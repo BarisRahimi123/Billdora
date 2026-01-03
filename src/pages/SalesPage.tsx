@@ -1,0 +1,768 @@
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, Search, Filter, Download, MoreHorizontal, X, FileText, ArrowRight, Eye, Printer, Send, Check, XCircle, Mail, Trash2, List, LayoutGrid, ChevronDown, ChevronRight } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { api, Client, Quote } from '../lib/api';
+import { useToast } from '../components/Toast';
+
+type Tab = 'clients' | 'quotes';
+
+export default function SalesPage() {
+  const navigate = useNavigate();
+  const { profile } = useAuth();
+  const [activeTab, setActiveTab] = useState<Tab>('clients');
+  const [clients, setClients] = useState<Client[]>([]);
+  const [quotes, setQuotes] = useState<Quote[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showClientModal, setShowClientModal] = useState(false);
+  const [showQuoteModal, setShowQuoteModal] = useState(false);
+  const [editingClient, setEditingClient] = useState<Client | null>(null);
+  const [editingQuote, setEditingQuote] = useState<Quote | null>(null);
+  const [activeQuoteMenu, setActiveQuoteMenu] = useState<string | null>(null);
+  const [quoteViewMode, setQuoteViewMode] = useState<'list' | 'client'>('list');
+  const [expandedClients, setExpandedClients] = useState<Set<string>>(() => {
+    const saved = localStorage.getItem('quotesExpandedClients');
+    return saved ? new Set(JSON.parse(saved)) : new Set();
+  });
+
+  const toggleClientExpanded = (clientName: string) => {
+    const newExpanded = new Set(expandedClients);
+    if (newExpanded.has(clientName)) newExpanded.delete(clientName);
+    else newExpanded.add(clientName);
+    setExpandedClients(newExpanded);
+    localStorage.setItem('quotesExpandedClients', JSON.stringify([...newExpanded]));
+  };
+
+  useEffect(() => {
+    loadData();
+  }, [profile?.company_id]);
+
+  async function loadData() {
+    if (!profile?.company_id) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    try {
+      const clientsData = await api.getClients(profile.company_id);
+      setClients(clientsData);
+    } catch (error) {
+      console.error('Failed to load clients:', error);
+    }
+    try {
+      const quotesData = await api.getQuotes(profile.company_id);
+      setQuotes(quotesData);
+    } catch (error) {
+      console.error('Failed to load quotes:', error);
+    }
+    setLoading(false);
+  }
+
+  const filteredClients = clients.filter(c => 
+    c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    c.display_name?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const filteredQuotes = quotes.filter(q =>
+    q.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    q.quote_number?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const getStatusColor = (status?: string) => {
+    switch (status) {
+      case 'active': return 'bg-emerald-100 text-emerald-700';
+      case 'pending': case 'draft': return 'bg-amber-100 text-amber-700';
+      case 'sent': return 'bg-blue-100 text-blue-700';
+      case 'approved': case 'accepted': return 'bg-emerald-100 text-emerald-700';
+      case 'dropped': case 'rejected': case 'declined': return 'bg-red-100 text-red-700';
+      default: return 'bg-neutral-100 text-neutral-700';
+    }
+  };
+
+  const updateQuoteStatus = async (quoteId: string, status: string) => {
+    try {
+      await api.updateQuote(quoteId, { status });
+      loadData();
+    } catch (error) {
+      console.error('Failed to update quote:', error);
+    }
+    setActiveQuoteMenu(null);
+  };
+
+  const generateQuotePDF = (quote: Quote) => {
+    const client = clients.find(c => c.id === quote.client_id);
+    const content = `
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Quote ${quote.quote_number}</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; }
+    .header { display: flex; justify-content: space-between; margin-bottom: 40px; }
+    .quote-title { font-size: 32px; font-weight: bold; color: #333; }
+    .quote-number { color: #666; margin-top: 8px; }
+    .section { margin-bottom: 30px; }
+    .section-title { font-size: 14px; font-weight: bold; color: #666; margin-bottom: 8px; text-transform: uppercase; }
+    .client-name { font-size: 18px; font-weight: bold; }
+    .description { background: #f9f9f9; padding: 20px; border-radius: 8px; margin: 20px 0; }
+    .total { font-size: 24px; font-weight: bold; margin-top: 30px; padding: 20px; background: #f0f0f0; border-radius: 8px; text-align: right; }
+    .status { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; }
+    .validity { color: #666; margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <div class="quote-title">QUOTE</div>
+      <div class="quote-number">${quote.quote_number}</div>
+    </div>
+    <div style="text-align: right;">
+      <span class="status">${(quote.status || 'draft').toUpperCase()}</span>
+      <div style="margin-top: 8px; color: #666;">Date: ${new Date(quote.created_at || '').toLocaleDateString()}</div>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-title">Prepared For</div>
+    <div class="client-name">${client?.name || 'N/A'}</div>
+    ${client?.email ? `<div>${client.email}</div>` : ''}
+  </div>
+  <div class="section">
+    <div class="section-title">Project</div>
+    <div style="font-size: 18px; font-weight: 600;">${quote.title}</div>
+  </div>
+  ${quote.description ? `<div class="description">${quote.description}</div>` : ''}
+  <div class="total">Total: ${formatCurrency(quote.total_amount)}</div>
+  ${quote.valid_until ? `<div class="validity"><strong>Valid Until:</strong> ${new Date(quote.valid_until).toLocaleDateString()}</div>` : ''}
+</body>
+</html>`;
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(content);
+      printWindow.document.close();
+      setTimeout(() => printWindow.print(), 250);
+    }
+    setActiveQuoteMenu(null);
+  };
+
+  const formatCurrency = (amount?: number) => {
+    if (!amount) return '$0';
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(amount);
+  };
+
+  const [convertingQuoteId, setConvertingQuoteId] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'error') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), type === 'error' ? 4000 : 2500);
+  };
+
+  const handleConvertToProject = async (quote: Quote) => {
+    if (!profile?.company_id) return;
+    setConvertingQuoteId(quote.id);
+    try {
+      const result = await api.convertQuoteToProject(quote.id, profile.company_id);
+      showToast(`Project "${result.projectName}" created with ${result.tasksCreated} tasks!`, 'success');
+      await loadData();
+      setTimeout(() => navigate(`/projects`), 2000);
+    } catch (error: any) {
+      console.error('Failed to convert quote:', error);
+      showToast(error?.message || 'Failed to convert quote to project', 'error');
+    } finally {
+      setConvertingQuoteId(null);
+    }
+  };
+
+  const handleDeleteQuote = async (quoteId: string) => {
+    if (!confirm('Are you sure you want to delete this quote? This action cannot be undone.')) return;
+    try {
+      await api.deleteQuote(quoteId);
+      showToast('Quote deleted successfully', 'success');
+      await loadData();
+    } catch (error: any) {
+      console.error('Failed to delete quote:', error);
+      showToast(error?.message || 'Failed to delete quote', 'error');
+    }
+    setActiveQuoteMenu(null);
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {toast && (
+        <div className={`fixed top-4 right-4 z-50 px-6 py-3 rounded-xl shadow-lg transition-all ${
+          toast.type === 'success' ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white'
+        }`}>
+          {toast.message}
+        </div>
+      )}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-neutral-900">Sales</h1>
+          <p className="text-neutral-500">Manage clients and quotes</p>
+        </div>
+        <button
+          onClick={() => activeTab === 'clients' ? setShowClientModal(true) : navigate('/quotes/new/document')}
+          className="flex items-center gap-2 px-4 py-2.5 bg-neutral-900 text-white rounded-xl hover:bg-neutral-800 transition-colors"
+        >
+          <Plus className="w-4 h-4" />
+          Add {activeTab === 'clients' ? 'Client' : 'Quote'}
+        </button>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-1 p-1 bg-neutral-100 rounded-xl w-fit">
+        <button
+          onClick={() => setActiveTab('clients')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            activeTab === 'clients' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-600 hover:text-neutral-900'
+          }`}
+        >
+          Clients ({clients.length})
+        </button>
+        <button
+          onClick={() => setActiveTab('quotes')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            activeTab === 'quotes' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-600 hover:text-neutral-900'
+          }`}
+        >
+          Quotes ({quotes.length})
+        </button>
+      </div>
+
+      {/* Search and filters */}
+      <div className="flex items-center gap-4">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+          <input
+            type="text"
+            placeholder={`Search ${activeTab}...`}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+          />
+        </div>
+        <button className="flex items-center gap-2 px-4 py-2.5 border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors">
+          <Filter className="w-4 h-4" />
+          Filters
+        </button>
+        {activeTab === 'quotes' && (
+          <div className="flex items-center gap-1 p-1 bg-neutral-100 rounded-lg">
+            <button
+              onClick={() => setQuoteViewMode('list')}
+              className={`p-2 rounded-md transition-colors ${quoteViewMode === 'list' ? 'bg-white shadow-sm' : 'hover:bg-neutral-200'}`}
+              title="List View"
+            >
+              <List className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setQuoteViewMode('client')}
+              className={`p-2 rounded-md transition-colors ${quoteViewMode === 'client' ? 'bg-white shadow-sm' : 'hover:bg-neutral-200'}`}
+              title="Client View"
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+        <button className="flex items-center gap-2 px-4 py-2.5 border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors">
+          <Download className="w-4 h-4" />
+          Export
+        </button>
+      </div>
+
+      {/* Clients Table */}
+      {activeTab === 'clients' && (
+        <div className="bg-white rounded-2xl border border-neutral-100 overflow-hidden">
+          <table className="w-full">
+            <thead className="bg-neutral-50 border-b border-neutral-100">
+              <tr>
+                <th className="text-left px-6 py-4 text-xs font-medium text-neutral-500 uppercase tracking-wider">Client</th>
+                <th className="text-left px-6 py-4 text-xs font-medium text-neutral-500 uppercase tracking-wider">Type</th>
+                <th className="text-left px-6 py-4 text-xs font-medium text-neutral-500 uppercase tracking-wider">Phone</th>
+                <th className="text-left px-6 py-4 text-xs font-medium text-neutral-500 uppercase tracking-wider">Status</th>
+                <th className="w-12"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-neutral-100">
+              {filteredClients.map((client) => (
+                <tr key={client.id} className="hover:bg-neutral-50 transition-colors cursor-pointer" onClick={() => { setEditingClient(client); setShowClientModal(true); }}>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 font-medium">
+                        {client.name.charAt(0)}
+                      </div>
+                      <div>
+                        <p className="font-medium text-neutral-900">{client.name}</p>
+                        <p className="text-sm text-neutral-500">{client.email || client.display_name}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-neutral-600 capitalize">{client.type || 'company'}</td>
+                  <td className="px-6 py-4 text-neutral-600">{client.phone || '-'}</td>
+                  <td className="px-6 py-4">
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(client.lifecycle_stage)}`}>
+                      {client.lifecycle_stage || 'active'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <button className="p-1 hover:bg-neutral-100 rounded" onClick={(e) => e.stopPropagation()}>
+                      <MoreHorizontal className="w-4 h-4 text-neutral-400" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {filteredClients.length === 0 && (
+            <div className="text-center py-12 text-neutral-500">No clients found</div>
+          )}
+        </div>
+      )}
+
+      {/* Quotes Table */}
+      {activeTab === 'quotes' && (
+        quoteViewMode === 'list' ? (
+          <div className="bg-white rounded-2xl border border-neutral-100 overflow-hidden">
+            <table className="w-full">
+              <thead className="bg-neutral-50 border-b border-neutral-100">
+                <tr>
+                  <th className="text-left px-6 py-4 text-xs font-medium text-neutral-500 uppercase tracking-wider">Quote</th>
+                  <th className="text-left px-6 py-4 text-xs font-medium text-neutral-500 uppercase tracking-wider">Client</th>
+                  <th className="text-left px-6 py-4 text-xs font-medium text-neutral-500 uppercase tracking-wider">Amount</th>
+                  <th className="text-left px-6 py-4 text-xs font-medium text-neutral-500 uppercase tracking-wider">Status</th>
+                  <th className="text-left px-6 py-4 text-xs font-medium text-neutral-500 uppercase tracking-wider">Valid Until</th>
+                  <th className="w-48"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-neutral-100">
+                {filteredQuotes.map((quote) => (
+                  <tr key={quote.id} className="hover:bg-neutral-50 transition-colors">
+                    <td className="px-6 py-4 cursor-pointer" onClick={() => navigate(`/quotes/${quote.id}/document`)}>
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center">
+                          <FileText className="w-5 h-5 text-neutral-600" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-neutral-900">{quote.title}</p>
+                          <p className="text-sm text-neutral-500">{quote.quote_number}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-neutral-600">
+                      {clients.find(c => c.id === quote.client_id)?.name || '-'}
+                    </td>
+                    <td className="px-6 py-4 font-medium text-neutral-900">{formatCurrency(quote.total_amount)}</td>
+                    <td className="px-6 py-4">
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(quote.status)}`}>
+                        {quote.status || 'draft'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-neutral-600">
+                      {quote.valid_until ? new Date(quote.valid_until).toLocaleDateString() : '-'}
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2 relative">
+                        <button 
+                          onClick={() => navigate(`/quotes/${quote.id}/document`)}
+                          className="flex items-center gap-1 px-3 py-1.5 text-sm bg-neutral-900 text-white rounded-lg hover:bg-neutral-800 transition-colors"
+                          title="Edit Quote Document"
+                        >
+                          <Eye className="w-4 h-4" />
+                          Edit
+                        </button>
+                        {!quote.project_id && (quote.status === 'sent' || quote.status === 'approved' || quote.status === 'accepted' || quote.status === 'draft') && (
+                          <button 
+                            onClick={() => handleConvertToProject(quote)}
+                            disabled={convertingQuoteId === quote.id}
+                            className="flex items-center gap-1 px-3 py-1.5 text-sm bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 transition-colors disabled:opacity-50"
+                            title="Convert to Project"
+                          >
+                            <ArrowRight className="w-4 h-4" />
+                            {convertingQuoteId === quote.id ? 'Converting...' : 'Convert'}
+                          </button>
+                        )}
+                        <button 
+                          onClick={() => setActiveQuoteMenu(activeQuoteMenu === quote.id ? null : quote.id)}
+                          className="p-1.5 hover:bg-neutral-100 rounded-lg"
+                        >
+                          <MoreHorizontal className="w-4 h-4 text-neutral-500" />
+                        </button>
+                        {activeQuoteMenu === quote.id && (
+                          <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-xl shadow-lg border border-neutral-100 py-1 z-20">
+                            <button onClick={() => generateQuotePDF(quote)} className="w-full flex items-center gap-2 px-4 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50">
+                              <Printer className="w-4 h-4" /> Download PDF
+                            </button>
+                            {quote.status === 'draft' && (
+                              <button onClick={() => updateQuoteStatus(quote.id, 'sent')} className="w-full flex items-center gap-2 px-4 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50">
+                                <Send className="w-4 h-4" /> Mark as Sent
+                              </button>
+                            )}
+                            {(quote.status === 'sent' || quote.status === 'draft') && (
+                              <>
+                                <button onClick={() => updateQuoteStatus(quote.id, 'accepted')} className="w-full flex items-center gap-2 px-4 py-2 text-left text-sm text-emerald-600 hover:bg-emerald-50">
+                                  <Check className="w-4 h-4" /> Mark as Accepted
+                                </button>
+                                <button onClick={() => updateQuoteStatus(quote.id, 'declined')} className="w-full flex items-center gap-2 px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50">
+                                  <XCircle className="w-4 h-4" /> Mark as Declined
+                                </button>
+                              </>
+                            )}
+                            <div className="border-t border-neutral-100 my-1"></div>
+                            <button onClick={() => handleDeleteQuote(quote.id)} className="w-full flex items-center gap-2 px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50">
+                              <Trash2 className="w-4 h-4" /> Delete Quote
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {filteredQuotes.length === 0 && (
+              <div className="text-center py-12 text-neutral-500">No quotes found</div>
+            )}
+          </div>
+        ) : (
+          /* Client-Grouped View */
+          <div className="space-y-4">
+            {(() => {
+              const grouped: Record<string, Quote[]> = {};
+              filteredQuotes.forEach(q => {
+                const clientName = clients.find(c => c.id === q.client_id)?.name || 'Unassigned';
+                if (!grouped[clientName]) grouped[clientName] = [];
+                grouped[clientName].push(q);
+              });
+              const sortedClients = Object.keys(grouped).sort((a, b) => a === 'Unassigned' ? 1 : b === 'Unassigned' ? -1 : a.localeCompare(b));
+              return sortedClients.map(clientName => {
+                const clientQuotes = grouped[clientName];
+                const clientTotal = clientQuotes.reduce((sum, q) => sum + Number(q.total_amount || 0), 0);
+                return (
+                  <div key={clientName} className="bg-white rounded-2xl border border-neutral-100 overflow-hidden">
+                    <button
+                      onClick={() => toggleClientExpanded(clientName)}
+                      className="w-full flex items-center justify-between px-6 py-4 bg-neutral-50 hover:bg-neutral-100 transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        {expandedClients.has(clientName) ? <ChevronDown className="w-5 h-5 text-neutral-500" /> : <ChevronRight className="w-5 h-5 text-neutral-500" />}
+                        <span className="font-semibold text-neutral-900">{clientName}</span>
+                        <span className="text-sm text-neutral-500">({clientQuotes.length} quote{clientQuotes.length !== 1 ? 's' : ''})</span>
+                      </div>
+                      <span className="font-semibold text-neutral-900">{formatCurrency(clientTotal)}</span>
+                    </button>
+                    {expandedClients.has(clientName) && (
+                      <div className="divide-y divide-neutral-100">
+                        {clientQuotes.map(quote => (
+                          <div
+                            key={quote.id}
+                            className="flex items-center gap-4 px-6 py-3 hover:bg-neutral-50 cursor-pointer"
+                            onClick={() => navigate(`/quotes/${quote.id}/document`)}
+                          >
+                            <div className="w-9 h-9 rounded-lg bg-neutral-100 flex items-center justify-center shrink-0">
+                              <FileText className="w-4 h-4 text-neutral-500" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-neutral-900 truncate">{quote.title}</p>
+                              <p className="text-sm text-neutral-500">
+                                {quote.quote_number} • {new Date(quote.created_at || '').toLocaleDateString()}
+                              </p>
+                            </div>
+                            <div className="flex items-center shrink-0">
+                              <span className="font-medium text-neutral-900 w-24 text-right">{formatCurrency(quote.total_amount)}</span>
+                              <span className={`w-20 text-center px-2 py-0.5 rounded text-xs font-medium capitalize ${getStatusColor(quote.status)}`}>
+                                {quote.status || 'pending'}
+                              </span>
+                              <div className="w-20 flex justify-center">
+                                {!quote.project_id && (quote.status === 'sent' || quote.status === 'approved' || quote.status === 'accepted' || quote.status === 'pending' || quote.status === 'draft') ? (
+                                  <button 
+                                    onClick={(e) => { e.stopPropagation(); handleConvertToProject(quote); }}
+                                    disabled={convertingQuoteId === quote.id}
+                                    className="flex items-center gap-1 px-2 py-0.5 text-xs bg-emerald-500 text-white rounded hover:bg-emerald-600 transition-colors disabled:opacity-50"
+                                  >
+                                    <ArrowRight className="w-3 h-3" />
+                                    {convertingQuoteId === quote.id ? '...' : 'Convert'}
+                                  </button>
+                                ) : <span className="text-xs text-neutral-300">—</span>}
+                              </div>
+                              <div className="relative w-8 flex justify-center">
+                                <button 
+                                  onClick={(e) => { e.stopPropagation(); setActiveQuoteMenu(activeQuoteMenu === quote.id ? null : quote.id); }}
+                                  className="p-1.5 hover:bg-neutral-100 rounded-md transition-colors"
+                                >
+                                  <MoreHorizontal className="w-4 h-4 text-neutral-400" />
+                                </button>
+                                {activeQuoteMenu === quote.id && (
+                                  <div className="absolute right-0 top-full mt-1 w-44 bg-white rounded-lg shadow-lg border border-neutral-100 py-1 z-20">
+                                    <button onClick={(e) => { e.stopPropagation(); navigate(`/quotes/${quote.id}/document`); }} className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50">
+                                      <Eye className="w-4 h-4" /> View/Edit
+                                    </button>
+                                    <button onClick={(e) => { e.stopPropagation(); generateQuotePDF(quote); }} className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50">
+                                      <Printer className="w-4 h-4" /> Download PDF
+                                    </button>
+                                    <div className="border-t border-neutral-100 my-1"></div>
+                                    <p className="px-3 py-1 text-xs text-neutral-400 font-medium">Set Status</p>
+                                    {quote.status !== 'pending' && (
+                                      <button onClick={(e) => { e.stopPropagation(); updateQuoteStatus(quote.id, 'pending'); }} className="w-full flex items-center gap-2 px-3 py-1.5 text-left text-sm text-amber-600 hover:bg-amber-50">
+                                        <span className="w-2 h-2 rounded-full bg-amber-500"></span> Pending
+                                      </button>
+                                    )}
+                                    {quote.status !== 'sent' && (
+                                      <button onClick={(e) => { e.stopPropagation(); updateQuoteStatus(quote.id, 'sent'); }} className="w-full flex items-center gap-2 px-3 py-1.5 text-left text-sm text-blue-600 hover:bg-blue-50">
+                                        <span className="w-2 h-2 rounded-full bg-blue-500"></span> Sent
+                                      </button>
+                                    )}
+                                    {quote.status !== 'approved' && (
+                                      <button onClick={(e) => { e.stopPropagation(); updateQuoteStatus(quote.id, 'approved'); }} className="w-full flex items-center gap-2 px-3 py-1.5 text-left text-sm text-emerald-600 hover:bg-emerald-50">
+                                        <span className="w-2 h-2 rounded-full bg-emerald-500"></span> Approved
+                                      </button>
+                                    )}
+                                    {quote.status !== 'dropped' && (
+                                      <button onClick={(e) => { e.stopPropagation(); updateQuoteStatus(quote.id, 'dropped'); }} className="w-full flex items-center gap-2 px-3 py-1.5 text-left text-sm text-red-600 hover:bg-red-50">
+                                        <span className="w-2 h-2 rounded-full bg-red-500"></span> Dropped
+                                      </button>
+                                    )}
+                                    <div className="border-t border-neutral-100 my-1"></div>
+                                    <button onClick={(e) => { e.stopPropagation(); handleDeleteQuote(quote.id); }} className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50">
+                                      <Trash2 className="w-4 h-4" /> Delete
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              });
+            })()}
+            {filteredQuotes.length === 0 && (
+              <div className="text-center py-12 text-neutral-500 bg-white rounded-2xl border border-neutral-100">No quotes found</div>
+            )}
+          </div>
+        )
+      )}
+
+      {/* Client Modal */}
+      {showClientModal && (
+        <ClientModal
+          client={editingClient}
+          companyId={profile?.company_id || ''}
+          onClose={() => { setShowClientModal(false); setEditingClient(null); }}
+          onSave={() => { loadData(); setShowClientModal(false); setEditingClient(null); }}
+        />
+      )}
+
+      {/* Quote Modal */}
+      {showQuoteModal && (
+        <QuoteModal
+          quote={editingQuote}
+          clients={clients}
+          companyId={profile?.company_id || ''}
+          onClose={() => { setShowQuoteModal(false); setEditingQuote(null); }}
+          onSave={() => { loadData(); setShowQuoteModal(false); setEditingQuote(null); }}
+        />
+      )}
+    </div>
+  );
+}
+
+function ClientModal({ client, companyId, onClose, onSave }: { client: Client | null; companyId: string; onClose: () => void; onSave: () => void }) {
+  const [name, setName] = useState(client?.name || '');
+  const [displayName, setDisplayName] = useState(client?.display_name || '');
+  const [email, setEmail] = useState(client?.email || '');
+  const [phone, setPhone] = useState(client?.phone || '');
+  const [type, setType] = useState(client?.type || 'company');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name || !displayName) return;
+    setError(null);
+    setSaving(true);
+    try {
+      if (client) {
+        await api.updateClient(client.id, { name, display_name: displayName, email, phone, type });
+      } else {
+        await api.createClient({ company_id: companyId, name, display_name: displayName, email, phone, type, lifecycle_stage: 'active' });
+      }
+      onSave();
+    } catch (err: any) {
+      console.error('Failed to save client:', err);
+      setError(err?.message || 'Failed to save client');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-2xl w-full max-w-lg p-6 mx-4">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-semibold text-neutral-900">{client ? 'Edit Client' : 'Add Client'}</h2>
+          <button onClick={onClose} className="p-2 hover:bg-neutral-100 rounded-lg"><X className="w-5 h-5" /></button>
+        </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {error && <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">{error}</div>}
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 mb-1.5">Company Name *</label>
+            <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" required />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 mb-1.5">Display Name *</label>
+            <input type="text" value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" required />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-1.5">Email</label>
+              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-1.5">Phone</label>
+              <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 mb-1.5">Type</label>
+            <select value={type} onChange={(e) => setType(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none">
+              <option value="company">Company</option>
+              <option value="person">Person</option>
+            </select>
+          </div>
+          <div className="flex gap-3 pt-4">
+            <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors">Cancel</button>
+            <button type="submit" disabled={saving} onClick={(e) => { e.preventDefault(); handleSubmit(e as any); }} className="flex-1 px-4 py-2.5 bg-primary-500 text-white rounded-xl hover:bg-primary-600 transition-colors disabled:opacity-50">
+              {saving ? 'Saving...' : client ? 'Update' : 'Create'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function QuoteModal({ quote, clients, companyId, onClose, onSave }: { quote: Quote | null; clients: Client[]; companyId: string; onClose: () => void; onSave: () => void }) {
+  const navigate = useNavigate();
+  const [title, setTitle] = useState(quote?.title || '');
+  const [description, setDescription] = useState(quote?.description || '');
+  const [clientId, setClientId] = useState(quote?.client_id || '');
+  const [amount, setAmount] = useState(quote?.total_amount?.toString() || '');
+  const [billingModel, setBillingModel] = useState(quote?.billing_model || 'fixed');
+  const [validUntil, setValidUntil] = useState(quote?.valid_until?.split('T')[0] || '');
+  const [status, setStatus] = useState(quote?.status || 'draft');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title || !clientId) return;
+    setError(null);
+    setSaving(true);
+    try {
+      const quoteData = {
+        title,
+        description,
+        client_id: clientId,
+        total_amount: parseFloat(amount) || 0,
+        billing_model: billingModel,
+        valid_until: validUntil || null,
+        status,
+      };
+      if (quote) {
+        await api.updateQuote(quote.id, quoteData);
+      } else {
+        await api.createQuote({ ...quoteData, company_id: companyId, quote_number: `QT-${Date.now().toString().slice(-6)}` });
+      }
+      onSave();
+    } catch (err: any) {
+      console.error('Failed to save quote:', err);
+      setError(err?.message || 'Failed to save quote');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-2xl w-full max-w-lg p-6 mx-4 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-semibold text-neutral-900">{quote ? 'Edit Quote' : 'Create Quote'}</h2>
+          <button onClick={onClose} className="p-2 hover:bg-neutral-100 rounded-lg"><X className="w-5 h-5" /></button>
+        </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {error && <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">{error}</div>}
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 mb-1.5">Quote Title *</label>
+            <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" required placeholder="e.g. Website Redesign Proposal" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 mb-1.5">Client *</label>
+            <select value={clientId} onChange={(e) => setClientId(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" required>
+              <option value="">Select a client</option>
+              {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 mb-1.5">Description</label>
+            <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none resize-none" placeholder="Scope of work, deliverables, etc." />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-1.5">Total Amount ($)</label>
+              <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" placeholder="0" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-1.5">Billing Model</label>
+              <select value={billingModel} onChange={(e) => setBillingModel(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none">
+                <option value="fixed">Fixed Price</option>
+                <option value="time_and_materials">Time & Materials</option>
+                <option value="retainer">Retainer</option>
+              </select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-1.5">Valid Until</label>
+              <input type="date" value={validUntil} onChange={(e) => setValidUntil(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-1.5">Status</label>
+              <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none">
+                <option value="draft">Draft</option>
+                <option value="sent">Sent</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+              </select>
+            </div>
+          </div>
+          <div className="flex gap-3 pt-4">
+            <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors">Cancel</button>
+            <button type="submit" disabled={saving} onClick={(e) => { e.preventDefault(); handleSubmit(e as any); }} className="flex-1 px-4 py-2.5 bg-primary-500 text-white rounded-xl hover:bg-primary-600 transition-colors disabled:opacity-50">
+              {saving ? 'Saving...' : quote ? 'Update Quote' : 'Create Quote'}
+            </button>
+          </div>
+          {quote && (
+            <button
+              type="button"
+              onClick={() => navigate(`/quotes/${quote.id}/document`)}
+              className="w-full mt-3 px-4 py-2.5 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-colors flex items-center justify-center gap-2"
+            >
+              <Eye className="w-4 h-4" />
+              View Full Document
+            </button>
+          )}
+        </form>
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,4067 @@
+import { useState, useEffect, useRef } from 'react';
+import { useToast } from '../components/Toast';
+import { Settings, Building2, Users, FileText, Bell, Link, Shield, Package, Plus, Edit2, Trash2, X, Upload, Camera, Mail, UserCheck, UserX, MoreVertical, Check, User, Receipt, MapPin, Calculator, FileType, Send, Tag, List, Activity, Target, GripVertical } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { usePermissions } from '../contexts/PermissionsContext';
+import { api, Service, CompanySettings, userManagementApi, Role, UserProfile, CompanyInvitation, settingsApi, Category, ExpenseCode, InvoiceTerm, FieldValue, StatusCode, CostCenter } from '../lib/api';
+import { supabase } from '../lib/supabase';
+
+const CATEGORIES = ['Scanning', 'Modeling', 'Drafting', 'GIS', 'Consulting', 'Other'];
+const PRICING_TYPES = [
+  { value: 'hourly', label: 'Hourly Rate', unit: 'hour' },
+  { value: 'per_sqft', label: 'Per Square Foot', unit: 'sq ft' },
+  { value: 'fixed', label: 'Fixed Price', unit: 'project' },
+  { value: 'per_unit', label: 'Per Unit', unit: 'unit' },
+];
+
+export default function SettingsPage() {
+  const { profile } = useAuth();
+  const { canViewFinancials } = usePermissions();
+  const { showToast } = useToast();
+  const [activeTab, setActiveTab] = useState('company');
+  const [services, setServices] = useState<Service[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [showServiceModal, setShowServiceModal] = useState(false);
+  const [editingService, setEditingService] = useState<Service | null>(null);
+
+  // Company Info State
+  const [companySettings, setCompanySettings] = useState<CompanySettings | null>(null);
+  const [companyName, setCompanyName] = useState('');
+  const [address, setAddress] = useState('');
+  const [city, setCity] = useState('');
+  const [state, setState] = useState('');
+  const [zip, setZip] = useState('');
+  const [country, setCountry] = useState('USA');
+  const [phone, setPhone] = useState('');
+  const [fax, setFax] = useState('');
+  const [website, setWebsite] = useState('');
+  const [email, setEmail] = useState('');
+  const [logoUrl, setLogoUrl] = useState('');
+  const [defaultTaxRate, setDefaultTaxRate] = useState('8.25');
+  const [defaultTerms, setDefaultTerms] = useState('');
+  const [savingCompany, setSavingCompany] = useState(false);
+  const [companyError, setCompanyError] = useState<string | null>(null);
+  const [companySuccess, setCompanySuccess] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+
+  const tabs = [
+    { id: 'profile', label: 'My Profile', icon: User },
+    { id: 'company', label: 'Company Info', icon: Building2 },
+    { id: 'users', label: 'User Management', icon: Users },
+    { id: 'services', label: 'Products & Services', icon: Package },
+    { id: 'basic-codes', label: 'Basic Codes', icon: Tag },
+    { id: 'field-values', label: 'Field Values', icon: List },
+    { id: 'status-codes', label: 'Status Codes', icon: Activity },
+    { id: 'cost-centers', label: 'Cost Centers', icon: Target },
+    { id: 'staff', label: 'Staff', icon: Users },
+    { id: 'templates', label: 'Templates', icon: FileText },
+    { id: 'notifications', label: 'Notifications', icon: Bell },
+    { id: 'integrations', label: 'Integrations', icon: Link },
+    { id: 'security', label: 'Security', icon: Shield },
+    { id: 'invoicing', label: 'Invoicing', icon: Receipt },
+  ];
+
+  useEffect(() => {
+    if (profile?.company_id) {
+      if (activeTab === 'services') {
+        loadServices();
+      } else if (activeTab === 'company') {
+        loadCompanySettings();
+      }
+    }
+  }, [activeTab, profile?.company_id]);
+
+  async function loadCompanySettings() {
+    if (!profile?.company_id) return;
+    setLoading(true);
+    try {
+      const settings = await api.getCompanySettings(profile.company_id);
+      if (settings) {
+        setCompanySettings(settings);
+        setCompanyName(settings.company_name || '');
+        setAddress(settings.address || '');
+        setCity(settings.city || '');
+        setState(settings.state || '');
+        setZip(settings.zip || '');
+        setCountry(settings.country || 'USA');
+        setPhone(settings.phone || '');
+        setFax(settings.fax || '');
+        setWebsite(settings.website || '');
+        setEmail(settings.email || '');
+        setLogoUrl(settings.logo_url || '');
+        setDefaultTaxRate(settings.default_tax_rate?.toString() || '8.25');
+        setDefaultTerms(settings.default_terms || '');
+      }
+    } catch (error) {
+      console.error('Failed to load company settings:', error);
+    }
+    setLoading(false);
+  }
+
+  async function handleSaveCompanySettings(e: React.FormEvent) {
+    e.preventDefault();
+    if (!profile?.company_id) return;
+    
+    setSavingCompany(true);
+    setCompanyError(null);
+    setCompanySuccess(false);
+    
+    try {
+      const settingsData: Partial<CompanySettings> = {
+        company_id: profile.company_id,
+        company_name: companyName || null,
+        address: address || null,
+        city: city || null,
+        state: state || null,
+        zip: zip || null,
+        country: country || null,
+        phone: phone || null,
+        fax: fax || null,
+        website: website || null,
+        email: email || null,
+        logo_url: logoUrl || null,
+        default_tax_rate: defaultTaxRate ? parseFloat(defaultTaxRate) : null,
+        default_terms: defaultTerms || null,
+      };
+
+      // If we have existing settings, include the id
+      if (companySettings?.id) {
+        settingsData.id = companySettings.id;
+      }
+
+      const saved = await api.upsertCompanySettings(settingsData);
+      setCompanySettings(saved);
+      setCompanySuccess(true);
+      setTimeout(() => setCompanySuccess(false), 3000);
+    } catch (err: any) {
+      console.error('Failed to save company settings:', err);
+      setCompanyError(err?.message || 'Failed to save settings');
+    } finally {
+      setSavingCompany(false);
+    }
+  }
+
+  async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !profile?.company_id) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      setCompanyError('Please upload an image file');
+      return;
+    }
+
+    // Validate file size (5MB max)
+    if (file.size > 5 * 1024 * 1024) {
+      setCompanyError('Image must be less than 5MB');
+      return;
+    }
+
+    setUploadingLogo(true);
+    setCompanyError(null);
+
+    try {
+      // Create a unique filename
+      const ext = file.name.split('.').pop();
+      const filename = `${profile.company_id}/logo-${Date.now()}.${ext}`;
+
+      // Upload to Supabase Storage
+      const { data, error } = await supabase.storage
+        .from('company-logos')
+        .upload(filename, file, {
+          cacheControl: '3600',
+          upsert: true
+        });
+
+      if (error) throw error;
+
+      // Get the public URL
+      const { data: urlData } = supabase.storage
+        .from('company-logos')
+        .getPublicUrl(filename);
+
+      setLogoUrl(urlData.publicUrl);
+    } catch (err: any) {
+      console.error('Failed to upload logo:', err);
+      setCompanyError(err?.message || 'Failed to upload logo');
+    } finally {
+      setUploadingLogo(false);
+    }
+  }
+
+  async function loadServices() {
+    if (!profile?.company_id) return;
+    setLoading(true);
+    try {
+      const data = await api.getServices(profile.company_id);
+      setServices(data);
+    } catch (error) {
+      console.error('Failed to load services:', error);
+    }
+    setLoading(false);
+  }
+
+  const handleDeleteService = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this service?')) return;
+    try {
+      await api.deleteService(id);
+      loadServices();
+    } catch (error) {
+      console.error('Failed to delete service:', error);
+    }
+  };
+
+  const formatRate = (service: Service) => {
+    if (service.pricing_type === 'per_sqft' && service.min_rate && service.max_rate) {
+      return `$${service.min_rate} - $${service.max_rate}`;
+    }
+    return service.base_rate ? `$${service.base_rate}` : '-';
+  };
+
+  if (!profile?.company_id) {
+    return (
+      <div className="p-12 text-center">
+        <div className="animate-spin w-8 h-8 border-2 border-neutral-600 border-t-transparent rounded-full mx-auto" />
+        <p className="mt-4 text-neutral-500">Loading settings...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold text-neutral-900">Settings</h1>
+        <p className="text-neutral-500 mt-1">Manage your company preferences</p>
+      </div>
+
+      <div className="flex gap-6">
+        {/* Sidebar */}
+        <div className="w-64 flex-shrink-0">
+          <nav className="bg-white rounded-2xl border border-neutral-100 p-2">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-colors ${
+                  activeTab === tab.id 
+                    ? 'bg-neutral-900 text-white' 
+                    : 'text-neutral-600 hover:bg-neutral-50'
+                }`}
+              >
+                <tab.icon className="w-5 h-5" />
+                <span className="font-medium text-sm">{tab.label}</span>
+              </button>
+            ))}
+          </nav>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1">
+          {activeTab === 'profile' && (
+            <ProfileTab />
+          )}
+
+          {activeTab === 'company' && (
+            <div className="bg-white rounded-2xl p-8 border border-neutral-100">
+              <h2 className="text-xl font-semibold text-neutral-900 mb-6">Company Information</h2>
+              
+              {loading ? (
+                <div className="flex justify-center py-12">
+                  <div className="animate-spin w-8 h-8 border-2 border-neutral-600 border-t-transparent rounded-full" />
+                </div>
+              ) : (
+                <form onSubmit={handleSaveCompanySettings} className="space-y-6">
+                  {companyError && (
+                    <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm">
+                      {companyError}
+                    </div>
+                  )}
+                  {companySuccess && (
+                    <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl text-sm">
+                      Settings saved successfully!
+                    </div>
+                  )}
+
+                  {/* Logo Upload */}
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-3">Company Logo</label>
+                    <div className="flex items-center gap-6">
+                      <div 
+                        className="w-24 h-24 rounded-xl border-2 border-dashed border-neutral-200 flex items-center justify-center overflow-hidden bg-neutral-50 cursor-pointer hover:border-neutral-400 transition-colors"
+                        onClick={() => logoInputRef.current?.click()}
+                      >
+                        {logoUrl ? (
+                          <img src={logoUrl} alt="Company logo" className="w-full h-full object-contain" />
+                        ) : (
+                          <Camera className="w-8 h-8 text-neutral-400" />
+                        )}
+                      </div>
+                      <div>
+                        <input
+                          ref={logoInputRef}
+                          type="file"
+                          accept="image/*"
+                          onChange={handleLogoUpload}
+                          className="hidden"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => logoInputRef.current?.click()}
+                          disabled={uploadingLogo}
+                          className="flex items-center gap-2 px-4 py-2 border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors text-sm font-medium disabled:opacity-50"
+                        >
+                          <Upload className="w-4 h-4" />
+                          {uploadingLogo ? 'Uploading...' : 'Upload Logo'}
+                        </button>
+                        <p className="text-xs text-neutral-500 mt-2">PNG, JPG up to 5MB</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="col-span-2">
+                      <label className="block text-sm font-medium text-neutral-700 mb-1.5">Company Name</label>
+                      <input 
+                        type="text" 
+                        value={companyName}
+                        onChange={(e) => setCompanyName(e.target.value)}
+                        placeholder="Your Company Name"
+                        className="w-full h-12 px-4 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-400 outline-none" 
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-1.5">Street Address</label>
+                    <input 
+                      type="text" 
+                      value={address}
+                      onChange={(e) => setAddress(e.target.value)}
+                      placeholder="123 Business St"
+                      className="w-full h-12 px-4 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-400 outline-none" 
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-4 gap-4">
+                    <div className="col-span-2">
+                      <label className="block text-sm font-medium text-neutral-700 mb-1.5">City</label>
+                      <input 
+                        type="text" 
+                        value={city}
+                        onChange={(e) => setCity(e.target.value)}
+                        placeholder="City"
+                        className="w-full h-12 px-4 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-400 outline-none" 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-neutral-700 mb-1.5">State</label>
+                      <input 
+                        type="text" 
+                        value={state}
+                        onChange={(e) => setState(e.target.value)}
+                        placeholder="TX"
+                        className="w-full h-12 px-4 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-400 outline-none" 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-neutral-700 mb-1.5">ZIP</label>
+                      <input 
+                        type="text" 
+                        value={zip}
+                        onChange={(e) => setZip(e.target.value)}
+                        placeholder="75001"
+                        className="w-full h-12 px-4 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-400 outline-none" 
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-neutral-700 mb-1.5">Phone</label>
+                      <input 
+                        type="tel" 
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        placeholder="(555) 123-4567"
+                        className="w-full h-12 px-4 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-400 outline-none" 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-neutral-700 mb-1.5">Fax</label>
+                      <input 
+                        type="tel" 
+                        value={fax}
+                        onChange={(e) => setFax(e.target.value)}
+                        placeholder="(555) 123-4568"
+                        className="w-full h-12 px-4 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-400 outline-none" 
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-neutral-700 mb-1.5">Website</label>
+                      <input 
+                        type="url" 
+                        value={website}
+                        onChange={(e) => setWebsite(e.target.value)}
+                        placeholder="https://yourcompany.com"
+                        className="w-full h-12 px-4 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-400 outline-none" 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-neutral-700 mb-1.5">Email</label>
+                      <input 
+                        type="email" 
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="info@yourcompany.com"
+                        className="w-full h-12 px-4 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-400 outline-none" 
+                      />
+                    </div>
+                  </div>
+
+                  <div className="border-t border-neutral-100 pt-6 mt-6">
+                    <h3 className="text-lg font-semibold text-neutral-900 mb-4">Default Settings</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-neutral-700 mb-1.5">Default Tax Rate (%)</label>
+                        <input 
+                          type="number" 
+                          step="0.01"
+                          value={defaultTaxRate}
+                          onChange={(e) => setDefaultTaxRate(e.target.value)}
+                          placeholder="8.25"
+                          className="w-full h-12 px-4 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-400 outline-none" 
+                        />
+                      </div>
+                    </div>
+                    <div className="mt-4">
+                      <label className="block text-sm font-medium text-neutral-700 mb-1.5">Default Terms & Conditions</label>
+                      <textarea 
+                        value={defaultTerms}
+                        onChange={(e) => setDefaultTerms(e.target.value)}
+                        placeholder="Enter default terms and conditions for quotes and invoices..."
+                        rows={4}
+                        className="w-full px-4 py-3 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-400 outline-none resize-none" 
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pt-4">
+                    <button 
+                      type="submit"
+                      disabled={savingCompany}
+                      className="h-12 px-6 bg-neutral-900 text-white font-medium rounded-xl hover:bg-neutral-800 transition-colors disabled:opacity-50"
+                    >
+                      {savingCompany ? 'Saving...' : 'Save Changes'}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'users' && (
+            <UserManagementTab companyId={profile.company_id} currentUserId={profile?.id || ''} />
+          )}
+
+          {activeTab === 'services' && (
+            <div className="bg-white rounded-2xl border border-neutral-100">
+              <div className="p-6 border-b border-neutral-100 flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-semibold text-neutral-900">Products & Services</h2>
+                  <p className="text-neutral-500 text-sm mt-1">Manage your service catalog for quotes</p>
+                </div>
+                <button
+                  onClick={() => { setEditingService(null); setShowServiceModal(true); }}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-neutral-900 text-white rounded-xl hover:bg-neutral-800 transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Service
+                </button>
+              </div>
+
+              {loading ? (
+                <div className="p-12 text-center">
+                  <div className="animate-spin w-8 h-8 border-2 border-neutral-600 border-t-transparent rounded-full mx-auto" />
+                </div>
+              ) : services.length === 0 ? (
+                <div className="p-12 text-center">
+                  <div className="w-16 h-16 bg-neutral-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <Package className="w-8 h-8 text-neutral-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-neutral-900 mb-2">No services yet</h3>
+                  <p className="text-neutral-500 mb-4">Add your first service to start building quotes faster</p>
+                  <button
+                    onClick={() => { setEditingService(null); setShowServiceModal(true); }}
+                    className="px-4 py-2 bg-neutral-900 text-white rounded-lg hover:bg-neutral-800"
+                  >
+                    Add Your First Service
+                  </button>
+                </div>
+              ) : (
+                <table className="w-full">
+                  <thead className="bg-neutral-50 border-b border-neutral-100">
+                    <tr>
+                      <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-900 uppercase tracking-wider">Name</th>
+                      <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-900 uppercase tracking-wider">Category</th>
+                      <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-900 uppercase tracking-wider">Pricing</th>
+                      <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-900 uppercase tracking-wider">Rate</th>
+                      <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-900 uppercase tracking-wider">Unit</th>
+                      <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-900 uppercase tracking-wider">Status</th>
+                      <th className="w-24"></th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-100">
+                    {services.map((service) => (
+                      <tr key={service.id} className="hover:bg-neutral-50 transition-colors">
+                        <td className="px-6 py-4">
+                          <div>
+                            <p className="font-medium text-neutral-900">{service.name}</p>
+                            {service.description && (
+                              <p className="text-sm text-neutral-500 truncate max-w-xs">{service.description}</p>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-neutral-600">{service.category || '-'}</td>
+                        <td className="px-6 py-4 text-neutral-600 capitalize">
+                          {PRICING_TYPES.find(p => p.value === service.pricing_type)?.label || service.pricing_type}
+                        </td>
+                        <td className="px-6 py-4 font-medium text-neutral-900">{formatRate(service)}</td>
+                        <td className="px-6 py-4 text-neutral-600">{service.unit_label || '-'}</td>
+                        <td className="px-6 py-4">
+                          <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
+                            service.is_active !== false ? 'bg-emerald-100 text-emerald-700' : 'bg-neutral-100 text-neutral-600'
+                          }`}>
+                            {service.is_active !== false ? 'Active' : 'Inactive'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => { setEditingService(service); setShowServiceModal(true); }}
+                              className="p-1.5 text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 rounded"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteService(service.id)}
+                              className="p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'invoicing' && (
+            <InvoicingSettingsTab companyId={profile.company_id} />
+          )}
+
+          {activeTab === 'basic-codes' && (
+            <BasicCodesTab companyId={profile.company_id} />
+          )}
+
+          {activeTab === 'field-values' && (
+            <FieldValuesTab companyId={profile.company_id} />
+          )}
+
+          {activeTab === 'status-codes' && (
+            <StatusCodesTab companyId={profile.company_id} />
+          )}
+
+          {activeTab === 'cost-centers' && (
+            <CostCentersTab companyId={profile.company_id} />
+          )}
+
+          {activeTab !== 'profile' && activeTab !== 'company' && activeTab !== 'services' && activeTab !== 'users' && activeTab !== 'invoicing' && activeTab !== 'basic-codes' && activeTab !== 'field-values' && activeTab !== 'status-codes' && activeTab !== 'cost-centers' && (
+            <div className="bg-white rounded-2xl p-12 border border-neutral-100 text-center">
+              <div className="w-16 h-16 bg-neutral-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <Settings className="w-8 h-8 text-neutral-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-neutral-900 mb-2">{tabs.find(t => t.id === activeTab)?.label}</h3>
+              <p className="text-neutral-500">This settings section is under development</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Service Modal */}
+      {showServiceModal && (
+        <ServiceModal
+          service={editingService}
+          companyId={profile.company_id}
+          onClose={() => { setShowServiceModal(false); setEditingService(null); }}
+          onSave={() => { setShowServiceModal(false); setEditingService(null); loadServices(); }}
+        />
+      )}
+    </div>
+  );
+}
+
+function ServiceModal({ service, companyId, onClose, onSave }: { 
+  service: Service | null; 
+  companyId: string; 
+  onClose: () => void; 
+  onSave: () => void;
+}) {
+  const [name, setName] = useState(service?.name || '');
+  const [description, setDescription] = useState(service?.description || '');
+  const [category, setCategory] = useState(service?.category || 'Other');
+  const [pricingType, setPricingType] = useState(service?.pricing_type || 'hourly');
+  const [baseRate, setBaseRate] = useState(service?.base_rate?.toString() || '');
+  const [minRate, setMinRate] = useState(service?.min_rate?.toString() || '');
+  const [maxRate, setMaxRate] = useState(service?.max_rate?.toString() || '');
+  const [unitLabel, setUnitLabel] = useState(service?.unit_label || 'hour');
+  const [isActive, setIsActive] = useState(service?.is_active !== false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Update unit label when pricing type changes
+  useEffect(() => {
+    const pType = PRICING_TYPES.find(p => p.value === pricingType);
+    if (pType && !service) {
+      setUnitLabel(pType.unit);
+    }
+  }, [pricingType, service]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) {
+      setError('Service name is required');
+      return;
+    }
+    
+    setSaving(true);
+    setError(null);
+    
+    try {
+      const serviceData: Partial<Service> = {
+        company_id: companyId,
+        name: name.trim(),
+        description: description.trim() || null,
+        category,
+        pricing_type: pricingType,
+        base_rate: baseRate ? parseFloat(baseRate) : null,
+        min_rate: minRate ? parseFloat(minRate) : null,
+        max_rate: maxRate ? parseFloat(maxRate) : null,
+        unit_label: unitLabel,
+        is_active: isActive,
+      };
+      
+      if (service) {
+        await api.updateService(service.id, serviceData);
+      } else {
+        await api.createService(serviceData);
+      }
+      onSave();
+    } catch (err: any) {
+      console.error('Failed to save service:', err);
+      setError(err?.message || 'Failed to save service');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-2xl w-full max-w-lg p-6 mx-4 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-semibold text-neutral-900">
+            {service ? 'Edit Service' : 'Add Service'}
+          </h2>
+          <button onClick={onClose} className="p-2 hover:bg-neutral-100 rounded-lg">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {error && (
+            <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">{error}</div>
+          )}
+
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 mb-1.5">Service Name *</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-400 focus:border-transparent outline-none"
+              placeholder="e.g., 3D Laser Scanning"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 mb-1.5">Description</label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-400 focus:border-transparent outline-none resize-none h-20"
+              placeholder="Brief description of the service..."
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 mb-1.5">Category</label>
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-400 focus:border-transparent outline-none"
+            >
+              {CATEGORIES.map(cat => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 mb-1.5">Pricing Type</label>
+            <select
+              value={pricingType}
+              onChange={(e) => setPricingType(e.target.value)}
+              className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-400 focus:border-transparent outline-none"
+            >
+              {PRICING_TYPES.map(pt => (
+                <option key={pt.value} value={pt.value}>{pt.label}</option>
+              ))}
+            </select>
+          </div>
+
+          {pricingType === 'per_sqft' ? (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1.5">Min Rate ($)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={minRate}
+                  onChange={(e) => setMinRate(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-400 focus:border-transparent outline-none"
+                  placeholder="0.02"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1.5">Max Rate ($)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={maxRate}
+                  onChange={(e) => setMaxRate(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-400 focus:border-transparent outline-none"
+                  placeholder="0.20"
+                />
+              </div>
+            </div>
+          ) : (
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-1.5">Rate ($)</label>
+              <input
+                type="number"
+                step="0.01"
+                value={baseRate}
+                onChange={(e) => setBaseRate(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-400 focus:border-transparent outline-none"
+                placeholder="150.00"
+              />
+            </div>
+          )}
+
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 mb-1.5">Unit Label</label>
+            <input
+              type="text"
+              value={unitLabel}
+              onChange={(e) => setUnitLabel(e.target.value)}
+              className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-400 focus:border-transparent outline-none"
+              placeholder="hour, sq ft, project, etc."
+            />
+          </div>
+
+          <div className="flex items-center gap-3">
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isActive}
+                onChange={(e) => setIsActive(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-neutral-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-neutral-400 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-neutral-900"></div>
+            </label>
+            <span className="text-sm font-medium text-neutral-700">Active</span>
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2.5 border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="flex-1 px-4 py-2.5 bg-neutral-900 text-white rounded-xl hover:bg-neutral-800 transition-colors disabled:opacity-50"
+            >
+              {saving ? 'Saving...' : service ? 'Update Service' : 'Create Service'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+
+// User Management Tab Component
+function UserManagementTab({ companyId, currentUserId }: { companyId: string; currentUserId: string }) {
+  const { showToast } = useToast();
+  const { canViewFinancials } = usePermissions();
+  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [roles, setRoles] = useState<Role[]>([]);
+  const [invitations, setInvitations] = useState<CompanyInvitation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeSubTab, setActiveSubTab] = useState<'users' | 'roles' | 'invitations'>('users');
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [showEditUserModal, setShowEditUserModal] = useState(false);
+  const [showRoleModal, setShowRoleModal] = useState(false);
+  const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
+  const [editingRole, setEditingRole] = useState<Role | null>(null);
+  const [menuOpen, setMenuOpen] = useState<string | null>(null);
+  const [roleMenuOpen, setRoleMenuOpen] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (companyId) loadData();
+  }, [companyId]);
+
+  async function loadData() {
+    setLoading(true);
+    try {
+      const [usersData, rolesData, invitationsData] = await Promise.all([
+        userManagementApi.getCompanyUsers(companyId),
+        userManagementApi.getRoles(companyId),
+        userManagementApi.getInvitations(companyId),
+      ]);
+      setUsers(usersData);
+      setRoles(rolesData);
+      setInvitations(invitationsData.filter(i => i.status === 'pending'));
+    } catch (error) {
+      console.error('Failed to load user data:', error);
+    }
+    setLoading(false);
+  }
+
+  const handleDeactivateUser = async (userId: string) => {
+    try {
+      await userManagementApi.deactivateUser(userId);
+      loadData();
+    } catch (error) {
+      console.error('Failed to deactivate user:', error);
+    }
+    setMenuOpen(null);
+  };
+
+  const handleActivateUser = async (userId: string) => {
+    try {
+      await userManagementApi.activateUser(userId);
+      loadData();
+    } catch (error) {
+      console.error('Failed to activate user:', error);
+    }
+    setMenuOpen(null);
+  };
+
+  const handleCancelInvitation = async (invitationId: string) => {
+    try {
+      await userManagementApi.cancelInvitation(invitationId);
+      loadData();
+    } catch (error) {
+      console.error('Failed to cancel invitation:', error);
+    }
+  };
+
+  const handleDeleteRole = async (roleId: string) => {
+    if (!confirm('Are you sure you want to delete this role? Users with this role will lose their permissions.')) return;
+    try {
+      await userManagementApi.deleteRole(roleId);
+      loadData();
+    } catch (error) {
+      console.error('Failed to delete role:', error);
+      showToast('Cannot delete this role. It may be a system role or in use.', 'error');
+    }
+    setRoleMenuOpen(null);
+  };
+
+  const getRoleName = (roleId?: string) => {
+    if (!roleId) return 'No Role';
+    const role = roles.find(r => r.id === roleId);
+    return role?.name || 'Unknown';
+  };
+
+  const getRoleColor = (roleName: string) => {
+    switch (roleName) {
+      case 'Admin': return 'bg-purple-100 text-purple-700';
+      case 'Manager': return 'bg-blue-100 text-blue-700';
+      case 'Staff': return 'bg-emerald-100 text-emerald-700';
+      case 'Viewer': return 'bg-neutral-100 text-neutral-700';
+      default: return 'bg-neutral-100 text-neutral-600';
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-2xl border border-neutral-100 p-12">
+        <div className="flex justify-center">
+          <div className="animate-spin w-8 h-8 border-2 border-neutral-600 border-t-transparent rounded-full" />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Sub-tabs */}
+      <div className="flex items-center justify-between">
+        <div className="flex gap-1 p-1 bg-neutral-100 rounded-xl">
+          <button
+            onClick={() => setActiveSubTab('users')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              activeSubTab === 'users' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-600 hover:text-neutral-900'
+            }`}
+          >
+            Users ({users.length})
+          </button>
+          <button
+            onClick={() => setActiveSubTab('roles')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              activeSubTab === 'roles' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-600 hover:text-neutral-900'
+            }`}
+          >
+            Roles ({roles.length})
+          </button>
+          <button
+            onClick={() => setActiveSubTab('invitations')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              activeSubTab === 'invitations' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-600 hover:text-neutral-900'
+            }`}
+          >
+            Pending Invites ({invitations.length})
+          </button>
+        </div>
+        <button
+          onClick={() => setShowInviteModal(true)}
+          className="flex items-center gap-2 px-4 py-2.5 bg-neutral-900 text-white rounded-xl hover:bg-neutral-800 transition-colors"
+        >
+          <Mail className="w-4 h-4" />
+          Invite User
+        </button>
+      </div>
+
+      {/* Users List */}
+      {activeSubTab === 'users' && (
+        <div className="bg-white rounded-2xl border border-neutral-100 overflow-hidden">
+          <table className="w-full">
+            <thead className="bg-neutral-50 border-b border-neutral-100">
+              <tr>
+                <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-900 uppercase tracking-wider">User</th>
+                <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-900 uppercase tracking-wider">Role</th>
+                <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-900 uppercase tracking-wider">Status</th>
+{canViewFinancials && <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-900 uppercase tracking-wider">Hourly Rate</th>}
+                <th className="w-16"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-neutral-100">
+              {users.map((user) => (
+                <tr key={user.id} className="hover:bg-neutral-50 transition-colors">
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-600 font-medium">
+                        {user.full_name?.charAt(0)?.toUpperCase() || 'U'}
+                      </div>
+                      <div>
+                        <p className="font-medium text-neutral-900">{user.full_name || 'Unknown'}</p>
+                        <p className="text-sm text-neutral-500">{user.email}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${getRoleColor(getRoleName(user.role_id))}`}>
+                      {getRoleName(user.role_id)}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
+                      user.is_active !== false ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
+                    }`}>
+                      {user.is_active !== false ? 'Active' : 'Inactive'}
+                    </span>
+                  </td>
+{canViewFinancials && <td className="px-6 py-4 text-neutral-600">
+                    {user.hourly_rate ? `$${user.hourly_rate}/hr` : '-'}
+                  </td>}
+                  <td className="px-6 py-4 relative">
+                    <button
+                      onClick={() => setMenuOpen(menuOpen === user.id ? null : user.id)}
+                      className="p-1.5 hover:bg-neutral-100 rounded text-neutral-400 hover:text-neutral-600"
+                    >
+                      <MoreVertical className="w-4 h-4" />
+                    </button>
+                    {menuOpen === user.id && (
+                      <div className="absolute right-6 top-full mt-1 bg-white border border-neutral-200 rounded-lg shadow-lg py-1 z-20 min-w-[140px]">
+                        <button
+                          onClick={() => { setEditingUser(user); setShowEditUserModal(true); setMenuOpen(null); }}
+                          className="w-full px-4 py-2 text-left text-sm hover:bg-neutral-50 flex items-center gap-2"
+                        >
+                          <Edit2 className="w-4 h-4" /> Edit User
+                        </button>
+                        {user.id !== currentUserId && (
+                          user.is_active !== false ? (
+                            <button
+                              onClick={() => handleDeactivateUser(user.id)}
+                              className="w-full px-4 py-2 text-left text-sm hover:bg-red-50 text-red-600 flex items-center gap-2"
+                            >
+                              <UserX className="w-4 h-4" /> Deactivate
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleActivateUser(user.id)}
+                              className="w-full px-4 py-2 text-left text-sm hover:bg-emerald-50 text-emerald-600 flex items-center gap-2"
+                            >
+                              <UserCheck className="w-4 h-4" /> Activate
+                            </button>
+                          )
+                        )}
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {users.length === 0 && (
+            <div className="p-12 text-center text-neutral-500">No users found</div>
+          )}
+        </div>
+      )}
+
+      {/* Roles List */}
+      {activeSubTab === 'roles' && (
+        <div className="bg-white rounded-2xl border border-neutral-100 overflow-hidden">
+          <div className="p-6 border-b border-neutral-100 flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold text-neutral-900">Permission Roles</h3>
+              <p className="text-sm text-neutral-500 mt-1">Define access levels for your team members</p>
+            </div>
+            <button
+              onClick={() => { setEditingRole(null); setShowRoleModal(true); }}
+              className="flex items-center gap-2 px-4 py-2 bg-neutral-900 text-white rounded-lg hover:bg-neutral-800 text-sm"
+            >
+              <Plus className="w-4 h-4" /> Add Role
+            </button>
+          </div>
+          <div className="divide-y divide-neutral-100">
+            {roles.map((role) => (
+              <div key={role.id} className="p-6">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-medium text-neutral-900">{role.name}</h4>
+                      {role.is_system && (
+                        <span className="px-2 py-0.5 rounded text-xs bg-neutral-100 text-neutral-600">System</span>
+                      )}
+                    </div>
+                    <p className="text-sm text-neutral-500 mt-1">{role.description}</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${getRoleColor(role.name)}`}>
+                      {users.filter(u => u.role_id === role.id).length} users
+                    </span>
+                    <div className="relative">
+                      <button
+                        onClick={() => setRoleMenuOpen(roleMenuOpen === role.id ? null : role.id)}
+                        className="p-1.5 hover:bg-neutral-100 rounded text-neutral-400 hover:text-neutral-600"
+                      >
+                        <MoreVertical className="w-4 h-4" />
+                      </button>
+                      {roleMenuOpen === role.id && (
+                        <div className="absolute right-0 top-full mt-1 bg-white border border-neutral-200 rounded-lg shadow-lg py-1 z-20 min-w-[120px]">
+                          <button
+                            onClick={() => { setEditingRole(role); setShowRoleModal(true); setRoleMenuOpen(null); }}
+                            className="w-full px-4 py-2 text-left text-sm hover:bg-neutral-50 flex items-center gap-2"
+                          >
+                            <Edit2 className="w-4 h-4" /> Edit
+                          </button>
+                          {!role.is_system && (
+                            <button
+                              onClick={() => handleDeleteRole(role.id)}
+                              className="w-full px-4 py-2 text-left text-sm hover:bg-red-50 text-red-600 flex items-center gap-2"
+                            >
+                              <Trash2 className="w-4 h-4" /> Delete
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                {role.permissions && (
+                  <div className="mt-4 grid grid-cols-5 gap-4">
+                    {Object.entries(role.permissions).map(([module, perms]) => (
+                      <div key={module} className="bg-neutral-50 rounded-lg p-3">
+                        <p className="text-xs font-semibold text-neutral-900 uppercase mb-2">{module}</p>
+                        <div className="space-y-1">
+                          {['view', 'create', 'edit', 'delete'].map((action) => (
+                            <div key={action} className="flex items-center gap-1.5">
+                              <div className={`w-3 h-3 rounded-full ${(perms as any)[action] ? 'bg-emerald-500' : 'bg-neutral-300'}`} />
+                              <span className="text-xs text-neutral-600 capitalize">{action}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Pending Invitations */}
+      {activeSubTab === 'invitations' && (
+        <div className="bg-white rounded-2xl border border-neutral-100 overflow-hidden">
+          {invitations.length === 0 ? (
+            <div className="p-12 text-center">
+              <Mail className="w-12 h-12 text-neutral-300 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-neutral-900 mb-2">No pending invitations</h3>
+              <p className="text-neutral-500 mb-4">Invite team members to join your company</p>
+              <button
+                onClick={() => setShowInviteModal(true)}
+                className="px-4 py-2 bg-neutral-900 text-white rounded-lg hover:bg-neutral-800"
+              >
+                Send Invitation
+              </button>
+            </div>
+          ) : (
+            <table className="w-full">
+              <thead className="bg-neutral-50 border-b border-neutral-100">
+                <tr>
+                  <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-900 uppercase tracking-wider">Email</th>
+                  <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-900 uppercase tracking-wider">Role</th>
+                  <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-900 uppercase tracking-wider">Sent</th>
+                  <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-900 uppercase tracking-wider">Expires</th>
+                  <th className="w-24"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-neutral-100">
+                {invitations.map((invitation) => (
+                  <tr key={invitation.id} className="hover:bg-neutral-50">
+                    <td className="px-6 py-4 font-medium text-neutral-900">{invitation.email}</td>
+                    <td className="px-6 py-4">
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${getRoleColor((invitation.role as any)?.name || 'Unknown')}`}>
+                        {(invitation.role as any)?.name || 'No Role'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-neutral-600">
+                      {invitation.created_at ? new Date(invitation.created_at).toLocaleDateString() : '-'}
+                    </td>
+                    <td className="px-6 py-4 text-neutral-600">
+                      {invitation.expires_at ? new Date(invitation.expires_at).toLocaleDateString() : '-'}
+                    </td>
+                    <td className="px-6 py-4">
+                      <button
+                        onClick={() => handleCancelInvitation(invitation.id)}
+                        className="text-red-600 hover:text-red-700 text-sm font-medium"
+                      >
+                        Cancel
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
+
+      {/* Invite User Modal */}
+      {showInviteModal && (
+        <InviteUserModal
+          companyId={companyId}
+          currentUserId={currentUserId}
+          roles={roles}
+          onClose={() => setShowInviteModal(false)}
+          onInvite={() => { loadData(); setShowInviteModal(false); }}
+        />
+      )}
+
+      {/* Edit User Modal */}
+      {showEditUserModal && editingUser && (
+        <EditUserModal
+          user={editingUser}
+          roles={roles}
+          onClose={() => { setShowEditUserModal(false); setEditingUser(null); }}
+          onSave={() => { loadData(); setShowEditUserModal(false); setEditingUser(null); }}
+        />
+      )}
+
+      {/* Role Modal */}
+      {showRoleModal && (
+        <RoleModal
+          role={editingRole}
+          companyId={companyId}
+          onClose={() => { setShowRoleModal(false); setEditingRole(null); }}
+          onSave={() => { loadData(); setShowRoleModal(false); setEditingRole(null); }}
+        />
+      )}
+    </div>
+  );
+}
+
+function InviteUserModal({ companyId, currentUserId, roles, onClose, onInvite }: {
+  companyId: string;
+  currentUserId: string;
+  roles: Role[];
+  onClose: () => void;
+  onInvite: () => void;
+}) {
+  const [email, setEmail] = useState('');
+  const [roleId, setRoleId] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) return;
+    
+    setSaving(true);
+    setError(null);
+    
+    try {
+      await userManagementApi.createInvitation({
+        company_id: companyId,
+        email,
+        role_id: roleId || null,
+        invited_by: currentUserId,
+      });
+      onInvite();
+    } catch (err: any) {
+      console.error('Failed to send invitation:', err);
+      setError(err?.message || 'Failed to send invitation');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-2xl w-full max-w-md p-6 mx-4">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-semibold text-neutral-900">Invite User</h2>
+          <button onClick={onClose} className="p-2 hover:bg-neutral-100 rounded-lg">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {error && (
+            <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">{error}</div>
+          )}
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 mb-1.5">Email Address *</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-400 focus:border-transparent outline-none"
+              placeholder="user@example.com"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 mb-1.5">Role</label>
+            <select
+              value={roleId}
+              onChange={(e) => setRoleId(e.target.value)}
+              className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-400 focus:border-transparent outline-none"
+            >
+              <option value="">Select a role</option>
+              {roles.map(role => (
+                <option key={role.id} value={role.id}>{role.name}</option>
+              ))}
+            </select>
+          </div>
+          <p className="text-sm text-neutral-500">
+            An invitation email will be sent with a link to join your company.
+          </p>
+          <div className="flex gap-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2.5 border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="flex-1 px-4 py-2.5 bg-neutral-900 text-white rounded-xl hover:bg-neutral-800 transition-colors disabled:opacity-50"
+            >
+              {saving ? 'Sending...' : 'Send Invitation'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function EditUserModal({ user, roles, onClose, onSave }: {
+  user: UserProfile;
+  roles: Role[];
+  onClose: () => void;
+  onSave: () => void;
+}) {
+  const [fullName, setFullName] = useState(user.full_name || '');
+  const [roleId, setRoleId] = useState(user.role_id || '');
+  const [hourlyRate, setHourlyRate] = useState(user.hourly_rate?.toString() || '');
+  const [isBillable, setIsBillable] = useState(user.is_billable !== false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    setError(null);
+    
+    try {
+      await userManagementApi.updateUserProfile(user.id, {
+        full_name: fullName,
+        role_id: roleId || null,
+        hourly_rate: hourlyRate ? parseFloat(hourlyRate) : null,
+        is_billable: isBillable,
+      });
+      onSave();
+    } catch (err: any) {
+      console.error('Failed to update user:', err);
+      setError(err?.message || 'Failed to update user');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-2xl w-full max-w-md p-6 mx-4">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-semibold text-neutral-900">Edit User</h2>
+          <button onClick={onClose} className="p-2 hover:bg-neutral-100 rounded-lg">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {error && (
+            <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">{error}</div>
+          )}
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 mb-1.5">Full Name</label>
+            <input
+              type="text"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-400 focus:border-transparent outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 mb-1.5">Email</label>
+            <input
+              type="email"
+              value={user.email}
+              disabled
+              className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 bg-neutral-50 text-neutral-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 mb-1.5">Role</label>
+            <select
+              value={roleId}
+              onChange={(e) => setRoleId(e.target.value)}
+              className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-400 focus:border-transparent outline-none"
+            >
+              <option value="">No role assigned</option>
+              {roles.map(role => (
+                <option key={role.id} value={role.id}>{role.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 mb-1.5">Hourly Rate ($)</label>
+            <input
+              type="number"
+              step="0.01"
+              value={hourlyRate}
+              onChange={(e) => setHourlyRate(e.target.value)}
+              className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-400 focus:border-transparent outline-none"
+              placeholder="150.00"
+            />
+            <p className="mt-1.5 text-xs text-neutral-500">Used as default rate for time entry billing calculations</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="billable"
+              checked={isBillable}
+              onChange={(e) => setIsBillable(e.target.checked)}
+              className="rounded border-neutral-300 text-neutral-900 focus:ring-neutral-500"
+            />
+            <label htmlFor="billable" className="text-sm text-neutral-700">Billable employee</label>
+          </div>
+          <div className="flex gap-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2.5 border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="flex-1 px-4 py-2.5 bg-neutral-900 text-white rounded-xl hover:bg-neutral-800 transition-colors disabled:opacity-50"
+            >
+              {saving ? 'Saving...' : 'Save Changes'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+
+// Role Modal - Create/Edit roles with permission matrix
+function RoleModal({ role, companyId, onClose, onSave }: {
+  role: Role | null;
+  companyId: string;
+  onClose: () => void;
+  onSave: () => void;
+}) {
+  const modules = ['projects', 'time', 'invoicing', 'quotes', 'settings'];
+  const actions = ['view', 'create', 'edit', 'delete'];
+  
+  const [name, setName] = useState(role?.name || '');
+  const [description, setDescription] = useState(role?.description || '');
+  const [canViewFinancials, setCanViewFinancials] = useState(() => {
+    if (role?.permissions && typeof (role.permissions as any).canViewFinancials === 'boolean') {
+      return (role.permissions as any).canViewFinancials;
+    }
+    return true; // Default to true for new roles
+  });
+  const [canApprove, setCanApprove] = useState(() => {
+    if (role?.permissions && typeof (role.permissions as any).approvals === 'object') {
+      return (role.permissions as any).approvals?.approve || false;
+    }
+    return false;
+  });
+  const [canViewApprovals, setCanViewApprovals] = useState(() => {
+    if (role?.permissions && typeof (role.permissions as any).approvals === 'object') {
+      return (role.permissions as any).approvals?.view || false;
+    }
+    return false;
+  });
+  const [permissions, setPermissions] = useState<Record<string, Record<string, boolean>>>(() => {
+    if (role?.permissions) {
+      return role.permissions as Record<string, Record<string, boolean>>;
+    }
+    const initial: Record<string, Record<string, boolean>> = {};
+    modules.forEach(m => {
+      initial[m] = { view: false, create: false, edit: false, delete: false };
+    });
+    return initial;
+  });
+
+  // Preset role configurations
+  const applyPreset = (preset: 'admin' | 'manager' | 'team_member') => {
+    if (preset === 'admin') {
+      setName('Admin');
+      setDescription('Full access to all features');
+      setCanViewFinancials(true);
+      const newPerms: Record<string, Record<string, boolean>> = {};
+      modules.forEach(m => {
+        newPerms[m] = { view: true, create: true, edit: true, delete: true };
+      });
+      setPermissions(newPerms);
+    } else if (preset === 'manager') {
+      setName('Manager');
+      setDescription('Manage projects and team');
+      setCanViewFinancials(true);
+      setPermissions({
+        projects: { view: true, create: true, edit: true, delete: false },
+        time: { view: true, create: true, edit: true, delete: true },
+        invoicing: { view: true, create: true, edit: true, delete: false },
+        quotes: { view: true, create: true, edit: true, delete: false },
+        settings: { view: true, create: false, edit: false, delete: false },
+      });
+    } else if (preset === 'team_member') {
+      setName('Team Member');
+      setDescription('Work on projects and log time without financial access');
+      setCanViewFinancials(false);
+      setPermissions({
+        projects: { view: true, create: true, edit: true, delete: true },
+        time: { view: true, create: true, edit: true, delete: true },
+        invoicing: { view: false, create: false, edit: false, delete: false },
+        quotes: { view: false, create: false, edit: false, delete: false },
+        settings: { view: false, create: false, edit: false, delete: false },
+      });
+    }
+  };
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const togglePermission = (module: string, action: string) => {
+    setPermissions(prev => ({
+      ...prev,
+      [module]: {
+        ...prev[module],
+        [action]: !prev[module][action],
+      }
+    }));
+  };
+
+  const toggleModule = (module: string, value: boolean) => {
+    setPermissions(prev => ({
+      ...prev,
+      [module]: { view: value, create: value, edit: value, delete: value }
+    }));
+  };
+
+  const toggleAll = (value: boolean) => {
+    const newPerms: Record<string, Record<string, boolean>> = {};
+    modules.forEach(m => {
+      newPerms[m] = { view: value, create: value, edit: value, delete: value };
+    });
+    setPermissions(newPerms);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) {
+      setError('Role name is required');
+      return;
+    }
+    
+    setSaving(true);
+    setError(null);
+    
+    try {
+      const permissionsWithFinancials = { ...permissions, canViewFinancials, approvals: { view: canViewApprovals, approve: canApprove } };
+      if (role) {
+        await userManagementApi.updateRole(role.id, {
+          name: name.trim(),
+          description: description.trim() || null,
+          permissions: permissionsWithFinancials,
+        });
+      } else {
+        await userManagementApi.createRole({
+          company_id: companyId,
+          name: name.trim(),
+          description: description.trim() || null,
+          permissions: permissionsWithFinancials,
+          is_system: false,
+        });
+      }
+      onSave();
+    } catch (err: any) {
+      console.error('Failed to save role:', err);
+      setError(err?.message || 'Failed to save role');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-2xl w-full max-w-2xl p-6 mx-4 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-semibold text-neutral-900">
+            {role ? 'Edit Role' : 'Create Role'}
+          </h2>
+          <button onClick={onClose} className="p-2 hover:bg-neutral-100 rounded-lg">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {error && (
+            <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">{error}</div>
+          )}
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-1.5">Role Name *</label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                disabled={role?.is_system}
+                className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-400 focus:border-transparent outline-none disabled:bg-neutral-100"
+                placeholder="e.g. Project Manager"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-1.5">Description</label>
+              <input
+                type="text"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-400 focus:border-transparent outline-none"
+                placeholder="Brief description of this role"
+              />
+            </div>
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <label className="block text-sm font-medium text-neutral-900">Permissions</label>
+              <div className="flex gap-2">
+                <span className="text-xs text-neutral-500 mr-2">Presets:</span>
+                <button type="button" onClick={() => applyPreset('admin')} className="text-xs px-2 py-1 bg-purple-100 text-purple-700 rounded hover:bg-purple-200">
+                  Admin
+                </button>
+                <button type="button" onClick={() => applyPreset('manager')} className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200">
+                  Manager
+                </button>
+                <button type="button" onClick={() => applyPreset('team_member')} className="text-xs px-2 py-1 bg-amber-100 text-amber-700 rounded hover:bg-amber-200">
+                  Team Member
+                </button>
+                <button type="button" onClick={() => toggleAll(true)} className="text-xs px-2 py-1 bg-emerald-100 text-emerald-700 rounded hover:bg-emerald-200">
+                  Grant All
+                </button>
+                <button type="button" onClick={() => toggleAll(false)} className="text-xs px-2 py-1 bg-neutral-100 text-neutral-700 rounded hover:bg-neutral-200">
+                  Revoke All
+                </button>
+              </div>
+            </div>
+            
+            <div className="border border-neutral-200 rounded-xl overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-neutral-50 border-b border-neutral-200">
+                  <tr>
+                    <th className="text-left px-4 py-3 font-medium text-neutral-600">Module</th>
+                    {actions.map(action => (
+                      <th key={action} className="text-center px-3 py-3 font-medium text-neutral-600 capitalize w-20">
+                        {action}
+                      </th>
+                    ))}
+                    <th className="text-center px-3 py-3 font-medium text-neutral-600 w-16">All</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-neutral-100">
+                  {modules.map(module => {
+                    const allChecked = actions.every(a => permissions[module]?.[a]);
+                    return (
+                      <tr key={module} className="hover:bg-neutral-50">
+                        <td className="px-4 py-3 font-medium text-neutral-900 capitalize">{module}</td>
+                        {actions.map(action => (
+                          <td key={action} className="text-center px-3 py-3">
+                            <input
+                              type="checkbox"
+                              checked={permissions[module]?.[action] || false}
+                              onChange={() => togglePermission(module, action)}
+                              className="w-4 h-4 rounded border-neutral-300 text-neutral-900 focus:ring-neutral-500"
+                            />
+                          </td>
+                        ))}
+                        <td className="text-center px-3 py-3">
+                          <input
+                            type="checkbox"
+                            checked={allChecked}
+                            onChange={() => toggleModule(module, !allChecked)}
+                            className="w-4 h-4 rounded border-neutral-300 text-neutral-900 focus:ring-neutral-500"
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Financial Access */}
+          <div className="p-4 bg-amber-50 rounded-xl border border-amber-200">
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={canViewFinancials}
+                onChange={(e) => setCanViewFinancials(e.target.checked)}
+                className="w-5 h-5 rounded border-neutral-300 text-amber-600 focus:ring-amber-500"
+              />
+              <div>
+                <span className="font-medium text-neutral-900">Can View Financial Data</span>
+                <p className="text-sm text-neutral-500">Allow access to dollar amounts, rates, invoicing, and budget information</p>
+              </div>
+            </label>
+          </div>
+
+          {/* Approval Access */}
+          <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-200 space-y-3">
+            <div className="font-medium text-neutral-900">Approval Permissions</div>
+            <p className="text-sm text-neutral-500">Control access to approve time entries and expenses</p>
+            <div className="flex gap-6">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={canViewApprovals}
+                  onChange={(e) => setCanViewApprovals(e.target.checked)}
+                  className="w-4 h-4 rounded border-neutral-300 text-emerald-600 focus:ring-emerald-500"
+                />
+                <span className="text-sm text-neutral-700">View Pending Approvals</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={canApprove}
+                  onChange={(e) => setCanApprove(e.target.checked)}
+                  className="w-4 h-4 rounded border-neutral-300 text-emerald-600 focus:ring-emerald-500"
+                />
+                <span className="text-sm text-neutral-700">Can Approve/Reject</span>
+              </label>
+            </div>
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2.5 border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="flex-1 px-4 py-2.5 bg-neutral-900 text-white rounded-xl hover:bg-neutral-800 transition-colors disabled:opacity-50"
+            >
+              {saving ? 'Saving...' : role ? 'Update Role' : 'Create Role'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// Profile Tab Component - User's personal settings
+function ProfileTab() {
+  const { profile, refreshProfile } = useAuth();
+  const [fullName, setFullName] = useState(profile?.full_name || '');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+
+  useEffect(() => {
+    if (profile) {
+      setFullName(profile.full_name || '');
+    }
+  }, [profile]);
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!profile?.id) return;
+    
+    setSaving(true);
+    setError(null);
+    setSuccess(false);
+    
+    try {
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({
+          full_name: fullName || null,
+        })
+        .eq('id', profile.id);
+      
+      if (updateError) throw updateError;
+      
+      if (refreshProfile) await refreshProfile();
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
+    } catch (err: any) {
+      console.error('Failed to update profile:', err);
+      setError(err?.message || 'Failed to save changes');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-2xl p-8 border border-neutral-100">
+      <h2 className="text-xl font-semibold text-neutral-900 mb-6">My Profile</h2>
+      
+      <form onSubmit={handleSave} className="space-y-6 max-w-lg">
+        {error && (
+          <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm">
+            {error}
+          </div>
+        )}
+        {success && (
+          <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl text-sm">
+            Profile updated successfully!
+          </div>
+        )}
+
+        <div>
+          <label className="block text-sm font-medium text-neutral-700 mb-1.5">Full Name</label>
+          <input
+            type="text"
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            placeholder="Your name"
+            className="w-full h-12 px-4 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-400 outline-none"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-neutral-700 mb-1.5">Email</label>
+          <input
+            type="email"
+            value={profile?.email || ''}
+            disabled
+            className="w-full h-12 px-4 rounded-xl border border-neutral-200 bg-neutral-50 text-neutral-500"
+          />
+        </div>
+
+
+
+        <div className="pt-4">
+          <button
+            type="submit"
+            disabled={saving}
+            className="h-12 px-6 bg-neutral-900 text-white font-medium rounded-xl hover:bg-neutral-800 transition-colors disabled:opacity-50"
+          >
+            {saving ? 'Saving...' : 'Save Changes'}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+// Invoice Settings Tab Component
+function InvoicingSettingsTab({ companyId }: { companyId: string }) {
+  const [activeSubTab, setActiveSubTab] = useState<'address' | 'defaults' | 'calculators' | 'pdf' | 'email'>('address');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+
+  // Address Info state
+  const [invoiceCompanyName, setInvoiceCompanyName] = useState('');
+  const [invoiceAddress, setInvoiceAddress] = useState('');
+  const [invoiceCity, setInvoiceCity] = useState('');
+  const [invoiceState, setInvoiceState] = useState('');
+  const [invoiceZip, setInvoiceZip] = useState('');
+  const [invoiceCountry, setInvoiceCountry] = useState('USA');
+  const [invoicePhone, setInvoicePhone] = useState('');
+  const [invoiceWebsite, setInvoiceWebsite] = useState('');
+  const [invoiceLogoUrl, setInvoiceLogoUrl] = useState('');
+  const [addressBlockPosition, setAddressBlockPosition] = useState<'left' | 'right'>('left');
+
+  const subTabs = [
+    { id: 'address', label: 'Address Info', icon: MapPin },
+    { id: 'defaults', label: 'Defaults', icon: Settings },
+    { id: 'calculators', label: 'Calculators', icon: Calculator },
+    { id: 'pdf', label: 'PDF Formats', icon: FileType },
+    { id: 'email', label: 'Email Settings', icon: Send },
+  ];
+
+  useEffect(() => {
+    if (companyId) {
+      loadInvoiceSettings();
+    }
+  }, [companyId]);
+
+  async function loadInvoiceSettings() {
+    setLoading(true);
+    try {
+      const { data } = await supabase
+        .from('invoice_settings')
+        .select('*')
+        .eq('company_id', companyId)
+        .single();
+
+      if (data) {
+        setInvoiceCompanyName(data.company_name || '');
+        setInvoiceAddress(data.address || '');
+        setInvoiceCity(data.city || '');
+        setInvoiceState(data.state || '');
+        setInvoiceZip(data.zip || '');
+        setInvoiceCountry(data.country || 'USA');
+        setInvoicePhone(data.phone || '');
+        setInvoiceWebsite(data.website || '');
+        setInvoiceLogoUrl(data.logo_url || '');
+        setAddressBlockPosition(data.address_block_position || 'left');
+      }
+    } catch (err) {
+      console.error('Failed to load invoice settings:', err);
+    }
+    setLoading(false);
+  }
+
+  async function handleSaveAddressInfo(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    setError(null);
+    setSuccess(false);
+
+    try {
+      const { error: upsertError } = await supabase
+        .from('invoice_settings')
+        .upsert({
+          company_id: companyId,
+          company_name: invoiceCompanyName || null,
+          address: invoiceAddress || null,
+          city: invoiceCity || null,
+          state: invoiceState || null,
+          zip: invoiceZip || null,
+          country: invoiceCountry || null,
+          phone: invoicePhone || null,
+          website: invoiceWebsite || null,
+          logo_url: invoiceLogoUrl || null,
+          address_block_position: addressBlockPosition,
+        }, { onConflict: 'company_id' });
+
+      if (upsertError) throw upsertError;
+
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
+    } catch (err: any) {
+      console.error('Failed to save invoice settings:', err);
+      setError(err?.message || 'Failed to save settings');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !companyId) return;
+
+    if (!file.type.startsWith('image/')) {
+      setError('Please upload an image file');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Image must be less than 5MB');
+      return;
+    }
+
+    setUploadingLogo(true);
+    setError(null);
+
+    try {
+      const ext = file.name.split('.').pop();
+      const filename = `${companyId}/invoice-logo-${Date.now()}.${ext}`;
+
+      const { error } = await supabase.storage
+        .from('company-logos')
+        .upload(filename, file, { cacheControl: '3600', upsert: true });
+
+      if (error) throw error;
+
+      const { data: urlData } = supabase.storage
+        .from('company-logos')
+        .getPublicUrl(filename);
+
+      setInvoiceLogoUrl(urlData.publicUrl);
+    } catch (err: any) {
+      console.error('Failed to upload logo:', err);
+      setError(err?.message || 'Failed to upload logo');
+    } finally {
+      setUploadingLogo(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-2xl border border-neutral-100 p-12">
+        <div className="flex justify-center">
+          <div className="animate-spin w-8 h-8 border-2 border-neutral-600 border-t-transparent rounded-full" />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Sub-tabs */}
+      <div className="flex gap-1 p-1 bg-neutral-100 rounded-xl w-fit">
+        {subTabs.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveSubTab(tab.id as any)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              activeSubTab === tab.id ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-600 hover:text-neutral-900'
+            }`}
+          >
+            <tab.icon className="w-4 h-4" />
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Address Info Tab */}
+      {activeSubTab === 'address' && (
+        <div className="bg-white rounded-2xl p-8 border border-neutral-100">
+          <h2 className="text-xl font-semibold text-neutral-900 mb-2">Invoice Address Info</h2>
+          <p className="text-neutral-500 text-sm mb-6">Configure the company information that appears on your invoices</p>
+
+          <form onSubmit={handleSaveAddressInfo} className="space-y-6">
+            {error && (
+              <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm">{error}</div>
+            )}
+            {success && (
+              <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl text-sm">
+                Settings saved successfully!
+              </div>
+            )}
+
+            {/* Logo Upload */}
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-3">Invoice Logo</label>
+              <div className="flex items-center gap-6">
+                <div
+                  className="w-24 h-24 rounded-xl border-2 border-dashed border-neutral-200 flex items-center justify-center overflow-hidden bg-neutral-50 cursor-pointer hover:border-neutral-400 transition-colors"
+                  onClick={() => logoInputRef.current?.click()}
+                >
+                  {invoiceLogoUrl ? (
+                    <img src={invoiceLogoUrl} alt="Invoice logo" className="w-full h-full object-contain" />
+                  ) : (
+                    <Camera className="w-8 h-8 text-neutral-400" />
+                  )}
+                </div>
+                <div>
+                  <input
+                    ref={logoInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleLogoUpload}
+                    className="hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => logoInputRef.current?.click()}
+                    disabled={uploadingLogo}
+                    className="flex items-center gap-2 px-4 py-2 border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors text-sm font-medium disabled:opacity-50"
+                  >
+                    <Upload className="w-4 h-4" />
+                    {uploadingLogo ? 'Uploading...' : 'Upload Logo'}
+                  </button>
+                  <p className="text-xs text-neutral-500 mt-2">PNG, JPG up to 5MB. Appears on invoice header.</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Company Name */}
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-1.5">Company Name</label>
+              <input
+                type="text"
+                value={invoiceCompanyName}
+                onChange={(e) => setInvoiceCompanyName(e.target.value)}
+                placeholder="Your Company Name"
+                className="w-full h-12 px-4 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-400 outline-none"
+              />
+            </div>
+
+            {/* Address */}
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-1.5">Street Address</label>
+              <input
+                type="text"
+                value={invoiceAddress}
+                onChange={(e) => setInvoiceAddress(e.target.value)}
+                placeholder="123 Business St"
+                className="w-full h-12 px-4 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-400 outline-none"
+              />
+            </div>
+
+            {/* City, State, Zip */}
+            <div className="grid grid-cols-4 gap-4">
+              <div className="col-span-2">
+                <label className="block text-sm font-medium text-neutral-700 mb-1.5">City</label>
+                <input
+                  type="text"
+                  value={invoiceCity}
+                  onChange={(e) => setInvoiceCity(e.target.value)}
+                  placeholder="City"
+                  className="w-full h-12 px-4 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-400 outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1.5">State</label>
+                <input
+                  type="text"
+                  value={invoiceState}
+                  onChange={(e) => setInvoiceState(e.target.value)}
+                  placeholder="TX"
+                  className="w-full h-12 px-4 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-400 outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1.5">ZIP</label>
+                <input
+                  type="text"
+                  value={invoiceZip}
+                  onChange={(e) => setInvoiceZip(e.target.value)}
+                  placeholder="75001"
+                  className="w-full h-12 px-4 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-400 outline-none"
+                />
+              </div>
+            </div>
+
+            {/* Country */}
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-1.5">Country</label>
+              <input
+                type="text"
+                value={invoiceCountry}
+                onChange={(e) => setInvoiceCountry(e.target.value)}
+                placeholder="USA"
+                className="w-full h-12 px-4 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-400 outline-none"
+              />
+            </div>
+
+            {/* Phone & Website */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1.5">Phone</label>
+                <input
+                  type="tel"
+                  value={invoicePhone}
+                  onChange={(e) => setInvoicePhone(e.target.value)}
+                  placeholder="(555) 123-4567"
+                  className="w-full h-12 px-4 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-400 outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1.5">Website</label>
+                <input
+                  type="url"
+                  value={invoiceWebsite}
+                  onChange={(e) => setInvoiceWebsite(e.target.value)}
+                  placeholder="https://yourcompany.com"
+                  className="w-full h-12 px-4 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-400 outline-none"
+                />
+              </div>
+            </div>
+
+            {/* Address Block Position */}
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-3">Address Block Position</label>
+              <p className="text-xs text-neutral-500 mb-3">Choose where your company address appears on the invoice</p>
+              <div className="flex gap-4">
+                <label className={`flex items-center gap-3 px-4 py-3 border rounded-xl cursor-pointer transition-colors ${
+                  addressBlockPosition === 'left' ? 'border-neutral-900 bg-neutral-50' : 'border-neutral-200 hover:border-neutral-300'
+                }`}>
+                  <input
+                    type="radio"
+                    name="addressPosition"
+                    value="left"
+                    checked={addressBlockPosition === 'left'}
+                    onChange={() => setAddressBlockPosition('left')}
+                    className="sr-only"
+                  />
+                  <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                    addressBlockPosition === 'left' ? 'border-neutral-900' : 'border-neutral-300'
+                  }`}>
+                    {addressBlockPosition === 'left' && <div className="w-2 h-2 rounded-full bg-neutral-900" />}
+                  </div>
+                  <span className="text-sm font-medium text-neutral-700">Left Side</span>
+                </label>
+                <label className={`flex items-center gap-3 px-4 py-3 border rounded-xl cursor-pointer transition-colors ${
+                  addressBlockPosition === 'right' ? 'border-neutral-900 bg-neutral-50' : 'border-neutral-200 hover:border-neutral-300'
+                }`}>
+                  <input
+                    type="radio"
+                    name="addressPosition"
+                    value="right"
+                    checked={addressBlockPosition === 'right'}
+                    onChange={() => setAddressBlockPosition('right')}
+                    className="sr-only"
+                  />
+                  <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                    addressBlockPosition === 'right' ? 'border-neutral-900' : 'border-neutral-300'
+                  }`}>
+                    {addressBlockPosition === 'right' && <div className="w-2 h-2 rounded-full bg-neutral-900" />}
+                  </div>
+                  <span className="text-sm font-medium text-neutral-700">Right Side</span>
+                </label>
+              </div>
+            </div>
+
+            <div className="pt-4">
+              <button
+                type="submit"
+                disabled={saving}
+                className="h-12 px-6 bg-neutral-900 text-white font-medium rounded-xl hover:bg-neutral-800 transition-colors disabled:opacity-50"
+              >
+                {saving ? 'Saving...' : 'Save Address Info'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Calculators Tab */}
+      {activeSubTab === 'calculators' && (
+        <CalculatorsTab companyId={companyId} />
+      )}
+
+      {/* PDF Formats Tab */}
+      {activeSubTab === 'pdf' && (
+        <PDFFormatsTab companyId={companyId} />
+      )}
+
+      {/* Placeholder for other tabs */}
+      {(activeSubTab === 'defaults' || activeSubTab === 'email') && (
+        <div className="bg-white rounded-2xl p-12 border border-neutral-100 text-center">
+          <div className="w-16 h-16 bg-neutral-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            {activeSubTab === 'defaults' && <Settings className="w-8 h-8 text-neutral-400" />}
+            {activeSubTab === 'email' && <Send className="w-8 h-8 text-neutral-400" />}
+          </div>
+          <h3 className="text-lg font-semibold text-neutral-900 mb-2">
+            {subTabs.find(t => t.id === activeSubTab)?.label}
+          </h3>
+          <p className="text-neutral-500">This section will be implemented next</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Calculator types definition
+const CALCULATOR_TYPES = [
+  {
+    id: 'manual',
+    name: 'Manual Invoice',
+    description: 'Create a brand new invoice for a specific dollar amount and ignore billable time/expenses.',
+    icon: '📝',
+  },
+  {
+    id: 'time_materials',
+    name: 'Time & Materials (T&M)',
+    description: 'Create an invoice which bills hours (based on the billing rate(s) you\'ve setup) and expenses.',
+    icon: '⏱️',
+  },
+  {
+    id: 'fixed_fee',
+    name: 'Fixed Fee',
+    description: 'Bill based on the tasks you have defined for each project. You\'ll have the option to bill a percentage of each task, or to bill 100% of any completed tasks.',
+    icon: '💰',
+  },
+  {
+    id: 'item_based',
+    name: 'Item Based Billing',
+    description: 'Bill based on the task fee types you have defined for each project. You\'ll have the option to bill each task as a T&M, Milestone, Percent Complete, Retainer, or Non-billable line item.',
+    icon: '📋',
+  },
+  {
+    id: 'project_monthly',
+    name: 'Project Monthly Fee',
+    description: 'Bill based on the project monthly fee. Ideal for recurring retainer arrangements.',
+    icon: '📅',
+  },
+];
+
+// Calculators Tab Component
+function CalculatorsTab({ companyId }: { companyId: string }) {
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [defaultCalculator, setDefaultCalculator] = useState('time_materials');
+  const [enabledCalculators, setEnabledCalculators] = useState<string[]>(CALCULATOR_TYPES.map(c => c.id));
+  const [success, setSuccess] = useState(false);
+
+  useEffect(() => {
+    loadSettings();
+  }, [companyId]);
+
+  async function loadSettings() {
+    setLoading(true);
+    try {
+      const { data } = await supabase
+        .from('invoice_settings')
+        .select('default_calculator, enabled_calculators')
+        .eq('company_id', companyId)
+        .single();
+
+      if (data) {
+        setDefaultCalculator(data.default_calculator || 'time_materials');
+        setEnabledCalculators(data.enabled_calculators || CALCULATOR_TYPES.map(c => c.id));
+      }
+    } catch (err) {
+      console.error('Failed to load calculator settings:', err);
+    }
+    setLoading(false);
+  }
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from('invoice_settings')
+        .upsert({
+          company_id: companyId,
+          default_calculator: defaultCalculator,
+          enabled_calculators: enabledCalculators,
+        }, { onConflict: 'company_id' });
+
+      if (error) throw error;
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
+    } catch (err) {
+      console.error('Failed to save calculator settings:', err);
+    }
+    setSaving(false);
+  }
+
+  const toggleCalculator = (id: string) => {
+    if (enabledCalculators.includes(id)) {
+      if (enabledCalculators.length > 1) {
+        setEnabledCalculators(enabledCalculators.filter(c => c !== id));
+        if (defaultCalculator === id) {
+          setDefaultCalculator(enabledCalculators.find(c => c !== id) || 'time_materials');
+        }
+      }
+    } else {
+      setEnabledCalculators([...enabledCalculators, id]);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-2xl border border-neutral-100 p-12">
+        <div className="flex justify-center">
+          <div className="animate-spin w-8 h-8 border-2 border-neutral-600 border-t-transparent rounded-full" />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-2xl p-8 border border-neutral-100">
+      <h2 className="text-xl font-semibold text-neutral-900 mb-2">Invoice Calculators</h2>
+      <p className="text-neutral-500 text-sm mb-6">Choose which invoice calculation methods are available when creating invoices</p>
+
+      {success && (
+        <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl text-sm mb-6">
+          Calculator settings saved successfully!
+        </div>
+      )}
+
+      <div className="space-y-4 mb-8">
+        {CALCULATOR_TYPES.map((calc) => (
+          <div
+            key={calc.id}
+            className={`p-5 rounded-xl border transition-colors ${
+              enabledCalculators.includes(calc.id) 
+                ? 'border-neutral-200 bg-white' 
+                : 'border-neutral-100 bg-neutral-50 opacity-60'
+            }`}
+          >
+            <div className="flex items-start gap-4">
+              <div className="text-2xl">{calc.icon}</div>
+              <div className="flex-1">
+                <div className="flex items-center gap-3 mb-1">
+                  <h3 className="font-semibold text-neutral-900">{calc.name}</h3>
+                  {defaultCalculator === calc.id && (
+                    <span className="px-2 py-0.5 text-xs font-medium bg-emerald-100 text-emerald-700 rounded-full">
+                      Default
+                    </span>
+                  )}
+                </div>
+                <p className="text-sm text-neutral-600">{calc.description}</p>
+              </div>
+              <div className="flex items-center gap-3">
+                {enabledCalculators.includes(calc.id) && defaultCalculator !== calc.id && (
+                  <button
+                    onClick={() => setDefaultCalculator(calc.id)}
+                    className="text-xs text-neutral-500 hover:text-neutral-700 underline"
+                  >
+                    Set as default
+                  </button>
+                )}
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={enabledCalculators.includes(calc.id)}
+                    onChange={() => toggleCalculator(calc.id)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-neutral-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-neutral-400 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-neutral-900"></div>
+                </label>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <button
+        onClick={handleSave}
+        disabled={saving}
+        className="h-12 px-6 bg-neutral-900 text-white font-medium rounded-xl hover:bg-neutral-800 transition-colors disabled:opacity-50"
+      >
+        {saving ? 'Saving...' : 'Save Calculator Settings'}
+      </button>
+    </div>
+  );
+}
+
+// PDF Template type
+interface PDFTemplate {
+  id: string;
+  name: string;
+  description: string;
+  is_default: boolean;
+  show_logo: boolean;
+  logo_position: string;
+  show_company_address: boolean;
+  show_client_address: boolean;
+  include_line_items: boolean;
+  include_time_detail: boolean;
+  include_expense_detail: boolean;
+  include_budget_status: boolean;
+  include_receipts: boolean;
+  font_name: string;
+  font_size: number;
+  created_at: string;
+}
+
+// PDF Formats Tab Component
+function PDFFormatsTab({ companyId }: { companyId: string }) {
+  const [templates, setTemplates] = useState<PDFTemplate[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<PDFTemplate | null>(null);
+
+  useEffect(() => {
+    loadTemplates();
+  }, [companyId]);
+
+  async function loadTemplates() {
+    setLoading(true);
+    try {
+      const { data } = await supabase
+        .from('invoice_pdf_templates')
+        .select('*')
+        .eq('company_id', companyId)
+        .order('created_at', { ascending: false });
+
+      setTemplates(data || []);
+    } catch (err) {
+      console.error('Failed to load PDF templates:', err);
+    }
+    setLoading(false);
+  }
+
+  async function handleDelete(id: string) {
+    if (!confirm('Are you sure you want to delete this PDF template?')) return;
+    try {
+      await supabase.from('invoice_pdf_templates').delete().eq('id', id);
+      loadTemplates();
+    } catch (err) {
+      console.error('Failed to delete template:', err);
+    }
+  }
+
+  async function setAsDefault(id: string) {
+    try {
+      // First remove default from all templates
+      await supabase
+        .from('invoice_pdf_templates')
+        .update({ is_default: false })
+        .eq('company_id', companyId);
+      
+      // Then set this one as default
+      await supabase
+        .from('invoice_pdf_templates')
+        .update({ is_default: true })
+        .eq('id', id);
+      
+      loadTemplates();
+    } catch (err) {
+      console.error('Failed to set default:', err);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-2xl border border-neutral-100 p-12">
+        <div className="flex justify-center">
+          <div className="animate-spin w-8 h-8 border-2 border-neutral-600 border-t-transparent rounded-full" />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-white rounded-2xl p-8 border border-neutral-100">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-xl font-semibold text-neutral-900 mb-1">PDF Format Templates</h2>
+            <p className="text-neutral-500 text-sm">Create custom PDF styles for your invoices</p>
+          </div>
+          <button
+            onClick={() => { setEditingTemplate(null); setShowModal(true); }}
+            className="flex items-center gap-2 px-4 py-2.5 bg-neutral-900 text-white rounded-xl hover:bg-neutral-800 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            Create Template
+          </button>
+        </div>
+
+        {templates.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="w-16 h-16 bg-neutral-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <FileType className="w-8 h-8 text-neutral-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-neutral-900 mb-2">No PDF templates yet</h3>
+            <p className="text-neutral-500 mb-4">Create your first PDF template to customize how your invoices look</p>
+            <button
+              onClick={() => { setEditingTemplate(null); setShowModal(true); }}
+              className="px-4 py-2 bg-neutral-900 text-white rounded-lg hover:bg-neutral-800"
+            >
+              Create Your First Template
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {templates.map((template) => (
+              <div
+                key={template.id}
+                className="p-5 rounded-xl border border-neutral-200 hover:border-neutral-300 transition-colors"
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="font-semibold text-neutral-900">{template.name}</h3>
+                      {template.is_default && (
+                        <span className="px-2 py-0.5 text-xs font-medium bg-emerald-100 text-emerald-700 rounded-full">
+                          Default
+                        </span>
+                      )}
+                    </div>
+                    {template.description && (
+                      <p className="text-sm text-neutral-500">{template.description}</p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => { setEditingTemplate(template); setShowModal(true); }}
+                      className="p-1.5 text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 rounded"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(template.id)}
+                      className="p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {template.include_line_items && (
+                    <span className="px-2 py-1 text-xs bg-neutral-100 text-neutral-600 rounded">Line Items</span>
+                  )}
+                  {template.include_time_detail && (
+                    <span className="px-2 py-1 text-xs bg-neutral-100 text-neutral-600 rounded">Time Detail</span>
+                  )}
+                  {template.include_expense_detail && (
+                    <span className="px-2 py-1 text-xs bg-neutral-100 text-neutral-600 rounded">Expenses</span>
+                  )}
+                  {template.include_budget_status && (
+                    <span className="px-2 py-1 text-xs bg-neutral-100 text-neutral-600 rounded">Budget Status</span>
+                  )}
+                  {template.include_receipts && (
+                    <span className="px-2 py-1 text-xs bg-neutral-100 text-neutral-600 rounded">Receipts</span>
+                  )}
+                </div>
+                {!template.is_default && (
+                  <button
+                    onClick={() => setAsDefault(template.id)}
+                    className="text-xs text-neutral-500 hover:text-neutral-700 underline"
+                  >
+                    Set as default
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* PDF Template Modal */}
+      {showModal && (
+        <PDFTemplateModal
+          template={editingTemplate}
+          companyId={companyId}
+          onClose={() => { setShowModal(false); setEditingTemplate(null); }}
+          onSave={() => { setShowModal(false); setEditingTemplate(null); loadTemplates(); }}
+        />
+      )}
+    </div>
+  );
+}
+
+// PDF Template Modal Component
+function PDFTemplateModal({ template, companyId, onClose, onSave }: {
+  template: PDFTemplate | null;
+  companyId: string;
+  onClose: () => void;
+  onSave: () => void;
+}) {
+  const [activeTab, setActiveTab] = useState<'basic' | 'header' | 'fields' | 'details' | 'appearance'>('basic');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Basic info
+  const [name, setName] = useState(template?.name || '');
+  const [description, setDescription] = useState(template?.description || '');
+
+  // Header settings
+  const [showLogo, setShowLogo] = useState(template?.show_logo ?? true);
+  const [logoPosition, setLogoPosition] = useState(template?.logo_position || 'left');
+  const [showCompanyAddress, setShowCompanyAddress] = useState(template?.show_company_address ?? true);
+  const [showClientAddress, setShowClientAddress] = useState(template?.show_client_address ?? true);
+
+  // Fields
+  const [showTotalAmountDue, setShowTotalAmountDue] = useState(true);
+  const [showInvoiceNumber, setShowInvoiceNumber] = useState(true);
+  const [showInvoiceDate, setShowInvoiceDate] = useState(true);
+  const [showDueDate, setShowDueDate] = useState(true);
+  const [showInvoiceTerms, setShowInvoiceTerms] = useState(true);
+  const [showPONumber, setShowPONumber] = useState(false);
+  const [showProjectName, setShowProjectName] = useState(true);
+
+  // Details
+  const [includeLineItems, setIncludeLineItems] = useState(template?.include_line_items ?? true);
+  const [includeTimeDetail, setIncludeTimeDetail] = useState(template?.include_time_detail ?? false);
+  const [includeExpenseDetail, setIncludeExpenseDetail] = useState(template?.include_expense_detail ?? false);
+  const [includeBudgetStatus, setIncludeBudgetStatus] = useState(template?.include_budget_status ?? false);
+  const [includeReceipts, setIncludeReceipts] = useState(template?.include_receipts ?? false);
+  const [receiptsPerPage, setReceiptsPerPage] = useState(4);
+
+  // Appearance
+  const [fontName, setFontName] = useState(template?.font_name || 'Arial');
+  const [fontSize, setFontSize] = useState(template?.font_size || 10);
+  const [colorScheme, setColorScheme] = useState('default');
+
+  const tabs = [
+    { id: 'basic', label: 'Basic Info' },
+    { id: 'header', label: 'Header' },
+    { id: 'fields', label: 'Fields' },
+    { id: 'details', label: 'Details' },
+    { id: 'appearance', label: 'Appearance' },
+  ];
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!name.trim()) {
+      setError('Template name is required');
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+
+    try {
+      const templateData = {
+        company_id: companyId,
+        name: name.trim(),
+        description: description.trim() || null,
+        show_logo: showLogo,
+        logo_position: logoPosition,
+        show_company_address: showCompanyAddress,
+        show_client_address: showClientAddress,
+        show_total_amount_due: showTotalAmountDue,
+        show_invoice_number: showInvoiceNumber,
+        show_invoice_date: showInvoiceDate,
+        show_due_date: showDueDate,
+        show_invoice_terms: showInvoiceTerms,
+        show_po_number: showPONumber,
+        show_project_name: showProjectName,
+        include_line_items: includeLineItems,
+        include_time_detail: includeTimeDetail,
+        include_expense_detail: includeExpenseDetail,
+        include_budget_status: includeBudgetStatus,
+        include_receipts: includeReceipts,
+        receipts_per_page: receiptsPerPage,
+        font_name: fontName,
+        font_size: fontSize,
+        color_scheme: colorScheme,
+      };
+
+      if (template) {
+        await supabase
+          .from('invoice_pdf_templates')
+          .update(templateData)
+          .eq('id', template.id);
+      } else {
+        await supabase
+          .from('invoice_pdf_templates')
+          .insert(templateData);
+      }
+
+      onSave();
+    } catch (err: any) {
+      console.error('Failed to save template:', err);
+      setError(err?.message || 'Failed to save template');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-2xl w-full max-w-3xl mx-4 max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="p-6 border-b border-neutral-100 flex items-center justify-between">
+          <h2 className="text-xl font-semibold text-neutral-900">
+            {template ? 'Edit PDF Template' : 'Create PDF Template'}
+          </h2>
+          <button onClick={onClose} className="p-2 hover:bg-neutral-100 rounded-lg">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Tabs */}
+        <div className="px-6 py-3 border-b border-neutral-100 flex gap-1 bg-neutral-50">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                activeTab === tab.id ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-600 hover:text-neutral-900'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6">
+          {error && (
+            <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm mb-4">{error}</div>
+          )}
+
+          {/* Basic Info Tab */}
+          {activeTab === 'basic' && (
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1.5">Template Name *</label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g., Detailed Invoice with Time"
+                  className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-400 outline-none"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1.5">Description</label>
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Brief description of when to use this template..."
+                  className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-400 outline-none resize-none h-20"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Header Tab */}
+          {activeTab === 'header' && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between p-4 bg-neutral-50 rounded-xl">
+                <div>
+                  <p className="font-medium text-neutral-900">Show Company Logo</p>
+                  <p className="text-sm text-neutral-500">Display your logo on the invoice</p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" checked={showLogo} onChange={(e) => setShowLogo(e.target.checked)} className="sr-only peer" />
+                  <div className="w-11 h-6 bg-neutral-200 peer-checked:bg-neutral-900 rounded-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+                </label>
+              </div>
+
+              {showLogo && (
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-2">Logo Position</label>
+                  <div className="flex gap-3">
+                    {['left', 'center', 'right'].map((pos) => (
+                      <label key={pos} className={`flex-1 px-4 py-3 border rounded-xl cursor-pointer text-center transition-colors ${
+                        logoPosition === pos ? 'border-neutral-900 bg-neutral-50' : 'border-neutral-200'
+                      }`}>
+                        <input type="radio" name="logoPos" value={pos} checked={logoPosition === pos} onChange={() => setLogoPosition(pos)} className="sr-only" />
+                        <span className="text-sm font-medium capitalize">{pos}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-center justify-between p-4 bg-neutral-50 rounded-xl">
+                <div>
+                  <p className="font-medium text-neutral-900">Show Company Address</p>
+                  <p className="text-sm text-neutral-500">Display your company address in the header</p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" checked={showCompanyAddress} onChange={(e) => setShowCompanyAddress(e.target.checked)} className="sr-only peer" />
+                  <div className="w-11 h-6 bg-neutral-200 peer-checked:bg-neutral-900 rounded-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+                </label>
+              </div>
+
+              <div className="flex items-center justify-between p-4 bg-neutral-50 rounded-xl">
+                <div>
+                  <p className="font-medium text-neutral-900">Show Client Address</p>
+                  <p className="text-sm text-neutral-500">Display client billing address</p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" checked={showClientAddress} onChange={(e) => setShowClientAddress(e.target.checked)} className="sr-only peer" />
+                  <div className="w-11 h-6 bg-neutral-200 peer-checked:bg-neutral-900 rounded-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+                </label>
+              </div>
+            </div>
+          )}
+
+          {/* Fields Tab */}
+          {activeTab === 'fields' && (
+            <div className="space-y-3">
+              <p className="text-sm text-neutral-500 mb-4">Choose which fields to display on the invoice</p>
+              {[
+                { label: 'Total Amount Due', state: showTotalAmountDue, setState: setShowTotalAmountDue },
+                { label: 'Invoice Number', state: showInvoiceNumber, setState: setShowInvoiceNumber },
+                { label: 'Invoice Date', state: showInvoiceDate, setState: setShowInvoiceDate },
+                { label: 'Due Date', state: showDueDate, setState: setShowDueDate },
+                { label: 'Invoice Terms', state: showInvoiceTerms, setState: setShowInvoiceTerms },
+                { label: 'PO Number', state: showPONumber, setState: setShowPONumber },
+                { label: 'Project Name', state: showProjectName, setState: setShowProjectName },
+              ].map((field) => (
+                <div key={field.label} className="flex items-center justify-between p-3 bg-neutral-50 rounded-lg">
+                  <span className="text-sm font-medium text-neutral-700">{field.label}</span>
+                  <input
+                    type="checkbox"
+                    checked={field.state}
+                    onChange={(e) => field.setState(e.target.checked)}
+                    className="w-4 h-4 rounded border-neutral-300 text-neutral-900 focus:ring-neutral-500"
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Details Tab */}
+          {activeTab === 'details' && (
+            <div className="space-y-4">
+              <p className="text-sm text-neutral-500 mb-4">Configure what details to include in the invoice body</p>
+              
+              <div className="flex items-center justify-between p-4 bg-neutral-50 rounded-xl">
+                <div>
+                  <p className="font-medium text-neutral-900">Line Items</p>
+                  <p className="text-sm text-neutral-500">Show invoice line items with descriptions and amounts</p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" checked={includeLineItems} onChange={(e) => setIncludeLineItems(e.target.checked)} className="sr-only peer" />
+                  <div className="w-11 h-6 bg-neutral-200 peer-checked:bg-neutral-900 rounded-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+                </label>
+              </div>
+
+              <div className="flex items-center justify-between p-4 bg-neutral-50 rounded-xl">
+                <div>
+                  <p className="font-medium text-neutral-900">Time Detail</p>
+                  <p className="text-sm text-neutral-500">Include detailed time entries with staff, hours, rates</p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" checked={includeTimeDetail} onChange={(e) => setIncludeTimeDetail(e.target.checked)} className="sr-only peer" />
+                  <div className="w-11 h-6 bg-neutral-200 peer-checked:bg-neutral-900 rounded-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+                </label>
+              </div>
+
+              <div className="flex items-center justify-between p-4 bg-neutral-50 rounded-xl">
+                <div>
+                  <p className="font-medium text-neutral-900">Expense Detail</p>
+                  <p className="text-sm text-neutral-500">Include detailed expense entries</p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" checked={includeExpenseDetail} onChange={(e) => setIncludeExpenseDetail(e.target.checked)} className="sr-only peer" />
+                  <div className="w-11 h-6 bg-neutral-200 peer-checked:bg-neutral-900 rounded-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+                </label>
+              </div>
+
+              <div className="flex items-center justify-between p-4 bg-neutral-50 rounded-xl">
+                <div>
+                  <p className="font-medium text-neutral-900">Budget Status</p>
+                  <p className="text-sm text-neutral-500">Show project budget progress and remaining amounts</p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" checked={includeBudgetStatus} onChange={(e) => setIncludeBudgetStatus(e.target.checked)} className="sr-only peer" />
+                  <div className="w-11 h-6 bg-neutral-200 peer-checked:bg-neutral-900 rounded-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+                </label>
+              </div>
+
+              <div className="flex items-center justify-between p-4 bg-neutral-50 rounded-xl">
+                <div>
+                  <p className="font-medium text-neutral-900">Receipts</p>
+                  <p className="text-sm text-neutral-500">Include receipt images as additional pages</p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" checked={includeReceipts} onChange={(e) => setIncludeReceipts(e.target.checked)} className="sr-only peer" />
+                  <div className="w-11 h-6 bg-neutral-200 peer-checked:bg-neutral-900 rounded-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+                </label>
+              </div>
+
+              {includeReceipts && (
+                <div className="ml-4 p-4 border border-neutral-200 rounded-xl">
+                  <label className="block text-sm font-medium text-neutral-700 mb-2">Receipts Per Page</label>
+                  <div className="flex gap-2">
+                    {[1, 2, 3, 4, 6].map((num) => (
+                      <button
+                        key={num}
+                        type="button"
+                        onClick={() => setReceiptsPerPage(num)}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                          receiptsPerPage === num ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
+                        }`}
+                      >
+                        {num}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Appearance Tab */}
+          {activeTab === 'appearance' && (
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-2">Font Family</label>
+                <select
+                  value={fontName}
+                  onChange={(e) => setFontName(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-400 outline-none"
+                >
+                  <option value="Arial">Arial</option>
+                  <option value="Helvetica">Helvetica</option>
+                  <option value="Times New Roman">Times New Roman</option>
+                  <option value="Georgia">Georgia</option>
+                  <option value="Courier New">Courier New</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-2">Font Size</label>
+                <select
+                  value={fontSize}
+                  onChange={(e) => setFontSize(parseInt(e.target.value))}
+                  className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-400 outline-none"
+                >
+                  {[8, 9, 10, 11, 12, 14].map((size) => (
+                    <option key={size} value={size}>{size}pt</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-2">Color Scheme</label>
+                <div className="grid grid-cols-3 gap-3">
+                  {[
+                    { id: 'default', label: 'Default', colors: ['#000000', '#666666'] },
+                    { id: 'professional', label: 'Professional', colors: ['#1a365d', '#2b6cb0'] },
+                    { id: 'modern', label: 'Modern', colors: ['#171717', '#737373'] },
+                  ].map((scheme) => (
+                    <label key={scheme.id} className={`p-4 border rounded-xl cursor-pointer transition-colors ${
+                      colorScheme === scheme.id ? 'border-neutral-900 bg-neutral-50' : 'border-neutral-200'
+                    }`}>
+                      <input type="radio" name="colorScheme" value={scheme.id} checked={colorScheme === scheme.id} onChange={() => setColorScheme(scheme.id)} className="sr-only" />
+                      <div className="flex gap-1 mb-2">
+                        {scheme.colors.map((color, i) => (
+                          <div key={i} className="w-4 h-4 rounded" style={{ backgroundColor: color }} />
+                        ))}
+                      </div>
+                      <span className="text-sm font-medium">{scheme.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </form>
+
+        <div className="p-6 border-t border-neutral-100 flex gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 px-4 py-2.5 border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={saving}
+            className="flex-1 px-4 py-2.5 bg-neutral-900 text-white rounded-xl hover:bg-neutral-800 transition-colors disabled:opacity-50"
+          >
+            {saving ? 'Saving...' : template ? 'Update Template' : 'Create Template'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+// Basic Codes Tab Component
+function BasicCodesTab({ companyId }: { companyId: string }) {
+  const [activeSubTab, setActiveSubTab] = useState<'categories' | 'expense_codes' | 'invoice_terms'>('categories');
+  const [items, setItems] = useState<any[]>([]);
+  const [selectedItem, setSelectedItem] = useState<any | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [includeInactive, setIncludeInactive] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  useEffect(() => {
+    if (companyId) {
+      loadItems();
+    } else {
+      setLoading(false);
+      setItems([]);
+    }
+  }, [companyId, activeSubTab, includeInactive]);
+
+  async function loadItems() {
+    if (!companyId) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    try {
+      let data: any[] = [];
+      if (activeSubTab === 'categories') {
+        data = await settingsApi.getCategories(companyId, includeInactive);
+      } else if (activeSubTab === 'expense_codes') {
+        data = await settingsApi.getExpenseCodes(companyId, includeInactive);
+      } else if (activeSubTab === 'invoice_terms') {
+        data = await settingsApi.getInvoiceTerms(companyId, includeInactive);
+      }
+      setItems(data);
+      if (data.length > 0 && !selectedItem) setSelectedItem(data[0]);
+    } catch (error) {
+      console.error('Failed to load items:', error);
+    }
+    setLoading(false);
+  }
+
+  async function handleSave() {
+    if (!selectedItem) return;
+    setSaving(true);
+    try {
+      if (selectedItem.id) {
+        if (activeSubTab === 'categories') {
+          await settingsApi.updateCategory(selectedItem.id, selectedItem);
+        } else if (activeSubTab === 'expense_codes') {
+          await settingsApi.updateExpenseCode(selectedItem.id, selectedItem);
+        } else if (activeSubTab === 'invoice_terms') {
+          await settingsApi.updateInvoiceTerm(selectedItem.id, selectedItem);
+        }
+      } else {
+        const newItem = { ...selectedItem, company_id: companyId };
+        if (activeSubTab === 'categories') {
+          await settingsApi.createCategory(newItem);
+        } else if (activeSubTab === 'expense_codes') {
+          await settingsApi.createExpenseCode(newItem);
+        } else if (activeSubTab === 'invoice_terms') {
+          await settingsApi.createInvoiceTerm(newItem);
+        }
+      }
+      loadItems();
+    } catch (error) {
+      console.error('Failed to save:', error);
+    }
+    setSaving(false);
+  }
+
+  async function handleDelete() {
+    if (!selectedItem?.id) return;
+    if (!confirm('Are you sure you want to delete this item?')) return;
+    try {
+      if (activeSubTab === 'categories') {
+        await settingsApi.deleteCategory(selectedItem.id);
+      } else if (activeSubTab === 'expense_codes') {
+        await settingsApi.deleteExpenseCode(selectedItem.id);
+      } else if (activeSubTab === 'invoice_terms') {
+        await settingsApi.deleteInvoiceTerm(selectedItem.id);
+      }
+      setSelectedItem(null);
+      loadItems();
+    } catch (error) {
+      console.error('Failed to delete:', error);
+    }
+  }
+
+  function addNewItem() {
+    if (activeSubTab === 'categories') {
+      setSelectedItem({ name: '', code: '', service_item: '', tax_rate: 0, description: '', is_non_billable: false, is_inactive: false });
+    } else if (activeSubTab === 'expense_codes') {
+      setSelectedItem({ name: '', code: '', service_item: '', description: '', markup_percent: 0, is_taxable: false, is_inactive: false });
+    } else if (activeSubTab === 'invoice_terms') {
+      setSelectedItem({ name: '', days_out: 30, quickbooks_link: '', is_default: false, is_inactive: false });
+    }
+  }
+
+  const filteredItems = items.filter(item => {
+    const name = item.name || '';
+    return name.toLowerCase().includes(searchTerm.toLowerCase());
+  });
+
+  const subTabs = [
+    { id: 'categories', label: 'CATEGORIES' },
+    { id: 'expense_codes', label: 'Expense Codes' },
+    { id: 'invoice_terms', label: 'Invoice Terms' },
+  ];
+
+  if (!companyId) {
+    return (
+      <div className="bg-white rounded-2xl p-12 border border-neutral-100 text-center">
+        <div className="w-16 h-16 bg-neutral-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+          <Tag className="w-8 h-8 text-neutral-400" />
+        </div>
+        <h3 className="text-lg font-semibold text-neutral-900 mb-2">Company Setup Required</h3>
+        <p className="text-neutral-500">Please set up your company profile first to manage basic codes.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Sub-tabs */}
+      <div className="flex gap-1 p-1 bg-neutral-100 rounded-xl w-fit">
+        {subTabs.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => { setActiveSubTab(tab.id as any); setSelectedItem(null); }}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              activeSubTab === tab.id ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-600 hover:text-neutral-900'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="flex gap-6">
+        {/* Left Panel - List */}
+        <div className="w-80 bg-white rounded-2xl border border-neutral-100 flex flex-col">
+          <div className="p-4 border-b border-neutral-100 space-y-3">
+            <input
+              type="text"
+              placeholder="Search..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full px-3 py-2 border border-neutral-200 rounded-lg text-sm focus:ring-2 focus:ring-neutral-400 outline-none"
+            />
+            <div className="flex items-center justify-between">
+              <button
+                onClick={addNewItem}
+                className="flex items-center gap-2 px-3 py-1.5 bg-neutral-900 text-white text-sm rounded-lg hover:bg-neutral-800"
+              >
+                <Plus className="w-4 h-4" /> Add New Value
+              </button>
+              <label className="flex items-center gap-2 text-sm text-neutral-600 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={includeInactive}
+                  onChange={(e) => setIncludeInactive(e.target.checked)}
+                  className="w-4 h-4 rounded border-neutral-300"
+                />
+                Include Inactive
+              </label>
+            </div>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto max-h-[500px]">
+            {loading ? (
+              <div className="p-8 text-center">
+                <div className="animate-spin w-6 h-6 border-2 border-neutral-400 border-t-transparent rounded-full mx-auto" />
+              </div>
+            ) : filteredItems.length === 0 ? (
+              <div className="p-8 text-center text-neutral-500 text-sm">No items found</div>
+            ) : (
+              <div className="divide-y divide-neutral-100">
+                {filteredItems.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => setSelectedItem(item)}
+                    className={`w-full px-4 py-3 text-left hover:bg-neutral-50 transition-colors ${
+                      selectedItem?.id === item.id ? 'bg-neutral-100' : ''
+                    }`}
+                  >
+                    <p className={`font-medium ${item.is_inactive ? 'text-neutral-400' : 'text-neutral-900'}`}>
+                      {item.name}
+                    </p>
+                    {item.code && <p className="text-xs text-neutral-500">{item.code}</p>}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Right Panel - Edit Form */}
+        <div className="flex-1 bg-white rounded-2xl border border-neutral-100 p-6">
+          {selectedItem ? (
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-neutral-900">
+                {selectedItem.id ? 'Edit' : 'New'} {activeSubTab === 'categories' ? 'Category' : activeSubTab === 'expense_codes' ? 'Expense Code' : 'Invoice Term'}
+              </h3>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1">Name *</label>
+                  <input
+                    type="text"
+                    value={selectedItem.name || ''}
+                    onChange={(e) => setSelectedItem({ ...selectedItem, name: e.target.value })}
+                    className="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-neutral-400 outline-none"
+                  />
+                </div>
+                
+                {(activeSubTab === 'categories' || activeSubTab === 'expense_codes') && (
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-1">Code</label>
+                    <input
+                      type="text"
+                      value={selectedItem.code || ''}
+                      onChange={(e) => setSelectedItem({ ...selectedItem, code: e.target.value })}
+                      className="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-neutral-400 outline-none"
+                    />
+                  </div>
+                )}
+
+                {activeSubTab === 'invoice_terms' && (
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-1">Days Out</label>
+                    <input
+                      type="number"
+                      value={selectedItem.days_out || 30}
+                      onChange={(e) => setSelectedItem({ ...selectedItem, days_out: parseInt(e.target.value) })}
+                      className="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-neutral-400 outline-none"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {(activeSubTab === 'categories' || activeSubTab === 'expense_codes') && (
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1">Service Item</label>
+                  <input
+                    type="text"
+                    value={selectedItem.service_item || ''}
+                    onChange={(e) => setSelectedItem({ ...selectedItem, service_item: e.target.value })}
+                    className="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-neutral-400 outline-none"
+                  />
+                </div>
+              )}
+
+              {activeSubTab === 'categories' && (
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1">Tax Rate (%)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={selectedItem.tax_rate || ''}
+                    onChange={(e) => setSelectedItem({ ...selectedItem, tax_rate: parseFloat(e.target.value) || 0 })}
+                    className="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-neutral-400 outline-none"
+                  />
+                </div>
+              )}
+
+              {activeSubTab === 'expense_codes' && (
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1">Markup Percent (%)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={selectedItem.markup_percent || ''}
+                    onChange={(e) => setSelectedItem({ ...selectedItem, markup_percent: parseFloat(e.target.value) || 0 })}
+                    className="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-neutral-400 outline-none"
+                  />
+                </div>
+              )}
+
+              {(activeSubTab === 'categories' || activeSubTab === 'expense_codes' || activeSubTab === 'invoice_terms') && (
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1">
+                    {activeSubTab === 'invoice_terms' ? 'QuickBooks Link' : 'Description'}
+                  </label>
+                  <textarea
+                    value={activeSubTab === 'invoice_terms' ? (selectedItem.quickbooks_link || '') : (selectedItem.description || '')}
+                    onChange={(e) => setSelectedItem({ 
+                      ...selectedItem, 
+                      [activeSubTab === 'invoice_terms' ? 'quickbooks_link' : 'description']: e.target.value 
+                    })}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-neutral-400 outline-none resize-none"
+                  />
+                </div>
+              )}
+
+              <div className="flex flex-wrap gap-4">
+                {activeSubTab === 'categories' && (
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={selectedItem.is_non_billable || false}
+                      onChange={(e) => setSelectedItem({ ...selectedItem, is_non_billable: e.target.checked })}
+                      className="w-4 h-4 rounded border-neutral-300"
+                    />
+                    <span className="text-sm text-neutral-700">Non-Billable</span>
+                  </label>
+                )}
+
+                {activeSubTab === 'expense_codes' && (
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={selectedItem.is_taxable || false}
+                      onChange={(e) => setSelectedItem({ ...selectedItem, is_taxable: e.target.checked })}
+                      className="w-4 h-4 rounded border-neutral-300"
+                    />
+                    <span className="text-sm text-neutral-700">Taxable</span>
+                  </label>
+                )}
+
+                {activeSubTab === 'invoice_terms' && (
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={selectedItem.is_default || false}
+                      onChange={(e) => setSelectedItem({ ...selectedItem, is_default: e.target.checked })}
+                      className="w-4 h-4 rounded border-neutral-300"
+                    />
+                    <span className="text-sm text-neutral-700">Default</span>
+                  </label>
+                )}
+
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={selectedItem.is_inactive || false}
+                    onChange={(e) => setSelectedItem({ ...selectedItem, is_inactive: e.target.checked })}
+                    className="w-4 h-4 rounded border-neutral-300"
+                  />
+                  <span className="text-sm text-neutral-700">Inactive</span>
+                </label>
+              </div>
+
+              <div className="flex gap-3 pt-4 border-t border-neutral-100">
+                {selectedItem.id && (
+                  <button
+                    onClick={handleDelete}
+                    className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                  >
+                    Delete
+                  </button>
+                )}
+                <div className="flex-1" />
+                <button
+                  onClick={() => setSelectedItem(null)}
+                  className="px-4 py-2 border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSave}
+                  disabled={saving || !selectedItem.name}
+                  className="px-4 py-2 bg-neutral-900 text-white rounded-lg hover:bg-neutral-800 transition-colors disabled:opacity-50"
+                >
+                  {saving ? 'Saving...' : 'Save'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-12 text-neutral-500">
+              Select an item to edit or click "Add New Value" to create one
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Field Values Tab Component
+function FieldValuesTab({ companyId }: { companyId: string }) {
+  const [activeSubTab, setActiveSubTab] = useState('project_types');
+  const [items, setItems] = useState<FieldValue[]>([]);
+  const [selectedItem, setSelectedItem] = useState<FieldValue | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [includeInactive, setIncludeInactive] = useState(false);
+
+  const subTabs = [
+    { id: 'project_types', label: 'Project Type' },
+    { id: 'contact_types', label: 'Contact Type' },
+    { id: 'team_roles', label: 'Team Role' },
+    { id: 'staff_departments', label: 'Staff Dept' },
+    { id: 'staff_teams', label: 'Staff Team' },
+    { id: 'merchants', label: 'Merchant' },
+    { id: 'locations', label: 'Location' },
+    { id: 'credit_cards', label: 'Credit Cards' },
+    { id: 'client_types', label: 'Client Type' },
+  ];
+
+  useEffect(() => {
+    if (companyId) {
+      loadItems();
+    } else {
+      setLoading(false);
+      setItems([]);
+    }
+  }, [companyId, activeSubTab, includeInactive]);
+
+  async function loadItems() {
+    if (!companyId) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    try {
+      const data = await settingsApi.getFieldValues(activeSubTab, companyId, includeInactive);
+      setItems(data);
+      if (data.length > 0 && !selectedItem) setSelectedItem(data[0]);
+    } catch (error) {
+      console.error('Failed to load items:', error);
+    }
+    setLoading(false);
+  }
+
+  async function handleSave() {
+    if (!selectedItem) return;
+    setSaving(true);
+    try {
+      if (selectedItem.id) {
+        await settingsApi.updateFieldValue(activeSubTab, selectedItem.id, selectedItem);
+      } else {
+        await settingsApi.createFieldValue(activeSubTab, { ...selectedItem, company_id: companyId });
+      }
+      loadItems();
+    } catch (error) {
+      console.error('Failed to save:', error);
+    }
+    setSaving(false);
+  }
+
+  async function handleDelete() {
+    if (!selectedItem?.id) return;
+    if (!confirm('Are you sure you want to delete this item?')) return;
+    try {
+      await settingsApi.deleteFieldValue(activeSubTab, selectedItem.id);
+      setSelectedItem(null);
+      loadItems();
+    } catch (error) {
+      console.error('Failed to delete:', error);
+    }
+  }
+
+  function addNewItem() {
+    setSelectedItem({ company_id: companyId, value: '', description: '', is_inactive: false } as any);
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Sub-tabs */}
+      <div className="flex flex-wrap gap-1 p-1 bg-neutral-100 rounded-xl">
+        {subTabs.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => { setActiveSubTab(tab.id); setSelectedItem(null); }}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              activeSubTab === tab.id ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-600 hover:text-neutral-900'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="flex gap-6">
+        {/* Left Panel - List */}
+        <div className="w-80 bg-white rounded-2xl border border-neutral-100 flex flex-col">
+          <div className="p-4 border-b border-neutral-100 space-y-3">
+            <div className="flex items-center justify-between">
+              <button
+                onClick={addNewItem}
+                className="flex items-center gap-2 px-3 py-1.5 bg-neutral-900 text-white text-sm rounded-lg hover:bg-neutral-800"
+              >
+                <Plus className="w-4 h-4" /> Add New Value
+              </button>
+              <label className="flex items-center gap-2 text-sm text-neutral-600 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={includeInactive}
+                  onChange={(e) => setIncludeInactive(e.target.checked)}
+                  className="w-4 h-4 rounded border-neutral-300"
+                />
+                Inactive
+              </label>
+            </div>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto max-h-[500px]">
+            {loading ? (
+              <div className="p-8 text-center">
+                <div className="animate-spin w-6 h-6 border-2 border-neutral-400 border-t-transparent rounded-full mx-auto" />
+              </div>
+            ) : items.length === 0 ? (
+              <div className="p-8 text-center text-neutral-500 text-sm">No items found</div>
+            ) : (
+              <div className="divide-y divide-neutral-100">
+                {items.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => setSelectedItem(item)}
+                    className={`w-full px-4 py-3 text-left hover:bg-neutral-50 transition-colors flex items-center gap-2 ${
+                      selectedItem?.id === item.id ? 'bg-neutral-100' : ''
+                    }`}
+                  >
+                    <GripVertical className="w-4 h-4 text-neutral-300" />
+                    <span className={`flex-1 ${item.is_inactive ? 'text-neutral-400' : 'text-neutral-900'}`}>
+                      {item.value}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Right Panel - Edit Form */}
+        <div className="flex-1 bg-white rounded-2xl border border-neutral-100 p-6">
+          {selectedItem ? (
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-neutral-900">
+                {selectedItem.id ? 'Edit' : 'New'} {subTabs.find(t => t.id === activeSubTab)?.label}
+              </h3>
+
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1">Value *</label>
+                <input
+                  type="text"
+                  value={selectedItem.value || ''}
+                  onChange={(e) => setSelectedItem({ ...selectedItem, value: e.target.value })}
+                  className="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-neutral-400 outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1">Description</label>
+                <textarea
+                  value={selectedItem.description || ''}
+                  onChange={(e) => setSelectedItem({ ...selectedItem, description: e.target.value })}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-neutral-400 outline-none resize-none"
+                />
+              </div>
+
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={selectedItem.is_inactive || false}
+                  onChange={(e) => setSelectedItem({ ...selectedItem, is_inactive: e.target.checked })}
+                  className="w-4 h-4 rounded border-neutral-300"
+                />
+                <span className="text-sm text-neutral-700">Inactive</span>
+              </label>
+
+              <div className="flex gap-3 pt-4 border-t border-neutral-100">
+                {selectedItem.id && (
+                  <button
+                    onClick={handleDelete}
+                    className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                  >
+                    Delete
+                  </button>
+                )}
+                <div className="flex-1" />
+                <button
+                  onClick={() => setSelectedItem(null)}
+                  className="px-4 py-2 border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSave}
+                  disabled={saving || !selectedItem.value}
+                  className="px-4 py-2 bg-neutral-900 text-white rounded-lg hover:bg-neutral-800 transition-colors disabled:opacity-50"
+                >
+                  {saving ? 'Saving...' : 'Save'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-12 text-neutral-500">
+              Select an item to edit or click "Add New Value" to create one
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Status Codes Tab Component
+function StatusCodesTab({ companyId }: { companyId: string }) {
+  const [activeSubTab, setActiveSubTab] = useState('project_statuses');
+  const [items, setItems] = useState<StatusCode[]>([]);
+  const [selectedItem, setSelectedItem] = useState<StatusCode | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [includeInactive, setIncludeInactive] = useState(false);
+
+  const subTabs = [
+    { id: 'project_statuses', label: 'Project' },
+    { id: 'billing_statuses', label: 'Project (Billing)' },
+    { id: 'staff_statuses', label: 'Staff Member' },
+  ];
+
+  useEffect(() => {
+    loadItems();
+  }, [companyId, activeSubTab, includeInactive]);
+
+  async function loadItems() {
+    if (!companyId) return;
+    setLoading(true);
+    try {
+      const data = await settingsApi.getStatusCodes(activeSubTab, companyId, includeInactive);
+      setItems(data);
+      if (data.length > 0 && !selectedItem) setSelectedItem(data[0]);
+    } catch (error) {
+      console.error('Failed to load items:', error);
+    }
+    setLoading(false);
+  }
+
+  async function handleSave() {
+    if (!selectedItem) return;
+    setSaving(true);
+    try {
+      if (selectedItem.id) {
+        await settingsApi.updateStatusCode(activeSubTab, selectedItem.id, selectedItem);
+      } else {
+        await settingsApi.createStatusCode(activeSubTab, { ...selectedItem, company_id: companyId });
+      }
+      loadItems();
+    } catch (error) {
+      console.error('Failed to save:', error);
+    }
+    setSaving(false);
+  }
+
+  async function handleDelete() {
+    if (!selectedItem?.id) return;
+    if (!confirm('Are you sure you want to delete this status?')) return;
+    try {
+      await settingsApi.deleteStatusCode(activeSubTab, selectedItem.id);
+      setSelectedItem(null);
+      loadItems();
+    } catch (error) {
+      console.error('Failed to delete:', error);
+    }
+  }
+
+  function addNewItem() {
+    setSelectedItem({ company_id: companyId, value: '', description: '', items_inactive: false, is_inactive: false } as any);
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Sub-tabs */}
+      <div className="flex gap-1 p-1 bg-neutral-100 rounded-xl w-fit">
+        {subTabs.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => { setActiveSubTab(tab.id); setSelectedItem(null); }}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              activeSubTab === tab.id ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-600 hover:text-neutral-900'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="flex gap-6">
+        {/* Left Panel - List */}
+        <div className="w-80 bg-white rounded-2xl border border-neutral-100 flex flex-col">
+          <div className="p-4 border-b border-neutral-100 space-y-3">
+            <div className="flex items-center justify-between">
+              <button
+                onClick={addNewItem}
+                className="flex items-center gap-2 px-3 py-1.5 bg-neutral-900 text-white text-sm rounded-lg hover:bg-neutral-800"
+              >
+                <Plus className="w-4 h-4" /> Add Status
+              </button>
+              <label className="flex items-center gap-2 text-sm text-neutral-600 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={includeInactive}
+                  onChange={(e) => setIncludeInactive(e.target.checked)}
+                  className="w-4 h-4 rounded border-neutral-300"
+                />
+                Inactive
+              </label>
+            </div>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto max-h-[500px]">
+            {loading ? (
+              <div className="p-8 text-center">
+                <div className="animate-spin w-6 h-6 border-2 border-neutral-400 border-t-transparent rounded-full mx-auto" />
+              </div>
+            ) : items.length === 0 ? (
+              <div className="p-8 text-center text-neutral-500 text-sm">No statuses found</div>
+            ) : (
+              <div className="divide-y divide-neutral-100">
+                {items.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => setSelectedItem(item)}
+                    className={`w-full px-4 py-3 text-left hover:bg-neutral-50 transition-colors ${
+                      selectedItem?.id === item.id ? 'bg-neutral-100' : ''
+                    }`}
+                  >
+                    <span className={item.is_inactive ? 'text-neutral-400' : 'text-neutral-900'}>
+                      {item.value}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Right Panel - Edit Form */}
+        <div className="flex-1 bg-white rounded-2xl border border-neutral-100 p-6">
+          {selectedItem ? (
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-neutral-900">
+                {selectedItem.id ? 'Edit' : 'New'} Status
+              </h3>
+
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1">Value *</label>
+                <input
+                  type="text"
+                  value={selectedItem.value || ''}
+                  onChange={(e) => setSelectedItem({ ...selectedItem, value: e.target.value })}
+                  className="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-neutral-400 outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1">Description</label>
+                <textarea
+                  value={selectedItem.description || ''}
+                  onChange={(e) => setSelectedItem({ ...selectedItem, description: e.target.value })}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-neutral-400 outline-none resize-none"
+                />
+              </div>
+
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={selectedItem.items_inactive || false}
+                  onChange={(e) => setSelectedItem({ ...selectedItem, items_inactive: e.target.checked })}
+                  className="w-4 h-4 rounded border-neutral-300"
+                />
+                <span className="text-sm text-neutral-700">Items attached to this status are inactive</span>
+              </label>
+
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={selectedItem.is_inactive || false}
+                  onChange={(e) => setSelectedItem({ ...selectedItem, is_inactive: e.target.checked })}
+                  className="w-4 h-4 rounded border-neutral-300"
+                />
+                <span className="text-sm text-neutral-700">Inactive (hide from lists)</span>
+              </label>
+
+              <div className="flex gap-3 pt-4 border-t border-neutral-100">
+                {selectedItem.id && (
+                  <button
+                    onClick={handleDelete}
+                    className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                  >
+                    Delete
+                  </button>
+                )}
+                <div className="flex-1" />
+                <button
+                  onClick={() => setSelectedItem(null)}
+                  className="px-4 py-2 border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSave}
+                  disabled={saving || !selectedItem.value}
+                  className="px-4 py-2 bg-neutral-900 text-white rounded-lg hover:bg-neutral-800 transition-colors disabled:opacity-50"
+                >
+                  {saving ? 'Saving...' : 'Save'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-12 text-neutral-500">
+              Select a status to edit or click "Add Status" to create one
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Cost Centers Tab Component
+function CostCentersTab({ companyId }: { companyId: string }) {
+  const [activeSubTab, setActiveSubTab] = useState('cost_center_groups');
+  const [items, setItems] = useState<CostCenter[]>([]);
+  const [selectedItem, setSelectedItem] = useState<CostCenter | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [includeInactive, setIncludeInactive] = useState(false);
+
+  const subTabs = [
+    { id: 'cost_center_groups', label: 'GROUP' },
+    { id: 'cost_center_functions', label: 'FUNCTION' },
+    { id: 'cost_center_locations', label: 'LOCATION' },
+  ];
+
+  useEffect(() => {
+    loadItems();
+  }, [companyId, activeSubTab, includeInactive]);
+
+  async function loadItems() {
+    if (!companyId) return;
+    setLoading(true);
+    try {
+      const data = await settingsApi.getCostCenters(activeSubTab, companyId, includeInactive);
+      setItems(data);
+      if (data.length > 0 && !selectedItem) setSelectedItem(data[0]);
+    } catch (error) {
+      console.error('Failed to load items:', error);
+    }
+    setLoading(false);
+  }
+
+  async function handleSave() {
+    if (!selectedItem) return;
+    setSaving(true);
+    try {
+      if (selectedItem.id) {
+        await settingsApi.updateCostCenter(activeSubTab, selectedItem.id, selectedItem);
+      } else {
+        await settingsApi.createCostCenter(activeSubTab, { ...selectedItem, company_id: companyId });
+      }
+      loadItems();
+    } catch (error) {
+      console.error('Failed to save:', error);
+    }
+    setSaving(false);
+  }
+
+  async function handleDelete() {
+    if (!selectedItem?.id) return;
+    if (!confirm('Are you sure you want to delete this cost center?')) return;
+    try {
+      await settingsApi.deleteCostCenter(activeSubTab, selectedItem.id);
+      setSelectedItem(null);
+      loadItems();
+    } catch (error) {
+      console.error('Failed to delete:', error);
+    }
+  }
+
+  function addNewItem() {
+    setSelectedItem({ company_id: companyId, name: '', abbreviation: '', description: '', is_inactive: false } as any);
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Sub-tabs */}
+      <div className="flex gap-1 p-1 bg-neutral-100 rounded-xl w-fit">
+        {subTabs.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => { setActiveSubTab(tab.id); setSelectedItem(null); }}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              activeSubTab === tab.id ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-600 hover:text-neutral-900'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="flex gap-6">
+        {/* Left Panel - List */}
+        <div className="w-80 bg-white rounded-2xl border border-neutral-100 flex flex-col">
+          <div className="p-4 border-b border-neutral-100 space-y-3">
+            <div className="flex items-center justify-between">
+              <button
+                onClick={addNewItem}
+                className="flex items-center gap-2 px-3 py-1.5 bg-neutral-900 text-white text-sm rounded-lg hover:bg-neutral-800"
+              >
+                <Plus className="w-4 h-4" /> Add Cost Center
+              </button>
+              <label className="flex items-center gap-2 text-sm text-neutral-600 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={includeInactive}
+                  onChange={(e) => setIncludeInactive(e.target.checked)}
+                  className="w-4 h-4 rounded border-neutral-300"
+                />
+                Inactive
+              </label>
+            </div>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto max-h-[500px]">
+            {loading ? (
+              <div className="p-8 text-center">
+                <div className="animate-spin w-6 h-6 border-2 border-neutral-400 border-t-transparent rounded-full mx-auto" />
+              </div>
+            ) : items.length === 0 ? (
+              <div className="p-8 text-center text-neutral-500 text-sm">No cost centers found</div>
+            ) : (
+              <div className="divide-y divide-neutral-100">
+                {items.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => setSelectedItem(item)}
+                    className={`w-full px-4 py-3 text-left hover:bg-neutral-50 transition-colors ${
+                      selectedItem?.id === item.id ? 'bg-neutral-100' : ''
+                    }`}
+                  >
+                    <p className={item.is_inactive ? 'text-neutral-400' : 'text-neutral-900'}>
+                      {item.name}
+                    </p>
+                    {item.abbreviation && <p className="text-xs text-neutral-500">{item.abbreviation}</p>}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Right Panel - Edit Form */}
+        <div className="flex-1 bg-white rounded-2xl border border-neutral-100 p-6">
+          {selectedItem ? (
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-neutral-900">
+                {selectedItem.id ? 'Edit' : 'New'} Cost Center
+              </h3>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1">Name *</label>
+                  <input
+                    type="text"
+                    value={selectedItem.name || ''}
+                    onChange={(e) => setSelectedItem({ ...selectedItem, name: e.target.value })}
+                    className="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-neutral-400 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1">Abbreviation</label>
+                  <input
+                    type="text"
+                    value={selectedItem.abbreviation || ''}
+                    onChange={(e) => setSelectedItem({ ...selectedItem, abbreviation: e.target.value })}
+                    className="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-neutral-400 outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1">Description</label>
+                <textarea
+                  value={selectedItem.description || ''}
+                  onChange={(e) => setSelectedItem({ ...selectedItem, description: e.target.value })}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-neutral-400 outline-none resize-none"
+                />
+              </div>
+
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={selectedItem.is_inactive || false}
+                  onChange={(e) => setSelectedItem({ ...selectedItem, is_inactive: e.target.checked })}
+                  className="w-4 h-4 rounded border-neutral-300"
+                />
+                <span className="text-sm text-neutral-700">Inactive</span>
+              </label>
+
+              <div className="flex gap-3 pt-4 border-t border-neutral-100">
+                {selectedItem.id && (
+                  <button
+                    onClick={handleDelete}
+                    className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                  >
+                    Delete
+                  </button>
+                )}
+                <div className="flex-1" />
+                <button
+                  onClick={() => setSelectedItem(null)}
+                  className="px-4 py-2 border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSave}
+                  disabled={saving || !selectedItem.name}
+                  className="px-4 py-2 bg-neutral-900 text-white rounded-lg hover:bg-neutral-800 transition-colors disabled:opacity-50"
+                >
+                  {saving ? 'Saving...' : 'Save'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-12 text-neutral-500">
+              Select a cost center to edit or click "Add Cost Center" to create one
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

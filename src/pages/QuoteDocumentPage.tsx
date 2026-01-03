@@ -1,0 +1,1286 @@
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { ArrowLeft, Download, Send, Upload, Plus, Trash2, Check, Save, X, Package, UserPlus } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { api, Quote, Client, QuoteLineItem, CompanySettings, Service } from '../lib/api';
+import { useToast } from '../components/Toast';
+
+interface LineItem {
+  id: string;
+  description: string;
+  unitPrice: number;
+  qty: number;
+  unit: string;
+  taxed: boolean;
+}
+
+export default function QuoteDocumentPage() {
+  const { quoteId } = useParams();
+  const navigate = useNavigate();
+  const { profile } = useAuth();
+  const { showToast } = useToast();
+  const isNewQuote = quoteId === 'new';
+
+  const [quote, setQuote] = useState<Quote | null>(null);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [client, setClient] = useState<Client | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [currentPage, setCurrentPage] = useState<'cover' | 'details'>('details');
+
+  // Editable fields
+  const [documentTitle, setDocumentTitle] = useState('New Quote');
+  const [description, setDescription] = useState('');
+  const [selectedClientId, setSelectedClientId] = useState('');
+  const [validUntil, setValidUntil] = useState('');
+  const [volumeNumber, setVolumeNumber] = useState('Volume I');
+  const [coverBgUrl, setCoverBgUrl] = useState('https://images.unsplash.com/photo-1497366216548-37526070297c?w=1200&q=80');
+  
+  const [companySettings, setCompanySettings] = useState<CompanySettings | null>(null);
+  const companyInfo = {
+    name: companySettings?.company_name || 'Your Company',
+    address: companySettings?.address || '',
+    city: companySettings?.city || '',
+    state: companySettings?.state || '',
+    zip: companySettings?.zip || '',
+    website: companySettings?.website || '',
+    phone: companySettings?.phone || '',
+    fax: companySettings?.fax || '',
+    logo: companySettings?.logo_url,
+  };
+
+  const [lineItems, setLineItems] = useState<LineItem[]>([
+    { id: '1', description: '', unitPrice: 0, qty: 1, unit: 'each', taxed: false }
+  ]);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  const [taxRate, setTaxRate] = useState(8.25);
+  const [otherCharges, setOtherCharges] = useState(0);
+  const [terms, setTerms] = useState(`1. Customer will be invoiced upon acceptance of this quote.
+2. Payment is due within 30 days of invoice date.
+3. This quote is valid for the period specified above.
+4. Any changes to scope may result in price adjustments.
+5. Please sign and return this quote to proceed with the project.`);
+
+  const [signatureName, setSignatureName] = useState('');
+  const [revisionComments, setRevisionComments] = useState('');
+  const [showRevisionForm, setShowRevisionForm] = useState(false);
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [services, setServices] = useState<Service[]>([]);
+  const [showServicesModal, setShowServicesModal] = useState(false);
+  const [showNewClientModal, setShowNewClientModal] = useState(false);
+
+  useEffect(() => {
+    loadData();
+  }, [quoteId, profile?.company_id]);
+
+  // Warn before leaving with unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
+
+  async function loadData() {
+    if (!profile?.company_id) return;
+    setLoading(true);
+    try {
+      // Load clients for dropdown
+      const clientsData = await api.getClients(profile.company_id);
+      setClients(clientsData);
+
+      // Load services for "Add from Services"
+      const servicesData = await api.getServices(profile.company_id);
+      setServices(servicesData.filter(s => s.is_active !== false));
+
+      // Load company settings
+      const settings = await api.getCompanySettings(profile.company_id);
+      if (settings) {
+        setCompanySettings(settings);
+        setTaxRate(settings.default_tax_rate || 8.25);
+        if (settings.default_terms) setTerms(settings.default_terms);
+      }
+
+      if (!isNewQuote && quoteId) {
+        // Load existing quote
+        const quotes = await api.getQuotes(profile.company_id);
+        const foundQuote = quotes.find(q => q.id === quoteId);
+        if (foundQuote) {
+          setQuote(foundQuote);
+          setDocumentTitle(foundQuote.title || 'Quote');
+          setDescription(foundQuote.description || '');
+          setSelectedClientId(foundQuote.client_id || '');
+          setValidUntil(foundQuote.valid_until?.split('T')[0] || '');
+          setCoverBgUrl(foundQuote.cover_background_url || 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=1200&q=80');
+          setVolumeNumber(foundQuote.cover_volume_number || 'Volume I');
+          
+          const foundClient = clientsData.find(c => c.id === foundQuote.client_id);
+          setClient(foundClient || null);
+          
+          // Load line items
+          const dbLineItems = await api.getQuoteLineItems(quoteId);
+          if (dbLineItems && dbLineItems.length > 0) {
+            setLineItems(dbLineItems.map(item => ({
+              id: item.id,
+              description: item.description,
+              unitPrice: item.unit_price,
+              qty: item.quantity,
+              unit: item.unit || 'each',
+              taxed: item.taxed
+            })));
+          } else if (foundQuote.total_amount) {
+            setLineItems([{
+              id: 'init-1',
+              description: foundQuote.description || 'Professional Services',
+              unitPrice: foundQuote.total_amount,
+              qty: 1,
+              unit: 'each',
+              taxed: false
+            }]);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load data:', error);
+    }
+    setLoading(false);
+  }
+
+  // Update client when selection changes
+  useEffect(() => {
+    if (selectedClientId) {
+      const foundClient = clients.find(c => c.id === selectedClientId);
+      setClient(foundClient || null);
+    } else {
+      setClient(null);
+    }
+  }, [selectedClientId, clients]);
+
+  const subtotal = lineItems.reduce((sum, item) => sum + (item.unitPrice * item.qty), 0);
+  const taxableAmount = lineItems.filter(item => item.taxed).reduce((sum, item) => sum + (item.unitPrice * item.qty), 0);
+  const taxDue = taxableAmount * (taxRate / 100);
+  const total = subtotal + taxDue + otherCharges;
+
+  const addLineItem = () => {
+    setLineItems([...lineItems, { 
+      id: Date.now().toString(), 
+      description: '', 
+      unitPrice: 0, 
+      qty: 1,
+      unit: 'each',
+      taxed: false 
+    }]);
+    setHasUnsavedChanges(true);
+  };
+
+  const updateLineItem = (id: string, updates: Partial<LineItem>) => {
+    setLineItems(lineItems.map(item => item.id === id ? { ...item, ...updates } : item));
+    setHasUnsavedChanges(true);
+  };
+
+  const removeLineItem = (id: string) => {
+    if (lineItems.length > 1) {
+      setLineItems(lineItems.filter(item => item.id !== id));
+      setHasUnsavedChanges(true);
+    }
+  };
+
+  const handleBgUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setCoverBgUrl(reader.result as string);
+        setHasUnsavedChanges(true);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const [showExportPreview, setShowExportPreview] = useState(false);
+  const [generatingPdf, setGeneratingPdf] = useState(false);
+  
+  const handlePrint = () => {
+    setShowExportPreview(true);
+  };
+
+  const handleServerPdf = async () => {
+    setGeneratingPdf(true);
+    try {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-pdf`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          type: 'quote',
+          data: {
+            title: documentTitle,
+            company: companyInfo,
+            client,
+            lineItems: lineItems.filter(item => item.description.trim()),
+            totals: { subtotal, tax: taxDue, total },
+            coverBgUrl,
+            volumeNumber,
+            validUntil,
+            terms,
+          }
+        }),
+      });
+      
+      const result = await response.json();
+      if (result.error) throw new Error(result.error.message);
+      
+      // Open HTML in new window for printing
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        printWindow.document.write(result.data.html);
+        printWindow.document.close();
+        printWindow.onload = () => setTimeout(() => printWindow.print(), 300);
+      }
+      showToast('PDF generated successfully', 'success');
+    } catch (error: any) {
+      console.error('PDF generation failed:', error);
+      // Fallback to preview mode
+      setShowExportPreview(true);
+    } finally {
+      setGeneratingPdf(false);
+    }
+  };
+
+  const saveChanges = async () => {
+    if (!profile?.company_id) {
+      showToast('Please log in to save quotes', 'error');
+      return;
+    }
+    if (!documentTitle.trim()) {
+      showToast('Please enter a quote title', 'error');
+      return;
+    }
+    if (!selectedClientId) {
+      showToast('Please select a client', 'error');
+      return;
+    }
+    
+    setSaving(true);
+    try {
+      let savedQuoteId = quoteId;
+      
+      if (isNewQuote) {
+        // Create new quote
+        const newQuote = await api.createQuote({
+          company_id: profile.company_id,
+          client_id: selectedClientId,
+          title: documentTitle.trim(),
+          description: description || '',
+          total_amount: total,
+          quote_number: `QT-${Date.now().toString().slice(-6)}`,
+          valid_until: validUntil || undefined,
+          cover_background_url: coverBgUrl,
+          cover_volume_number: volumeNumber,
+          status: 'draft'
+        });
+        savedQuoteId = newQuote.id;
+        setQuote(newQuote);
+      } else if (quoteId && quoteId !== 'new') {
+        // Update existing quote
+        await api.updateQuote(quoteId, {
+          title: documentTitle.trim(),
+          description: description || '',
+          client_id: selectedClientId,
+          total_amount: total,
+          valid_until: validUntil || undefined,
+          cover_background_url: coverBgUrl,
+          cover_volume_number: volumeNumber,
+        });
+        savedQuoteId = quoteId;
+      }
+
+      // Save line items
+      if (savedQuoteId && savedQuoteId !== 'new') {
+        await api.saveQuoteLineItems(savedQuoteId, lineItems.filter(item => item.description.trim()).map(item => ({
+          quote_id: savedQuoteId!,
+          description: item.description.trim(),
+          unit_price: item.unitPrice || 0,
+          quantity: item.qty || 1,
+          unit: item.unit || 'each',
+          taxed: item.taxed || false,
+          amount: (item.unitPrice || 0) * (item.qty || 1)
+        })));
+      }
+
+      setHasUnsavedChanges(false);
+      showToast('Quote saved successfully!', 'success');
+      navigate('/sales');
+    } catch (error: any) {
+      console.error('Failed to save:', error);
+      showToast(error?.message || 'Failed to save. Please try again.', 'error');
+    }
+    setSaving(false);
+  };
+
+  const handleSendToCustomer = async () => {
+    if (!quote) {
+      await saveChanges();
+    }
+    if (quote) {
+      try {
+        await api.updateQuote(quote.id, { status: 'sent' });
+        showToast('Quote sent to customer successfully!', 'success');
+        loadData();
+      } catch (error) {
+        console.error('Failed to send quote:', error);
+      }
+    }
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+  };
+
+  const formatDate = (dateStr?: string) => {
+    if (!dateStr) return new Date().toLocaleDateString();
+    return new Date(dateStr).toLocaleDateString();
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-neutral-100">
+        <div className="animate-spin w-8 h-8 border-2 border-neutral-600 border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-neutral-100">
+      {/* Toolbar */}
+      <div className="sticky top-0 z-50 bg-white border-b border-neutral-200 px-6 py-3 flex items-center justify-between print:hidden">
+        <div className="flex items-center gap-4">
+          <button onClick={() => {
+            if (hasUnsavedChanges && !confirm('You have unsaved changes. Are you sure you want to leave?')) return;
+            navigate('/sales');
+          }} className="flex items-center gap-2 text-neutral-600 hover:text-neutral-900">
+            <ArrowLeft className="w-5 h-5" />
+            Back to Sales
+          </button>
+          <div className="h-6 w-px bg-neutral-200" />
+          <div className="flex gap-1 p-1 bg-neutral-100 rounded-lg">
+            <button
+              onClick={() => setCurrentPage('cover')}
+              className={`px-3 py-1.5 text-sm font-medium rounded ${currentPage === 'cover' ? 'bg-white shadow-sm text-neutral-900' : 'text-neutral-600'}`}
+            >
+              Cover Page
+            </button>
+            <button
+              onClick={() => setCurrentPage('details')}
+              className={`px-3 py-1.5 text-sm font-medium rounded ${currentPage === 'details' ? 'bg-white shadow-sm text-neutral-900' : 'text-neutral-600'}`}
+            >
+              Quote Details
+            </button>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          {hasUnsavedChanges && (
+            <span className="text-sm text-amber-600">Unsaved changes</span>
+          )}
+          <button
+            onClick={saveChanges}
+            disabled={saving}
+            className="flex items-center gap-2 px-4 py-2 bg-neutral-900 text-white rounded-lg hover:bg-neutral-800 disabled:opacity-50"
+          >
+            <Save className="w-4 h-4" />
+            {saving ? 'Saving...' : isNewQuote ? 'Create Quote' : 'Save Changes'}
+          </button>
+          <button 
+            onClick={handleServerPdf} 
+            disabled={generatingPdf}
+            className="flex items-center gap-2 px-4 py-2 border border-neutral-200 rounded-lg hover:bg-neutral-50 disabled:opacity-50"
+          >
+            <Download className="w-4 h-4" />
+            {generatingPdf ? 'Generating...' : 'Export PDF'}
+          </button>
+          <button onClick={handlePrint} className="flex items-center gap-2 px-3 py-2 text-neutral-500 hover:text-neutral-900" title="Preview">
+            Preview
+          </button>
+          {!isNewQuote && (
+            <button onClick={handleSendToCustomer} className="flex items-center gap-2 px-4 py-2 border border-neutral-900 text-neutral-900 rounded-lg hover:bg-neutral-50">
+              <Send className="w-4 h-4" />
+              Send to Customer
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Document Container */}
+      <div className="py-8 px-4 flex justify-center">
+        <div className="w-full max-w-[850px]">
+          
+          {/* COVER PAGE */}
+          {currentPage === 'cover' && (
+            <div 
+              className="bg-white shadow-xl rounded-lg overflow-hidden relative"
+              style={{ minHeight: '1100px', aspectRatio: '8.5/11' }}
+            >
+              {/* Background Image */}
+              <div 
+                className="absolute inset-0 bg-cover bg-center"
+                style={{ backgroundImage: `url(${coverBgUrl})` }}
+              >
+                <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-black/80" />
+              </div>
+
+              {/* Upload Background Button */}
+              <label className="absolute top-4 right-4 z-20 cursor-pointer print:hidden">
+                <input type="file" accept="image/*" onChange={handleBgUpload} className="hidden" />
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-white/20 backdrop-blur-sm text-white text-sm rounded-lg hover:bg-white/30 transition-colors">
+                  <Upload className="w-4 h-4" />
+                  Change Background
+                </div>
+              </label>
+
+              {/* Content */}
+              <div className="relative z-10 h-full flex flex-col text-white p-12">
+                {/* Header */}
+                <div className="flex justify-between items-start mb-8">
+                  <div>
+                    {companyInfo.logo ? (
+                      <img src={companyInfo.logo} alt={companyInfo.name} className="w-16 h-16 object-contain rounded-lg bg-white/10 mb-2" />
+                    ) : (
+                      <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center text-2xl font-bold mb-2">
+                        {companyInfo.name?.charAt(0) || 'C'}
+                      </div>
+                    )}
+                    <p className="text-white/70 text-sm">{companyInfo.website}</p>
+                  </div>
+                </div>
+
+                {/* Client Info */}
+                <div className="mb-auto">
+                  <p className="text-white/60 text-sm uppercase tracking-wider mb-2">Prepared For</p>
+                  <h3 className="text-2xl font-semibold mb-1">{client?.name || 'Select a Client'}</h3>
+                  <p className="text-white/80">{client?.display_name}</p>
+                  <p className="text-white/60 mt-4">{formatDate(quote?.created_at)}</p>
+                </div>
+
+                {/* Center Title */}
+                <div className="text-center py-16">
+                  {editingTitle ? (
+                    <div className="inline-flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={documentTitle}
+                        onChange={(e) => { setDocumentTitle(e.target.value); setHasUnsavedChanges(true); }}
+                        className="text-4xl md:text-5xl font-bold tracking-tight bg-transparent border-b-2 border-white/50 text-center outline-none"
+                        autoFocus
+                      />
+                      <button onClick={() => setEditingTitle(false)} className="p-2 hover:bg-white/20 rounded">
+                        <Check className="w-5 h-5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <h1 
+                      onClick={() => setEditingTitle(true)}
+                      className="text-4xl md:text-5xl font-bold tracking-tight cursor-pointer hover:opacity-80 print:cursor-default"
+                    >
+                      {documentTitle || 'QUOTE'}
+                    </h1>
+                  )}
+                  <div className="mt-4 flex items-center justify-center gap-2">
+                    <input
+                      type="text"
+                      value={volumeNumber}
+                      onChange={(e) => { setVolumeNumber(e.target.value); setHasUnsavedChanges(true); }}
+                      className="text-lg text-white/70 bg-transparent border-b border-transparent hover:border-white/30 focus:border-white/50 text-center outline-none print:border-none"
+                    />
+                  </div>
+                  <div className="mt-8">
+                    <p className="text-white/50 text-sm uppercase tracking-wider mb-2">Project</p>
+                    <h2 className="text-2xl md:text-3xl font-semibold">{documentTitle || 'Project Name'}</h2>
+                  </div>
+                </div>
+
+                {/* Footer */}
+                <div className="mt-auto pt-8 border-t border-white/20">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xl font-semibold">{companyInfo.name}</p>
+                      <p className="text-white/60 text-sm">{companyInfo.address}</p>
+                      <p className="text-white/60 text-sm">{companyInfo.city}, {companyInfo.state} {companyInfo.zip}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-white/60 text-sm">{companyInfo.phone}</p>
+                      <p className="text-white/60 text-sm">{companyInfo.website}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* DETAILS PAGE */}
+          {currentPage === 'details' && (
+            <div className="bg-white shadow-xl rounded-lg overflow-hidden" style={{ minHeight: '1100px' }}>
+              {/* Header */}
+              <div className="p-8 border-b border-neutral-200">
+                <div className="flex justify-between">
+                  <div className="flex gap-6">
+                    {companyInfo.logo ? (
+                      <img src={companyInfo.logo} alt={companyInfo.name} className="w-16 h-16 object-contain rounded-xl bg-neutral-100" />
+                    ) : (
+                      <div className="w-16 h-16 bg-neutral-100 rounded-xl flex items-center justify-center text-2xl font-bold text-neutral-700">
+                        {companyInfo.name?.charAt(0) || 'C'}
+                      </div>
+                    )}
+                    <div>
+                      <h2 className="text-2xl font-bold text-neutral-900">{companyInfo.name}</h2>
+                      <p className="text-neutral-600">{companyInfo.address}</p>
+                      <p className="text-neutral-600">{companyInfo.city}, {companyInfo.state} {companyInfo.zip}</p>
+                      <p className="text-neutral-500 text-sm mt-1">{companyInfo.website} | {companyInfo.phone}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="bg-neutral-50 border border-neutral-200 rounded-lg p-4 text-sm">
+                      <table className="text-left">
+                        <tbody>
+                          <tr>
+                            <td className="pr-4 py-1 text-neutral-500">DATE:</td>
+                            <td className="font-medium text-neutral-900">{formatDate(quote?.created_at)}</td>
+                          </tr>
+                          <tr>
+                            <td className="pr-4 py-1 text-neutral-500">QUOTE #:</td>
+                            <td className="font-medium text-neutral-900">{quote?.quote_number || 'New'}</td>
+                          </tr>
+                          <tr>
+                            <td className="pr-4 py-1 text-neutral-500">VALID UNTIL:</td>
+                            <td>
+                              <input
+                                type="date"
+                                value={validUntil}
+                                onChange={(e) => { setValidUntil(e.target.value); setHasUnsavedChanges(true); }}
+                                className="font-medium text-neutral-900 bg-transparent border-none outline-none"
+                              />
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Quote Title & Description */}
+              <div className="px-8 py-4 border-b border-neutral-100">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-1">Quote Title *</label>
+                    <input
+                      type="text"
+                      value={documentTitle}
+                      onChange={(e) => { setDocumentTitle(e.target.value); setHasUnsavedChanges(true); }}
+                      className="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-neutral-400 focus:border-transparent outline-none"
+                      placeholder="Enter quote title..."
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-1">Description</label>
+                    <input
+                      type="text"
+                      value={description}
+                      onChange={(e) => { setDescription(e.target.value); setHasUnsavedChanges(true); }}
+                      className="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-neutral-400 focus:border-transparent outline-none"
+                      placeholder="Brief description..."
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Customer Section - Clean Minimal Design */}
+              <div className="px-8 py-4">
+                <h3 className="text-sm font-semibold text-neutral-900 uppercase tracking-wider mb-3">Customer</h3>
+                <div className="border border-neutral-200 rounded-lg p-5">
+                  <div className="mb-4 print:hidden">
+                    <div className="flex items-center gap-3">
+                      <select
+                        value={selectedClientId}
+                        onChange={(e) => { setSelectedClientId(e.target.value); setHasUnsavedChanges(true); }}
+                        className="flex-1 px-3 py-2.5 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-neutral-400 focus:border-transparent outline-none text-sm"
+                      >
+                        <option value="">Select a client...</option>
+                        {clients.map(c => (
+                          <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => setShowNewClientModal(true)}
+                        className="px-3 py-2.5 text-sm text-neutral-600 hover:text-neutral-900 border border-neutral-200 rounded-lg hover:bg-neutral-50"
+                      >
+                        <UserPlus className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                  {client && (
+                    <div className="space-y-1">
+                      <p className="font-semibold text-neutral-900">{client.name}</p>
+                      {client.display_name && client.display_name !== client.name && (
+                        <p className="text-neutral-600 text-sm">{client.display_name}</p>
+                      )}
+                      {client.email && <p className="text-neutral-500 text-sm">{client.email}</p>}
+                      {client.phone && <p className="text-neutral-500 text-sm">{client.phone}</p>}
+                    </div>
+                  )}
+                  {!client && <p className="text-neutral-400 text-sm italic">No client selected</p>}
+                </div>
+              </div>
+
+              {/* Line Items - Clean Minimal Design */}
+              <div className="px-8 py-4">
+                <h3 className="text-sm font-semibold text-neutral-900 uppercase tracking-wider mb-3">Line Items</h3>
+                <div className="border border-neutral-200 rounded-lg overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-neutral-50 border-b border-neutral-200">
+                        <th className="text-left px-5 py-3 font-medium text-neutral-600 text-xs uppercase tracking-wider">Description</th>
+                        <th className="text-right px-4 py-3 font-medium text-neutral-600 text-xs uppercase tracking-wider w-28">Unit Price</th>
+                        <th className="text-center px-4 py-3 font-medium text-neutral-600 text-xs uppercase tracking-wider w-24">Unit</th>
+                        <th className="text-center px-4 py-3 font-medium text-neutral-600 text-xs uppercase tracking-wider w-16">Qty</th>
+                        <th className="text-center px-4 py-3 font-medium text-neutral-600 text-xs uppercase tracking-wider w-16">Tax</th>
+                        <th className="text-right px-5 py-3 font-medium text-neutral-600 text-xs uppercase tracking-wider w-28">Amount</th>
+                        <th className="w-10 print:hidden"></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-neutral-100">
+                      {lineItems.map((item) => (
+                        <tr key={item.id} className="group hover:bg-neutral-50">
+                          <td className="px-5 py-3">
+                            <input
+                              type="text"
+                              value={item.description}
+                              onChange={(e) => updateLineItem(item.id, { description: e.target.value })}
+                              className="w-full bg-transparent outline-none text-neutral-900"
+                              placeholder="Item description..."
+                            />
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <input
+                              type="number"
+                              value={item.unitPrice}
+                              onChange={(e) => updateLineItem(item.id, { unitPrice: parseFloat(e.target.value) || 0 })}
+                              className="w-full text-right bg-transparent outline-none text-neutral-900"
+                            />
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <select
+                              value={item.unit}
+                              onChange={(e) => updateLineItem(item.id, { unit: e.target.value })}
+                              className="w-full text-center bg-transparent outline-none text-neutral-900 text-xs"
+                            >
+                              <option value="each">each</option>
+                              <option value="hour">hour</option>
+                              <option value="day">day</option>
+                              <option value="sq ft">sq ft</option>
+                              <option value="linear ft">linear ft</option>
+                              <option value="project">project</option>
+                              <option value="lump sum">lump sum</option>
+                              <option value="month">month</option>
+                            </select>
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <input
+                              type="number"
+                              value={item.qty}
+                              onChange={(e) => updateLineItem(item.id, { qty: parseInt(e.target.value) || 1 })}
+                              className="w-full text-center bg-transparent outline-none text-neutral-900"
+                            />
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <input
+                              type="checkbox"
+                              checked={item.taxed}
+                              onChange={(e) => updateLineItem(item.id, { taxed: e.target.checked })}
+                              className="w-4 h-4 rounded border-neutral-300 text-neutral-900 focus:ring-neutral-500"
+                            />
+                          </td>
+                          <td className="px-5 py-3 text-right font-medium text-neutral-900">
+                            {formatCurrency(item.unitPrice * item.qty)}
+                          </td>
+                          <td className="px-2 py-3 print:hidden">
+                            <button
+                              onClick={() => removeLineItem(item.id)}
+                              className="p-1 text-neutral-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  
+                  {/* Add Line Item Buttons */}
+                  <div className="px-5 py-3 border-t border-neutral-100 print:hidden flex gap-4">
+                    <button
+                      onClick={addLineItem}
+                      className="flex items-center gap-2 text-sm text-neutral-500 hover:text-neutral-900"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Add Item
+                    </button>
+                    {services.length > 0 && (
+                      <button
+                        onClick={() => setShowServicesModal(true)}
+                        className="flex items-center gap-2 text-sm text-neutral-500 hover:text-neutral-900"
+                      >
+                        <Package className="w-4 h-4" />
+                        From Services
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Totals */}
+              <div className="px-8 py-4 flex justify-end">
+                <div className="w-72">
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between py-1">
+                      <span className="text-neutral-600">Subtotal:</span>
+                      <span className="font-medium text-neutral-900">{formatCurrency(subtotal)}</span>
+                    </div>
+                    <div className="flex justify-between py-1">
+                      <span className="text-neutral-600">Taxable Amount:</span>
+                      <span className="text-neutral-900">{formatCurrency(taxableAmount)}</span>
+                    </div>
+                    <div className="flex justify-between py-1 items-center">
+                      <span className="text-neutral-600">Tax Rate:</span>
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="number"
+                          value={taxRate}
+                          onChange={(e) => { setTaxRate(parseFloat(e.target.value) || 0); setHasUnsavedChanges(true); }}
+                          className="w-16 text-right bg-transparent border-b border-neutral-200 outline-none focus:border-neutral-500 print:border-none text-neutral-900"
+                          step="0.01"
+                        />
+                        <span className="text-neutral-900">%</span>
+                      </div>
+                    </div>
+                    <div className="flex justify-between py-1">
+                      <span className="text-neutral-600">Tax Due:</span>
+                      <span className="text-neutral-900">{formatCurrency(taxDue)}</span>
+                    </div>
+                    <div className="flex justify-between py-1 items-center">
+                      <span className="text-neutral-600">Other:</span>
+                      <input
+                        type="number"
+                        value={otherCharges}
+                        onChange={(e) => { setOtherCharges(parseFloat(e.target.value) || 0); setHasUnsavedChanges(true); }}
+                        className="w-24 text-right bg-transparent border-b border-neutral-200 outline-none focus:border-neutral-500 print:border-none text-neutral-900"
+                      />
+                    </div>
+                    <div className="flex justify-between py-2 border-t-2 border-neutral-900 mt-2">
+                      <span className="text-lg font-bold text-neutral-900">TOTAL:</span>
+                      <span className="text-lg font-bold text-neutral-900">{formatCurrency(total)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Terms and Conditions */}
+              <div className="px-8 py-4">
+                <h3 className="font-bold text-neutral-900 mb-2">TERMS AND CONDITIONS</h3>
+                <textarea
+                  value={terms}
+                  onChange={(e) => { setTerms(e.target.value); setHasUnsavedChanges(true); }}
+                  className="w-full h-32 p-3 text-sm text-neutral-700 border border-neutral-200 rounded-lg resize-none focus:ring-2 focus:ring-neutral-400 focus:border-transparent outline-none print:border-none print:resize-none"
+                />
+              </div>
+
+              {/* Signature Section */}
+              <div className="px-8 py-6 border-t border-neutral-200 mt-4">
+                <h3 className="font-bold text-neutral-900 mb-4">Customer Acceptance (sign below):</h3>
+                <div className="grid grid-cols-2 gap-8">
+                  <div>
+                    <div className="border-b-2 border-neutral-900 pb-1 mb-2">
+                      <span className="text-2xl font-serif">X</span>
+                      <span className="ml-4 text-neutral-400">___________________________</span>
+                    </div>
+                    <p className="text-sm text-neutral-500">Signature</p>
+                  </div>
+                  <div>
+                    <input
+                      type="text"
+                      value={signatureName}
+                      onChange={(e) => setSignatureName(e.target.value)}
+                      placeholder="Print Name"
+                      className="w-full border-b-2 border-neutral-900 pb-1 mb-2 bg-transparent outline-none focus:border-neutral-600 print:border-neutral-900 text-neutral-900"
+                    />
+                    <p className="text-sm text-neutral-500">Print Name</p>
+                  </div>
+                </div>
+
+                {/* Request Revisions */}
+                <div className="mt-6 print:hidden">
+                  {!showRevisionForm ? (
+                    <button
+                      onClick={() => setShowRevisionForm(true)}
+                      className="text-neutral-700 hover:text-neutral-900 text-sm font-medium"
+                    >
+                      Request Revisions
+                    </button>
+                  ) : (
+                    <div className="bg-neutral-50 rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="font-medium text-neutral-900">Request Revisions</h4>
+                        <button onClick={() => setShowRevisionForm(false)} className="text-neutral-400 hover:text-neutral-600">
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <textarea
+                        value={revisionComments}
+                        onChange={(e) => setRevisionComments(e.target.value)}
+                        placeholder="Enter your comments or requested changes..."
+                        className="w-full h-24 p-3 text-sm border border-neutral-200 rounded-lg resize-none focus:ring-2 focus:ring-neutral-400 focus:border-transparent outline-none"
+                      />
+                      <button className="mt-2 px-4 py-2 bg-neutral-900 text-white rounded-lg hover:bg-neutral-800 text-sm font-medium">
+                        Submit Revision Request
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="px-8 py-6 bg-neutral-50 border-t border-neutral-200">
+                <div className="text-center">
+                  <p className="text-neutral-600">{companyInfo.phone} | {companyInfo.website}</p>
+                  <p className="text-lg font-semibold text-neutral-900 mt-2">Thank You For Your Business!</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+        </div>
+      </div>
+
+      {/* Print Styles */}
+      <style>{`
+        @media print {
+          body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          .print\\:hidden { display: none !important; }
+          .print\\:border-none { border: none !important; }
+          .print\\:resize-none { resize: none !important; }
+          .print\\:cursor-default { cursor: default !important; }
+          .export-page { page-break-after: always; }
+          .export-page:last-child { page-break-after: avoid; }
+        }
+      `}</style>
+
+      {/* Export Preview Modal - Shows Cover + Details */}
+      {showExportPreview && (
+        <div className="fixed inset-0 bg-black/80 z-50 overflow-auto print:bg-white print:overflow-visible">
+          {/* Toolbar */}
+          <div className="sticky top-0 bg-white border-b px-6 py-3 flex items-center justify-between print:hidden">
+            <h2 className="font-semibold text-neutral-900">Export Preview</h2>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setShowExportPreview(false)}
+                className="px-4 py-2 text-neutral-600 hover:text-neutral-900"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => window.print()}
+                className="px-4 py-2 bg-neutral-900 text-white rounded-lg hover:bg-neutral-800"
+              >
+                <Download className="w-4 h-4 inline mr-2" />
+                Download PDF
+              </button>
+            </div>
+          </div>
+
+          <div className="py-8 flex flex-col items-center gap-8 print:p-0 print:gap-0">
+            {/* Cover Page */}
+            <div className="export-page w-[850px] bg-white shadow-xl print:shadow-none print:w-full" style={{ minHeight: '1100px', aspectRatio: '8.5/11' }}>
+              <div className="relative h-full">
+                <div 
+                  className="absolute inset-0 bg-cover bg-center"
+                  style={{ backgroundImage: `url(${coverBgUrl})` }}
+                >
+                  <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-black/80" />
+                </div>
+                <div className="relative z-10 h-full flex flex-col text-white p-12">
+                  <div className="flex justify-between items-start mb-8">
+                    <div>
+                      {companyInfo.logo ? (
+                        <img src={companyInfo.logo} alt={companyInfo.name} className="w-16 h-16 object-contain rounded-lg bg-white/10 mb-2" />
+                      ) : (
+                        <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center text-2xl font-bold mb-2">
+                          {companyInfo.name?.charAt(0) || 'C'}
+                        </div>
+                      )}
+                      <p className="text-white/70 text-sm">{companyInfo.website}</p>
+                    </div>
+                  </div>
+                  <div className="mb-auto">
+                    <p className="text-white/60 text-sm uppercase tracking-wider mb-2">Prepared For</p>
+                    <h3 className="text-2xl font-semibold mb-1">{client?.name || 'Client'}</h3>
+                    <p className="text-white/80">{client?.display_name}</p>
+                    <p className="text-white/60 mt-4">{formatDate(quote?.created_at)}</p>
+                  </div>
+                  <div className="text-center py-16">
+                    <h1 className="text-5xl font-bold tracking-tight">{documentTitle || 'QUOTE'}</h1>
+                    <p className="text-lg text-white/70 mt-4">{volumeNumber}</p>
+                    <div className="mt-8">
+                      <p className="text-white/50 text-sm uppercase tracking-wider mb-2">Project</p>
+                      <h2 className="text-3xl font-semibold">{documentTitle}</h2>
+                    </div>
+                  </div>
+                  <div className="mt-auto pt-8 border-t border-white/20">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xl font-semibold">{companyInfo.name}</p>
+                        <p className="text-white/60 text-sm">{companyInfo.address}</p>
+                        <p className="text-white/60 text-sm">{companyInfo.city}, {companyInfo.state} {companyInfo.zip}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-white/60 text-sm">{companyInfo.phone}</p>
+                        <p className="text-white/60 text-sm">{companyInfo.website}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Details Page */}
+            <div className="export-page w-[850px] bg-white shadow-xl print:shadow-none print:w-full" style={{ minHeight: '1100px' }}>
+              {/* Header */}
+              <div className="p-8 border-b border-neutral-200">
+                <div className="flex justify-between">
+                  <div className="flex gap-6">
+                    {companyInfo.logo ? (
+                      <img src={companyInfo.logo} alt={companyInfo.name} className="w-16 h-16 object-contain rounded-xl bg-neutral-100" />
+                    ) : (
+                      <div className="w-16 h-16 bg-neutral-100 rounded-xl flex items-center justify-center text-2xl font-bold text-neutral-700">
+                        {companyInfo.name?.charAt(0) || 'C'}
+                      </div>
+                    )}
+                    <div>
+                      <h2 className="text-2xl font-bold text-neutral-900">{companyInfo.name}</h2>
+                      <p className="text-neutral-600">{companyInfo.address}</p>
+                      <p className="text-neutral-600">{companyInfo.city}, {companyInfo.state} {companyInfo.zip}</p>
+                      <p className="text-neutral-500 text-sm mt-1">{companyInfo.website} | {companyInfo.phone}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="bg-neutral-50 border border-neutral-200 rounded-lg p-4 text-sm">
+                      <table className="text-left">
+                        <tbody>
+                          <tr><td className="pr-4 py-1 text-neutral-500">DATE:</td><td className="font-medium text-neutral-900">{formatDate(quote?.created_at)}</td></tr>
+                          <tr><td className="pr-4 py-1 text-neutral-500">QUOTE #:</td><td className="font-medium text-neutral-900">{quote?.quote_number || 'New'}</td></tr>
+                          <tr><td className="pr-4 py-1 text-neutral-500">VALID UNTIL:</td><td className="font-medium text-neutral-900">{validUntil ? formatDate(validUntil) : '-'}</td></tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Customer */}
+              <div className="px-8 py-4">
+                <h3 className="text-sm font-semibold text-neutral-900 uppercase tracking-wider mb-3">Customer</h3>
+                <div className="border border-neutral-200 rounded-lg p-5">
+                  {client && (
+                    <div className="space-y-1">
+                      <p className="font-semibold text-neutral-900">{client.name}</p>
+                      {client.display_name && client.display_name !== client.name && <p className="text-neutral-600 text-sm">{client.display_name}</p>}
+                      {client.email && <p className="text-neutral-500 text-sm">{client.email}</p>}
+                      {client.phone && <p className="text-neutral-500 text-sm">{client.phone}</p>}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Line Items */}
+              <div className="px-8 py-4">
+                <h3 className="text-sm font-semibold text-neutral-900 uppercase tracking-wider mb-3">Line Items</h3>
+                <div className="border border-neutral-200 rounded-lg overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-neutral-50 border-b border-neutral-200">
+                        <th className="text-left px-5 py-3 font-medium text-neutral-600 text-xs uppercase tracking-wider">Description</th>
+                        <th className="text-right px-4 py-3 font-medium text-neutral-600 text-xs uppercase tracking-wider w-28">Unit Price</th>
+                        <th className="text-center px-4 py-3 font-medium text-neutral-600 text-xs uppercase tracking-wider w-20">Unit</th>
+                        <th className="text-center px-4 py-3 font-medium text-neutral-600 text-xs uppercase tracking-wider w-16">Qty</th>
+                        <th className="text-center px-4 py-3 font-medium text-neutral-600 text-xs uppercase tracking-wider w-16">Tax</th>
+                        <th className="text-right px-5 py-3 font-medium text-neutral-600 text-xs uppercase tracking-wider w-28">Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-neutral-100">
+                      {lineItems.map((item) => (
+                        <tr key={item.id}>
+                          <td className="px-5 py-3 text-neutral-900">{item.description}</td>
+                          <td className="px-4 py-3 text-right text-neutral-900">{formatCurrency(item.unitPrice)}</td>
+                          <td className="px-4 py-3 text-center text-neutral-500 text-xs">{item.unit}</td>
+                          <td className="px-4 py-3 text-center text-neutral-900">{item.qty}</td>
+                          <td className="px-4 py-3 text-center text-neutral-900">{item.taxed ? '✓' : '-'}</td>
+                          <td className="px-5 py-3 text-right font-medium text-neutral-900">{formatCurrency(item.unitPrice * item.qty)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Totals */}
+              <div className="px-8 py-4 flex justify-end">
+                <div className="w-72 space-y-2 text-sm">
+                  <div className="flex justify-between py-1"><span className="text-neutral-600">Subtotal:</span><span className="font-medium">{formatCurrency(subtotal)}</span></div>
+                  <div className="flex justify-between py-1"><span className="text-neutral-600">Tax ({taxRate}%):</span><span>{formatCurrency(taxDue)}</span></div>
+                  {otherCharges > 0 && <div className="flex justify-between py-1"><span className="text-neutral-600">Other:</span><span>{formatCurrency(otherCharges)}</span></div>}
+                  <div className="flex justify-between py-2 border-t-2 border-neutral-900 mt-2">
+                    <span className="text-lg font-bold">TOTAL:</span>
+                    <span className="text-lg font-bold">{formatCurrency(total)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Terms */}
+              <div className="px-8 py-4">
+                <h3 className="font-bold text-neutral-900 mb-2">TERMS AND CONDITIONS</h3>
+                <div className="text-sm text-neutral-700 whitespace-pre-line">{terms}</div>
+              </div>
+
+              {/* Signature */}
+              <div className="px-8 py-6 border-t border-neutral-200 mt-4">
+                <h3 className="font-bold text-neutral-900 mb-4">Customer Acceptance:</h3>
+                <div className="grid grid-cols-2 gap-8">
+                  <div>
+                    <div className="border-b-2 border-neutral-900 pb-1 mb-2"><span className="text-2xl font-serif">X</span><span className="ml-4 text-neutral-400">___________________________</span></div>
+                    <p className="text-sm text-neutral-500">Signature</p>
+                  </div>
+                  <div>
+                    <div className="border-b-2 border-neutral-900 pb-1 mb-2 h-8"></div>
+                    <p className="text-sm text-neutral-500">Print Name</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="px-8 py-6 bg-neutral-50 border-t border-neutral-200">
+                <div className="text-center">
+                  <p className="text-neutral-600">{companyInfo.phone} | {companyInfo.website}</p>
+                  <p className="text-lg font-semibold text-neutral-900 mt-2">Thank You For Your Business!</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Services Modal */}
+      {showServicesModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl w-full max-w-lg p-6 mx-4 max-h-[80vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-neutral-900">Add from Services</h2>
+              <button onClick={() => setShowServicesModal(false)} className="p-2 hover:bg-neutral-100 rounded-lg">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="overflow-y-auto flex-1">
+              {services.length === 0 ? (
+                <p className="text-neutral-500 text-center py-8">No services available. Add services in Settings.</p>
+              ) : (
+                <div className="space-y-2">
+                  {services.map((service) => (
+                    <button
+                      key={service.id}
+                      onClick={() => {
+                        const rate = service.pricing_type === 'per_sqft' 
+                          ? (service.min_rate || 0) 
+                          : (service.base_rate || 0);
+                        const unit = service.pricing_type === 'per_sqft' ? 'sq ft' 
+                          : service.pricing_type === 'hourly' ? 'hour' 
+                          : service.pricing_type === 'fixed' ? 'project' 
+                          : 'each';
+                        setLineItems([...lineItems, {
+                          id: Date.now().toString(),
+                          description: service.name + (service.description ? ` - ${service.description}` : ''),
+                          unitPrice: rate,
+                          qty: 1,
+                          unit,
+                          taxed: false
+                        }]);
+                        setHasUnsavedChanges(true);
+                        setShowServicesModal(false);
+                      }}
+                      className="w-full text-left p-4 border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors"
+                    >
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="font-medium text-neutral-900">{service.name}</p>
+                          <p className="text-sm text-neutral-500">{service.category}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-medium text-neutral-900">
+                            {service.pricing_type === 'per_sqft' && service.min_rate && service.max_rate
+                              ? `$${service.min_rate} - $${service.max_rate}`
+                              : service.base_rate ? `$${service.base_rate}` : '-'}
+                          </p>
+                          <p className="text-sm text-neutral-500">per {service.unit_label}</p>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* New Client Modal */}
+      {showNewClientModal && (
+        <NewClientModal
+          companyId={profile?.company_id || ''}
+          onClose={() => setShowNewClientModal(false)}
+          onSave={async (newClient) => {
+            setClients([...clients, newClient]);
+            setSelectedClientId(newClient.id);
+            setClient(newClient);
+            setHasUnsavedChanges(true);
+            setShowNewClientModal(false);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function NewClientModal({ companyId, onClose, onSave }: { 
+  companyId: string; 
+  onClose: () => void; 
+  onSave: (client: Client) => void;
+}) {
+  const [name, setName] = useState('');
+  const [displayName, setDisplayName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) {
+      setError('Client name is required');
+      return;
+    }
+    
+    setSaving(true);
+    setError(null);
+    
+    try {
+      const newClient = await api.createClient({
+        company_id: companyId,
+        name: name.trim(),
+        display_name: displayName.trim() || name.trim(),
+        email: email.trim() || undefined,
+        phone: phone.trim() || undefined,
+      });
+      onSave(newClient);
+    } catch (err: any) {
+      console.error('Failed to create client:', err);
+      setError(err?.message || 'Failed to create client');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-2xl w-full max-w-md p-6 mx-4">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-semibold text-neutral-900">New Client</h2>
+          <button onClick={onClose} className="p-2 hover:bg-neutral-100 rounded-lg">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {error && (
+            <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">{error}</div>
+          )}
+
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 mb-1.5">Client Name *</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-400 focus:border-transparent outline-none"
+              placeholder="e.g., Acme Corporation"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 mb-1.5">Display Name</label>
+            <input
+              type="text"
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-400 focus:border-transparent outline-none"
+              placeholder="Optional short name"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 mb-1.5">Email</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-400 focus:border-transparent outline-none"
+              placeholder="client@example.com"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 mb-1.5">Phone</label>
+            <input
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-400 focus:border-transparent outline-none"
+              placeholder="(555) 123-4567"
+            />
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2.5 border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="flex-1 px-4 py-2.5 bg-neutral-900 text-white rounded-xl hover:bg-neutral-800 transition-colors disabled:opacity-50"
+            >
+              {saving ? 'Creating...' : 'Create Client'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
