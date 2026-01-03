@@ -12,60 +12,99 @@ module.exports = {
       center: true,
       padding: '2rem',
       screens: {
-        '2xl': '1400px',
+        '2xl': '1200px', // Max width 1200px per spec
       },
     },
     extend: {
       colors: {
+        // Swiss Design System Colors
+        swiss: {
+          red: {
+            DEFAULT: '#DC143C', // Primary Brand
+            dark: '#A01028',    // Hover
+          },
+          black: '#000000',
+          charcoal: {
+            dark: '#1A1A1A',
+            DEFAULT: '#333333',
+          },
+          gray: {
+            medium: '#666666',
+            light: '#999999',
+            border: '#CCCCCC',
+            surface: '#F5F5F5',
+            subtle: '#E5E5E5',
+          },
+          white: '#FFFFFF',
+        },
+        // Keeping existing colors for backward compatibility if needed, 
+        // but landing page will use 'swiss-' prefix or I can map primary to swiss red.
         primary: {
-          50: '#E6F0FF',
-          100: '#CCE0FF',
-          200: '#99C2FF',
-          300: '#66A3FF',
-          400: '#3385FF',
-          500: '#0066FF',
-          600: '#0052CC',
-          700: '#003D99',
-          800: '#002966',
-          900: '#001433',
+            DEFAULT: '#DC143C', // Mapping primary to Swiss Red for ease
+            foreground: '#FFFFFF',
+            50: '#FDE8ED', // Generated shades of red for completeness if needed
+            100: '#FBD1DA',
+            200: '#F7A3B4',
+            300: '#F3758E',
+            400: '#EF4769',
+            500: '#DC143C',
+            600: '#B01030',
+            700: '#840C24',
+            800: '#580818',
+            900: '#2C040C',
         },
         neutral: {
-          0: '#FFFFFF',
-          50: '#FAFAFA',
+          DEFAULT: '#333333',
+          50: '#FFFFFF',
           100: '#F5F5F5',
           200: '#E5E5E5',
-          300: '#D4D4D4',
-          400: '#A3A3A3',
-          500: '#737373',
-          600: '#525252',
-          700: '#404040',
-          800: '#262626',
-          900: '#171717',
-        },
-        semantic: {
-          success: '#10B981',
-          warning: '#F59E0B',
-          error: '#EF4444',
-          info: '#3B82F6',
+          300: '#CCCCCC',
+          400: '#999999',
+          500: '#666666',
+          600: '#333333',
+          700: '#1A1A1A',
+          800: '#0D0D0D',
+          900: '#000000',
         },
       },
       fontFamily: {
-        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
-        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+        sans: ['"Helvetica Neue"', 'Helvetica', 'Arial', 'sans-serif'], // Swiss font stack
       },
       borderRadius: {
-        lg: '12px',
-        xl: '16px',
-        '2xl': '24px',
+        none: '0px',
+        sm: '2px', // Subtle
+        DEFAULT: '0px',
+        md: '0px',
+        lg: '0px',
+        xl: '0px',
+        '2xl': '0px',
+        '3xl': '0px',
+      },
+      spacing: {
+        'micro': '8px',
+        'small': '16px',
+        'base': '24px',
+        'medium': '32px',
+        'large': '48px',
+        'xl': '64px',
+        'xxl': '96px',
       },
       boxShadow: {
-        sm: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
-        md: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
-        lg: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
-        xl: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+        card: '0 1px 3px rgba(0, 0, 0, 0.12)',
       },
       animation: {
-        'spin': 'spin 1s linear infinite',
+        'fade-in': 'fadeIn 0.2s linear forwards',
+        'slide-up': 'slideUp 0.2s linear forwards',
+      },
+      keyframes: {
+        fadeIn: {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
+        slideUp: {
+          '0%': { opacity: '0', transform: 'translateY(20px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
       },
     },
   },

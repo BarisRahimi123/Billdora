@@ -61,17 +61,52 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   async function signUp(email: string, password: string, fullName: string) {
     const { data, error } = await supabase.auth.signUp({ email, password });
     if (!error && data.user) {
-      // Try to create company first
-      let companyId: string | null = null;
+      // Check if there's a pending invitation for this email
+      let invitation: any = null;
       try {
-        const { data: newCompany, error: companyError } = await supabase.from('companies').insert({
-          name: `${fullName}'s Company`,
-        }).select().single();
-        if (!companyError && newCompany) {
-          companyId = newCompany.id;
-        }
+        const { data: inviteData } = await supabase
+          .from('company_invitations')
+          .select('*, role:roles(id, name)')
+          .eq('email', email.toLowerCase())
+          .eq('status', 'pending')
+          .gt('expires_at', new Date().toISOString())
+          .maybeSingle();
+        invitation = inviteData;
       } catch (e) {
-        console.error('Company creation failed:', e);
+        console.error('Failed to check invitation:', e);
+      }
+
+      let companyId: string | null = null;
+      let userRole = 'admin';
+      let roleId: string | null = null;
+
+      if (invitation) {
+        // User was invited - use invitation's company and role
+        companyId = invitation.company_id;
+        roleId = invitation.role_id;
+        userRole = invitation.role?.name || 'staff';
+        
+        // Mark invitation as accepted
+        try {
+          await supabase
+            .from('company_invitations')
+            .update({ status: 'accepted' })
+            .eq('id', invitation.id);
+        } catch (e) {
+          console.error('Failed to update invitation status:', e);
+        }
+      } else {
+        // New user signing up - create company and make them admin
+        try {
+          const { data: newCompany, error: companyError } = await supabase.from('companies').insert({
+            name: `${fullName}'s Company`,
+          }).select().single();
+          if (!companyError && newCompany) {
+            companyId = newCompany.id;
+          }
+        } catch (e) {
+          console.error('Company creation failed:', e);
+        }
       }
       
       // Try to create profile (may already exist via trigger)
@@ -81,26 +116,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         if (existingProfile) {
           // Profile exists, update it with company_id and role
+          const updateData: any = { 
+            company_id: companyId, 
+            full_name: fullName, 
+            role: userRole 
+          };
+          if (roleId) updateData.role_id = roleId;
+          
           const { data: updatedProfile } = await supabase.from('profiles')
-            .update({ 
-              company_id: companyId, 
-              full_name: fullName, 
-              role: 'admin' 
-            })
+            .update(updateData)
             .eq('id', data.user.id)
             .select().single();
           setProfile(updatedProfile);
         } else {
           // Create new profile
-          const { data: newProfile } = await supabase.from('profiles').insert({
+          const profileData: any = {
             id: data.user.id,
             email,
             full_name: fullName,
             company_id: companyId,
-            role: 'admin',
+            role: userRole,
             is_active: true,
             is_billable: true,
-          }).select().single();
+          };
+          if (roleId) profileData.role_id = roleId;
+          
+          const { data: newProfile } = await supabase.from('profiles').insert(profileData).select().single();
           setProfile(newProfile);
         }
       } catch (e) {

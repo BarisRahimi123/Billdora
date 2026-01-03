@@ -15,6 +15,8 @@ import ReportsPage from './pages/ReportsPage';
 import SettingsPage from './pages/SettingsPage';
 import QuoteDocumentPage from './pages/QuoteDocumentPage';
 
+import LandingPage from './pages/LandingPage';
+
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   
@@ -46,22 +48,23 @@ function AppRoutes() {
 
   return (
     <Routes>
+      <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <LoginPage />} />
       <Route path="/quotes/:quoteId/document" element={<ProtectedRoute><QuoteDocumentPage /></ProtectedRoute>} />
-      <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-        <Route index element={<Navigate to="/dashboard" replace />} />
-        <Route path="dashboard" element={<DashboardPage />} />
-        <Route path="sales" element={<SalesPage />} />
-        <Route path="projects" element={<ProjectsPage />} />
-        <Route path="projects/:projectId" element={<ProjectsPage />} />
-        <Route path="time-expense" element={<TimeExpensePage />} />
-        <Route path="invoicing" element={<InvoicingPage />} />
-        <Route path="resourcing" element={<ResourcingPage />} />
-        <Route path="analytics" element={<AnalyticsPage />} />
-        <Route path="reports" element={<ReportsPage />} />
-        <Route path="settings" element={<SettingsPage />} />
+      
+      <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+        <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/sales" element={<SalesPage />} />
+        <Route path="/projects" element={<ProjectsPage />} />
+        <Route path="/projects/:projectId" element={<ProjectsPage />} />
+        <Route path="/time-expense" element={<TimeExpensePage />} />
+        <Route path="/invoicing" element={<InvoicingPage />} />
+        <Route path="/resourcing" element={<ResourcingPage />} />
+        <Route path="/analytics" element={<AnalyticsPage />} />
+        <Route path="/reports" element={<ReportsPage />} />
+        <Route path="/settings" element={<SettingsPage />} />
       </Route>
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }
