@@ -172,7 +172,7 @@ export default function PaymentModal({ invoice, onClose, onSave }: PaymentModalP
         {activeTab === 'manual' && (
           <form onSubmit={handleManualSubmit} className="p-5 space-y-4">
             {error && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+              <div className="p-3 bg-neutral-100 border border-red-200 rounded-lg text-red-700 text-sm">
                 {error}
               </div>
             )}
@@ -271,7 +271,7 @@ export default function PaymentModal({ invoice, onClose, onSave }: PaymentModalP
             ) : (
               <form onSubmit={handleOnlinePayment} className="space-y-4">
                 {stripeError && (
-                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                  <div className="p-3 bg-neutral-100 border border-red-200 rounded-lg text-red-700 text-sm">
                     {stripeError}
                   </div>
                 )}

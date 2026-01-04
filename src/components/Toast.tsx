@@ -31,7 +31,7 @@ export function Toast({ message, type = 'success', duration = 4000, onClose }: T
   const styles = {
     success: 'bg-emerald-600 text-white',
     error: 'bg-red-600 text-white',
-    warning: 'bg-amber-500 text-white',
+    warning: 'bg-neutral-1000 text-white',
     info: 'bg-blue-600 text-white',
   };
 

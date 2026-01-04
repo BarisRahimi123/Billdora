@@ -17,54 +17,38 @@ module.exports = {
     },
     extend: {
       colors: {
-        // Swiss Design System Colors
-        swiss: {
-          red: {
-            DEFAULT: '#DC143C', // Primary Brand
-            dark: '#A01028',    // Hover
-          },
-          black: '#000000',
-          charcoal: {
-            dark: '#1A1A1A',
-            DEFAULT: '#333333',
-          },
-          gray: {
-            medium: '#666666',
-            light: '#999999',
-            border: '#CCCCCC',
-            surface: '#F5F5F5',
-            subtle: '#E5E5E5',
-          },
-          white: '#FFFFFF',
+        // Modern SaaS Neutral Base Palette
+        background: {
+          DEFAULT: '#F9FAFB', // Main background
+          surface: '#FFFFFF', // Cards
         },
-        // Keeping existing colors for backward compatibility if needed, 
-        // but landing page will use 'swiss-' prefix or I can map primary to swiss red.
+        border: {
+          DEFAULT: '#E5E7EB', // Subtle borders
+          divider: '#D1D5DB', // Dividers
+        },
+        text: {
+          primary: '#111827',   // Primary text
+          secondary: '#4B5563', // Secondary text
+          muted: '#9CA3AF',     // Muted/hints
+        },
+        // Primary accent (keeping red for CTAs)
         primary: {
-            DEFAULT: '#DC143C', // Mapping primary to Swiss Red for ease
-            foreground: '#FFFFFF',
-            50: '#FDE8ED', // Generated shades of red for completeness if needed
-            100: '#FBD1DA',
-            200: '#F7A3B4',
-            300: '#F3758E',
-            400: '#EF4769',
-            500: '#DC143C',
-            600: '#B01030',
-            700: '#840C24',
-            800: '#580818',
-            900: '#2C040C',
+          DEFAULT: '#DC143C',
+          foreground: '#FFFFFF',
+          dark: '#A01028',
         },
+        // Neutral scale for compatibility
         neutral: {
-          DEFAULT: '#333333',
-          50: '#FFFFFF',
-          100: '#F5F5F5',
-          200: '#E5E5E5',
-          300: '#CCCCCC',
-          400: '#999999',
-          500: '#666666',
-          600: '#333333',
-          700: '#1A1A1A',
-          800: '#0D0D0D',
-          900: '#000000',
+          50: '#F9FAFB',
+          100: '#F3F4F6',
+          200: '#E5E7EB',
+          300: '#D1D5DB',
+          400: '#9CA3AF',
+          500: '#6B7280',
+          600: '#4B5563',
+          700: '#374151',
+          800: '#1F2937',
+          900: '#111827',
         },
       },
       fontFamily: {

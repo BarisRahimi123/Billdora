@@ -273,12 +273,12 @@ export default function SettingsPage() {
               ) : (
                 <form onSubmit={handleSaveCompanySettings} className="space-y-6">
                   {companyError && (
-                    <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm">
+                    <div className="p-4 bg-neutral-100 border border-red-200 text-red-700 rounded-xl text-sm">
                       {companyError}
                     </div>
                   )}
                   {companySuccess && (
-                    <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl text-sm">
+                    <div className="p-4 bg-neutral-100 border border-emerald-200 text-emerald-700 rounded-xl text-sm">
                       Settings saved successfully!
                     </div>
                   )}
@@ -548,7 +548,7 @@ export default function SettingsPage() {
                             </button>
                             <button
                               onClick={() => handleDeleteService(service.id)}
-                              className="p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded"
+                              className="p-1.5 text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 rounded"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
@@ -685,7 +685,7 @@ function ServiceModal({ service, companyId, onClose, onSave }: {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
-            <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">{error}</div>
+            <div className="p-3 bg-neutral-100 border border-red-200 text-red-700 rounded-lg text-sm">{error}</div>
           )}
 
           <div>
@@ -1027,14 +1027,14 @@ function UserManagementTab({ companyId, currentUserId }: { companyId: string; cu
                           user.is_active !== false ? (
                             <button
                               onClick={() => handleDeactivateUser(user.id)}
-                              className="w-full px-4 py-2 text-left text-sm hover:bg-red-50 text-red-600 flex items-center gap-2"
+                              className="w-full px-4 py-2 text-left text-sm hover:bg-neutral-100 text-neutral-900 flex items-center gap-2"
                             >
                               <UserX className="w-4 h-4" /> Deactivate
                             </button>
                           ) : (
                             <button
                               onClick={() => handleActivateUser(user.id)}
-                              className="w-full px-4 py-2 text-left text-sm hover:bg-emerald-50 text-emerald-600 flex items-center gap-2"
+                              className="w-full px-4 py-2 text-left text-sm hover:bg-neutral-100 text-neutral-900 flex items-center gap-2"
                             >
                               <UserCheck className="w-4 h-4" /> Activate
                             </button>
@@ -1103,7 +1103,7 @@ function UserManagementTab({ companyId, currentUserId }: { companyId: string; cu
                           {!role.is_system && (
                             <button
                               onClick={() => handleDeleteRole(role.id)}
-                              className="w-full px-4 py-2 text-left text-sm hover:bg-red-50 text-red-600 flex items-center gap-2"
+                              className="w-full px-4 py-2 text-left text-sm hover:bg-neutral-100 text-neutral-900 flex items-center gap-2"
                             >
                               <Trash2 className="w-4 h-4" /> Delete
                             </button>
@@ -1121,7 +1121,7 @@ function UserManagementTab({ companyId, currentUserId }: { companyId: string; cu
                         <div className="space-y-1">
                           {['view', 'create', 'edit', 'delete'].map((action) => (
                             <div key={action} className="flex items-center gap-1.5">
-                              <div className={`w-3 h-3 rounded-full ${(perms as any)[action] ? 'bg-emerald-500' : 'bg-neutral-300'}`} />
+                              <div className={`w-3 h-3 rounded-full ${(perms as any)[action] ? 'bg-neutral-1000' : 'bg-neutral-300'}`} />
                               <span className="text-xs text-neutral-600 capitalize">{action}</span>
                             </div>
                           ))}
@@ -1180,7 +1180,7 @@ function UserManagementTab({ companyId, currentUserId }: { companyId: string; cu
                     <td className="px-6 py-4">
                       <button
                         onClick={() => handleCancelInvitation(invitation.id)}
-                        className="text-red-600 hover:text-red-700 text-sm font-medium"
+                        className="text-neutral-900 hover:text-red-700 text-sm font-medium"
                       >
                         Cancel
                       </button>
@@ -1253,6 +1253,26 @@ function InviteUserModal({ companyId, currentUserId, roles, onClose, onInvite }:
         role_id: roleId || null,
         invited_by: currentUserId,
       });
+      
+      // Send invitation email via edge function
+      const selectedRole = roles.find(r => r.id === roleId);
+      const { data: companyData } = await supabase.from('companies').select('name').eq('id', companyId).single();
+      const { data: inviterData } = await supabase.from('profiles').select('full_name').eq('id', currentUserId).single();
+      
+      await supabase.functions.invoke('send-email', {
+        body: {
+          to: email,
+          subject: `You've been invited to join ${companyData?.name || 'a company'} on PrimeLedger`,
+          type: 'invitation',
+          data: {
+            inviterName: inviterData?.full_name || 'A team member',
+            companyName: companyData?.name || 'a company',
+            roleName: selectedRole?.name || '',
+            signupUrl: `${window.location.origin}/login`,
+          },
+        },
+      });
+      
       onInvite();
     } catch (err: any) {
       console.error('Failed to send invitation:', err);
@@ -1273,7 +1293,7 @@ function InviteUserModal({ companyId, currentUserId, roles, onClose, onInvite }:
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
-            <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">{error}</div>
+            <div className="p-3 bg-neutral-100 border border-red-200 text-red-700 rounded-lg text-sm">{error}</div>
           )}
           <div>
             <label className="block text-sm font-medium text-neutral-700 mb-1.5">Email Address *</label>
@@ -1369,7 +1389,7 @@ function EditUserModal({ user, roles, onClose, onSave }: {
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
-            <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">{error}</div>
+            <div className="p-3 bg-neutral-100 border border-red-200 text-red-700 rounded-lg text-sm">{error}</div>
           )}
           <div>
             <label className="block text-sm font-medium text-neutral-700 mb-1.5">Full Name</label>
@@ -1600,7 +1620,7 @@ function RoleModal({ role, companyId, onClose, onSave }: {
         </div>
         <form onSubmit={handleSubmit} className="space-y-6">
           {error && (
-            <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">{error}</div>
+            <div className="p-3 bg-neutral-100 border border-red-200 text-red-700 rounded-lg text-sm">{error}</div>
           )}
           
           <div className="grid grid-cols-2 gap-4">
@@ -1697,13 +1717,13 @@ function RoleModal({ role, companyId, onClose, onSave }: {
           </div>
 
           {/* Financial Access */}
-          <div className="p-4 bg-amber-50 rounded-xl border border-amber-200">
+          <div className="p-4 bg-neutral-100 rounded-xl border border-amber-200">
             <label className="flex items-center gap-3 cursor-pointer">
               <input
                 type="checkbox"
                 checked={canViewFinancials}
                 onChange={(e) => setCanViewFinancials(e.target.checked)}
-                className="w-5 h-5 rounded border-neutral-300 text-amber-600 focus:ring-amber-500"
+                className="w-5 h-5 rounded border-neutral-300 text-neutral-900 focus:ring-amber-500"
               />
               <div>
                 <span className="font-medium text-neutral-900">Can View Financial Data</span>
@@ -1713,7 +1733,7 @@ function RoleModal({ role, companyId, onClose, onSave }: {
           </div>
 
           {/* Approval Access */}
-          <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-200 space-y-3">
+          <div className="p-4 bg-neutral-100 rounded-xl border border-emerald-200 space-y-3">
             <div className="font-medium text-neutral-900">Approval Permissions</div>
             <p className="text-sm text-neutral-500">Control access to approve time entries and expenses</p>
             <div className="flex gap-6">
@@ -1722,7 +1742,7 @@ function RoleModal({ role, companyId, onClose, onSave }: {
                   type="checkbox"
                   checked={canViewApprovals}
                   onChange={(e) => setCanViewApprovals(e.target.checked)}
-                  className="w-4 h-4 rounded border-neutral-300 text-emerald-600 focus:ring-emerald-500"
+                  className="w-4 h-4 rounded border-neutral-300 text-neutral-900 focus:ring-emerald-500"
                 />
                 <span className="text-sm text-neutral-700">View Pending Approvals</span>
               </label>
@@ -1731,7 +1751,7 @@ function RoleModal({ role, companyId, onClose, onSave }: {
                   type="checkbox"
                   checked={canApprove}
                   onChange={(e) => setCanApprove(e.target.checked)}
-                  className="w-4 h-4 rounded border-neutral-300 text-emerald-600 focus:ring-emerald-500"
+                  className="w-4 h-4 rounded border-neutral-300 text-neutral-900 focus:ring-emerald-500"
                 />
                 <span className="text-sm text-neutral-700">Can Approve/Reject</span>
               </label>
@@ -1809,12 +1829,12 @@ function ProfileTab() {
       
       <form onSubmit={handleSave} className="space-y-6 max-w-lg">
         {error && (
-          <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm">
+          <div className="p-4 bg-neutral-100 border border-red-200 text-red-700 rounded-xl text-sm">
             {error}
           </div>
         )}
         {success && (
-          <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl text-sm">
+          <div className="p-4 bg-neutral-100 border border-emerald-200 text-emerald-700 rounded-xl text-sm">
             Profile updated successfully!
           </div>
         )}
@@ -2030,10 +2050,10 @@ function InvoicingSettingsTab({ companyId }: { companyId: string }) {
 
           <form onSubmit={handleSaveAddressInfo} className="space-y-6">
             {error && (
-              <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm">{error}</div>
+              <div className="p-4 bg-neutral-100 border border-red-200 text-red-700 rounded-xl text-sm">{error}</div>
             )}
             {success && (
-              <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl text-sm">
+              <div className="p-4 bg-neutral-100 border border-emerald-200 text-emerald-700 rounded-xl text-sm">
                 Settings saved successfully!
               </div>
             )}
@@ -2366,7 +2386,7 @@ function CalculatorsTab({ companyId }: { companyId: string }) {
       <p className="text-neutral-500 text-sm mb-6">Choose which invoice calculation methods are available when creating invoices</p>
 
       {success && (
-        <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl text-sm mb-6">
+        <div className="p-4 bg-neutral-100 border border-emerald-200 text-emerald-700 rounded-xl text-sm mb-6">
           Calculator settings saved successfully!
         </div>
       )}
@@ -2577,7 +2597,7 @@ function PDFFormatsTab({ companyId }: { companyId: string }) {
                     </button>
                     <button
                       onClick={() => handleDelete(template.id)}
-                      className="p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded"
+                      className="p-1.5 text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 rounded"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -2764,7 +2784,7 @@ function PDFTemplateModal({ template, companyId, onClose, onSave }: {
 
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6">
           {error && (
-            <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm mb-4">{error}</div>
+            <div className="p-3 bg-neutral-100 border border-red-200 text-red-700 rounded-lg text-sm mb-4">{error}</div>
           )}
 
           {/* Basic Info Tab */}
@@ -3382,7 +3402,7 @@ function BasicCodesTab({ companyId }: { companyId: string }) {
                 {selectedItem.id && (
                   <button
                     onClick={handleDelete}
-                    className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    className="px-4 py-2 text-neutral-900 hover:bg-neutral-100 rounded-lg transition-colors"
                   >
                     Delete
                   </button>
@@ -3602,7 +3622,7 @@ function FieldValuesTab({ companyId }: { companyId: string }) {
                 {selectedItem.id && (
                   <button
                     onClick={handleDelete}
-                    className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    className="px-4 py-2 text-neutral-900 hover:bg-neutral-100 rounded-lg transition-colors"
                   >
                     Delete
                   </button>
@@ -3817,7 +3837,7 @@ function StatusCodesTab({ companyId }: { companyId: string }) {
                 {selectedItem.id && (
                   <button
                     onClick={handleDelete}
-                    className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    className="px-4 py-2 text-neutral-900 hover:bg-neutral-100 rounded-lg transition-colors"
                   >
                     Delete
                   </button>
@@ -4034,7 +4054,7 @@ function CostCentersTab({ companyId }: { companyId: string }) {
                 {selectedItem.id && (
                   <button
                     onClick={handleDelete}
-                    className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    className="px-4 py-2 text-neutral-900 hover:bg-neutral-100 rounded-lg transition-colors"
                   >
                     Delete
                   </button>

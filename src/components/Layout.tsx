@@ -176,9 +176,9 @@ export default function Layout() {
 
   const getResultIcon = (type: string) => {
     switch (type) {
-      case 'project': return <FolderKanban className="w-4 h-4 text-primary-500" />;
-      case 'client': return <Users className="w-4 h-4 text-emerald-500" />;
-      case 'invoice': return <FileText className="w-4 h-4 text-amber-500" />;
+      case 'project': return <FolderKanban className="w-4 h-4 text-neutral-900-500" />;
+      case 'client': return <Users className="w-4 h-4 text-neutral-700" />;
+      case 'invoice': return <FileText className="w-4 h-4 text-neutral-700" />;
       default: return null;
     }
   };
@@ -207,7 +207,7 @@ export default function Layout() {
               to={item.path}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-4 py-3 mx-2 rounded-xl transition-colors ${
-                  isActive ? 'bg-primary-500 text-white' : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
+                  isActive ? 'bg-neutral-900-500 text-white' : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
                 }`
               }
             >
@@ -291,7 +291,7 @@ export default function Layout() {
               {!showTimerWidget && (
                 <button
                   onClick={() => setShowTimerWidget(true)}
-                  className="flex items-center gap-2 px-3 py-2 bg-primary-50 text-primary-600 rounded-xl hover:bg-primary-100 transition-colors"
+                  className="flex items-center gap-2 px-3 py-2 bg-neutral-900-50 text-neutral-900-600 rounded-xl hover:bg-neutral-800-100 transition-colors"
                 >
                   <Clock className="w-4 h-4" />
                   <span className="text-sm font-medium">Timer</span>
@@ -300,8 +300,8 @@ export default function Layout() {
 
               {/* Mini Timer Display */}
               {timerRunning && (
-                <div className="flex items-center gap-2 px-3 py-2 bg-emerald-50 text-emerald-700 rounded-xl">
-                  <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+                <div className="flex items-center gap-2 px-3 py-2 bg-neutral-100 text-emerald-700 rounded-xl">
+                  <div className="w-2 h-2 bg-neutral-1000 rounded-full animate-pulse" />
                   <span className="text-sm font-mono font-medium">{formatTimer(timerSeconds)}</span>
                 </div>
               )}
@@ -317,7 +317,7 @@ export default function Layout() {
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
                   className="flex items-center gap-2 px-3 py-2 hover:bg-neutral-100 rounded-xl transition-colors"
                 >
-                  <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 font-medium">
+                  <div className="w-8 h-8 rounded-full bg-neutral-900-100 flex items-center justify-center text-neutral-900-600 font-medium">
                     {profile?.full_name?.charAt(0) || 'U'}
                   </div>
                   {profile?.full_name && <span className="text-sm font-medium text-neutral-700">{profile.full_name}</span>}
@@ -335,7 +335,7 @@ export default function Layout() {
                     </button>
                     <button
                       onClick={() => { signOut(); setUserMenuOpen(false); }}
-                      className="w-full flex items-center gap-2 px-4 py-2.5 text-left text-red-600 hover:bg-red-50"
+                      className="w-full flex items-center gap-2 px-4 py-2.5 text-left text-neutral-900 hover:bg-neutral-100"
                     >
                       <LogOut className="w-4 h-4" />
                       Sign Out
@@ -362,7 +362,7 @@ export default function Layout() {
               </button>
             </div>
 
-            <div className={`text-4xl font-mono font-bold text-center mb-4 ${timerRunning ? 'text-emerald-600' : 'text-neutral-900'}`}>
+            <div className={`text-4xl font-mono font-bold text-center mb-4 ${timerRunning ? 'text-neutral-900' : 'text-neutral-900'}`}>
               {formatTimer(timerSeconds)}
             </div>
 
@@ -386,18 +386,18 @@ export default function Layout() {
 
             <div className="flex items-center justify-center gap-2">
               {!timerRunning ? (
-                <button onClick={startTimer} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-500 text-white rounded-xl hover:bg-emerald-600">
+                <button onClick={startTimer} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-neutral-1000 text-white rounded-xl hover:bg-emerald-600">
                   <Play className="w-4 h-4" /> Start
                 </button>
               ) : (
-                <button onClick={pauseTimer} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-amber-500 text-white rounded-xl hover:bg-amber-600">
+                <button onClick={pauseTimer} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-neutral-1000 text-white rounded-xl hover:bg-amber-600">
                   <Pause className="w-4 h-4" /> Pause
                 </button>
               )}
               <button
                 onClick={stopTimer}
                 disabled={timerSeconds < 60}
-                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-red-500 text-white rounded-xl hover:bg-red-600 disabled:opacity-50"
+                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-neutral-1000 text-white rounded-xl hover:bg-red-600 disabled:opacity-50"
               >
                 <Square className="w-4 h-4" /> Stop
               </button>

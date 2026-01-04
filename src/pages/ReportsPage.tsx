@@ -167,7 +167,7 @@ function TimeByUserReport({ timeEntries, profiles, formatCurrency }: {
           <p className="text-2xl font-bold text-blue-700">{totals.billableHours.toFixed(1)}h</p>
         </div>
         <div className="bg-white rounded-2xl p-4 border border-emerald-100">
-          <p className="text-sm text-emerald-600">Billable Value</p>
+          <p className="text-sm text-neutral-900">Billable Value</p>
           <p className="text-2xl font-bold text-emerald-700">{formatCurrency(totals.billableValue)}</p>
         </div>
         <div className="bg-white rounded-2xl p-4 border border-purple-100">
@@ -209,14 +209,14 @@ function TimeByUserReport({ timeEntries, profiles, formatCurrency }: {
                         <td className="px-6 py-3">
                           <div className="flex items-center gap-2">
                             {isUserExpanded ? <ChevronDown className="w-4 h-4 text-neutral-400" /> : <ChevronRight className="w-4 h-4 text-neutral-400" />}
-                            <Users className="w-4 h-4 text-primary-500" />
+                            <Users className="w-4 h-4 text-neutral-900-500" />
                             <span className="font-semibold text-neutral-900">{user.userName}</span>
                             <span className="text-xs text-neutral-400">{user.userEmail}</span>
                           </div>
                         </td>
                         <td className="px-4 py-3 text-right font-semibold text-neutral-900">{user.totalHours.toFixed(1)}h</td>
                         <td className="px-4 py-3 text-right font-semibold text-blue-600">{user.billableHours.toFixed(1)}h</td>
-                        <td className="px-4 py-3 text-right font-semibold text-emerald-600">{formatCurrency(user.billableValue)}</td>
+                        <td className="px-4 py-3 text-right font-semibold text-neutral-900">{formatCurrency(user.billableValue)}</td>
                         <td className="px-4 py-3 text-right">
                           <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${userUtil >= 80 ? 'bg-emerald-100 text-emerald-700' : userUtil >= 50 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
                             {userUtil}%
@@ -237,14 +237,14 @@ function TimeByUserReport({ timeEntries, profiles, formatCurrency }: {
                               <td className="px-6 py-2 pl-12">
                                 <div className="flex items-center gap-2">
                                   {isClientExpanded ? <ChevronDown className="w-3 h-3 text-neutral-400" /> : <ChevronRight className="w-3 h-3 text-neutral-400" />}
-                                  <Building2 className="w-4 h-4 text-amber-500" />
+                                  <Building2 className="w-4 h-4 text-neutral-700" />
                                   <span className="font-medium text-neutral-800">{client.clientName}</span>
                                   <span className="text-xs text-neutral-400">({projects.length} project{projects.length !== 1 ? 's' : ''})</span>
                                 </div>
                               </td>
                               <td className="px-4 py-2 text-right text-neutral-700">{client.totalHours.toFixed(1)}h</td>
                               <td className="px-4 py-2 text-right text-blue-600">{client.billableHours.toFixed(1)}h</td>
-                              <td className="px-4 py-2 text-right text-emerald-600">{formatCurrency(client.billableValue)}</td>
+                              <td className="px-4 py-2 text-right text-neutral-900">{formatCurrency(client.billableValue)}</td>
                               <td className="px-4 py-2 text-right text-neutral-500">{clientUtil}%</td>
                             </tr>
 
@@ -260,8 +260,8 @@ function TimeByUserReport({ timeEntries, profiles, formatCurrency }: {
                                     </div>
                                   </td>
                                   <td className="px-4 py-2 text-right text-neutral-600">{project.totalHours.toFixed(1)}h</td>
-                                  <td className="px-4 py-2 text-right text-blue-500">{project.billableHours.toFixed(1)}h</td>
-                                  <td className="px-4 py-2 text-right text-emerald-500">{formatCurrency(project.billableValue)}</td>
+                                  <td className="px-4 py-2 text-right text-neutral-700">{project.billableHours.toFixed(1)}h</td>
+                                  <td className="px-4 py-2 text-right text-neutral-700">{formatCurrency(project.billableValue)}</td>
                                   <td className="px-4 py-2 text-right text-neutral-400">{projUtil}%</td>
                                 </tr>
                               );
@@ -480,7 +480,7 @@ export default function ReportsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full" />
+        <div className="animate-spin w-8 h-8 border-2 border-neutral-900-500 border-t-transparent rounded-full" />
       </div>
     );
   }
@@ -521,7 +521,7 @@ export default function ReportsPage() {
             onClick={() => setActiveReport(report.id)}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
               activeReport === report.id
-                ? 'bg-primary-500 text-white'
+                ? 'bg-neutral-900-500 text-white'
                 : 'bg-white border border-neutral-200 text-neutral-700 hover:bg-neutral-50'
             }`}
           >
@@ -570,7 +570,7 @@ export default function ReportsPage() {
                   <td className="px-6 py-3 text-right font-semibold text-neutral-900">
                     {timeByProjectData.reduce((sum, r) => sum + r.billable, 0).toFixed(1)}h
                   </td>
-                  <td className="px-6 py-3 text-right font-semibold text-primary-600">
+                  <td className="px-6 py-3 text-right font-semibold text-neutral-900-600">
                     {formatCurrency(timeByProjectData.reduce((sum, r) => sum + r.value, 0))}
                   </td>
                 </tr>
@@ -603,19 +603,19 @@ export default function ReportsPage() {
                   <tr key={i} className="hover:bg-neutral-50">
                     <td className="px-6 py-4 font-medium text-neutral-900">{row.name}</td>
                     <td className="px-6 py-4 text-right text-neutral-600">{row.hours.toFixed(1)}h</td>
-                    <td className="px-6 py-4 text-right font-medium text-amber-600">{formatCurrency(row.value)}</td>
+                    <td className="px-6 py-4 text-right font-medium text-neutral-900">{formatCurrency(row.value)}</td>
                   </tr>
                 ))
               )}
             </tbody>
             {unbilledTimeData.length > 0 && (
-              <tfoot className="bg-amber-50 border-t border-amber-200">
+              <tfoot className="bg-neutral-100 border-t border-amber-200">
                 <tr>
                   <td className="px-6 py-3 font-semibold text-neutral-900">Total Unbilled</td>
                   <td className="px-6 py-3 text-right font-semibold text-neutral-900">
                     {unbilledTimeData.reduce((sum, r) => sum + r.hours, 0).toFixed(1)}h
                   </td>
-                  <td className="px-6 py-3 text-right font-semibold text-amber-600">
+                  <td className="px-6 py-3 text-right font-semibold text-neutral-900">
                     {formatCurrency(unbilledTimeData.reduce((sum, r) => sum + r.value, 0))}
                   </td>
                 </tr>
@@ -652,10 +652,10 @@ export default function ReportsPage() {
                     <td className="px-6 py-4 text-right text-neutral-600">{formatCurrency(row.revenue)}</td>
                     <td className="px-6 py-4 text-right text-neutral-600">{formatCurrency(row.laborCost)}</td>
                     <td className="px-6 py-4 text-right text-neutral-600">{formatCurrency(row.expenseCost)}</td>
-                    <td className={`px-6 py-4 text-right font-medium ${row.profit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                    <td className={`px-6 py-4 text-right font-medium ${row.profit >= 0 ? 'text-neutral-900' : 'text-neutral-900'}`}>
                       {formatCurrency(row.profit)}
                     </td>
-                    <td className={`px-6 py-4 text-right font-medium ${row.margin >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                    <td className={`px-6 py-4 text-right font-medium ${row.margin >= 0 ? 'text-neutral-900' : 'text-neutral-900'}`}>
                       {row.margin.toFixed(1)}%
                     </td>
                   </tr>
@@ -672,23 +672,23 @@ export default function ReportsPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-white rounded-2xl p-6 border border-neutral-100">
               <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center">
-                  <DollarSign className="w-5 h-5 text-emerald-500" />
+                <div className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center">
+                  <DollarSign className="w-5 h-5 text-neutral-700" />
                 </div>
                 <span className="text-neutral-500 text-sm">Total Revenue</span>
               </div>
-              <p className="text-3xl font-bold text-emerald-600">{formatCurrency(revenueData.totalRevenue)}</p>
+              <p className="text-3xl font-bold text-neutral-900">{formatCurrency(revenueData.totalRevenue)}</p>
               <p className="text-sm text-neutral-500 mt-1">{revenueData.paidCount} paid invoices</p>
             </div>
 
             <div className="bg-white rounded-2xl p-6 border border-neutral-100">
               <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center">
-                  <Clock className="w-5 h-5 text-amber-500" />
+                <div className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center">
+                  <Clock className="w-5 h-5 text-neutral-700" />
                 </div>
                 <span className="text-neutral-500 text-sm">Outstanding</span>
               </div>
-              <p className="text-3xl font-bold text-amber-600">{formatCurrency(revenueData.outstanding)}</p>
+              <p className="text-3xl font-bold text-neutral-900">{formatCurrency(revenueData.outstanding)}</p>
               <p className="text-sm text-neutral-500 mt-1">{revenueData.outstandingCount} unpaid invoices</p>
             </div>
 

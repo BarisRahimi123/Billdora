@@ -358,7 +358,7 @@ export default function TimeExpensePage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full" />
+        <div className="animate-spin w-8 h-8 border-2 border-neutral-900-500 border-t-transparent rounded-full" />
       </div>
     );
   }
@@ -372,7 +372,7 @@ export default function TimeExpensePage() {
         </div>
         <button
           onClick={() => activeTab === 'timesheet' ? setShowTimeEntryModal(true) : setShowExpenseModal(true)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-primary-500 text-white rounded-xl hover:bg-primary-600 transition-colors"
+          className="flex items-center gap-2 px-4 py-2.5 bg-neutral-900-500 text-white rounded-xl hover:bg-neutral-800-600 transition-colors"
         >
           <Plus className="w-4 h-4" />
           {activeTab === 'timesheet' ? 'Add Row' : 'Add Expense'}
@@ -419,7 +419,7 @@ export default function TimeExpensePage() {
         <div className="bg-white rounded-2xl border border-neutral-100 p-4 mb-6">
           <div className="flex items-center gap-4 flex-wrap">
             <div className="flex items-center gap-2">
-              <div className={`text-3xl font-mono font-bold ${timerRunning ? 'text-primary-600' : 'text-neutral-900'}`}>
+              <div className={`text-3xl font-mono font-bold ${timerRunning ? 'text-neutral-900-600' : 'text-neutral-900'}`}>
                 {formatTimer(timerSeconds)}
               </div>
             </div>
@@ -450,15 +450,15 @@ export default function TimeExpensePage() {
             />
             <div className="flex items-center gap-2">
               {!timerRunning ? (
-                <button onClick={startTimer} className="p-2.5 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600">
+                <button onClick={startTimer} className="p-2.5 bg-neutral-1000 text-white rounded-lg hover:bg-emerald-600">
                   <Play className="w-5 h-5" />
                 </button>
               ) : (
-                <button onClick={pauseTimer} className="p-2.5 bg-amber-500 text-white rounded-lg hover:bg-amber-600">
+                <button onClick={pauseTimer} className="p-2.5 bg-neutral-1000 text-white rounded-lg hover:bg-amber-600">
                   <Pause className="w-5 h-5" />
                 </button>
               )}
-              <button onClick={stopTimer} disabled={timerSeconds === 0 || !timerProjectId} className="p-2.5 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50" title={!timerProjectId ? 'Select a project first' : 'Stop and save'}>
+              <button onClick={stopTimer} disabled={timerSeconds === 0 || !timerProjectId} className="p-2.5 bg-neutral-1000 text-white rounded-lg hover:bg-red-600 disabled:opacity-50" title={!timerProjectId ? 'Select a project first' : 'Stop and save'}>
                 <Square className="w-5 h-5" />
               </button>
             </div>
@@ -513,11 +513,11 @@ export default function TimeExpensePage() {
                     </tr>
                   )}
                   {draftRows.map((row) => (
-                    <tr key={row.id} className="hover:bg-blue-50/50">
+                    <tr key={row.id} className="hover:bg-neutral-100/50">
                       <td className="px-4 py-3">
                         <div className="font-medium text-neutral-900">
                           {row.project?.name || 'Unknown Project'}
-                          {row.task && <span className="text-primary-600"> / {row.task.name}</span>}
+                          {row.task && <span className="text-neutral-900-600"> / {row.task.name}</span>}
                         </div>
                       </td>
                       {weekDays.map((day, i) => {
@@ -532,7 +532,7 @@ export default function TimeExpensePage() {
                               step="0.5"
                               value={draftVal || ''}
                               placeholder=""
-                              className="w-full h-10 text-center rounded-lg border-2 border-blue-200 bg-blue-50 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                              className="w-full h-10 text-center rounded-lg border-2 border-blue-200 bg-neutral-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
                               onChange={(e) => {
                                 const val = parseFloat(e.target.value) || 0;
                                 setDraftValue(row.id, dateKey, val);
@@ -547,7 +547,7 @@ export default function TimeExpensePage() {
                       <td className="px-2 py-3">
                         <button 
                           onClick={() => removeDraftRow(row)}
-                          className="p-1.5 hover:bg-red-100 text-neutral-400 hover:text-red-600 rounded-lg"
+                          className="p-1.5 hover:bg-red-100 text-neutral-400 hover:text-neutral-900 rounded-lg"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -558,7 +558,7 @@ export default function TimeExpensePage() {
                     <td colSpan={10} className="py-3">
                       <button 
                         onClick={() => setShowTimeEntryModal(true)}
-                        className="text-primary-500 hover:text-primary-600 font-medium text-sm"
+                        className="text-neutral-900-500 hover:text-neutral-700-600 font-medium text-sm"
                       >
                         + Add a project row to start tracking
                       </button>
@@ -566,7 +566,7 @@ export default function TimeExpensePage() {
                   </tr>
                 </tbody>
                 {draftRows.length > 0 && (
-                  <tfoot className="bg-blue-50 border-t border-blue-200">
+                  <tfoot className="bg-neutral-100 border-t border-blue-200">
                     <tr>
                       <td className="px-4 py-3 font-semibold text-neutral-900">Draft Total</td>
                       {weekDays.map((day, i) => {
@@ -578,7 +578,7 @@ export default function TimeExpensePage() {
                           </td>
                         );
                       })}
-                      <td className="px-4 py-3 text-center font-bold text-primary-600 text-lg">
+                      <td className="px-4 py-3 text-center font-bold text-neutral-900-600 text-lg">
                         {getTotalDraftHours()}h
                       </td>
                       <td></td>
@@ -598,7 +598,7 @@ export default function TimeExpensePage() {
               <button
                 onClick={submitTimesheet}
                 disabled={!hasUnsavedDrafts || savingTimesheet}
-                className="flex items-center gap-2 px-6 py-2.5 bg-primary-500 text-white rounded-xl hover:bg-primary-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                className="flex items-center gap-2 px-6 py-2.5 bg-neutral-900-500 text-white rounded-xl hover:bg-neutral-800-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
               >
                 <Send className="w-4 h-4" />
                 {savingTimesheet ? 'Submitting...' : 'Submit for Approval'}
@@ -646,9 +646,9 @@ export default function TimeExpensePage() {
                           return (
                             <td key={i} className="px-2 py-3">
                               <div className={`w-full h-10 flex items-center justify-center rounded-lg border-2 text-neutral-600 ${
-                                entry?.approval_status === 'approved' ? 'border-emerald-300 bg-emerald-50' :
-                                entry?.approval_status === 'rejected' ? 'border-red-300 bg-red-50' :
-                                entry ? 'border-amber-300 bg-amber-50' : 'border-neutral-200 bg-neutral-100'
+                                entry?.approval_status === 'approved' ? 'border-emerald-300 bg-neutral-100' :
+                                entry?.approval_status === 'rejected' ? 'border-red-300 bg-neutral-100' :
+                                entry ? 'border-amber-300 bg-neutral-100' : 'border-neutral-200 bg-neutral-100'
                               }`}>
                                 {entry?.hours || '-'}
                               </div>
@@ -719,7 +719,7 @@ export default function TimeExpensePage() {
                     <p>No expenses recorded</p>
                     <button 
                       onClick={() => setShowExpenseModal(true)}
-                      className="mt-2 text-primary-500 hover:text-primary-600 font-medium"
+                      className="mt-2 text-neutral-900-500 hover:text-neutral-700-600 font-medium"
                     >
                       Add your first expense
                     </button>
@@ -751,7 +751,7 @@ export default function TimeExpensePage() {
                         </button>
                         <button 
                           onClick={() => deleteExpense(expense.id)}
-                          className="p-1.5 hover:bg-red-100 text-neutral-400 hover:text-red-600 rounded-lg"
+                          className="p-1.5 hover:bg-red-100 text-neutral-400 hover:text-neutral-900 rounded-lg"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -800,7 +800,7 @@ export default function TimeExpensePage() {
                               await api.approveTimeEntry(entry.id, user?.id || '');
                               loadData();
                             }}
-                            className="p-1.5 bg-emerald-100 text-emerald-600 hover:bg-emerald-200 rounded-lg"
+                            className="p-1.5 bg-emerald-100 text-neutral-900 hover:bg-emerald-200 rounded-lg"
                             title="Approve"
                           >
                             <CheckCircle className="w-4 h-4" />
@@ -810,7 +810,7 @@ export default function TimeExpensePage() {
                               await api.rejectTimeEntry(entry.id, user?.id || '');
                               loadData();
                             }}
-                            className="p-1.5 bg-red-100 text-red-600 hover:bg-red-200 rounded-lg"
+                            className="p-1.5 bg-red-100 text-neutral-900 hover:bg-red-200 rounded-lg"
                             title="Reject"
                           >
                             <XCircle className="w-4 h-4" />
@@ -858,7 +858,7 @@ export default function TimeExpensePage() {
                               await api.approveExpense(expense.id, user?.id || '');
                               loadData();
                             }}
-                            className="p-1.5 bg-emerald-100 text-emerald-600 hover:bg-emerald-200 rounded-lg"
+                            className="p-1.5 bg-emerald-100 text-neutral-900 hover:bg-emerald-200 rounded-lg"
                             title="Approve"
                           >
                             <CheckCircle className="w-4 h-4" />
@@ -868,7 +868,7 @@ export default function TimeExpensePage() {
                               await api.rejectExpense(expense.id, user?.id || '');
                               loadData();
                             }}
-                            className="p-1.5 bg-red-100 text-red-600 hover:bg-red-200 rounded-lg"
+                            className="p-1.5 bg-red-100 text-neutral-900 hover:bg-red-200 rounded-lg"
                             title="Reject"
                           >
                             <XCircle className="w-4 h-4" />
@@ -978,14 +978,14 @@ function AddTimeRowModal({ projects, tasks: initialTasks, existingDraftRows, exi
             </select>
           </div>
           {isRowExists && (
-            <p className="text-sm text-amber-600">This project/task combination already exists in your timesheet.</p>
+            <p className="text-sm text-neutral-900">This project/task combination already exists in your timesheet.</p>
           )}
           <div className="flex gap-3 pt-4">
             <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors">Cancel</button>
             <button 
               onClick={() => onAdd(projectId, taskId || null)} 
               disabled={!projectId || isRowExists}
-              className="flex-1 px-4 py-2.5 bg-primary-500 text-white rounded-xl hover:bg-primary-600 transition-colors disabled:opacity-50"
+              className="flex-1 px-4 py-2.5 bg-neutral-900-500 text-white rounded-xl hover:bg-neutral-800-600 transition-colors disabled:opacity-50"
             >
               Add Row
             </button>
@@ -1069,7 +1069,7 @@ function ExpenseModal({ expense, projects, companyId, userId, onClose, onSave }:
           <button onClick={onClose} className="p-2 hover:bg-neutral-100 rounded-lg"><X className="w-5 h-5" /></button>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
-          {error && <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">{error}</div>}
+          {error && <div className="p-3 bg-neutral-100 border border-red-200 text-red-700 rounded-lg text-sm">{error}</div>}
           <div>
             <label className="block text-sm font-medium text-neutral-700 mb-1.5">Description *</label>
             <input type="text" value={description} onChange={(e) => setDescription(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" required />
@@ -1103,7 +1103,7 @@ function ExpenseModal({ expense, projects, companyId, userId, onClose, onSave }:
             </select>
           </div>
           <div className="flex items-center gap-2">
-            <input type="checkbox" id="billable" checked={billable} onChange={(e) => setBillable(e.target.checked)} className="rounded border-neutral-300 text-primary-500 focus:ring-primary-500" />
+            <input type="checkbox" id="billable" checked={billable} onChange={(e) => setBillable(e.target.checked)} className="rounded border-neutral-300 text-neutral-900-500 focus:ring-primary-500" />
             <label htmlFor="billable" className="text-sm text-neutral-700">Billable to client</label>
           </div>
           <div>
@@ -1129,7 +1129,7 @@ function ExpenseModal({ expense, projects, companyId, userId, onClose, onSave }:
                     <p className="text-sm font-medium text-neutral-700">{receiptFile?.name || 'Receipt attached'}</p>
                     <p className="text-xs text-neutral-500">{receiptFile ? `${(receiptFile.size / 1024).toFixed(1)} KB` : ''}</p>
                   </div>
-                  <button type="button" onClick={removeReceipt} className="p-1.5 hover:bg-neutral-100 rounded-lg text-neutral-500 hover:text-red-500">
+                  <button type="button" onClick={removeReceipt} className="p-1.5 hover:bg-neutral-100 rounded-lg text-neutral-500 hover:text-neutral-700">
                     <X className="w-4 h-4" />
                   </button>
                 </div>
@@ -1138,7 +1138,7 @@ function ExpenseModal({ expense, projects, companyId, userId, onClose, onSave }:
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="w-full px-4 py-3 border-2 border-dashed border-neutral-300 rounded-xl hover:border-primary-400 hover:bg-primary-50 transition-colors flex items-center justify-center gap-2 text-neutral-600"
+                className="w-full px-4 py-3 border-2 border-dashed border-neutral-300 rounded-xl hover:border-neutral-900-400 hover:bg-neutral-800-50 transition-colors flex items-center justify-center gap-2 text-neutral-600"
               >
                 <Upload className="w-5 h-5" />
                 <span>Click to upload receipt</span>
@@ -1147,7 +1147,7 @@ function ExpenseModal({ expense, projects, companyId, userId, onClose, onSave }:
           </div>
           <div className="flex gap-3 pt-4">
             <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors">Cancel</button>
-            <button type="submit" disabled={saving} onClick={(e) => { e.preventDefault(); handleSubmit(e as any); }} className="flex-1 px-4 py-2.5 bg-primary-500 text-white rounded-xl hover:bg-primary-600 transition-colors disabled:opacity-50">
+            <button type="submit" disabled={saving} onClick={(e) => { e.preventDefault(); handleSubmit(e as any); }} className="flex-1 px-4 py-2.5 bg-neutral-900-500 text-white rounded-xl hover:bg-neutral-800-600 transition-colors disabled:opacity-50">
               {saving ? 'Saving...' : expense ? 'Update' : 'Add Expense'}
             </button>
           </div>

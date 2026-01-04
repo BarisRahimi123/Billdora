@@ -142,7 +142,7 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full" />
+        <div className="animate-spin w-8 h-8 border-2 border-neutral-900-500 border-t-transparent rounded-full" />
       </div>
     );
   }
@@ -157,7 +157,7 @@ export default function DashboardPage() {
         <div className="relative" ref={quickAddRef}>
           <button 
             onClick={() => setShowQuickAdd(!showQuickAdd)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-primary-500 text-white rounded-xl hover:bg-primary-600 transition-colors"
+            className="flex items-center gap-2 px-4 py-2.5 bg-neutral-900-500 text-white rounded-xl hover:bg-neutral-800-600 transition-colors"
           >
             <Plus className="w-4 h-4" />
             Quick Add
@@ -186,30 +186,30 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {canViewFinancials && <div className="bg-white rounded-2xl p-6 border border-neutral-100">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center">
-              <DollarSign className="w-5 h-5 text-emerald-500" />
+            <div className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center">
+              <DollarSign className="w-5 h-5 text-neutral-700" />
             </div>
             <span className="text-neutral-500 text-sm">Total Revenue</span>
           </div>
-          <p className="text-3xl font-bold text-emerald-600">{formatCurrency(stats?.totalRevenue || 0)}</p>
+          <p className="text-3xl font-bold text-neutral-900">{formatCurrency(stats?.totalRevenue || 0)}</p>
           <p className="text-sm text-neutral-500 mt-1">All-time paid invoices</p>
         </div>}
 
         {canViewFinancials && <div className="bg-white rounded-2xl p-6 border border-neutral-100">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center">
-              <FileText className="w-5 h-5 text-amber-500" />
+            <div className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center">
+              <FileText className="w-5 h-5 text-neutral-700" />
             </div>
             <span className="text-neutral-500 text-sm">Outstanding</span>
           </div>
-          <p className="text-3xl font-bold text-amber-600">{formatCurrency(stats?.outstandingInvoices || 0)}</p>
+          <p className="text-3xl font-bold text-neutral-900">{formatCurrency(stats?.outstandingInvoices || 0)}</p>
           <p className="text-sm text-neutral-500 mt-1">Awaiting payment</p>
         </div>}
 
         <div className="bg-white rounded-2xl p-6 border border-neutral-100">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-primary-50 flex items-center justify-center">
-              <Clock className="w-5 h-5 text-primary-500" />
+            <div className="w-10 h-10 rounded-xl bg-neutral-900-50 flex items-center justify-center">
+              <Clock className="w-5 h-5 text-neutral-900-500" />
             </div>
             <span className="text-neutral-500 text-sm">Hours This Week</span>
           </div>
@@ -219,8 +219,8 @@ export default function DashboardPage() {
 
         <div className="bg-white rounded-2xl p-6 border border-neutral-100">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center">
-              <FolderPlus className="w-5 h-5 text-purple-500" />
+            <div className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center">
+              <FolderPlus className="w-5 h-5 text-neutral-700" />
             </div>
             <span className="text-neutral-500 text-sm">Active Projects</span>
           </div>
@@ -233,8 +233,8 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {canViewFinancials && <div className="bg-white rounded-2xl p-6 border border-neutral-100">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
-              <TrendingUp className="w-5 h-5 text-blue-500" />
+            <div className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center">
+              <TrendingUp className="w-5 h-5 text-neutral-700" />
             </div>
             <span className="text-neutral-500 text-sm">Unbilled WIP</span>
           </div>
@@ -243,8 +243,8 @@ export default function DashboardPage() {
 
         <div className="bg-white rounded-2xl p-6 border border-neutral-100">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-cyan-50 flex items-center justify-center">
-              <CheckSquare className="w-5 h-5 text-cyan-500" />
+            <div className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center">
+              <CheckSquare className="w-5 h-5 text-neutral-700" />
             </div>
             <span className="text-neutral-500 text-sm">Pending Tasks</span>
           </div>
@@ -253,8 +253,8 @@ export default function DashboardPage() {
 
         <div className="bg-white rounded-2xl p-6 border border-neutral-100">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center">
-              <TrendingUp className="w-5 h-5 text-indigo-500" />
+            <div className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center">
+              <TrendingUp className="w-5 h-5 text-neutral-700" />
             </div>
             <span className="text-neutral-500 text-sm">Utilization</span>
           </div>
@@ -263,8 +263,8 @@ export default function DashboardPage() {
 
         <div className="bg-white rounded-2xl p-6 border border-neutral-100">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-rose-50 flex items-center justify-center">
-              <FileText className="w-5 h-5 text-rose-500" />
+            <div className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center">
+              <FileText className="w-5 h-5 text-neutral-700" />
             </div>
             <span className="text-neutral-500 text-sm">Draft Invoices</span>
           </div>
@@ -282,7 +282,7 @@ export default function DashboardPage() {
               <svg className="w-full h-full transform -rotate-90">
                 <circle cx="64" cy="64" r="56" fill="none" stroke="#E5E7EB" strokeWidth="12" />
                 <circle
-                  cx="64" cy="64" r="56" fill="none" stroke="#3B82F6" strokeWidth="12"
+                  cx="64" cy="64" r="56" fill="none" stroke="#111827" strokeWidth="12"
                   strokeDasharray={`${(stats?.utilization || 0) * 3.52} 352`}
                   strokeLinecap="round"
                 />
@@ -293,7 +293,7 @@ export default function DashboardPage() {
             </div>
             <div className="space-y-3">
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-primary-500" />
+                <div className="w-3 h-3 rounded-full bg-neutral-900-500" />
                 <span className="text-neutral-600">Billable</span>
                 <span className="font-medium text-neutral-900 ml-auto">{stats?.billableHours || 0}h</span>
               </div>
@@ -303,7 +303,7 @@ export default function DashboardPage() {
                 <span className="font-medium text-neutral-900 ml-auto">{stats?.nonBillableHours || 0}h</span>
               </div>
               <div className="pt-2 border-t border-neutral-100">
-                <p className="text-primary-600 font-medium">{stats?.utilization || 0}% Overall Utilization</p>
+                <p className="text-neutral-900-600 font-medium">{stats?.utilization || 0}% Overall Utilization</p>
               </div>
             </div>
           </div>
@@ -338,8 +338,8 @@ export default function DashboardPage() {
           <div className="space-y-3">
             {activities.map((activity) => (
               <div key={activity.id} className="flex items-center gap-4 p-3 bg-neutral-50 rounded-xl">
-                <div className="w-10 h-10 rounded-xl bg-primary-100 flex items-center justify-center">
-                  <Clock className="w-5 h-5 text-primary-600" />
+                <div className="w-10 h-10 rounded-xl bg-neutral-900-100 flex items-center justify-center">
+                  <Clock className="w-5 h-5 text-neutral-900-600" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-neutral-900">{activity.description}</p>
@@ -415,7 +415,7 @@ export default function DashboardPage() {
                 <button 
                   onClick={handleSaveTime} 
                   disabled={saving || !timeEntry.hours}
-                  className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50"
+                  className="px-4 py-2 bg-neutral-900-500 text-white rounded-lg hover:bg-neutral-800-600 disabled:opacity-50"
                 >
                   {saving ? 'Saving...' : 'Save'}
                 </button>

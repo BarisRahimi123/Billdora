@@ -300,7 +300,7 @@ export default function InvoicingPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full" />
+        <div className="animate-spin w-8 h-8 border-2 border-neutral-900-500 border-t-transparent rounded-full" />
       </div>
     );
   }
@@ -322,7 +322,7 @@ export default function InvoicingPage() {
           </button>
           <button
             onClick={() => setShowInvoiceModal(true)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-primary-500 text-white rounded-xl hover:bg-primary-600 transition-colors"
+            className="flex items-center gap-2 px-4 py-2.5 bg-neutral-900-500 text-white rounded-xl hover:bg-neutral-800-600 transition-colors"
           >
             <Plus className="w-4 h-4" />
             Create Invoice
@@ -334,8 +334,8 @@ export default function InvoicingPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white rounded-2xl p-6 border border-neutral-100">
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center">
-              <Clock className="w-5 h-5 text-amber-500" />
+            <div className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center">
+              <Clock className="w-5 h-5 text-neutral-700" />
             </div>
             <span className="text-neutral-500 text-sm">Work-in-Progress</span>
           </div>
@@ -345,8 +345,8 @@ export default function InvoicingPage() {
 
         <div className="bg-white rounded-2xl p-6 border border-neutral-100">
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
-              <FileText className="w-5 h-5 text-blue-500" />
+            <div className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center">
+              <FileText className="w-5 h-5 text-neutral-700" />
             </div>
             <span className="text-neutral-500 text-sm">Drafts</span>
           </div>
@@ -356,8 +356,8 @@ export default function InvoicingPage() {
 
         <div className="bg-white rounded-2xl p-6 border border-neutral-100">
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center">
-              <DollarSign className="w-5 h-5 text-red-500" />
+            <div className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center">
+              <DollarSign className="w-5 h-5 text-neutral-700" />
             </div>
             <span className="text-neutral-500 text-sm">A/R Aging</span>
           </div>
@@ -465,7 +465,7 @@ export default function InvoicingPage() {
                           </button>
                           {invoice.status === 'draft' && (
                             <>
-                              <button onClick={(e) => { e.stopPropagation(); sendInvoiceEmail(invoice); }} className="w-full flex items-center gap-2 px-4 py-2 text-left text-sm text-blue-600 hover:bg-blue-50">
+                              <button onClick={(e) => { e.stopPropagation(); sendInvoiceEmail(invoice); }} className="w-full flex items-center gap-2 px-4 py-2 text-left text-sm text-blue-600 hover:bg-neutral-100">
                                 <Mail className="w-4 h-4" /> Send to Client
                               </button>
                               <button onClick={(e) => { e.stopPropagation(); updateInvoiceStatus(invoice.id, 'sent'); }} className="w-full flex items-center gap-2 px-4 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50">
@@ -474,7 +474,7 @@ export default function InvoicingPage() {
                             </>
                           )}
                           {(invoice.status === 'sent' || invoice.status === 'draft') && (
-                            <button onClick={(e) => { e.stopPropagation(); openPaymentModal(invoice); }} className="w-full flex items-center gap-2 px-4 py-2 text-left text-sm text-emerald-600 hover:bg-emerald-50">
+                            <button onClick={(e) => { e.stopPropagation(); openPaymentModal(invoice); }} className="w-full flex items-center gap-2 px-4 py-2 text-left text-sm text-neutral-900 hover:bg-neutral-100">
                               <CreditCard className="w-4 h-4" /> Record Payment
                             </button>
                           )}
@@ -851,7 +851,7 @@ function InvoiceModal({ clients, projects, companyId, onClose, onSave }: { clien
                   key={calc.id}
                   className={`p-3 border rounded-xl cursor-pointer transition-colors ${
                     calculatorType === calc.id 
-                      ? 'border-primary-500 bg-primary-50' 
+                      ? 'border-neutral-900-500 bg-neutral-900-50' 
                       : 'border-neutral-200 hover:border-neutral-300'
                   }`}
                 >
@@ -935,7 +935,7 @@ function InvoiceModal({ clients, projects, companyId, onClose, onSave }: { clien
                             </td>
                             <td className="px-3 py-2 text-right">{formatCurrency(totalBudget)}</td>
                             <td className="px-3 py-2 text-right text-neutral-500">{formatCurrency(task.billed_amount || 0)}</td>
-                            <td className="px-3 py-2 text-right font-medium text-emerald-600">
+                            <td className="px-3 py-2 text-right font-medium text-neutral-900">
                               {formatCurrency(remainingAmt)}
                               <span className="text-xs text-neutral-400 ml-1">({remainingPct}%)</span>
                             </td>
@@ -959,7 +959,7 @@ function InvoiceModal({ clients, projects, companyId, onClose, onSave }: { clien
                                 checked={isSelected}
                                 disabled={isFullyBilled}
                                 onChange={() => toggleTaskSelection(task.id, calculatorType as 'milestone' | 'percentage')}
-                                className="w-4 h-4 text-primary-500 rounded border-neutral-300"
+                                className="w-4 h-4 text-neutral-900-500 rounded border-neutral-300"
                               />
                             </td>
                           </tr>
@@ -1034,7 +1034,7 @@ function InvoiceModal({ clients, projects, companyId, onClose, onSave }: { clien
           </div>
           <div className="flex gap-3 pt-4">
             <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors">Cancel</button>
-            <button type="submit" disabled={saving} className="flex-1 px-4 py-2.5 bg-primary-500 text-white rounded-xl hover:bg-primary-600 transition-colors disabled:opacity-50">
+            <button type="submit" disabled={saving} className="flex-1 px-4 py-2.5 bg-neutral-900-500 text-white rounded-xl hover:bg-neutral-800-600 transition-colors disabled:opacity-50">
               {saving ? 'Creating...' : 'Create Invoice'}
             </button>
           </div>
@@ -1365,7 +1365,7 @@ function InvoiceDetailView({
                 onClick={() => setActiveTab(tab.id as any)}
                 className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
                   activeTab === tab.id
-                    ? 'border-primary-500 text-primary-600'
+                    ? 'border-neutral-900-500 text-neutral-900-600'
                     : 'border-transparent text-neutral-500 hover:text-neutral-700'
                 }`}
               >
@@ -1403,7 +1403,7 @@ function InvoiceDetailView({
                 <option value="percentage">Percentage</option>
                 <option value="summary">Summary Only</option>
               </select>
-              <button className="px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg font-medium">Edit</button>
+              <button className="px-4 py-2 text-sm text-neutral-900 hover:bg-neutral-100 rounded-lg font-medium">Edit</button>
               <button className="px-4 py-2 bg-white border border-neutral-300 rounded-lg text-sm font-medium hover:bg-neutral-50">Refresh</button>
               <button className="px-4 py-2 bg-white border border-neutral-300 rounded-lg text-sm font-medium hover:bg-neutral-50">Snapshot</button>
             </div>
@@ -1586,7 +1586,7 @@ function InvoiceDetailView({
               <div className="flex items-start justify-between mb-6">
                 <div className="flex items-center gap-4">
                   <div className="text-sm">
-                    <a href="#" className="text-primary-600 hover:underline font-medium">{invoice.client?.name}</a>
+                    <a href="#" className="text-neutral-900-600 hover:underline font-medium">{invoice.client?.name}</a>
                     <p className="text-neutral-500">Client</p>
                   </div>
                 </div>
@@ -1641,7 +1641,7 @@ function InvoiceDetailView({
                         <td className="px-2 py-2">
                           <button
                             onClick={() => removeLineItem(item.id)}
-                            className="p-1 text-neutral-400 hover:text-red-500"
+                            className="p-1 text-neutral-400 hover:text-neutral-700"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -1654,7 +1654,7 @@ function InvoiceDetailView({
 
               <button
                 onClick={addLineItem}
-                className="flex items-center gap-2 px-3 py-1.5 bg-primary-500 text-white text-sm rounded-lg hover:bg-primary-600 mb-6"
+                className="flex items-center gap-2 px-3 py-1.5 bg-neutral-900-500 text-white text-sm rounded-lg hover:bg-neutral-800-600 mb-6"
               >
                 <Plus className="w-4 h-4" /> Add Line Item
               </button>
@@ -1735,28 +1735,28 @@ function InvoiceDetailView({
                 <div className="space-y-2 pt-2">
                   <div className="flex items-center justify-between text-xs">
                     <div className="flex items-center gap-2">
-                      <div className={`w-2 h-2 rounded-full ${draftDate ? 'bg-emerald-500' : 'bg-neutral-300'}`}></div>
+                      <div className={`w-2 h-2 rounded-full ${draftDate ? 'bg-neutral-1000' : 'bg-neutral-300'}`}></div>
                       <span className="text-neutral-600">Drafted</span>
                     </div>
                     <span className="text-neutral-500">{draftDate ? new Date(draftDate).toLocaleDateString() : '-'}</span>
                   </div>
                   <div className="flex items-center justify-between text-xs">
                     <div className="flex items-center gap-2">
-                      <div className={`w-2 h-2 rounded-full ${sentDate ? 'bg-blue-500' : 'bg-neutral-300'}`}></div>
+                      <div className={`w-2 h-2 rounded-full ${sentDate ? 'bg-neutral-1000' : 'bg-neutral-300'}`}></div>
                       <span className="text-neutral-600">Sent</span>
                     </div>
                     <span className="text-neutral-500">{sentDate ? new Date(sentDate).toLocaleDateString() : '-'}</span>
                   </div>
                   <div className="flex items-center justify-between text-xs">
                     <div className="flex items-center gap-2">
-                      <div className={`w-2 h-2 rounded-full ${dueDate ? 'bg-amber-500' : 'bg-neutral-300'}`}></div>
+                      <div className={`w-2 h-2 rounded-full ${dueDate ? 'bg-neutral-1000' : 'bg-neutral-300'}`}></div>
                       <span className="text-neutral-600">Due</span>
                     </div>
                     <span className="text-neutral-500">{dueDate ? new Date(dueDate).toLocaleDateString() : '-'}</span>
                   </div>
                   <div className="flex items-center justify-between text-xs">
                     <div className="flex items-center gap-2">
-                      <div className={`w-2 h-2 rounded-full ${status === 'paid' ? 'bg-emerald-500' : 'bg-neutral-300'}`}></div>
+                      <div className={`w-2 h-2 rounded-full ${status === 'paid' ? 'bg-neutral-1000' : 'bg-neutral-300'}`}></div>
                       <span className="text-neutral-600">Paid</span>
                     </div>
                     <span className="text-neutral-500">{status === 'paid' && invoice.paid_at ? new Date(invoice.paid_at).toLocaleDateString() : '-'}</span>
@@ -1774,15 +1774,15 @@ function InvoiceDetailView({
                 <label className="block text-xs font-medium text-neutral-500">Payment Options</label>
                 <div className="space-y-2">
                   <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input type="checkbox" defaultChecked className="w-4 h-4 rounded border-neutral-300 text-primary-500" />
+                    <input type="checkbox" defaultChecked className="w-4 h-4 rounded border-neutral-300 text-neutral-900-500" />
                     <span>Bank Transfer</span>
                   </label>
                   <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input type="checkbox" className="w-4 h-4 rounded border-neutral-300 text-primary-500" />
+                    <input type="checkbox" className="w-4 h-4 rounded border-neutral-300 text-neutral-900-500" />
                     <span>Credit Card</span>
                   </label>
                   <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input type="checkbox" className="w-4 h-4 rounded border-neutral-300 text-primary-500" />
+                    <input type="checkbox" className="w-4 h-4 rounded border-neutral-300 text-neutral-900-500" />
                     <span>Check</span>
                   </label>
                 </div>
@@ -1802,7 +1802,7 @@ function InvoiceDetailView({
                 <button className="px-4 py-2 bg-white border border-neutral-300 rounded-lg text-sm font-medium hover:bg-neutral-50">
                   Update Rates
                 </button>
-                <button className="px-4 py-2 bg-emerald-500 text-white rounded-lg text-sm font-medium hover:bg-emerald-600">
+                <button className="px-4 py-2 bg-neutral-1000 text-white rounded-lg text-sm font-medium hover:bg-emerald-600">
                   Recalculate Invoice Amount
                 </button>
               </div>
@@ -1865,7 +1865,7 @@ function InvoiceDetailView({
                 <button className="px-4 py-2 bg-white border border-neutral-300 rounded-lg text-sm font-medium hover:bg-neutral-50">
                   Add Expense
                 </button>
-                <button className="px-4 py-2 bg-emerald-500 text-white rounded-lg text-sm font-medium hover:bg-emerald-600">
+                <button className="px-4 py-2 bg-neutral-1000 text-white rounded-lg text-sm font-medium hover:bg-emerald-600">
                   Recalculate Invoice Amount
                 </button>
               </div>
@@ -1897,7 +1897,7 @@ function InvoiceDetailView({
                         <td className="px-4 py-3 text-sm">{expense.vendor || '-'}</td>
                         <td className="px-4 py-3 text-sm text-right">{formatCurrency(expense.amount)}</td>
                         <td className="px-4 py-3 text-center">
-                          {expense.billable ? <Check className="w-4 h-4 text-emerald-500 mx-auto" /> : '-'}
+                          {expense.billable ? <Check className="w-4 h-4 text-neutral-700 mx-auto" /> : '-'}
                         </td>
                       </tr>
                     ))
@@ -1920,7 +1920,7 @@ function InvoiceDetailView({
 
       {/* Footer */}
       <div className="bg-white border-t border-neutral-200 px-6 py-4 flex items-center justify-between">
-        <button className="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg">
+        <button className="flex items-center gap-2 px-4 py-2 text-neutral-900 hover:bg-neutral-100 rounded-lg">
           <Trash2 className="w-4 h-4" /> Delete
         </button>
         <div className="flex items-center gap-3">
@@ -1930,7 +1930,7 @@ function InvoiceDetailView({
           <button
             onClick={handleSaveChanges}
             disabled={saving}
-            className="px-6 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 disabled:opacity-50 flex items-center gap-2"
+            className="px-6 py-2 bg-neutral-1000 text-white rounded-lg hover:bg-emerald-600 disabled:opacity-50 flex items-center gap-2"
           >
             {saving ? 'Saving...' : 'Save Changes'}
           </button>

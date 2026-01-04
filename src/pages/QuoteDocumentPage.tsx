@@ -387,7 +387,7 @@ export default function QuoteDocumentPage() {
         </div>
         <div className="flex items-center gap-3">
           {hasUnsavedChanges && (
-            <span className="text-sm text-amber-600">Unsaved changes</span>
+            <span className="text-sm text-neutral-900">Unsaved changes</span>
           )}
           <button
             onClick={saveChanges}
@@ -713,7 +713,7 @@ export default function QuoteDocumentPage() {
                           <td className="px-2 py-3 print:hidden">
                             <button
                               onClick={() => removeLineItem(item.id)}
-                              className="p-1 text-neutral-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                              className="p-1 text-neutral-300 hover:text-neutral-700 opacity-0 group-hover:opacity-100 transition-opacity"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
@@ -1084,61 +1084,76 @@ export default function QuoteDocumentPage() {
         </div>
       )}
 
-      {/* Services Modal */}
+      {/* Services Modal - Minimalistic Design */}
       {showServicesModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl w-full max-w-lg p-6 mx-4 max-h-[80vh] overflow-hidden flex flex-col">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-neutral-900">Add from Services</h2>
-              <button onClick={() => setShowServicesModal(false)} className="p-2 hover:bg-neutral-100 rounded-lg">
-                <X className="w-5 h-5" />
+          <div className="bg-white rounded-xl w-full max-w-md mx-4 max-h-[70vh] overflow-hidden flex flex-col shadow-2xl">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100">
+              <h2 className="text-base font-medium text-neutral-900">Add from Services</h2>
+              <button onClick={() => setShowServicesModal(false)} className="p-1.5 hover:bg-neutral-100 rounded-full text-neutral-400 hover:text-neutral-600">
+                <X className="w-4 h-4" />
               </button>
             </div>
             <div className="overflow-y-auto flex-1">
               {services.length === 0 ? (
-                <p className="text-neutral-500 text-center py-8">No services available. Add services in Settings.</p>
+                <p className="text-neutral-500 text-center py-8 text-sm">No services available. Add services in Settings.</p>
               ) : (
-                <div className="space-y-2">
-                  {services.map((service) => (
-                    <button
-                      key={service.id}
-                      onClick={() => {
-                        const rate = service.pricing_type === 'per_sqft' 
-                          ? (service.min_rate || 0) 
-                          : (service.base_rate || 0);
-                        const unit = service.pricing_type === 'per_sqft' ? 'sq ft' 
-                          : service.pricing_type === 'hourly' ? 'hour' 
-                          : service.pricing_type === 'fixed' ? 'project' 
-                          : 'each';
-                        setLineItems([...lineItems, {
-                          id: Date.now().toString(),
-                          description: service.name + (service.description ? ` - ${service.description}` : ''),
-                          unitPrice: rate,
-                          qty: 1,
-                          unit,
-                          taxed: false
-                        }]);
-                        setHasUnsavedChanges(true);
-                        setShowServicesModal(false);
-                      }}
-                      className="w-full text-left p-4 border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors"
-                    >
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <p className="font-medium text-neutral-900">{service.name}</p>
-                          <p className="text-sm text-neutral-500">{service.category}</p>
+                <div className="divide-y divide-neutral-100">
+                  {services.map((service) => {
+                    const isAlreadyAdded = lineItems.some(item => 
+                      item.description.startsWith(service.name)
+                    );
+                    return (
+                      <button
+                        key={service.id}
+                        disabled={isAlreadyAdded}
+                        onClick={() => {
+                          if (isAlreadyAdded) return;
+                          const rate = service.pricing_type === 'per_sqft' 
+                            ? (service.min_rate || 0) 
+                            : (service.base_rate || 0);
+                          const unit = service.pricing_type === 'per_sqft' ? 'sq ft' 
+                            : service.pricing_type === 'hourly' ? 'hour' 
+                            : service.pricing_type === 'fixed' ? 'project' 
+                            : 'each';
+                          const newItem = {
+                            id: Date.now().toString(),
+                            description: service.name + (service.description ? ` - ${service.description}` : ''),
+                            unitPrice: rate,
+                            qty: 1,
+                            unit,
+                            taxed: false
+                          };
+                          // Remove empty rows before adding
+                          const filteredItems = lineItems.filter(item => item.description.trim() !== '');
+                          setLineItems([...filteredItems, newItem]);
+                          setHasUnsavedChanges(true);
+                          setShowServicesModal(false);
+                        }}
+                        className={`w-full text-left px-5 py-3 flex justify-between items-center transition-colors ${
+                          isAlreadyAdded 
+                            ? 'opacity-40 cursor-not-allowed bg-neutral-50' 
+                            : 'hover:bg-neutral-50'
+                        }`}
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium text-neutral-900 text-sm truncate">{service.name}</p>
+                          <p className="text-xs text-neutral-400">{service.category}</p>
                         </div>
-                        <div className="text-right">
-                          <p className="font-medium text-neutral-900">
+                        <div className="text-right ml-4 flex-shrink-0">
+                          <p className="font-medium text-neutral-900 text-sm">
                             {service.pricing_type === 'per_sqft' && service.min_rate && service.max_rate
                               ? `$${service.min_rate} - $${service.max_rate}`
                               : service.base_rate ? `$${service.base_rate}` : '-'}
                           </p>
-                          <p className="text-sm text-neutral-500">per {service.unit_label}</p>
+                          <p className="text-xs text-neutral-400">per {service.unit_label}</p>
                         </div>
-                      </div>
-                    </button>
-                  ))}
+                        {isAlreadyAdded && (
+                          <Check className="w-4 h-4 text-neutral-700 ml-3" />
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -1215,7 +1230,7 @@ function NewClientModal({ companyId, onClose, onSave }: {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
-            <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">{error}</div>
+            <div className="p-3 bg-neutral-100 border border-red-200 text-red-700 rounded-lg text-sm">{error}</div>
           )}
 
           <div>

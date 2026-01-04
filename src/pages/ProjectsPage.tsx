@@ -16,14 +16,14 @@ type TaskSubTab = 'overview' | 'editor' | 'schedule' | 'allocations' | 'checklis
 type DetailTab = 'vitals' | 'client' | 'tasks' | 'team' | 'financials' | 'billing' | 'details';
 
 const PROJECT_CATEGORIES = [
-  { value: 'A', label: 'Architectural', color: 'bg-blue-500' },
-  { value: 'C', label: 'Civil', color: 'bg-amber-500' },
-  { value: 'M', label: 'Mechanical', color: 'bg-red-500' },
-  { value: 'E', label: 'Electrical', color: 'bg-yellow-500' },
-  { value: 'P', label: 'Plumbing', color: 'bg-cyan-500' },
-  { value: 'S', label: 'Structural', color: 'bg-purple-500' },
+  { value: 'A', label: 'Architectural', color: 'bg-neutral-1000' },
+  { value: 'C', label: 'Civil', color: 'bg-neutral-1000' },
+  { value: 'M', label: 'Mechanical', color: 'bg-neutral-1000' },
+  { value: 'E', label: 'Electrical', color: 'bg-neutral-1000' },
+  { value: 'P', label: 'Plumbing', color: 'bg-neutral-1000' },
+  { value: 'S', label: 'Structural', color: 'bg-neutral-1000' },
   { value: 'I', label: 'Interior', color: 'bg-pink-500' },
-  { value: 'L', label: 'Landscape', color: 'bg-green-500' },
+  { value: 'L', label: 'Landscape', color: 'bg-neutral-1000' },
   { value: 'O', label: 'Other', color: 'bg-neutral-500' },
 ];
 
@@ -240,7 +240,7 @@ export default function ProjectsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full" />
+        <div className="animate-spin w-8 h-8 border-2 border-neutral-900-500 border-t-transparent rounded-full" />
       </div>
     );
   }
@@ -315,7 +315,7 @@ export default function ProjectsPage() {
                       }
                       setShowProjectActionsMenu(false);
                     }}
-                    className="flex items-center gap-2 w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                    className="flex items-center gap-2 w-full px-4 py-2 text-sm text-neutral-900 hover:bg-neutral-100"
                   >
                     <Trash2 className="w-4 h-4" /> Delete
                   </button>
@@ -344,7 +344,7 @@ export default function ProjectsPage() {
           {canViewFinancials && <div className="bg-white rounded-xl border border-neutral-100 p-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center">
-                <DollarSign className="w-5 h-5 text-emerald-600" />
+                <DollarSign className="w-5 h-5 text-neutral-900" />
               </div>
               <div>
                 <p className="text-sm text-neutral-500">Budget</p>
@@ -366,7 +366,7 @@ export default function ProjectsPage() {
           {canViewFinancials && <div className="bg-white rounded-xl border border-neutral-100 p-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center">
-                <FileText className="w-5 h-5 text-amber-600" />
+                <FileText className="w-5 h-5 text-neutral-900" />
               </div>
               <div>
                 <p className="text-sm text-neutral-500">Invoiced</p>
@@ -500,7 +500,7 @@ export default function ProjectsPage() {
                             loadProjectDetails(selectedProject!.id);
                           }
                         }}
-                        className="p-2 text-neutral-400 hover:text-red-500 transition-colors"
+                        className="p-2 text-neutral-400 hover:text-neutral-700 transition-colors"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -524,7 +524,7 @@ export default function ProjectsPage() {
                   <p className="text-2xl font-bold text-neutral-900">{formatCurrency(stats.billableHours * 150)}</p>
                   <p className="text-xs text-neutral-400">{stats.billableHours}h @ $150/hr</p>
                 </div>
-                <div className="p-4 bg-orange-50 rounded-xl">
+                <div className="p-4 bg-neutral-100 rounded-xl">
                   <p className="text-sm text-orange-600 mb-1">Expenses</p>
                   <p className="text-2xl font-bold text-orange-700">{formatCurrency(expenses.reduce((sum, e) => sum + (e.amount || 0), 0))}</p>
                   <p className="text-xs text-orange-400">{expenses.length} expense{expenses.length !== 1 ? 's' : ''}</p>
@@ -535,7 +535,7 @@ export default function ProjectsPage() {
                 </div>
                 <div className="p-4 bg-neutral-50 rounded-xl">
                   <p className="text-sm text-neutral-500 mb-1">Collected</p>
-                  <p className="text-2xl font-bold text-emerald-600">{formatCurrency(stats.billedAmount)}</p>
+                  <p className="text-2xl font-bold text-neutral-900">{formatCurrency(stats.billedAmount)}</p>
                 </div>
               </div>
               
@@ -615,7 +615,7 @@ export default function ProjectsPage() {
                     <h3 className="text-lg font-semibold text-neutral-900">Billing History</h3>
                     <button 
                       onClick={() => setShowInvoiceModal(true)}
-                      className="flex items-center gap-2 px-3 py-1.5 bg-primary-500 text-white text-sm rounded-lg hover:bg-primary-600"
+                      className="flex items-center gap-2 px-3 py-1.5 bg-neutral-900-500 text-white text-sm rounded-lg hover:bg-neutral-800-600"
                     >
                       <Plus className="w-4 h-4" /> Create Invoice
                     </button>
@@ -746,7 +746,7 @@ export default function ProjectsPage() {
         {canCreate('projects') && (
           <button
             onClick={() => { setEditingProject(null); setShowProjectModal(true); }}
-            className="flex items-center gap-2 px-4 py-2.5 bg-primary-500 text-white rounded-xl hover:bg-primary-600 transition-colors"
+            className="flex items-center gap-2 px-4 py-2.5 bg-neutral-900-500 text-white rounded-xl hover:bg-neutral-800-600 transition-colors"
           >
             <Plus className="w-4 h-4" />
             Add Project
@@ -850,7 +850,7 @@ export default function ProjectsPage() {
                         setVisibleColumns(newCols);
                         localStorage.setItem('projectsVisibleColumns', JSON.stringify(newCols));
                       }}
-                      className="w-4 h-4 rounded border-neutral-300 text-primary-500"
+                      className="w-4 h-4 rounded border-neutral-300 text-neutral-900-500"
                     />
                     <span className="text-sm text-neutral-700">{col.label}</span>
                   </label>
@@ -869,7 +869,7 @@ export default function ProjectsPage() {
                       loadData();
                       setShowActionsMenu(false);
                     }}
-                    className="flex items-center gap-2 w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                    className="flex items-center gap-2 w-full px-4 py-2 text-sm text-neutral-900 hover:bg-neutral-100"
                   >
                     <Trash2 className="w-4 h-4" /> Delete Selected ({selectedProjects.size})
                   </button>
@@ -898,7 +898,7 @@ export default function ProjectsPage() {
                         setSelectedProjects(new Set());
                       }
                     }}
-                    className="w-4 h-4 rounded border-neutral-300 text-primary-500"
+                    className="w-4 h-4 rounded border-neutral-300 text-neutral-900-500"
                   />
                 </th>
                 {visibleColumns.includes('project') && <th className="text-left px-6 py-4 text-xs font-medium text-neutral-500 uppercase tracking-wider">Project</th>}
@@ -918,7 +918,7 @@ export default function ProjectsPage() {
                 return (
                   <tr 
                     key={project.id} 
-                    className={`hover:bg-neutral-50 transition-colors cursor-pointer ${selectedProjects.has(project.id) ? 'bg-primary-50' : ''}`}
+                    className={`hover:bg-neutral-50 transition-colors cursor-pointer ${selectedProjects.has(project.id) ? 'bg-neutral-900-50' : ''}`}
                     onClick={() => navigate(`/projects/${project.id}`)}
                   >
                     <td className="px-4 py-4" onClick={(e) => e.stopPropagation()}>
@@ -934,7 +934,7 @@ export default function ProjectsPage() {
                           }
                           setSelectedProjects(newSelected);
                         }}
-                        className="w-4 h-4 rounded border-neutral-300 text-primary-500"
+                        className="w-4 h-4 rounded border-neutral-300 text-neutral-900-500"
                       />
                     </td>
                     {visibleColumns.includes('project') && (
@@ -962,7 +962,7 @@ export default function ProjectsPage() {
                             member.avatar_url ? (
                               <img key={idx} src={member.avatar_url} alt="" className="w-7 h-7 rounded-full border-2 border-white object-cover" title={member.full_name} />
                             ) : (
-                              <div key={idx} className="w-7 h-7 rounded-full border-2 border-white bg-primary-100 flex items-center justify-center text-xs font-medium text-primary-700" title={member.full_name}>
+                              <div key={idx} className="w-7 h-7 rounded-full border-2 border-white bg-neutral-900-100 flex items-center justify-center text-xs font-medium text-neutral-900-700" title={member.full_name}>
                                 {member.full_name?.charAt(0) || '?'}
                               </div>
                             )
@@ -1053,7 +1053,7 @@ export default function ProjectsPage() {
                                   loadData();
                                   setRowMenuOpen(null);
                                 }}
-                                className="flex items-center gap-2 w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                                className="flex items-center gap-2 w-full px-4 py-2 text-sm text-neutral-900 hover:bg-neutral-100"
                               >
                                 <Trash2 className="w-4 h-4" /> Delete
                               </button>
@@ -1200,7 +1200,7 @@ function ProjectModal({ project, clients, companyId, onClose, onSave }: {
           <button onClick={onClose} className="p-2 hover:bg-neutral-100 rounded-lg"><X className="w-5 h-5" /></button>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
-          {error && <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">{error}</div>}
+          {error && <div className="p-3 bg-neutral-100 border border-red-200 text-red-700 rounded-lg text-sm">{error}</div>}
           <div>
             <label className="block text-sm font-medium text-neutral-700 mb-1.5">Project Name *</label>
             <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" required />
@@ -1251,7 +1251,7 @@ function ProjectModal({ project, clients, companyId, onClose, onSave }: {
           </div>
           <div className="flex gap-3 pt-4">
             <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors">Cancel</button>
-            <button type="submit" disabled={saving} onClick={(e) => { e.preventDefault(); handleSubmit(e as any); }} className="flex-1 px-4 py-2.5 bg-primary-500 text-white rounded-xl hover:bg-primary-600 transition-colors disabled:opacity-50">
+            <button type="submit" disabled={saving} onClick={(e) => { e.preventDefault(); handleSubmit(e as any); }} className="flex-1 px-4 py-2.5 bg-neutral-900-500 text-white rounded-xl hover:bg-neutral-800-600 transition-colors disabled:opacity-50">
               {saving ? 'Saving...' : project ? 'Update' : 'Create Project'}
             </button>
           </div>
@@ -1322,7 +1322,7 @@ function TaskModal({ task, projectId, companyId, teamMembers, onClose, onSave }:
           <button onClick={onClose} className="p-2 hover:bg-neutral-100 rounded-lg"><X className="w-5 h-5" /></button>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
-          {error && <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">{error}</div>}
+          {error && <div className="p-3 bg-neutral-100 border border-red-200 text-red-700 rounded-lg text-sm">{error}</div>}
           <div>
             <label className="block text-sm font-medium text-neutral-700 mb-1.5">Task Name *</label>
             <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" required placeholder="e.g. Design homepage mockup" />
@@ -1387,7 +1387,7 @@ function TaskModal({ task, projectId, companyId, teamMembers, onClose, onSave }:
           </div>
           <div className="flex gap-3 pt-4">
             <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors">Cancel</button>
-            <button type="submit" disabled={saving} className="flex-1 px-4 py-2.5 bg-primary-500 text-white rounded-xl hover:bg-primary-600 transition-colors disabled:opacity-50">
+            <button type="submit" disabled={saving} className="flex-1 px-4 py-2.5 bg-neutral-900-500 text-white rounded-xl hover:bg-neutral-800-600 transition-colors disabled:opacity-50">
               {saving ? 'Saving...' : task ? 'Update Task' : 'Create Task'}
             </button>
           </div>
@@ -1402,9 +1402,10 @@ function ClientTabContent({ client, onClientUpdate }: {
   client?: Client;
   onClientUpdate: (client: Client) => Promise<void>;
 }) {
-  const [editing, setEditing] = useState<'primary' | 'billing' | 'company' | null>(null);
+  const [editing, setEditing] = useState(false);
   const [editData, setEditData] = useState<Partial<Client>>({});
   const [saving, setSaving] = useState(false);
+  const [openMenu, setOpenMenu] = useState(false);
 
   if (!client) {
     return (
@@ -1414,22 +1415,33 @@ function ClientTabContent({ client, onClientUpdate }: {
     );
   }
 
-  const startEdit = (section: 'primary' | 'billing' | 'company') => {
-    setEditing(section);
-    if (section === 'company') {
-      setEditData({ name: client.name, email: client.email, phone: client.phone, address: client.address, city: client.city, state: client.state, zip: client.zip, website: client.website });
-    } else if (section === 'primary') {
-      setEditData({ primary_contact_name: client.primary_contact_name, primary_contact_title: client.primary_contact_title, primary_contact_email: client.primary_contact_email, primary_contact_phone: client.primary_contact_phone });
-    } else {
-      setEditData({ billing_contact_name: client.billing_contact_name, billing_contact_title: client.billing_contact_title, billing_contact_email: client.billing_contact_email, billing_contact_phone: client.billing_contact_phone });
-    }
+  const startEdit = () => {
+    setEditing(true);
+    setEditData({
+      name: client.name,
+      email: client.email,
+      phone: client.phone,
+      address: client.address,
+      city: client.city,
+      state: client.state,
+      zip: client.zip,
+      website: client.website,
+      primary_contact_name: client.primary_contact_name,
+      primary_contact_title: client.primary_contact_title,
+      primary_contact_email: client.primary_contact_email,
+      primary_contact_phone: client.primary_contact_phone,
+      billing_contact_name: client.billing_contact_name,
+      billing_contact_title: client.billing_contact_title,
+      billing_contact_email: client.billing_contact_email,
+      billing_contact_phone: client.billing_contact_phone
+    });
   };
 
   const saveEdit = async () => {
     setSaving(true);
     try {
       await onClientUpdate({ ...client, ...editData });
-      setEditing(null);
+      setEditing(false);
     } finally {
       setSaving(false);
     }
@@ -1437,15 +1449,34 @@ function ClientTabContent({ client, onClientUpdate }: {
 
   return (
     <div className="space-y-6">
+      {/* Header with Edit Menu */}
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold text-neutral-900">Client Information</h3>
+        {editing ? (
+          <div className="flex items-center gap-2">
+            <button onClick={() => setEditing(false)} className="px-3 py-1.5 text-sm text-neutral-600 hover:bg-neutral-100 rounded-lg">Cancel</button>
+            <button onClick={saveEdit} disabled={saving} className="px-3 py-1.5 text-sm bg-black text-white rounded-lg hover:bg-neutral-800 disabled:opacity-50">{saving ? 'Saving...' : 'Save'}</button>
+          </div>
+        ) : (
+          <div className="relative">
+            <button onClick={() => setOpenMenu(!openMenu)} className="p-2 hover:bg-neutral-100 rounded-lg">
+              <MoreVertical className="w-5 h-5 text-neutral-500" />
+            </button>
+            {openMenu && (
+              <div className="absolute right-0 top-full mt-1 w-32 bg-white rounded-lg shadow-lg border border-neutral-100 py-1 z-10">
+                <button onClick={() => { startEdit(); setOpenMenu(false); }} className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50">
+                  <Edit2 className="w-4 h-4" /> Edit
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* Company Information */}
       <div className="border border-neutral-200 rounded-xl p-5">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-neutral-900">Company Information</h3>
-          {editing !== 'company' && (
-            <button onClick={() => startEdit('company')} className="text-sm text-blue-600 hover:text-blue-700">Edit</button>
-          )}
-        </div>
-        {editing === 'company' ? (
+        <h4 className="text-md font-semibold text-neutral-900 mb-4">Company Information</h4>
+        {editing ? (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -1485,10 +1516,6 @@ function ClientTabContent({ client, onClientUpdate }: {
                 <input type="text" value={editData.zip || ''} onChange={(e) => setEditData({...editData, zip: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent" />
               </div>
             </div>
-            <div className="flex gap-2 justify-end">
-              <button onClick={() => setEditing(null)} className="px-4 py-2 text-neutral-600 hover:bg-neutral-100 rounded-lg">Cancel</button>
-              <button onClick={saveEdit} disabled={saving} className="px-4 py-2 bg-black text-white rounded-lg hover:bg-neutral-800 disabled:opacity-50">{saving ? 'Saving...' : 'Save'}</button>
-            </div>
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-4">
@@ -1520,13 +1547,8 @@ function ClientTabContent({ client, onClientUpdate }: {
 
       {/* Primary Contact */}
       <div className="border border-neutral-200 rounded-xl p-5">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-neutral-900">Primary Contact</h3>
-          {editing !== 'primary' && (
-            <button onClick={() => startEdit('primary')} className="text-sm text-blue-600 hover:text-blue-700">Edit</button>
-          )}
-        </div>
-        {editing === 'primary' ? (
+        <h4 className="text-md font-semibold text-neutral-900 mb-4">Primary Contact</h4>
+        {editing ? (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -1547,10 +1569,6 @@ function ClientTabContent({ client, onClientUpdate }: {
                 <label className="block text-sm text-neutral-600 mb-1">Phone</label>
                 <input type="tel" value={editData.primary_contact_phone || ''} onChange={(e) => setEditData({...editData, primary_contact_phone: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent" />
               </div>
-            </div>
-            <div className="flex gap-2 justify-end">
-              <button onClick={() => setEditing(null)} className="px-4 py-2 text-neutral-600 hover:bg-neutral-100 rounded-lg">Cancel</button>
-              <button onClick={saveEdit} disabled={saving} className="px-4 py-2 bg-black text-white rounded-lg hover:bg-neutral-800 disabled:opacity-50">{saving ? 'Saving...' : 'Save'}</button>
             </div>
           </div>
         ) : (
@@ -1577,13 +1595,8 @@ function ClientTabContent({ client, onClientUpdate }: {
 
       {/* Billing Contact */}
       <div className="border border-neutral-200 rounded-xl p-5">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-neutral-900">Billing Contact</h3>
-          {editing !== 'billing' && (
-            <button onClick={() => startEdit('billing')} className="text-sm text-blue-600 hover:text-blue-700">Edit</button>
-          )}
-        </div>
-        {editing === 'billing' ? (
+        <h4 className="text-md font-semibold text-neutral-900 mb-4">Billing Contact</h4>
+        {editing ? (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -1604,10 +1617,6 @@ function ClientTabContent({ client, onClientUpdate }: {
                 <label className="block text-sm text-neutral-600 mb-1">Phone</label>
                 <input type="tel" value={editData.billing_contact_phone || ''} onChange={(e) => setEditData({...editData, billing_contact_phone: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent" />
               </div>
-            </div>
-            <div className="flex gap-2 justify-end">
-              <button onClick={() => setEditing(null)} className="px-4 py-2 text-neutral-600 hover:bg-neutral-100 rounded-lg">Cancel</button>
-              <button onClick={saveEdit} disabled={saving} className="px-4 py-2 bg-black text-white rounded-lg hover:bg-neutral-800 disabled:opacity-50">{saving ? 'Saving...' : 'Save'}</button>
             </div>
           </div>
         ) : (
@@ -1761,7 +1770,7 @@ function TasksTabContent({ tasks, projectId, companyId, onTasksChange, onEditTas
             key={tab.key}
             onClick={() => setSubTab(tab.key)}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-              subTab === tab.key ? 'border-primary-500 text-primary-600' : 'border-transparent text-neutral-500 hover:text-neutral-700'
+              subTab === tab.key ? 'border-neutral-900-500 text-neutral-900-600' : 'border-transparent text-neutral-500 hover:text-neutral-700'
             }`}
           >
             {tab.label}
@@ -1774,9 +1783,9 @@ function TasksTabContent({ tasks, projectId, companyId, onTasksChange, onEditTas
         <div className="space-y-6">
           <div className="grid grid-cols-4 gap-4">
             <div className="bg-neutral-50 rounded-lg p-4"><p className="text-sm text-neutral-500">Total Tasks</p><p className="text-2xl font-bold text-neutral-900">{taskStats.total}</p></div>
-            <div className="bg-emerald-50 rounded-lg p-4"><p className="text-sm text-emerald-600">Completed</p><p className="text-2xl font-bold text-emerald-700">{taskStats.completed}</p></div>
-            <div className="bg-blue-50 rounded-lg p-4"><p className="text-sm text-blue-600">In Progress</p><p className="text-2xl font-bold text-blue-700">{taskStats.inProgress}</p></div>
-            <div className="bg-amber-50 rounded-lg p-4"><p className="text-sm text-amber-600">Not Started</p><p className="text-2xl font-bold text-amber-700">{taskStats.notStarted}</p></div>
+            <div className="bg-neutral-100 rounded-lg p-4"><p className="text-sm text-neutral-900">Completed</p><p className="text-2xl font-bold text-emerald-700">{taskStats.completed}</p></div>
+            <div className="bg-neutral-100 rounded-lg p-4"><p className="text-sm text-blue-600">In Progress</p><p className="text-2xl font-bold text-blue-700">{taskStats.inProgress}</p></div>
+            <div className="bg-neutral-100 rounded-lg p-4"><p className="text-sm text-neutral-900">Not Started</p><p className="text-2xl font-bold text-amber-700">{taskStats.notStarted}</p></div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-white border border-neutral-200 rounded-lg p-4"><p className="text-sm text-neutral-500 mb-1">Total Estimated Hours</p><p className="text-xl font-semibold">{taskStats.totalHours}h</p></div>
@@ -1784,14 +1793,14 @@ function TasksTabContent({ tasks, projectId, companyId, onTasksChange, onEditTas
           </div>
           <div>
             <div className="flex justify-between text-sm mb-2"><span className="text-neutral-600">Overall Progress</span><span className="font-medium">{taskStats.total > 0 ? Math.round((taskStats.completed / taskStats.total) * 100) : 0}%</span></div>
-            <div className="w-full bg-neutral-200 rounded-full h-3"><div className="bg-emerald-500 h-3 rounded-full transition-all" style={{ width: `${taskStats.total > 0 ? (taskStats.completed / taskStats.total) * 100 : 0}%` }} /></div>
+            <div className="w-full bg-neutral-200 rounded-full h-3"><div className="bg-neutral-1000 h-3 rounded-full transition-all" style={{ width: `${taskStats.total > 0 ? (taskStats.completed / taskStats.total) * 100 : 0}%` }} /></div>
           </div>
           
           {/* Tasks List */}
           <div className="bg-white border border-neutral-200 rounded-lg overflow-hidden">
             <div className="px-4 py-3 bg-neutral-50 border-b border-neutral-200 flex items-center justify-between">
               <span className="font-medium">Tasks</span>
-              <button onClick={onAddTask} className="text-sm text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1">
+              <button onClick={onAddTask} className="text-sm text-neutral-900-600 hover:text-neutral-700-700 font-medium flex items-center gap-1">
                 <Plus className="w-4 h-4" /> Add Task
               </button>
             </div>
@@ -1867,7 +1876,7 @@ function TasksTabContent({ tasks, projectId, companyId, onTasksChange, onEditTas
               <div key={task.id} className="px-4 py-3 flex items-center justify-between">
                 <div><p className="font-medium text-neutral-900">{task.name}</p><p className="text-sm text-neutral-500">{task.estimated_hours || 0}h estimated</p></div>
                 <div className="text-right">
-                  <p className={`font-medium ${new Date(task.due_date!) < new Date() && task.status !== 'completed' ? 'text-red-600' : 'text-neutral-900'}`}>{new Date(task.due_date!).toLocaleDateString()}</p>
+                  <p className={`font-medium ${new Date(task.due_date!) < new Date() && task.status !== 'completed' ? 'text-neutral-900' : 'text-neutral-900'}`}>{new Date(task.due_date!).toLocaleDateString()}</p>
                   <span className={`text-xs px-2 py-0.5 rounded-full ${task.status === 'completed' ? 'bg-emerald-100 text-emerald-700' : task.status === 'in_progress' ? 'bg-blue-100 text-blue-700' : 'bg-neutral-100 text-neutral-600'}`}>{task.status?.replace('_', ' ')}</span>
                 </div>
               </div>
@@ -1907,7 +1916,7 @@ function TasksTabContent({ tasks, projectId, companyId, onTasksChange, onEditTas
               </div>
               <div className="p-4">
                 <div className="flex items-center gap-3">
-                  <input type="checkbox" checked={task.status === 'completed'} readOnly className="w-4 h-4 rounded border-neutral-300 text-primary-500" />
+                  <input type="checkbox" checked={task.status === 'completed'} readOnly className="w-4 h-4 rounded border-neutral-300 text-neutral-900-500" />
                   <span className={task.status === 'completed' ? 'line-through text-neutral-400' : ''}>{task.description || 'No description'}</span>
                 </div>
                 {task.due_date && <p className="text-sm text-neutral-500 mt-2 ml-7">Due: {new Date(task.due_date).toLocaleDateString()}</p>}
@@ -1924,7 +1933,7 @@ function TasksTabContent({ tasks, projectId, companyId, onTasksChange, onEditTas
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3">
           <div className="relative">
-            <button onClick={() => setShowAddDropdown(!showAddDropdown)} className="flex items-center gap-1 px-4 py-2 bg-primary-500 text-white text-sm font-medium rounded-lg hover:bg-primary-600">
+            <button onClick={() => setShowAddDropdown(!showAddDropdown)} className="flex items-center gap-1 px-4 py-2 bg-neutral-900-500 text-white text-sm font-medium rounded-lg hover:bg-neutral-800-600">
               Add Task <ChevronDown className="w-4 h-4" />
             </button>
             {showAddDropdown && (
@@ -1940,11 +1949,11 @@ function TasksTabContent({ tasks, projectId, companyId, onTasksChange, onEditTas
             <input type="text" placeholder="Search" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9 pr-4 py-2 w-48 text-sm border border-neutral-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
           </div>
           <label className="flex items-center gap-2 text-sm text-neutral-600 cursor-pointer">
-            <input type="checkbox" checked={hideCompleted} onChange={(e) => setHideCompleted(e.target.checked)} className="w-4 h-4 rounded border-neutral-300 text-primary-500 focus:ring-primary-500" />
+            <input type="checkbox" checked={hideCompleted} onChange={(e) => setHideCompleted(e.target.checked)} className="w-4 h-4 rounded border-neutral-300 text-neutral-900-500 focus:ring-primary-500" />
             Hide Completed Tasks
           </label>
           <label className="flex items-center gap-2 text-sm text-neutral-600 cursor-pointer">
-            <input type="checkbox" checked={includeInactive} onChange={(e) => setIncludeInactive(e.target.checked)} className="w-4 h-4 rounded border-neutral-300 text-primary-500 focus:ring-primary-500" />
+            <input type="checkbox" checked={includeInactive} onChange={(e) => setIncludeInactive(e.target.checked)} className="w-4 h-4 rounded border-neutral-300 text-neutral-900-500 focus:ring-primary-500" />
             Include Inactive Staffers
           </label>
           <select
@@ -1959,10 +1968,10 @@ function TasksTabContent({ tasks, projectId, companyId, onTasksChange, onEditTas
         </div>
         <div className="flex items-center gap-2">
           <span className="text-sm text-neutral-600">AutoSave</span>
-          <button onClick={() => setAutoSave(!autoSave)} className={`relative w-12 h-6 rounded-full transition-colors ${autoSave ? 'bg-primary-500' : 'bg-neutral-300'}`}>
+          <button onClick={() => setAutoSave(!autoSave)} className={`relative w-12 h-6 rounded-full transition-colors ${autoSave ? 'bg-neutral-900-500' : 'bg-neutral-300'}`}>
             <span className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${autoSave ? 'left-7' : 'left-1'}`} />
           </button>
-          <span className={`text-xs font-medium ${autoSave ? 'text-primary-600' : 'text-neutral-400'}`}>{autoSave ? 'ON' : 'OFF'}</span>
+          <span className={`text-xs font-medium ${autoSave ? 'text-neutral-900-600' : 'text-neutral-400'}`}>{autoSave ? 'ON' : 'OFF'}</span>
         </div>
       </div>
 
@@ -2001,7 +2010,7 @@ function TasksTabContent({ tasks, projectId, companyId, onTasksChange, onEditTas
       {filteredTasks.length === 0 && !quickAddName && subTab === 'editor' && (
         <div className="text-center py-8 text-neutral-500">
           <p>No tasks found.</p>
-          <button onClick={onAddTask} className="text-primary-500 hover:text-primary-600 font-medium mt-1">Create your first task</button>
+          <button onClick={onAddTask} className="text-neutral-900-500 hover:text-neutral-700-600 font-medium mt-1">Create your first task</button>
         </div>
       )}
       </>)}
@@ -2019,7 +2028,7 @@ function TaskTableRow({ task, editingCell, editValues, onStartEditing, onEditCha
   const isCompleted = task.status === 'completed';
 
   return (
-    <tr className={`hover:bg-blue-50/30 group ${isCompleted ? 'opacity-60' : ''}`}>
+    <tr className={`hover:bg-neutral-100/30 group ${isCompleted ? 'opacity-60' : ''}`}>
       {/* Completion Radio Button */}
       <td className="px-2 py-2">
         <button
@@ -2043,14 +2052,14 @@ function TaskTableRow({ task, editingCell, editValues, onStartEditing, onEditCha
       </td>
       <td className="px-4 py-2 text-right">
         {isEditing('fees') ? (
-          <input type="number" value={getValue('fees', task.estimated_fees?.toString() || '0')} onChange={(e) => onEditChange(task.id, 'fees', e.target.value)} onBlur={() => onSaveEdit(task.id, 'fees')} onKeyDown={(e) => e.key === 'Enter' && onSaveEdit(task.id, 'fees')} className="w-full px-2 py-1 text-right text-sm border border-primary-300 rounded outline-none" autoFocus />
+          <input type="number" value={getValue('fees', task.estimated_fees?.toString() || '0')} onChange={(e) => onEditChange(task.id, 'fees', e.target.value)} onBlur={() => onSaveEdit(task.id, 'fees')} onKeyDown={(e) => e.key === 'Enter' && onSaveEdit(task.id, 'fees')} className="w-full px-2 py-1 text-right text-sm border border-neutral-900-300 rounded outline-none" autoFocus />
         ) : (
           <span onClick={() => onStartEditing(task.id, 'fees', task.estimated_fees?.toString() || '0')} className="cursor-pointer hover:bg-neutral-100 px-2 py-1 rounded inline-block">{formatCurrency(task.estimated_fees)}</span>
         )}
       </td>
       <td className="px-4 py-2 text-right">
         {isEditing('hours') ? (
-          <input type="number" value={getValue('hours', task.estimated_hours?.toString() || '0')} onChange={(e) => onEditChange(task.id, 'hours', e.target.value)} onBlur={() => onSaveEdit(task.id, 'hours')} onKeyDown={(e) => e.key === 'Enter' && onSaveEdit(task.id, 'hours')} className="w-full px-2 py-1 text-right text-sm border border-primary-300 rounded outline-none" autoFocus />
+          <input type="number" value={getValue('hours', task.estimated_hours?.toString() || '0')} onChange={(e) => onEditChange(task.id, 'hours', e.target.value)} onBlur={() => onSaveEdit(task.id, 'hours')} onKeyDown={(e) => e.key === 'Enter' && onSaveEdit(task.id, 'hours')} className="w-full px-2 py-1 text-right text-sm border border-neutral-900-300 rounded outline-none" autoFocus />
         ) : (
           <span onClick={() => onStartEditing(task.id, 'hours', task.estimated_hours?.toString() || '0')} className="cursor-pointer hover:bg-neutral-100 px-2 py-1 rounded inline-block">{task.estimated_hours || '0'}</span>
         )}
@@ -2059,7 +2068,7 @@ function TaskTableRow({ task, editingCell, editValues, onStartEditing, onEditCha
         <select 
           value={task.billing_unit || 'hours'} 
           onChange={(e) => onUnitChange(task.id, e.target.value as 'hours' | 'unit')}
-          className="px-2 py-1 text-sm border border-neutral-200 rounded bg-white hover:border-primary-300 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none cursor-pointer"
+          className="px-2 py-1 text-sm border border-neutral-200 rounded bg-white hover:border-neutral-900-300 focus:border-neutral-900-500 focus:ring-1 focus:ring-primary-500 outline-none cursor-pointer"
         >
           <option value="hours">Hours</option>
           <option value="unit">Unit</option>
@@ -2067,7 +2076,7 @@ function TaskTableRow({ task, editingCell, editValues, onStartEditing, onEditCha
       </td>
       <td className="px-4 py-2">
         {isEditing('due_date') ? (
-          <input type="date" value={getValue('due_date', task.due_date?.split('T')[0] || '')} onChange={(e) => onEditChange(task.id, 'due_date', e.target.value)} onBlur={() => onSaveEdit(task.id, 'due_date')} className="px-2 py-1 text-sm border border-primary-300 rounded outline-none" autoFocus />
+          <input type="date" value={getValue('due_date', task.due_date?.split('T')[0] || '')} onChange={(e) => onEditChange(task.id, 'due_date', e.target.value)} onBlur={() => onSaveEdit(task.id, 'due_date')} className="px-2 py-1 text-sm border border-neutral-900-300 rounded outline-none" autoFocus />
         ) : (
           <span onClick={() => onStartEditing(task.id, 'due_date', task.due_date?.split('T')[0] || '')} className="cursor-pointer hover:bg-neutral-100 px-2 py-1 rounded inline-block text-neutral-600">{task.due_date ? new Date(task.due_date).toLocaleDateString() : '-'}</span>
         )}
@@ -2083,7 +2092,7 @@ function TaskTableRow({ task, editingCell, editValues, onStartEditing, onEditCha
                     {assignee.avatar_url ? (
                       <img src={assignee.avatar_url} alt="" className="w-6 h-6 rounded-full object-cover" />
                     ) : (
-                      <div className="w-6 h-6 rounded-full bg-primary-100 flex items-center justify-center text-xs font-medium text-primary-700">
+                      <div className="w-6 h-6 rounded-full bg-neutral-900-100 flex items-center justify-center text-xs font-medium text-neutral-900-700">
                         {assignee.full_name?.charAt(0) || '?'}
                       </div>
                     )}
@@ -2108,12 +2117,12 @@ function TaskTableRow({ task, editingCell, editValues, onStartEditing, onEditCha
       <td className="px-4 py-2 text-right text-neutral-600">{formatCurrency(estimate)}</td>
       <td className="px-4 py-2 text-right">
         {isEditing('percent') ? (
-          <input type="number" min="0" max="100" value={getValue('percent', (task.completion_percentage || 0).toString())} onChange={(e) => onEditChange(task.id, 'percent', e.target.value)} onBlur={() => onSaveEdit(task.id, 'percent')} onKeyDown={(e) => e.key === 'Enter' && onSaveEdit(task.id, 'percent')} className="w-16 px-2 py-1 text-right text-sm border border-primary-300 rounded outline-none" autoFocus />
+          <input type="number" min="0" max="100" value={getValue('percent', (task.completion_percentage || 0).toString())} onChange={(e) => onEditChange(task.id, 'percent', e.target.value)} onBlur={() => onSaveEdit(task.id, 'percent')} onKeyDown={(e) => e.key === 'Enter' && onSaveEdit(task.id, 'percent')} className="w-16 px-2 py-1 text-right text-sm border border-neutral-900-300 rounded outline-none" autoFocus />
         ) : (
           <div className="flex items-center justify-end gap-2">
             <div className="w-12 h-1.5 bg-neutral-200 rounded-full overflow-hidden">
               <div 
-                className="h-full bg-emerald-500 rounded-full transition-all" 
+                className="h-full bg-neutral-1000 rounded-full transition-all" 
                 style={{ width: `${task.completion_percentage || 0}%` }}
               />
             </div>
@@ -2129,7 +2138,7 @@ function TaskTableRow({ task, editingCell, editValues, onStartEditing, onEditCha
           <div className="absolute right-0 top-full mt-1 bg-white border border-neutral-200 rounded-lg shadow-lg py-1 z-20 min-w-[140px]">
             <button onClick={onEdit} className="w-full px-4 py-2 text-left text-sm hover:bg-neutral-50 flex items-center gap-2"><Edit2 className="w-4 h-4" /> Edit</button>
             <button onClick={onAddSubTask} className="w-full px-4 py-2 text-left text-sm hover:bg-neutral-50 flex items-center gap-2"><Plus className="w-4 h-4" /> Add Sub-task</button>
-            <button onClick={onDelete} className="w-full px-4 py-2 text-left text-sm hover:bg-red-50 text-red-600 flex items-center gap-2"><Trash2 className="w-4 h-4" /> Delete</button>
+            <button onClick={onDelete} className="w-full px-4 py-2 text-left text-sm hover:bg-neutral-100 text-neutral-900 flex items-center gap-2"><Trash2 className="w-4 h-4" /> Delete</button>
           </div>
         )}
       </td>
@@ -2459,7 +2468,7 @@ function ProjectInvoiceModal({ project, tasks, timeEntries, expenses, companyId,
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
         <div className="bg-white rounded-2xl w-full max-w-md p-6 mx-4 text-center">
           <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4">
-            <Check className="w-8 h-8 text-emerald-600" />
+            <Check className="w-8 h-8 text-neutral-900" />
           </div>
           <h2 className="text-xl font-semibold text-neutral-900 mb-2">Invoice Created!</h2>
           <p className="text-neutral-500 mb-6">Your invoice for {formatCurrency(total)} has been created as a draft.</p>
@@ -2472,7 +2481,7 @@ function ProjectInvoiceModal({ project, tasks, timeEntries, expenses, companyId,
             </button>
             <button
               onClick={() => navigate('/invoicing')}
-              className="flex-1 px-4 py-2.5 bg-primary-500 text-white rounded-xl hover:bg-primary-600 transition-colors flex items-center justify-center gap-2"
+              className="flex-1 px-4 py-2.5 bg-neutral-900-500 text-white rounded-xl hover:bg-neutral-800-600 transition-colors flex items-center justify-center gap-2"
             >
               <ExternalLink className="w-4 h-4" /> View Invoice
             </button>
@@ -2496,7 +2505,7 @@ function ProjectInvoiceModal({ project, tasks, timeEntries, expenses, companyId,
         </div>
 
         {error && (
-          <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm mb-4">{error}</div>
+          <div className="p-3 bg-neutral-100 border border-red-200 text-red-700 rounded-lg text-sm mb-4">{error}</div>
         )}
 
         <div className="space-y-6">
@@ -2508,7 +2517,7 @@ function ProjectInvoiceModal({ project, tasks, timeEntries, expenses, companyId,
                 type="button"
                 onClick={() => { setBillingType('items'); setSelectedTasks(new Set()); }}
                 className={`p-3 border rounded-xl text-left transition-colors ${
-                  billingType === 'items' ? 'border-primary-500 bg-primary-50' : 'border-neutral-200 hover:border-neutral-300'
+                  billingType === 'items' ? 'border-neutral-900-500 bg-neutral-900-50' : 'border-neutral-200 hover:border-neutral-300'
                 }`}
               >
                 <p className="font-medium text-sm text-neutral-900">By Items</p>
@@ -2518,7 +2527,7 @@ function ProjectInvoiceModal({ project, tasks, timeEntries, expenses, companyId,
                 type="button"
                 onClick={() => { setBillingType('milestone'); setSelectedTasks(new Set()); }}
                 className={`p-3 border rounded-xl text-left transition-colors ${
-                  billingType === 'milestone' ? 'border-primary-500 bg-primary-50' : 'border-neutral-200 hover:border-neutral-300'
+                  billingType === 'milestone' ? 'border-neutral-900-500 bg-neutral-900-50' : 'border-neutral-200 hover:border-neutral-300'
                 }`}
               >
                 <p className="font-medium text-sm text-neutral-900">By Milestone</p>
@@ -2528,7 +2537,7 @@ function ProjectInvoiceModal({ project, tasks, timeEntries, expenses, companyId,
                 type="button"
                 onClick={() => { setBillingType('percentage'); setSelectedTasks(new Set()); }}
                 className={`p-3 border rounded-xl text-left transition-colors ${
-                  billingType === 'percentage' ? 'border-primary-500 bg-primary-50' : 'border-neutral-200 hover:border-neutral-300'
+                  billingType === 'percentage' ? 'border-neutral-900-500 bg-neutral-900-50' : 'border-neutral-200 hover:border-neutral-300'
                 }`}
               >
                 <p className="font-medium text-sm text-neutral-900">By Percentage</p>
@@ -2545,7 +2554,7 @@ function ProjectInvoiceModal({ project, tasks, timeEntries, expenses, companyId,
                   type="checkbox"
                   checked={includeAllocatedFees}
                   onChange={(e) => setIncludeAllocatedFees(e.target.checked)}
-                  className="w-5 h-5 rounded border-neutral-300 text-primary-500 focus:ring-primary-500"
+                  className="w-5 h-5 rounded border-neutral-300 text-neutral-900-500 focus:ring-primary-500"
                 />
                 <div className="flex-1">
                   <p className="font-medium text-neutral-900">Project Budget (Fixed Fee)</p>
@@ -2565,7 +2574,7 @@ function ProjectInvoiceModal({ project, tasks, timeEntries, expenses, companyId,
                     type="checkbox"
                     checked={selectedTasks.size === tasks.length && tasks.length > 0}
                     onChange={selectAllTasks}
-                    className="w-4 h-4 rounded border-neutral-300 text-primary-500 focus:ring-primary-500"
+                    className="w-4 h-4 rounded border-neutral-300 text-neutral-900-500 focus:ring-primary-500"
                   />
                   <span className="font-medium text-neutral-900">Tasks ({tasks.length})</span>
                 </div>
@@ -2590,14 +2599,14 @@ function ProjectInvoiceModal({ project, tasks, timeEntries, expenses, companyId,
                         checked={isSelected}
                         disabled={isFullyBilled}
                         onChange={() => toggleTask(task.id)}
-                        className="w-4 h-4 rounded border-neutral-300 text-primary-500 focus:ring-primary-500"
+                        className="w-4 h-4 rounded border-neutral-300 text-neutral-900-500 focus:ring-primary-500"
                       />
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-neutral-900 truncate">{task.name}</p>
                         <p className="text-xs text-neutral-500">
                           {task.estimated_hours || 0}h estimated
                           {billedPct > 0 && (
-                            <span className="ml-2 text-amber-600">• {billedPct}% billed</span>
+                            <span className="ml-2 text-neutral-900">• {billedPct}% billed</span>
                           )}
                         </p>
                       </div>
@@ -2648,14 +2657,14 @@ function ProjectInvoiceModal({ project, tasks, timeEntries, expenses, companyId,
                     type="checkbox"
                     checked={selectedTimeEntries.size === unbilledTimeEntries.length && unbilledTimeEntries.length > 0}
                     onChange={selectAllTimeEntries}
-                    className="w-4 h-4 rounded border-neutral-300 text-primary-500 focus:ring-primary-500"
+                    className="w-4 h-4 rounded border-neutral-300 text-neutral-900-500 focus:ring-primary-500"
                   />
                   <span className="font-medium text-neutral-900">Time Entries ({unbilledTimeEntries.length})</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={(e) => { e.stopPropagation(); navigate('/settings'); }}
-                    className="flex items-center gap-1 text-xs text-primary-500 hover:text-primary-600 hover:underline"
+                    className="flex items-center gap-1 text-xs text-neutral-900-500 hover:text-neutral-700-600 hover:underline"
                     title="Manage your default hourly rate in Settings"
                   >
                     <Info className="w-3 h-3" />
@@ -2676,13 +2685,13 @@ function ProjectInvoiceModal({ project, tasks, timeEntries, expenses, companyId,
                         type="checkbox"
                         checked={selectedTimeEntries.has(entry.id)}
                         onChange={() => toggleTimeEntry(entry.id)}
-                        className="w-4 h-4 rounded border-neutral-300 text-primary-500 focus:ring-primary-500"
+                        className="w-4 h-4 rounded border-neutral-300 text-neutral-900-500 focus:ring-primary-500"
                       />
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-neutral-900 truncate">{entry.description || 'Time entry'}</p>
                         <p className="text-xs text-neutral-500">
                           {new Date(entry.date).toLocaleDateString()} • {entry.hours}h @ ${rate}/hr = {formatCurrency(entryTotal)}
-                          {rateSource === 'entry' && <span className="ml-1 text-emerald-600">(custom rate)</span>}
+                          {rateSource === 'entry' && <span className="ml-1 text-neutral-900">(custom rate)</span>}
                         </p>
                       </div>
                       <span className="font-medium text-neutral-700">{formatCurrency(entryTotal)}</span>
@@ -2702,7 +2711,7 @@ function ProjectInvoiceModal({ project, tasks, timeEntries, expenses, companyId,
                     type="checkbox"
                     checked={selectedExpenses.size === unbilledExpenses.length && unbilledExpenses.length > 0}
                     onChange={selectAllExpenses}
-                    className="w-4 h-4 rounded border-neutral-300 text-primary-500 focus:ring-primary-500"
+                    className="w-4 h-4 rounded border-neutral-300 text-neutral-900-500 focus:ring-primary-500"
                   />
                   <span className="font-medium text-neutral-900">Expenses ({unbilledExpenses.length})</span>
                 </div>
@@ -2715,7 +2724,7 @@ function ProjectInvoiceModal({ project, tasks, timeEntries, expenses, companyId,
                       type="checkbox"
                       checked={selectedExpenses.has(expense.id)}
                       onChange={() => toggleExpense(expense.id)}
-                      className="w-4 h-4 rounded border-neutral-300 text-primary-500 focus:ring-primary-500"
+                      className="w-4 h-4 rounded border-neutral-300 text-neutral-900-500 focus:ring-primary-500"
                     />
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-neutral-900 truncate">{expense.description}</p>
@@ -2788,7 +2797,7 @@ function ProjectInvoiceModal({ project, tasks, timeEntries, expenses, companyId,
             <button
               onClick={handleSubmit}
               disabled={saving || total <= 0}
-              className="flex-1 px-4 py-2.5 bg-primary-500 text-white rounded-xl hover:bg-primary-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-4 py-2.5 bg-neutral-900-500 text-white rounded-xl hover:bg-neutral-800-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {saving ? 'Creating...' : 'Create Invoice'}
             </button>
@@ -3114,7 +3123,7 @@ function InlineBillingInvoiceView({
           <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(status)}`}>
             {status}
           </span>
-          <button onClick={handleSave} disabled={saving} className="px-4 py-2 bg-primary-500 text-white text-sm rounded-lg hover:bg-primary-600 disabled:opacity-50">
+          <button onClick={handleSave} disabled={saving} className="px-4 py-2 bg-neutral-900-500 text-white text-sm rounded-lg hover:bg-neutral-800-600 disabled:opacity-50">
             {saving ? 'Saving...' : 'Save'}
           </button>
         </div>
@@ -3152,7 +3161,7 @@ function InlineBillingInvoiceView({
               <option value="percentage">Percentage</option>
               <option value="summary">Summary Only</option>
             </select>
-            <button className="px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg font-medium">Edit</button>
+            <button className="px-4 py-2 text-sm text-neutral-900 hover:bg-neutral-100 rounded-lg font-medium">Edit</button>
             <button className="px-4 py-2 bg-white border border-neutral-300 rounded-lg text-sm font-medium hover:bg-neutral-50">Refresh</button>
             <button className="px-4 py-2 bg-white border border-neutral-300 rounded-lg text-sm font-medium hover:bg-neutral-50">Snapshot</button>
           </div>
@@ -3375,7 +3384,7 @@ function InlineBillingInvoiceView({
           <div className="flex-1 space-y-4">
             <div className="flex items-start justify-between">
               <div className="text-sm">
-                <p className="font-medium text-primary-600">{invoice.client?.name || project?.client?.name}</p>
+                <p className="font-medium text-neutral-900-600">{invoice.client?.name || project?.client?.name}</p>
               </div>
               <div className="text-right">
                 <p className="text-3xl font-bold text-neutral-900">{formatCurrency(total)}</p>
@@ -3408,7 +3417,7 @@ function InlineBillingInvoiceView({
                       </td>
                       <td className="px-4 py-2 text-right font-medium text-sm">{formatCurrency(item.amount)}</td>
                       <td className="px-2 py-2">
-                        <button onClick={() => removeLineItem(item.id)} className="p-1 text-neutral-400 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
+                        <button onClick={() => removeLineItem(item.id)} className="p-1 text-neutral-400 hover:text-neutral-700"><Trash2 className="w-4 h-4" /></button>
                       </td>
                     </tr>
                   ))}
@@ -3416,7 +3425,7 @@ function InlineBillingInvoiceView({
               </table>
             </div>
 
-            <button onClick={addLineItem} className="flex items-center gap-2 px-3 py-1.5 bg-primary-500 text-white text-sm rounded-lg hover:bg-primary-600">
+            <button onClick={addLineItem} className="flex items-center gap-2 px-3 py-1.5 bg-neutral-900-500 text-white text-sm rounded-lg hover:bg-neutral-800-600">
               <Plus className="w-4 h-4" /> Add Line Item
             </button>
 
@@ -3501,28 +3510,28 @@ function InlineBillingInvoiceView({
               <div className="space-y-2 pt-2">
                 <div className="flex items-center justify-between text-xs">
                   <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${invoice.created_at ? 'bg-emerald-500' : 'bg-neutral-300'}`}></div>
+                    <div className={`w-2 h-2 rounded-full ${invoice.created_at ? 'bg-neutral-1000' : 'bg-neutral-300'}`}></div>
                     <span className="text-neutral-600">Drafted</span>
                   </div>
                   <span className="text-neutral-500">{invoice.created_at ? new Date(invoice.created_at).toLocaleDateString() : '-'}</span>
                 </div>
                 <div className="flex items-center justify-between text-xs">
                   <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${sentDate ? 'bg-blue-500' : 'bg-neutral-300'}`}></div>
+                    <div className={`w-2 h-2 rounded-full ${sentDate ? 'bg-neutral-1000' : 'bg-neutral-300'}`}></div>
                     <span className="text-neutral-600">Sent</span>
                   </div>
                   <span className="text-neutral-500">{sentDate ? new Date(sentDate).toLocaleDateString() : '-'}</span>
                 </div>
                 <div className="flex items-center justify-between text-xs">
                   <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${dueDate ? 'bg-amber-500' : 'bg-neutral-300'}`}></div>
+                    <div className={`w-2 h-2 rounded-full ${dueDate ? 'bg-neutral-1000' : 'bg-neutral-300'}`}></div>
                     <span className="text-neutral-600">Due</span>
                   </div>
                   <span className="text-neutral-500">{dueDate ? new Date(dueDate).toLocaleDateString() : '-'}</span>
                 </div>
                 <div className="flex items-center justify-between text-xs">
                   <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${status === 'paid' ? 'bg-emerald-500' : 'bg-neutral-300'}`}></div>
+                    <div className={`w-2 h-2 rounded-full ${status === 'paid' ? 'bg-neutral-1000' : 'bg-neutral-300'}`}></div>
                     <span className="text-neutral-600">Paid</span>
                   </div>
                   <span className="text-neutral-500">{status === 'paid' ? new Date().toLocaleDateString() : '-'}</span>
@@ -3541,15 +3550,15 @@ function InlineBillingInvoiceView({
               <label className="block text-xs font-medium text-neutral-500">Payment Options</label>
               <div className="space-y-2">
                 <label className="flex items-center gap-2 text-sm cursor-pointer">
-                  <input type="checkbox" defaultChecked className="w-4 h-4 rounded border-neutral-300 text-primary-500" />
+                  <input type="checkbox" defaultChecked className="w-4 h-4 rounded border-neutral-300 text-neutral-900-500" />
                   <span>Bank Transfer</span>
                 </label>
                 <label className="flex items-center gap-2 text-sm cursor-pointer">
-                  <input type="checkbox" className="w-4 h-4 rounded border-neutral-300 text-primary-500" />
+                  <input type="checkbox" className="w-4 h-4 rounded border-neutral-300 text-neutral-900-500" />
                   <span>Credit Card</span>
                 </label>
                 <label className="flex items-center gap-2 text-sm cursor-pointer">
-                  <input type="checkbox" className="w-4 h-4 rounded border-neutral-300 text-primary-500" />
+                  <input type="checkbox" className="w-4 h-4 rounded border-neutral-300 text-neutral-900-500" />
                   <span>Check</span>
                 </label>
               </div>
@@ -3786,14 +3795,14 @@ function ProjectDetailsTab({
         <button
           onClick={handleSave}
           disabled={saving}
-          className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50"
+          className="px-4 py-2 bg-neutral-900-500 text-white rounded-lg hover:bg-neutral-800-600 disabled:opacity-50"
         >
           {saving ? 'Saving...' : 'Save Changes'}
         </button>
       </div>
 
       {/* Status & Category - Primary Fields */}
-      <div className="grid grid-cols-2 gap-6 p-4 bg-primary-50 rounded-xl border border-primary-100">
+      <div className="grid grid-cols-2 gap-6 p-4 bg-neutral-900-50 rounded-xl border border-neutral-900-100">
         <div>
           <label className="block text-sm font-medium text-neutral-700 mb-1">Project Status</label>
           <select

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -48,12 +49,12 @@ export const Navbar = () => {
               <span className="absolute -bottom-1 left-0 w-0 h-[2px] bg-swiss-black transition-all duration-300 group-hover:w-full"></span>
             </a>
           ))}
-          <a 
-            href="/login" 
+          <Link 
+            to="/login" 
             className="text-sm font-bold uppercase tracking-wider text-swiss-black border-2 border-swiss-black px-6 py-3 hover:bg-swiss-black hover:text-white transition-colors duration-200"
           >
             Log In
-          </a>
+          </Link>
         </div>
 
         {/* Mobile Menu Toggle */}
@@ -84,13 +85,13 @@ export const Navbar = () => {
                   {link.name}
                 </a>
               ))}
-              <a 
-                href="/login" 
+              <Link 
+                to="/login" 
                 className="text-center text-lg font-bold uppercase tracking-wider text-white bg-swiss-red-DEFAULT py-4"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Log In
-              </a>
+              </Link>
             </motion.div>
           )}
         </AnimatePresence>

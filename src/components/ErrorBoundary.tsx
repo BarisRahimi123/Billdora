@@ -24,7 +24,7 @@ export class ErrorBoundary extends React.Component<
     if (this.state.hasError) {
       return (
         <div className="p-4 border border-red-500 rounded">
-          <h2 className="text-red-500">Something went wrong.</h2>
+          <h2 className="text-neutral-700">Something went wrong.</h2>
           <pre className="mt-2 text-sm">{searilizeError(this.state.error)}</pre>
         </div>
       );

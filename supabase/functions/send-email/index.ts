@@ -1,5 +1,6 @@
-// Edge function to send emails for invoices/quotes
-// In production, integrate with SendGrid, Mailgun, or similar
+// Edge function to send emails via SendGrid
+
+const SENDGRID_API_KEY = Deno.env.get('SENDGRID_API_KEY') || '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';
 
 Deno.serve(async (req) => {
   const corsHeaders = {
@@ -13,53 +14,100 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { to, subject, documentType, documentNumber, clientName, companyName, total, pdfUrl } = await req.json();
+    const { to, subject, type, data } = await req.json();
 
-    // Validate required fields
-    if (!to || !subject || !documentType) {
+    if (!to || !subject) {
       return new Response(
-        JSON.stringify({ error: 'Missing required fields: to, subject, documentType' }),
+        JSON.stringify({ error: 'Missing required fields: to, subject' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // In production, send actual email here via SendGrid/Mailgun/etc.
-    // For now, log the email details and simulate success
-    console.log('Email Request:', {
-      to,
-      subject,
-      documentType,
-      documentNumber,
-      clientName,
-      companyName,
-      total,
-      pdfUrl,
-      timestamp: new Date().toISOString()
+    let htmlContent = '';
+    
+    if (type === 'invitation') {
+      const { inviterName, companyName, roleName, signupUrl } = data || {};
+      htmlContent = `
+        <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px;">
+          <div style="text-align: center; margin-bottom: 40px;">
+            <div style="display: inline-block; width: 48px; height: 48px; background: #111827; color: white; font-size: 24px; font-weight: bold; line-height: 48px;">P</div>
+            <h1 style="margin: 16px 0 0; font-size: 24px; color: #111827;">PrimeLedger</h1>
+          </div>
+          <h2 style="color: #111827; font-size: 20px; margin-bottom: 24px;">You've been invited!</h2>
+          <p style="color: #4B5563; font-size: 16px; line-height: 1.6;">
+            ${inviterName || 'A team member'} has invited you to join <strong>${companyName || 'their company'}</strong> on PrimeLedger${roleName ? ` as a <strong>${roleName}</strong>` : ''}.
+          </p>
+          <p style="color: #4B5563; font-size: 16px; line-height: 1.6;">
+            Click the button below to create your account and get started:
+          </p>
+          <div style="text-align: center; margin: 32px 0;">
+            <a href="${signupUrl || 'https://primeledger.app/login'}" style="display: inline-block; background: #111827; color: white; text-decoration: none; padding: 14px 32px; font-size: 14px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">
+              Accept Invitation
+            </a>
+          </div>
+          <p style="color: #9CA3AF; font-size: 14px; margin-top: 40px;">
+            If you didn't expect this invitation, you can safely ignore this email.
+          </p>
+        </div>
+      `;
+    } else if (type === 'invoice' || type === 'quote') {
+      const { documentNumber, clientName, companyName, total, pdfUrl } = data || {};
+      htmlContent = `
+        <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px;">
+          <div style="text-align: center; margin-bottom: 40px;">
+            <div style="display: inline-block; width: 48px; height: 48px; background: #111827; color: white; font-size: 24px; font-weight: bold; line-height: 48px;">P</div>
+            <h1 style="margin: 16px 0 0; font-size: 24px; color: #111827;">PrimeLedger</h1>
+          </div>
+          <p style="color: #4B5563; font-size: 16px; line-height: 1.6;">
+            Dear ${clientName || 'Valued Customer'},
+          </p>
+          <p style="color: #4B5563; font-size: 16px; line-height: 1.6;">
+            Please find attached your ${type} ${documentNumber ? `#${documentNumber}` : ''} from ${companyName || 'our company'}.
+          </p>
+          ${total ? `<p style="color: #111827; font-size: 20px; font-weight: bold;">Total Amount: $${Number(total).toFixed(2)}</p>` : ''}
+          ${pdfUrl ? `
+          <div style="text-align: center; margin: 32px 0;">
+            <a href="${pdfUrl}" style="display: inline-block; background: #111827; color: white; text-decoration: none; padding: 14px 32px; font-size: 14px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">
+              View ${type}
+            </a>
+          </div>
+          ` : ''}
+          <p style="color: #4B5563; font-size: 16px; line-height: 1.6;">
+            If you have any questions, please don't hesitate to contact us.
+          </p>
+          <p style="color: #4B5563; font-size: 16px; line-height: 1.6;">
+            Best regards,<br/>
+            ${companyName || 'The Team'}
+          </p>
+        </div>
+      `;
+    } else {
+      htmlContent = `<p>${data?.message || 'You have a new notification from PrimeLedger.'}</p>`;
+    }
+
+    // Send via SendGrid
+    const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${SENDGRID_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        personalizations: [{ to: [{ email: to }] }],
+        from: { email: 'noreply@primeledger.app', name: 'PrimeLedger' },
+        subject: subject,
+        content: [{ type: 'text/html', value: htmlContent }],
+      }),
     });
 
-    // Simulate email template
-    const emailBody = `
-Dear ${clientName || 'Valued Customer'},
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('SendGrid error:', errorText);
+      throw new Error(`SendGrid error: ${response.status}`);
+    }
 
-Please find attached your ${documentType} ${documentNumber ? `#${documentNumber}` : ''} from ${companyName || 'our company'}.
-
-${total ? `Total Amount: $${total.toFixed(2)}` : ''}
-
-If you have any questions, please don't hesitate to contact us.
-
-Best regards,
-${companyName || 'The Team'}
-    `.trim();
-
-    console.log('Email Body:', emailBody);
-
-    // Return success (in production, return actual email service response)
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        message: `${documentType} sent to ${to}`,
-        emailId: `email_${Date.now()}` 
-      }),
+      JSON.stringify({ success: true, message: `Email sent to ${to}` }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 

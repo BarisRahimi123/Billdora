@@ -229,7 +229,7 @@ export default function MakePaymentModal({ clients, invoices, onClose, onSave }:
             </div>
 
             {/* Project Specific Checkbox */}
-            <div className="flex items-start gap-3 p-3 bg-blue-50 rounded-xl">
+            <div className="flex items-start gap-3 p-3 bg-neutral-100 rounded-xl">
               <input
                 type="checkbox"
                 id="projectSpecific"
@@ -238,7 +238,7 @@ export default function MakePaymentModal({ clients, invoices, onClose, onSave }:
                   setProjectSpecific(e.target.checked);
                   if (!e.target.checked) setSelectedProjectId('');
                 }}
-                className="mt-1 w-4 h-4 text-primary-500 rounded border-neutral-300"
+                className="mt-1 w-4 h-4 text-neutral-900-500 rounded border-neutral-300"
               />
               <div className="flex-1">
                 <label htmlFor="projectSpecific" className="font-medium text-neutral-900 cursor-pointer">
@@ -293,7 +293,7 @@ export default function MakePaymentModal({ clients, invoices, onClose, onSave }:
                         return (
                           <tr 
                             key={invoice.id} 
-                            className={`border-b border-neutral-100 ${isAutoMatched ? 'bg-emerald-50' : ''}`}
+                            className={`border-b border-neutral-100 ${isAutoMatched ? 'bg-neutral-100' : ''}`}
                           >
                             <td className="px-4 py-3">
                               <input 
@@ -306,16 +306,16 @@ export default function MakePaymentModal({ clients, invoices, onClose, onSave }:
                                     handlePaymentAmountChange(invoice.id, '');
                                   }
                                 }}
-                                className="w-4 h-4 rounded border-neutral-300 text-primary-500"
+                                className="w-4 h-4 rounded border-neutral-300 text-neutral-900-500"
                               />
                             </td>
                             <td className="px-4 py-3">
                               <div className="flex items-center gap-2">
-                                <a href="#" className="text-primary-600 hover:underline font-medium">
+                                <a href="#" className="text-neutral-900-600 hover:underline font-medium">
                                   {invoice.invoice_number}
                                 </a>
                                 {isAutoMatched && (
-                                  <span className="flex items-center gap-1 text-xs text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded-full">
+                                  <span className="flex items-center gap-1 text-xs text-neutral-900 bg-emerald-100 px-2 py-0.5 rounded-full">
                                     <Check className="w-3 h-3" /> Matched
                                   </span>
                                 )}
@@ -366,7 +366,7 @@ export default function MakePaymentModal({ clients, invoices, onClose, onSave }:
                     <span className="text-neutral-600">Allocated:</span>
                     <span className="font-medium">{formatCurrency(totalAllocated)}</span>
                   </div>
-                  <div className={`flex justify-between gap-8 ${remainingToAllocate > 0.01 ? 'text-amber-600' : remainingToAllocate < -0.01 ? 'text-red-600' : 'text-emerald-600'}`}>
+                  <div className={`flex justify-between gap-8 ${remainingToAllocate > 0.01 ? 'text-neutral-900' : remainingToAllocate < -0.01 ? 'text-neutral-900' : 'text-neutral-900'}`}>
                     <span>Remaining:</span>
                     <span className="font-medium">{formatCurrency(remainingToAllocate)}</span>
                   </div>
@@ -387,7 +387,7 @@ export default function MakePaymentModal({ clients, invoices, onClose, onSave }:
             <button
               type="submit"
               disabled={saving || !selectedClientId || totalAllocated <= 0}
-              className="px-6 py-2.5 bg-primary-500 text-white rounded-xl hover:bg-primary-600 transition-colors font-medium disabled:opacity-50"
+              className="px-6 py-2.5 bg-neutral-900-500 text-white rounded-xl hover:bg-neutral-800-600 transition-colors font-medium disabled:opacity-50"
             >
               {saving ? 'Saving...' : 'Save'}
             </button>

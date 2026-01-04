@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, Filter, Download, MoreHorizontal, X, FileText, ArrowRight, Eye, Printer, Send, Check, XCircle, Mail, Trash2, List, LayoutGrid, ChevronDown, ChevronRight } from 'lucide-react';
+import { Plus, Search, Filter, Download, MoreHorizontal, X, FileText, ArrowRight, Eye, Printer, Send, Check, XCircle, Mail, Trash2, List, LayoutGrid, ChevronDown, ChevronRight, ArrowLeft, Edit2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { api, Client, Quote } from '../lib/api';
 import { useToast } from '../components/Toast';
@@ -21,6 +21,8 @@ export default function SalesPage() {
   const [editingQuote, setEditingQuote] = useState<Quote | null>(null);
   const [activeQuoteMenu, setActiveQuoteMenu] = useState<string | null>(null);
   const [quoteViewMode, setQuoteViewMode] = useState<'list' | 'client'>('list');
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [isAddingNewClient, setIsAddingNewClient] = useState(false);
   const [expandedClients, setExpandedClients] = useState<Set<string>>(() => {
     const saved = localStorage.getItem('quotesExpandedClients');
     return saved ? new Set(JSON.parse(saved)) : new Set();
@@ -190,7 +192,7 @@ export default function SalesPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full" />
+        <div className="animate-spin w-8 h-8 border-2 border-neutral-900-500 border-t-transparent rounded-full" />
       </div>
     );
   }
@@ -210,7 +212,14 @@ export default function SalesPage() {
           <p className="text-neutral-500">Manage clients and quotes</p>
         </div>
         <button
-          onClick={() => activeTab === 'clients' ? setShowClientModal(true) : navigate('/quotes/new/document')}
+          onClick={() => {
+            if (activeTab === 'clients') {
+              setSelectedClient(null);
+              setIsAddingNewClient(true);
+            } else {
+              navigate('/quotes/new/document');
+            }
+          }}
           className="flex items-center gap-2 px-4 py-2.5 bg-neutral-900 text-white rounded-xl hover:bg-neutral-800 transition-colors"
         >
           <Plus className="w-4 h-4" />
@@ -278,51 +287,60 @@ export default function SalesPage() {
         </button>
       </div>
 
-      {/* Clients Table */}
+      {/* Clients Section - Inline editing */}
       {activeTab === 'clients' && (
-        <div className="bg-white rounded-2xl border border-neutral-100 overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-neutral-50 border-b border-neutral-100">
-              <tr>
-                <th className="text-left px-6 py-4 text-xs font-medium text-neutral-500 uppercase tracking-wider">Client</th>
-                <th className="text-left px-6 py-4 text-xs font-medium text-neutral-500 uppercase tracking-wider">Type</th>
-                <th className="text-left px-6 py-4 text-xs font-medium text-neutral-500 uppercase tracking-wider">Phone</th>
-                <th className="text-left px-6 py-4 text-xs font-medium text-neutral-500 uppercase tracking-wider">Status</th>
-                <th className="w-12"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-neutral-100">
+        <div className="flex gap-6">
+          {/* Client List */}
+          <div className={`bg-white rounded-2xl border border-neutral-100 overflow-hidden ${selectedClient || isAddingNewClient ? 'w-80 flex-shrink-0' : 'flex-1'}`}>
+            <div className="max-h-[calc(100vh-320px)] overflow-y-auto">
               {filteredClients.map((client) => (
-                <tr key={client.id} className="hover:bg-neutral-50 transition-colors cursor-pointer" onClick={() => { setEditingClient(client); setShowClientModal(true); }}>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 font-medium">
-                        {client.name.charAt(0)}
-                      </div>
-                      <div>
-                        <p className="font-medium text-neutral-900">{client.name}</p>
-                        <p className="text-sm text-neutral-500">{client.email || client.display_name}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-neutral-600 capitalize">{client.type || 'company'}</td>
-                  <td className="px-6 py-4 text-neutral-600">{client.phone || '-'}</td>
-                  <td className="px-6 py-4">
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(client.lifecycle_stage)}`}>
+                <div
+                  key={client.id}
+                  onClick={() => { setSelectedClient(client); setIsAddingNewClient(false); }}
+                  className={`flex items-center gap-3 px-4 py-3 border-b border-neutral-100 cursor-pointer transition-colors ${
+                    selectedClient?.id === client.id ? 'bg-neutral-100' : 'hover:bg-neutral-50'
+                  }`}
+                >
+                  <div className="w-10 h-10 rounded-full bg-neutral-900-100 flex items-center justify-center text-neutral-900-600 font-medium flex-shrink-0">
+                    {client.name.charAt(0)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-neutral-900 truncate">{client.name}</p>
+                    <p className="text-sm text-neutral-500 truncate">{client.email || client.display_name || '-'}</p>
+                  </div>
+                  {!selectedClient && !isAddingNewClient && (
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(client.lifecycle_stage)}`}>
                       {client.lifecycle_stage || 'active'}
                     </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <button className="p-1 hover:bg-neutral-100 rounded" onClick={(e) => e.stopPropagation()}>
-                      <MoreHorizontal className="w-4 h-4 text-neutral-400" />
-                    </button>
-                  </td>
-                </tr>
+                  )}
+                </div>
               ))}
-            </tbody>
-          </table>
-          {filteredClients.length === 0 && (
-            <div className="text-center py-12 text-neutral-500">No clients found</div>
+              {filteredClients.length === 0 && (
+                <div className="text-center py-12 text-neutral-500">No clients found</div>
+              )}
+            </div>
+          </div>
+
+          {/* Client Detail Panel */}
+          {(selectedClient || isAddingNewClient) && (
+            <div className="flex-1 bg-white rounded-2xl border border-neutral-100 p-6">
+              <InlineClientEditor
+                client={isAddingNewClient ? null : selectedClient}
+                companyId={profile?.company_id || ''}
+                onClose={() => { setSelectedClient(null); setIsAddingNewClient(false); }}
+                onSave={(savedClient) => {
+                  loadData();
+                  if (isAddingNewClient) {
+                    setIsAddingNewClient(false);
+                    setSelectedClient(savedClient);
+                  }
+                }}
+                onDelete={() => {
+                  loadData();
+                  setSelectedClient(null);
+                }}
+              />
+            </div>
           )}
         </div>
       )}
@@ -407,16 +425,16 @@ export default function SalesPage() {
                             )}
                             {(quote.status === 'sent' || quote.status === 'draft') && (
                               <>
-                                <button onClick={() => updateQuoteStatus(quote.id, 'accepted')} className="w-full flex items-center gap-2 px-4 py-2 text-left text-sm text-emerald-600 hover:bg-emerald-50">
+                                <button onClick={() => updateQuoteStatus(quote.id, 'accepted')} className="w-full flex items-center gap-2 px-4 py-2 text-left text-sm text-neutral-900 hover:bg-neutral-100">
                                   <Check className="w-4 h-4" /> Mark as Accepted
                                 </button>
-                                <button onClick={() => updateQuoteStatus(quote.id, 'declined')} className="w-full flex items-center gap-2 px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50">
+                                <button onClick={() => updateQuoteStatus(quote.id, 'declined')} className="w-full flex items-center gap-2 px-4 py-2 text-left text-sm text-neutral-900 hover:bg-neutral-100">
                                   <XCircle className="w-4 h-4" /> Mark as Declined
                                 </button>
                               </>
                             )}
                             <div className="border-t border-neutral-100 my-1"></div>
-                            <button onClick={() => handleDeleteQuote(quote.id)} className="w-full flex items-center gap-2 px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50">
+                            <button onClick={() => handleDeleteQuote(quote.id)} className="w-full flex items-center gap-2 px-4 py-2 text-left text-sm text-neutral-900 hover:bg-neutral-100">
                               <Trash2 className="w-4 h-4" /> Delete Quote
                             </button>
                           </div>
@@ -485,7 +503,7 @@ export default function SalesPage() {
                                   <button 
                                     onClick={(e) => { e.stopPropagation(); handleConvertToProject(quote); }}
                                     disabled={convertingQuoteId === quote.id}
-                                    className="flex items-center gap-1 px-2 py-0.5 text-xs bg-emerald-500 text-white rounded hover:bg-emerald-600 transition-colors disabled:opacity-50"
+                                    className="flex items-center gap-1 px-2 py-0.5 text-xs bg-neutral-1000 text-white rounded hover:bg-emerald-600 transition-colors disabled:opacity-50"
                                   >
                                     <ArrowRight className="w-3 h-3" />
                                     {convertingQuoteId === quote.id ? '...' : 'Convert'}
@@ -510,27 +528,27 @@ export default function SalesPage() {
                                     <div className="border-t border-neutral-100 my-1"></div>
                                     <p className="px-3 py-1 text-xs text-neutral-400 font-medium">Set Status</p>
                                     {quote.status !== 'pending' && (
-                                      <button onClick={(e) => { e.stopPropagation(); updateQuoteStatus(quote.id, 'pending'); }} className="w-full flex items-center gap-2 px-3 py-1.5 text-left text-sm text-amber-600 hover:bg-amber-50">
-                                        <span className="w-2 h-2 rounded-full bg-amber-500"></span> Pending
+                                      <button onClick={(e) => { e.stopPropagation(); updateQuoteStatus(quote.id, 'pending'); }} className="w-full flex items-center gap-2 px-3 py-1.5 text-left text-sm text-neutral-900 hover:bg-neutral-100">
+                                        <span className="w-2 h-2 rounded-full bg-neutral-1000"></span> Pending
                                       </button>
                                     )}
                                     {quote.status !== 'sent' && (
-                                      <button onClick={(e) => { e.stopPropagation(); updateQuoteStatus(quote.id, 'sent'); }} className="w-full flex items-center gap-2 px-3 py-1.5 text-left text-sm text-blue-600 hover:bg-blue-50">
-                                        <span className="w-2 h-2 rounded-full bg-blue-500"></span> Sent
+                                      <button onClick={(e) => { e.stopPropagation(); updateQuoteStatus(quote.id, 'sent'); }} className="w-full flex items-center gap-2 px-3 py-1.5 text-left text-sm text-blue-600 hover:bg-neutral-100">
+                                        <span className="w-2 h-2 rounded-full bg-neutral-1000"></span> Sent
                                       </button>
                                     )}
                                     {quote.status !== 'approved' && (
-                                      <button onClick={(e) => { e.stopPropagation(); updateQuoteStatus(quote.id, 'approved'); }} className="w-full flex items-center gap-2 px-3 py-1.5 text-left text-sm text-emerald-600 hover:bg-emerald-50">
-                                        <span className="w-2 h-2 rounded-full bg-emerald-500"></span> Approved
+                                      <button onClick={(e) => { e.stopPropagation(); updateQuoteStatus(quote.id, 'approved'); }} className="w-full flex items-center gap-2 px-3 py-1.5 text-left text-sm text-neutral-900 hover:bg-neutral-100">
+                                        <span className="w-2 h-2 rounded-full bg-neutral-1000"></span> Approved
                                       </button>
                                     )}
                                     {quote.status !== 'dropped' && (
-                                      <button onClick={(e) => { e.stopPropagation(); updateQuoteStatus(quote.id, 'dropped'); }} className="w-full flex items-center gap-2 px-3 py-1.5 text-left text-sm text-red-600 hover:bg-red-50">
-                                        <span className="w-2 h-2 rounded-full bg-red-500"></span> Dropped
+                                      <button onClick={(e) => { e.stopPropagation(); updateQuoteStatus(quote.id, 'dropped'); }} className="w-full flex items-center gap-2 px-3 py-1.5 text-left text-sm text-neutral-900 hover:bg-neutral-100">
+                                        <span className="w-2 h-2 rounded-full bg-neutral-1000"></span> Dropped
                                       </button>
                                     )}
                                     <div className="border-t border-neutral-100 my-1"></div>
-                                    <button onClick={(e) => { e.stopPropagation(); handleDeleteQuote(quote.id); }} className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50">
+                                    <button onClick={(e) => { e.stopPropagation(); handleDeleteQuote(quote.id); }} className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm text-neutral-900 hover:bg-neutral-100">
                                       <Trash2 className="w-4 h-4" /> Delete
                                     </button>
                                   </div>
@@ -552,16 +570,6 @@ export default function SalesPage() {
         )
       )}
 
-      {/* Client Modal */}
-      {showClientModal && (
-        <ClientModal
-          client={editingClient}
-          companyId={profile?.company_id || ''}
-          onClose={() => { setShowClientModal(false); setEditingClient(null); }}
-          onSave={() => { loadData(); setShowClientModal(false); setEditingClient(null); }}
-        />
-      )}
-
       {/* Quote Modal */}
       {showQuoteModal && (
         <QuoteModal
@@ -576,27 +584,89 @@ export default function SalesPage() {
   );
 }
 
-function ClientModal({ client, companyId, onClose, onSave }: { client: Client | null; companyId: string; onClose: () => void; onSave: () => void }) {
-  const [name, setName] = useState(client?.name || '');
-  const [displayName, setDisplayName] = useState(client?.display_name || '');
-  const [email, setEmail] = useState(client?.email || '');
-  const [phone, setPhone] = useState(client?.phone || '');
-  const [type, setType] = useState(client?.type || 'company');
+// Inline Client Editor Component - No modal, shows inline
+function InlineClientEditor({ client, companyId, onClose, onSave, onDelete }: { 
+  client: Client | null; 
+  companyId: string; 
+  onClose: () => void; 
+  onSave: (client: Client) => void;
+  onDelete: () => void;
+}) {
+  const isNew = !client;
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [editing, setEditing] = useState(isNew);
+  const [openMenu, setOpenMenu] = useState(false);
+  
+  const [formData, setFormData] = useState({
+    name: client?.name || '',
+    display_name: client?.display_name || '',
+    type: client?.type || 'company',
+    email: client?.email || '',
+    phone: client?.phone || '',
+    website: client?.website || '',
+    address: client?.address || '',
+    city: client?.city || '',
+    state: client?.state || '',
+    zip: client?.zip || '',
+    lifecycle_stage: client?.lifecycle_stage || 'active',
+    primary_contact_name: client?.primary_contact_name || '',
+    primary_contact_title: client?.primary_contact_title || '',
+    primary_contact_email: client?.primary_contact_email || '',
+    primary_contact_phone: client?.primary_contact_phone || '',
+    billing_contact_name: client?.billing_contact_name || '',
+    billing_contact_title: client?.billing_contact_title || '',
+    billing_contact_email: client?.billing_contact_email || '',
+    billing_contact_phone: client?.billing_contact_phone || '',
+  });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name || !displayName) return;
+  // Reset form when client changes
+  useEffect(() => {
+    setFormData({
+      name: client?.name || '',
+      display_name: client?.display_name || '',
+      type: client?.type || 'company',
+      email: client?.email || '',
+      phone: client?.phone || '',
+      website: client?.website || '',
+      address: client?.address || '',
+      city: client?.city || '',
+      state: client?.state || '',
+      zip: client?.zip || '',
+      lifecycle_stage: client?.lifecycle_stage || 'active',
+      primary_contact_name: client?.primary_contact_name || '',
+      primary_contact_title: client?.primary_contact_title || '',
+      primary_contact_email: client?.primary_contact_email || '',
+      primary_contact_phone: client?.primary_contact_phone || '',
+      billing_contact_name: client?.billing_contact_name || '',
+      billing_contact_title: client?.billing_contact_title || '',
+      billing_contact_email: client?.billing_contact_email || '',
+      billing_contact_phone: client?.billing_contact_phone || '',
+    });
+    setEditing(isNew);
+  }, [client?.id]);
+
+  const handleSave = async () => {
+    if (!formData.name.trim()) {
+      setError('Company name is required');
+      return;
+    }
     setError(null);
     setSaving(true);
     try {
+      let savedClient: Client;
       if (client) {
-        await api.updateClient(client.id, { name, display_name: displayName, email, phone, type });
+        savedClient = await api.updateClient(client.id, formData);
       } else {
-        await api.createClient({ company_id: companyId, name, display_name: displayName, email, phone, type, lifecycle_stage: 'active' });
+        savedClient = await api.createClient({ 
+          company_id: companyId, 
+          ...formData,
+          display_name: formData.display_name || formData.name
+        });
       }
-      onSave();
+      setEditing(false);
+      onSave(savedClient);
     } catch (err: any) {
       console.error('Failed to save client:', err);
       setError(err?.message || 'Failed to save client');
@@ -605,48 +675,275 @@ function ClientModal({ client, companyId, onClose, onSave }: { client: Client | 
     }
   };
 
+  const handleDelete = async () => {
+    if (!client) return;
+    if (!confirm('Are you sure you want to delete this client? This action cannot be undone.')) return;
+    setDeleting(true);
+    try {
+      await api.deleteClient(client.id);
+      onDelete();
+    } catch (err: any) {
+      console.error('Failed to delete client:', err);
+      setError(err?.message || 'Failed to delete client');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl w-full max-w-lg p-6 mx-4">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold text-neutral-900">{client ? 'Edit Client' : 'Add Client'}</h2>
-          <button onClick={onClose} className="p-2 hover:bg-neutral-100 rounded-lg"><X className="w-5 h-5" /></button>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <button onClick={onClose} className="p-2 hover:bg-neutral-100 rounded-lg">
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <div>
+            <h2 className="text-xl font-semibold text-neutral-900">
+              {isNew ? 'New Client' : client?.name}
+            </h2>
+            {!isNew && client?.display_name && client.display_name !== client.name && (
+              <p className="text-sm text-neutral-500">{client.display_name}</p>
+            )}
+          </div>
         </div>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {error && <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">{error}</div>}
-          <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1.5">Company Name *</label>
-            <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" required />
+        {!isNew && (
+          <div className="flex items-center gap-2">
+            {editing ? (
+              <>
+                <button onClick={() => setEditing(false)} className="px-3 py-1.5 text-sm text-neutral-600 hover:bg-neutral-100 rounded-lg">Cancel</button>
+                <button onClick={handleSave} disabled={saving} className="px-3 py-1.5 text-sm bg-neutral-900 text-white rounded-lg hover:bg-neutral-800 disabled:opacity-50">{saving ? 'Saving...' : 'Save'}</button>
+              </>
+            ) : (
+              <div className="relative">
+                <button onClick={() => setOpenMenu(!openMenu)} className="p-2 hover:bg-neutral-100 rounded-lg">
+                  <MoreHorizontal className="w-5 h-5 text-neutral-500" />
+                </button>
+                {openMenu && (
+                  <div className="absolute right-0 top-full mt-1 w-36 bg-white rounded-lg shadow-lg border border-neutral-100 py-1 z-10">
+                    <button onClick={() => { setEditing(true); setOpenMenu(false); }} className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50">
+                      <Edit2 className="w-4 h-4" /> Edit
+                    </button>
+                    <button onClick={handleDelete} disabled={deleting} className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm text-neutral-900 hover:bg-neutral-100">
+                      <Trash2 className="w-4 h-4" /> Delete
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
-          <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1.5">Display Name *</label>
-            <input type="text" value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" required />
+        )}
+      </div>
+
+      {error && (
+        <div className="p-3 bg-neutral-100 border border-red-200 text-red-700 rounded-lg text-sm">{error}</div>
+      )}
+
+      {/* Company Information */}
+      <div className="border border-neutral-200 rounded-xl p-5">
+        <h3 className="text-lg font-semibold text-neutral-900 mb-4">Company Information</h3>
+        {editing ? (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm text-neutral-600 mb-1">Company Name *</label>
+                <input type="text" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none" placeholder="Acme Corporation" />
+              </div>
+              <div>
+                <label className="block text-sm text-neutral-600 mb-1">Display Name</label>
+                <input type="text" value={formData.display_name} onChange={(e) => setFormData({...formData, display_name: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none" placeholder="Acme" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm text-neutral-600 mb-1">Type</label>
+                <select value={formData.type} onChange={(e) => setFormData({...formData, type: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none">
+                  <option value="company">Company</option>
+                  <option value="person">Person</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm text-neutral-600 mb-1">Status</label>
+                <select value={formData.lifecycle_stage} onChange={(e) => setFormData({...formData, lifecycle_stage: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none">
+                  <option value="active">Active</option>
+                  <option value="pending">Pending</option>
+                  <option value="dropped">Dropped</option>
+                </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm text-neutral-600 mb-1">Email</label>
+                <input type="email" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none" placeholder="contact@company.com" />
+              </div>
+              <div>
+                <label className="block text-sm text-neutral-600 mb-1">Phone</label>
+                <input type="tel" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none" placeholder="(555) 123-4567" />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm text-neutral-600 mb-1">Website</label>
+              <input type="url" value={formData.website} onChange={(e) => setFormData({...formData, website: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none" placeholder="https://company.com" />
+            </div>
+            <div>
+              <label className="block text-sm text-neutral-600 mb-1">Address</label>
+              <input type="text" value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none" placeholder="123 Main Street" />
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm text-neutral-600 mb-1">City</label>
+                <input type="text" value={formData.city} onChange={(e) => setFormData({...formData, city: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none" />
+              </div>
+              <div>
+                <label className="block text-sm text-neutral-600 mb-1">State</label>
+                <input type="text" value={formData.state} onChange={(e) => setFormData({...formData, state: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none" />
+              </div>
+              <div>
+                <label className="block text-sm text-neutral-600 mb-1">ZIP</label>
+                <input type="text" value={formData.zip} onChange={(e) => setFormData({...formData, zip: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none" />
+              </div>
+            </div>
+            {isNew && (
+              <div className="flex gap-2 justify-end pt-2">
+                <button onClick={handleSave} disabled={saving} className="px-4 py-2 bg-neutral-900 text-white rounded-lg hover:bg-neutral-800 disabled:opacity-50">{saving ? 'Saving...' : 'Create Client'}</button>
+              </div>
+            )}
           </div>
+        ) : (
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-1.5">Email</label>
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
+              <p className="text-sm text-neutral-500">Company Name</p>
+              <p className="font-medium text-neutral-900">{client?.name || '-'}</p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-1.5">Phone</label>
-              <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
+              <p className="text-sm text-neutral-500">Type</p>
+              <p className="font-medium text-neutral-900 capitalize">{client?.type || 'company'}</p>
+            </div>
+            <div>
+              <p className="text-sm text-neutral-500">Email</p>
+              <p className="font-medium text-neutral-900">{client?.email || '-'}</p>
+            </div>
+            <div>
+              <p className="text-sm text-neutral-500">Phone</p>
+              <p className="font-medium text-neutral-900">{client?.phone || '-'}</p>
+            </div>
+            <div>
+              <p className="text-sm text-neutral-500">Website</p>
+              <p className="font-medium text-neutral-900">{client?.website ? <a href={client.website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{client.website}</a> : '-'}</p>
+            </div>
+            <div>
+              <p className="text-sm text-neutral-500">Status</p>
+              <p className="font-medium text-neutral-900 capitalize">{client?.lifecycle_stage || 'active'}</p>
+            </div>
+            <div className="col-span-2">
+              <p className="text-sm text-neutral-500">Address</p>
+              <p className="font-medium text-neutral-900">
+                {client?.address ? `${client.address}${client.city ? `, ${client.city}` : ''}${client.state ? `, ${client.state}` : ''} ${client.zip || ''}`.trim() : '-'}
+              </p>
             </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1.5">Type</label>
-            <select value={type} onChange={(e) => setType(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none">
-              <option value="company">Company</option>
-              <option value="person">Person</option>
-            </select>
-          </div>
-          <div className="flex gap-3 pt-4">
-            <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors">Cancel</button>
-            <button type="submit" disabled={saving} onClick={(e) => { e.preventDefault(); handleSubmit(e as any); }} className="flex-1 px-4 py-2.5 bg-primary-500 text-white rounded-xl hover:bg-primary-600 transition-colors disabled:opacity-50">
-              {saving ? 'Saving...' : client ? 'Update' : 'Create'}
-            </button>
-          </div>
-        </form>
+        )}
       </div>
+
+      {/* Primary Contact */}
+      {!isNew && (
+        <div className="border border-neutral-200 rounded-xl p-5">
+          <h3 className="text-lg font-semibold text-neutral-900 mb-4">Primary Contact</h3>
+          {editing ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm text-neutral-600 mb-1">Name</label>
+                  <input type="text" value={formData.primary_contact_name} onChange={(e) => setFormData({...formData, primary_contact_name: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none" />
+                </div>
+                <div>
+                  <label className="block text-sm text-neutral-600 mb-1">Title</label>
+                  <input type="text" value={formData.primary_contact_title} onChange={(e) => setFormData({...formData, primary_contact_title: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm text-neutral-600 mb-1">Email</label>
+                  <input type="email" value={formData.primary_contact_email} onChange={(e) => setFormData({...formData, primary_contact_email: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none" />
+                </div>
+                <div>
+                  <label className="block text-sm text-neutral-600 mb-1">Phone</label>
+                  <input type="tel" value={formData.primary_contact_phone} onChange={(e) => setFormData({...formData, primary_contact_phone: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none" />
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-neutral-500">Name</p>
+                <p className="font-medium text-neutral-900">{client?.primary_contact_name || '-'}</p>
+              </div>
+              <div>
+                <p className="text-sm text-neutral-500">Title</p>
+                <p className="font-medium text-neutral-900">{client?.primary_contact_title || '-'}</p>
+              </div>
+              <div>
+                <p className="text-sm text-neutral-500">Email</p>
+                <p className="font-medium text-neutral-900">{client?.primary_contact_email || '-'}</p>
+              </div>
+              <div>
+                <p className="text-sm text-neutral-500">Phone</p>
+                <p className="font-medium text-neutral-900">{client?.primary_contact_phone || '-'}</p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Billing Contact */}
+      {!isNew && (
+        <div className="border border-neutral-200 rounded-xl p-5">
+          <h3 className="text-lg font-semibold text-neutral-900 mb-4">Billing Contact</h3>
+          {editing ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm text-neutral-600 mb-1">Name</label>
+                  <input type="text" value={formData.billing_contact_name} onChange={(e) => setFormData({...formData, billing_contact_name: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none" />
+                </div>
+                <div>
+                  <label className="block text-sm text-neutral-600 mb-1">Title</label>
+                  <input type="text" value={formData.billing_contact_title} onChange={(e) => setFormData({...formData, billing_contact_title: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm text-neutral-600 mb-1">Email</label>
+                  <input type="email" value={formData.billing_contact_email} onChange={(e) => setFormData({...formData, billing_contact_email: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none" />
+                </div>
+                <div>
+                  <label className="block text-sm text-neutral-600 mb-1">Phone</label>
+                  <input type="tel" value={formData.billing_contact_phone} onChange={(e) => setFormData({...formData, billing_contact_phone: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none" />
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-neutral-500">Name</p>
+                <p className="font-medium text-neutral-900">{client?.billing_contact_name || '-'}</p>
+              </div>
+              <div>
+                <p className="text-sm text-neutral-500">Title</p>
+                <p className="font-medium text-neutral-900">{client?.billing_contact_title || '-'}</p>
+              </div>
+              <div>
+                <p className="text-sm text-neutral-500">Email</p>
+                <p className="font-medium text-neutral-900">{client?.billing_contact_email || '-'}</p>
+              </div>
+              <div>
+                <p className="text-sm text-neutral-500">Phone</p>
+                <p className="font-medium text-neutral-900">{client?.billing_contact_phone || '-'}</p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -700,7 +997,7 @@ function QuoteModal({ quote, clients, companyId, onClose, onSave }: { quote: Quo
           <button onClick={onClose} className="p-2 hover:bg-neutral-100 rounded-lg"><X className="w-5 h-5" /></button>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
-          {error && <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">{error}</div>}
+          {error && <div className="p-3 bg-neutral-100 border border-red-200 text-red-700 rounded-lg text-sm">{error}</div>}
           <div>
             <label className="block text-sm font-medium text-neutral-700 mb-1.5">Quote Title *</label>
             <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" required placeholder="e.g. Website Redesign Proposal" />
@@ -747,7 +1044,7 @@ function QuoteModal({ quote, clients, companyId, onClose, onSave }: { quote: Quo
           </div>
           <div className="flex gap-3 pt-4">
             <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors">Cancel</button>
-            <button type="submit" disabled={saving} onClick={(e) => { e.preventDefault(); handleSubmit(e as any); }} className="flex-1 px-4 py-2.5 bg-primary-500 text-white rounded-xl hover:bg-primary-600 transition-colors disabled:opacity-50">
+            <button type="submit" disabled={saving} onClick={(e) => { e.preventDefault(); handleSubmit(e as any); }} className="flex-1 px-4 py-2.5 bg-neutral-900-500 text-white rounded-xl hover:bg-neutral-800-600 transition-colors disabled:opacity-50">
               {saving ? 'Saving...' : quote ? 'Update Quote' : 'Create Quote'}
             </button>
           </div>
@@ -755,7 +1052,7 @@ function QuoteModal({ quote, clients, companyId, onClose, onSave }: { quote: Quo
             <button
               type="button"
               onClick={() => navigate(`/quotes/${quote.id}/document`)}
-              className="w-full mt-3 px-4 py-2.5 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-colors flex items-center justify-center gap-2"
+              className="w-full mt-3 px-4 py-2.5 bg-neutral-1000 text-white rounded-xl hover:bg-blue-600 transition-colors flex items-center justify-center gap-2"
             >
               <Eye className="w-4 h-4" />
               View Full Document
