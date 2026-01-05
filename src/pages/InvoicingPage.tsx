@@ -1507,7 +1507,138 @@ function InvoiceDetailView({
               <button className="p-2 hover:bg-neutral-100 rounded-lg text-neutral-500">
                 <RefreshCw className="w-4 h-4" />
               </button>
-              <button className="p-2 hover:bg-neutral-100 rounded-lg text-neutral-500">
+              <button 
+                onClick={() => {
+                  const client = clients.find(c => c.id === invoice.client_id);
+                  const project = projects.find(p => p.id === invoice.project_id);
+                  
+                  // Build line items HTML
+                  let lineItemsHtml = '';
+                  if (calculatorType === 'milestone' || calculatorType === 'percentage') {
+                    lineItemsHtml = `
+                      <table>
+                        <thead>
+                          <tr>
+                            <th style="text-align:left;">Task</th>
+                            <th style="text-align:center;width:80px;">Prior</th>
+                            <th style="text-align:center;width:80px;">Current</th>
+                            <th style="text-align:right;width:100px;">Budget</th>
+                            <th style="text-align:right;width:100px;">Amount</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          ${lineItems.map(item => {
+                            const priorPct = item.priorBilledPercentage || 0;
+                            const currPct = item.billedPercentage || 0;
+                            const budget = item.taskBudget || item.amount;
+                            return `<tr>
+                              <td>${item.description}</td>
+                              <td style="text-align:center;">${priorPct}%</td>
+                              <td style="text-align:center;color:#16a34a;font-weight:600;">${currPct}%</td>
+                              <td style="text-align:right;">${formatCurrency(budget)}</td>
+                              <td style="text-align:right;font-weight:600;">${formatCurrency(item.amount)}</td>
+                            </tr>`;
+                          }).join('')}
+                        </tbody>
+                      </table>`;
+                  } else {
+                    lineItemsHtml = `
+                      <table>
+                        <thead>
+                          <tr>
+                            <th style="text-align:left;">Description</th>
+                            <th style="text-align:center;width:80px;">Qty</th>
+                            <th style="text-align:right;width:100px;">Rate</th>
+                            <th style="text-align:right;width:100px;">Amount</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          ${lineItems.map(item => `<tr>
+                            <td>${item.description}</td>
+                            <td style="text-align:center;">${item.quantity}</td>
+                            <td style="text-align:right;">${formatCurrency(item.rate)}</td>
+                            <td style="text-align:right;font-weight:600;">${formatCurrency(item.amount)}</td>
+                          </tr>`).join('')}
+                        </tbody>
+                      </table>`;
+                  }
+
+                  const printWindow = window.open('', '_blank');
+                  if (printWindow) {
+                    printWindow.document.write(`<!DOCTYPE html>
+<html>
+<head>
+  <title>Invoice ${invoiceNumber}</title>
+  <style>
+    @page { size: letter; margin: 0.6in; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; font-size: 11px; color: #333; line-height: 1.4; }
+    .header { display: flex; justify-content: space-between; margin-bottom: 30px; }
+    .logo { width: 50px; height: 50px; background: #111; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 20px; margin-bottom: 12px; }
+    .company-info { font-size: 11px; color: #666; }
+    .company-name { font-weight: 600; color: #111; font-size: 13px; margin-bottom: 2px; }
+    .invoice-title { font-size: 28px; font-weight: bold; color: #111; text-align: right; margin-bottom: 12px; }
+    .invoice-meta { text-align: right; font-size: 11px; }
+    .invoice-meta span { color: #666; }
+    .bill-to { margin-bottom: 24px; }
+    .bill-to-label { font-size: 10px; color: #666; margin-bottom: 4px; }
+    .bill-to-name { font-size: 14px; font-weight: 600; }
+    .calc-type { font-size: 13px; font-weight: 600; margin-bottom: 12px; color: #111; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+    th { background: #f5f5f5; padding: 8px 10px; font-size: 10px; font-weight: 600; color: #666; text-transform: uppercase; border-bottom: 1px solid #ddd; }
+    td { padding: 10px; border-bottom: 1px solid #eee; font-size: 11px; }
+    .totals { display: flex; justify-content: flex-end; }
+    .totals-box { width: 200px; }
+    .totals-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 11px; }
+    .totals-row.total { border-top: 2px solid #111; margin-top: 6px; padding-top: 10px; font-size: 14px; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <div class="logo">P</div>
+      <div class="company-info">
+        <div class="company-name">Your Company</div>
+        <div>123 Business Ave</div>
+        <div>City, State 12345</div>
+      </div>
+    </div>
+    <div>
+      <div class="invoice-title">INVOICE</div>
+      <div class="invoice-meta">
+        <div><span>Date:</span> ${draftDate ? new Date(draftDate).toLocaleDateString() : new Date().toLocaleDateString()}</div>
+        <div><span>Number:</span> ${invoiceNumber}</div>
+        <div><span>Terms:</span> ${terms}</div>
+        ${project ? `<div><span>Project:</span> ${project.name}</div>` : ''}
+      </div>
+    </div>
+  </div>
+  
+  <div class="bill-to">
+    <div class="bill-to-label">Bill To:</div>
+    <div class="bill-to-name">${client?.name || 'Client'}</div>
+  </div>
+
+  <div class="calc-type">${calculatorType === 'percentage' ? 'Percentage Billing' : calculatorType === 'milestone' ? 'Milestone Billing' : calculatorType === 'time_material' ? 'Time & Materials' : 'Fixed Fee'}</div>
+  
+  ${lineItemsHtml}
+  
+  <div class="totals">
+    <div class="totals-box">
+      <div class="totals-row"><span>Subtotal</span><span>${formatCurrency(subtotal)}</span></div>
+      ${taxAmount > 0 ? `<div class="totals-row"><span>Tax</span><span>${formatCurrency(taxAmount)}</span></div>` : ''}
+      <div class="totals-row total"><span>Total</span><span>${formatCurrency(total)}</span></div>
+    </div>
+  </div>
+</body>
+</html>`);
+                    printWindow.document.close();
+                    setTimeout(() => { printWindow.print(); }, 300);
+                  }
+                }}
+                className="p-2 hover:bg-neutral-100 rounded-lg text-neutral-500"
+                title="Download as PDF"
+              >
                 <Download className="w-4 h-4" />
               </button>
               <button className="p-2 hover:bg-neutral-100 rounded-lg text-neutral-500">
@@ -1538,7 +1669,7 @@ function InvoiceDetailView({
             </div>
 
             {/* Full-width Invoice Preview Card */}
-            <div className="bg-white rounded-xl shadow-lg p-8">
+            <div className="bg-white rounded-xl shadow-lg p-8 invoice-preview-content">
               {/* Header */}
               <div className="flex justify-between items-start mb-8">
                 <div>

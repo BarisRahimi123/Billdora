@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Clock, Briefcase, Receipt, PieChart, Users, FileText } from 'lucide-react';
+import { Clock, Briefcase, Receipt, BarChart3, Users, Shield, FileCheck } from 'lucide-react';
 
 const features = [
   {
@@ -16,13 +16,29 @@ const features = [
   {
     title: 'Automated Billing',
     description: 'Turn tracked time into professional invoices in seconds. Support for multiple billing models: T&M, Fixed Fee, and Retainers.',
-    icon: Receipt,
+    icon: FileCheck,
+    isHighlighted: true,
+  },
+  {
+    title: 'Real-time Analytics',
+    description: 'Dashboard insights into profitability, utilization rates, and project performance at a glance.',
+    icon: BarChart3,
+  },
+  {
+    title: 'Team Collaboration',
+    description: 'Seamless coordination between team members with role-based access and approval workflows.',
+    icon: Users,
+  },
+  {
+    title: 'Secure & Reliable',
+    description: 'Enterprise-grade security with encrypted data, automatic backups, and 99.9% uptime guarantee.',
+    icon: Shield,
   },
 ];
 
 export const Features = () => {
   return (
-    <section id="features" className="py-24 bg-swiss-surface border-y border-swiss-gray-border">
+    <section id="features" className="py-24 bg-gray-50 border-y border-gray-200">
       <div className="container mx-auto px-6 max-w-[1200px]">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -39,23 +55,55 @@ export const Features = () => {
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {features.map((feature, index) => (
-            <motion.div
-              key={feature.title}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.4, delay: index * 0.1 }}
-              className="bg-white p-12 border border-swiss-gray-border hover:border-swiss-black transition-colors duration-200"
-            >
-              <feature.icon className="w-8 h-8 mb-8 text-swiss-black" strokeWidth={1.5} />
-              <h3 className="text-2xl font-medium mb-4 text-swiss-black">{feature.title}</h3>
-              <p className="text-lg leading-relaxed text-swiss-charcoal">
-                {feature.description}
-              </p>
-            </motion.div>
-          ))}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {features.map((feature, index) => {
+            const isHighlighted = feature.isHighlighted;
+            
+            return (
+              <motion.div
+                key={feature.title}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.4, delay: index * 0.08 }}
+                className={`bg-white p-8 border transition-all duration-300 group hover:shadow-md ${
+                  isHighlighted 
+                    ? 'border-green-600' 
+                    : 'border-gray-200 hover:border-gray-400'
+                }`}
+              >
+                {/* Icon - Line Work Style */}
+                <div
+                  className={`w-14 h-14 rounded-xl flex items-center justify-center mb-6 border-2 ${
+                    isHighlighted 
+                      ? 'border-green-600' 
+                      : 'border-gray-300 group-hover:border-gray-500'
+                  }`}
+                >
+                  <feature.icon 
+                    className={`w-7 h-7 ${
+                      isHighlighted 
+                        ? 'text-green-600' 
+                        : 'text-gray-600 group-hover:text-gray-800'
+                    }`}
+                    strokeWidth={1.5} 
+                  />
+                </div>
+                
+                {/* Content */}
+                <h3 className={`text-xl font-bold mb-3 transition-colors ${
+                  isHighlighted 
+                    ? 'text-green-600' 
+                    : 'text-gray-900'
+                }`}>
+                  {feature.title}
+                </h3>
+                <p className="text-base leading-relaxed text-gray-600">
+                  {feature.description}
+                </p>
+              </motion.div>
+            );
+          })}
         </div>
       </div>
     </section>

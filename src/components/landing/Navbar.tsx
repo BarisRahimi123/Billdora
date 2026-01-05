@@ -31,10 +31,10 @@ export const Navbar = () => {
       <div className="container mx-auto h-full px-6 flex items-center justify-between max-w-[1200px]">
         {/* Logo */}
         <a href="#" className="flex items-center gap-2 z-50">
-          <div className="w-8 h-8 bg-swiss-red-DEFAULT flex items-center justify-center">
+          <div className="w-8 h-8 flex items-center justify-center" style={{ backgroundColor: '#476E66' }}>
             <span className="text-white font-bold text-lg">P</span>
           </div>
-          <span className="font-bold text-xl tracking-tight text-swiss-black">PrimeLedger</span>
+          <span className="font-bold text-xl tracking-tight" style={{ color: '#474747' }}>PrimeLedger</span>
         </a>
 
         {/* Desktop Links */}
@@ -43,7 +43,7 @@ export const Navbar = () => {
             <a 
               key={link.name} 
               href={link.href}
-              className="text-sm font-bold uppercase tracking-wider text-swiss-black hover:text-swiss-red-DEFAULT transition-colors relative group"
+              className="text-sm font-bold uppercase tracking-wider transition-colors relative group" style={{ color: '#474747' }}
             >
               {link.name}
               <span className="absolute -bottom-1 left-0 w-0 h-[2px] bg-swiss-black transition-all duration-300 group-hover:w-full"></span>
@@ -51,7 +51,8 @@ export const Navbar = () => {
           ))}
           <Link 
             to="/login" 
-            className="text-sm font-bold uppercase tracking-wider text-swiss-black border-2 border-swiss-black px-6 py-3 hover:bg-swiss-black hover:text-white transition-colors duration-200"
+            className="text-sm font-bold uppercase tracking-wider text-white px-6 py-3 rounded-lg transition-all hover:opacity-90"
+            style={{ backgroundColor: '#476E66' }}
           >
             Log In
           </Link>
@@ -87,7 +88,8 @@ export const Navbar = () => {
               ))}
               <Link 
                 to="/login" 
-                className="text-center text-lg font-bold uppercase tracking-wider text-white bg-swiss-red-DEFAULT py-4"
+                className="text-center text-lg font-bold uppercase tracking-wider text-white py-4 rounded-lg"
+                style={{ backgroundColor: '#476E66' }}
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Log In

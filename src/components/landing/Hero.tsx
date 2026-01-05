@@ -1,66 +1,118 @@
-import React from 'react';
 import { motion } from 'framer-motion';
-import { ArrowRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { FileText, FolderKanban, Clock, Receipt, FileCheck } from 'lucide-react';
 
-export const Hero = () => {
+const workflowSteps = [
+  { icon: FileText, label: 'Proposal', accent: false },
+  { icon: FolderKanban, label: 'Project', accent: false },
+  { icon: Clock, label: 'Time', accent: false },
+  { icon: Receipt, label: 'Expense', accent: false },
+  { icon: FileCheck, label: 'Invoice', accent: true },
+];
+
+const floatAnimation = {
+  y: [0, -6, 0],
+  transition: {
+    duration: 2.5,
+    repeat: Infinity,
+    ease: 'easeInOut',
+  },
+};
+
+export default function Hero() {
   return (
-    <section className="relative pt-32 pb-24 md:pt-48 md:pb-32 overflow-hidden bg-white">
-      <div className="container mx-auto px-6 max-w-[1200px]">
-        <div className="grid grid-cols-12 gap-8">
-          <div className="col-span-12 md:col-start-4 md:col-span-6 text-center">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, ease: "linear" }}
+    <section className="pt-24 md:pt-32 pb-12 md:pb-20 px-4" style={{ backgroundColor: '#F5F5F3' }}>
+      <div className="max-w-6xl mx-auto">
+        <div className="text-center mb-10 md:mb-16">
+          <motion.h1
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 md:mb-6 leading-tight"
+            style={{ color: '#474747' }}
+          >
+            Streamline Your
+            <br />
+            Business Workflow
+          </motion.h1>
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="text-base md:text-xl mb-6 md:mb-8 max-w-2xl mx-auto px-2"
+            style={{ color: '#6B6B6B' }}
+          >
+            From proposal to payment — manage your entire business cycle in one elegant platform.
+          </motion.p>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.4 }}
+          >
+            <Link
+              to="/register"
+              className="inline-block px-6 md:px-8 py-3 md:py-4 text-white font-semibold rounded-lg transition-all hover:opacity-90 hover:scale-105"
+              style={{ backgroundColor: '#476E66' }}
             >
-              <h1 className="text-4xl md:text-6xl font-bold tracking-tighter leading-[1.1] mb-8 text-swiss-black">
-                The Operating System for Professional Firms.
-              </h1>
-            </motion.div>
-            
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.1, ease: "linear" }}
-            >
-              <p className="text-xl md:text-2xl leading-relaxed text-swiss-charcoal mb-12">
-                Streamline time tracking, optimize billing, and clarify project insights. PrimeLedger replaces chaos with mathematical precision.
-              </p>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.2, ease: "linear" }}
-              className="flex flex-col sm:flex-row items-center justify-center gap-4"
-            >
-              <a 
-                href="/login" 
-                className="w-full sm:w-auto h-14 px-8 bg-swiss-red-DEFAULT hover:bg-swiss-red-dark text-white text-sm font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-colors duration-200"
-              >
-                Start Free Trial <ArrowRight size={16} />
-              </a>
-              <button 
-                className="w-full sm:w-auto h-14 px-8 border-2 border-swiss-black text-swiss-black hover:bg-swiss-black hover:text-white text-sm font-bold uppercase tracking-wider transition-colors duration-200"
-              >
-                View Documentation
-              </button>
-            </motion.div>
-          </div>
+              Start Free Trial
+            </Link>
+          </motion.div>
         </div>
-      </div>
-      
-      {/* Abstract Swiss Grid Background Decoration */}
-      <div className="absolute top-0 right-0 -z-10 w-1/3 h-full opacity-5 pointer-events-none hidden lg:block">
-        <div className="grid grid-cols-6 h-full">
-           <div className="border-l border-swiss-black h-full"></div>
-           <div className="border-l border-swiss-black h-full"></div>
-           <div className="border-l border-swiss-black h-full"></div>
-           <div className="border-l border-swiss-black h-full"></div>
-           <div className="border-l border-swiss-black h-full"></div>
-           <div className="border-l border-swiss-black h-full"></div>
+
+        {/* Workflow visualization */}
+        <div className="relative mt-10 md:mt-20">
+          {/* Animated connecting path - hidden on mobile */}
+          <svg
+            className="absolute top-1/2 left-0 w-full h-4 -translate-y-1/2 overflow-visible hidden md:block"
+            preserveAspectRatio="none"
+          >
+            <motion.path
+              d="M 10% 50% Q 30% 20%, 50% 50% T 90% 50%"
+              fill="none"
+              stroke="#C4C4C4"
+              strokeWidth="2"
+              strokeDasharray="8 4"
+              initial={{ pathLength: 0 }}
+              animate={{ pathLength: 1 }}
+              transition={{ duration: 2, ease: 'easeInOut' }}
+            />
+          </svg>
+
+          {/* Workflow icons - horizontal scroll on mobile, flex on desktop */}
+          <div className="relative flex justify-between items-center max-w-4xl mx-auto gap-2 md:gap-4 overflow-x-auto pb-4 md:pb-0 px-2">
+            {workflowSteps.map((step, index) => {
+              const Icon = step.icon;
+              const color = step.accent ? '#476E66' : '#474747';
+              return (
+                <motion.div
+                  key={step.label}
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: index * 0.15 }}
+                  className="flex flex-col items-center flex-shrink-0"
+                >
+                  <motion.div
+                    animate={floatAnimation}
+                    transition={{ ...floatAnimation.transition, delay: index * 0.2 }}
+                  >
+                    <Icon
+                      className="w-8 h-8 md:w-10 md:h-10"
+                      strokeWidth={1.5}
+                      style={{ color }}
+                    />
+                  </motion.div>
+                  <span
+                    className="mt-2 md:mt-3 text-xs md:text-sm font-medium whitespace-nowrap"
+                    style={{ color }}
+                  >
+                    {step.label}
+                  </span>
+                </motion.div>
+              );
+            })}
+          </div>
         </div>
       </div>
     </section>
   );
-};
+}
