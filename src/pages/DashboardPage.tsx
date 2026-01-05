@@ -149,18 +149,19 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900">Dashboard</h1>
-          <p className="text-neutral-500">Welcome back, {profile?.full_name || 'User'}</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-neutral-900">Dashboard</h1>
+          <p className="text-sm sm:text-base text-neutral-500">Welcome back, {profile?.full_name || 'User'}</p>
         </div>
         <div className="relative" ref={quickAddRef}>
           <button 
             onClick={() => setShowQuickAdd(!showQuickAdd)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-neutral-900 text-white rounded-xl hover:bg-neutral-800 transition-colors"
+            className="flex items-center gap-2 px-4 py-2.5 bg-neutral-900 text-white rounded-xl hover:bg-neutral-800 transition-colors text-sm sm:text-base"
           >
             <Plus className="w-4 h-4" />
-            Quick Add
+            <span className="hidden sm:inline">Quick Add</span>
+            <span className="sm:hidden">Add</span>
             <ChevronDown className="w-4 h-4" />
           </button>
           {showQuickAdd && (
@@ -277,9 +278,9 @@ export default function DashboardPage() {
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Billability Chart */}
-        <div className="bg-white rounded-2xl p-6 border border-neutral-100">
-          <h3 className="text-lg font-semibold text-neutral-900 mb-6">Billability</h3>
-          <div className="flex items-center gap-8">
+        <div className="bg-white rounded-2xl p-4 sm:p-6 border border-neutral-100">
+          <h3 className="text-lg font-semibold text-neutral-900 mb-4 sm:mb-6">Billability</h3>
+          <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-8">
             <div className="relative w-32 h-32">
               <svg className="w-full h-full transform -rotate-90">
                 <circle cx="64" cy="64" r="56" fill="none" stroke="#E5E7EB" strokeWidth="12" />
@@ -358,8 +359,8 @@ export default function DashboardPage() {
 
       {/* Log Time Modal */}
       {showTimeModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-4 sm:p-6 w-full max-w-md shadow-xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-lg font-semibold text-neutral-900">Log Time</h3>
               <button onClick={() => setShowTimeModal(false)} className="p-1 hover:bg-neutral-100 rounded-lg">

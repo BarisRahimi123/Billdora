@@ -33,7 +33,8 @@ export default function Layout() {
   const { canViewFinancials, isAdmin } = usePermissions();
   const navigate = useNavigate();
   const location = useLocation();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -50,6 +51,11 @@ export default function Layout() {
   const [showTimerWidget, setShowTimerWidget] = useState(false);
   const [projects, setProjects] = useState<Project[]>([]);
   const timerInterval = useRef<NodeJS.Timeout | null>(null);
+
+  // Close sidebar on route change (mobile)
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [location.pathname]);
 
   useEffect(() => {
     if (profile?.company_id) {
@@ -185,22 +191,42 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen bg-neutral-50 flex">
+      {/* Mobile Overlay */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className={`${sidebarOpen ? 'w-64' : 'w-20'} bg-neutral-900 text-white transition-all duration-300 flex flex-col fixed h-full z-30`}>
+      <aside className={`
+        ${sidebarExpanded ? 'lg:w-64' : 'lg:w-20'} 
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} 
+        lg:translate-x-0
+        w-64 bg-neutral-900 text-white transition-all duration-300 flex flex-col fixed h-full z-50
+      `}>
         <div className="p-4 flex items-center justify-between border-b border-neutral-800">
-          {sidebarOpen && <h1 className="text-xl font-bold">PrimeLedger</h1>}
-          <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-neutral-800 rounded-lg">
+          {(sidebarExpanded || sidebarOpen) && <h1 className="text-xl font-bold">PrimeLedger</h1>}
+          <button 
+            onClick={() => {
+              if (window.innerWidth >= 1024) {
+                setSidebarExpanded(!sidebarExpanded);
+              } else {
+                setSidebarOpen(false);
+              }
+            }} 
+            className="p-2 hover:bg-neutral-800 rounded-lg"
+          >
             <Menu className="w-5 h-5" />
           </button>
         </div>
 
         <nav className="flex-1 py-4 overflow-y-auto">
           {navItems.filter(item => {
-            // Hide Invoicing and Sales for users without financial access
             if (!canViewFinancials && (item.path === '/invoicing' || item.path === '/sales')) {
               return false;
             }
-            // Hide Reports, Analytics, Settings, Resourcing for non-admin users
             if (!isAdmin && (item.path === '/reports' || item.path === '/analytics' || item.path === '/settings' || item.path === '/resourcing')) {
               return false;
             }
@@ -216,7 +242,7 @@ export default function Layout() {
               }
             >
               <item.icon className="w-5 h-5 flex-shrink-0" />
-              {sidebarOpen && <span className="text-sm font-medium">{item.label}</span>}
+              {(sidebarExpanded || sidebarOpen) && <span className="text-sm font-medium">{item.label}</span>}
             </NavLink>
           ))}
         </nav>
@@ -227,25 +253,34 @@ export default function Layout() {
             className="flex items-center gap-3 w-full px-4 py-3 text-neutral-400 hover:text-white hover:bg-neutral-800 rounded-xl transition-colors"
           >
             <LogOut className="w-5 h-5" />
-            {sidebarOpen && <span className="text-sm font-medium">Sign Out</span>}
+            {(sidebarExpanded || sidebarOpen) && <span className="text-sm font-medium">Sign Out</span>}
           </button>
         </div>
       </aside>
 
       {/* Main Content */}
-      <div className={`flex-1 ${sidebarOpen ? 'ml-64' : 'ml-20'} transition-all duration-300`}>
+      <div className={`flex-1 ${sidebarExpanded ? 'lg:ml-64' : 'lg:ml-20'} transition-all duration-300`}>
         {/* Header */}
         <header className="bg-white border-b border-neutral-100 sticky top-0 z-20">
-          <div className="flex items-center justify-between px-6 py-4">
+          <div className="flex items-center justify-between px-4 lg:px-6 py-4">
+            {/* Mobile menu button */}
+            <button 
+              onClick={() => setSidebarOpen(true)}
+              className="p-2 hover:bg-neutral-100 rounded-lg lg:hidden"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+
             {/* Search */}
-            <div ref={searchRef} className="relative w-96">
+            <div ref={searchRef} className="relative flex-1 max-w-md mx-4 lg:mx-0 lg:flex-none lg:w-96">
               <button
                 onClick={() => setSearchOpen(true)}
-                className="flex items-center gap-2 w-full px-4 py-2.5 text-left bg-neutral-100 hover:bg-neutral-200 rounded-xl text-neutral-500 transition-colors"
+                className="flex items-center gap-2 w-full px-3 lg:px-4 py-2 lg:py-2.5 text-left bg-neutral-100 hover:bg-neutral-200 rounded-xl text-neutral-500 transition-colors"
               >
                 <Search className="w-4 h-4" />
-                <span className="text-sm">Search projects, clients, invoices...</span>
-                <kbd className="ml-auto text-xs bg-neutral-200 px-2 py-0.5 rounded">⌘K</kbd>
+                <span className="text-sm hidden sm:inline">Search projects, clients...</span>
+                <span className="text-sm sm:hidden">Search...</span>
+                <kbd className="ml-auto text-xs bg-neutral-200 px-2 py-0.5 rounded hidden lg:inline">⌘K</kbd>
               </button>
 
               {searchOpen && (
@@ -290,23 +325,23 @@ export default function Layout() {
               )}
             </div>
 
-            <div className="flex items-center gap-4">
-              {/* Quick Timer Button */}
+            <div className="flex items-center gap-2 lg:gap-4">
+              {/* Quick Timer Button - hidden on small mobile */}
               {!showTimerWidget && (
                 <button
                   onClick={() => setShowTimerWidget(true)}
-                  className="flex items-center gap-2 px-3 py-2 bg-neutral-900-50 text-neutral-900-600 rounded-xl hover:bg-neutral-800-100 transition-colors"
+                  className="hidden sm:flex items-center gap-2 px-3 py-2 bg-neutral-900-50 text-neutral-900-600 rounded-xl hover:bg-neutral-800-100 transition-colors"
                 >
                   <Clock className="w-4 h-4" />
-                  <span className="text-sm font-medium">Timer</span>
+                  <span className="text-sm font-medium hidden md:inline">Timer</span>
                 </button>
               )}
 
               {/* Mini Timer Display */}
               {timerRunning && (
-                <div className="flex items-center gap-2 px-3 py-2 bg-neutral-100 text-emerald-700 rounded-xl">
+                <div className="flex items-center gap-2 px-2 lg:px-3 py-2 bg-neutral-100 text-emerald-700 rounded-xl">
                   <div className="w-2 h-2 bg-neutral-1000 rounded-full animate-pulse" />
-                  <span className="text-sm font-mono font-medium">{formatTimer(timerSeconds)}</span>
+                  <span className="text-xs lg:text-sm font-mono font-medium">{formatTimer(timerSeconds)}</span>
                 </div>
               )}
 
@@ -319,13 +354,13 @@ export default function Layout() {
               <div ref={userMenuRef} className="relative">
                 <button
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
-                  className="flex items-center gap-2 px-3 py-2 hover:bg-neutral-100 rounded-xl transition-colors"
+                  className="flex items-center gap-2 px-2 lg:px-3 py-2 hover:bg-neutral-100 rounded-xl transition-colors"
                 >
                   <div className="w-8 h-8 rounded-full bg-neutral-900-100 flex items-center justify-center text-neutral-900-600 font-medium">
                     {profile?.full_name?.charAt(0) || 'U'}
                   </div>
-                  {profile?.full_name && <span className="text-sm font-medium text-neutral-700">{profile.full_name}</span>}
-                  <ChevronDown className="w-4 h-4 text-neutral-400" />
+                  {profile?.full_name && <span className="text-sm font-medium text-neutral-700 hidden lg:inline">{profile.full_name}</span>}
+                  <ChevronDown className="w-4 h-4 text-neutral-400 hidden lg:inline" />
                 </button>
 
                 {userMenuOpen && (
@@ -354,13 +389,13 @@ export default function Layout() {
         </header>
 
         {/* Page Content */}
-        <main className="p-6">
+        <main className="p-4 lg:p-6">
           <Outlet />
         </main>
 
         {/* Floating Timer Widget */}
         {showTimerWidget && (
-          <div className="fixed bottom-6 right-6 bg-white rounded-2xl shadow-2xl border border-neutral-200 p-4 w-80 z-50">
+          <div className="fixed bottom-4 right-4 lg:bottom-6 lg:right-6 bg-white rounded-2xl shadow-2xl border border-neutral-200 p-4 w-[calc(100vw-2rem)] sm:w-80 z-50">
             <div className="flex items-center justify-between mb-4">
               <h4 className="font-semibold text-neutral-900">Timer</h4>
               <button onClick={() => setShowTimerWidget(false)} className="p-1 hover:bg-neutral-100 rounded">

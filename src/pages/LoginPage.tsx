@@ -77,14 +77,14 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-white flex">
       {/* Left Side - Form */}
-      <div className="w-full lg:w-1/2 flex flex-col justify-center px-8 sm:px-16 lg:px-24 py-12">
+      <div className="w-full lg:w-1/2 flex flex-col justify-center px-6 sm:px-12 lg:px-24 py-8 sm:py-12">
         <div className="max-w-md w-full mx-auto">
           {/* Logo */}
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
-            className="flex items-center gap-2 mb-16"
+            className="flex items-center gap-2 mb-8 sm:mb-16"
           >
             <div className="w-8 h-8 bg-neutral-900 flex items-center justify-center">
               <span className="text-white font-bold text-lg">P</span>
@@ -98,10 +98,10 @@ export default function LoginPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: 0.1 }}
           >
-            <h1 className="text-4xl md:text-5xl font-bold tracking-tighter leading-[1.1] mb-4 text-neutral-900">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tighter leading-[1.1] mb-3 sm:mb-4 text-neutral-900">
               {isSignUp ? 'Create Account.' : 'Welcome Back.'}
             </h1>
-            <p className="text-lg text-text-secondary mb-10">
+            <p className="text-base sm:text-lg text-text-secondary mb-6 sm:mb-10">
               {isSignUp 
                 ? 'Start managing your projects with precision.' 
                 : 'Streamline your workflow with mathematical precision.'}
