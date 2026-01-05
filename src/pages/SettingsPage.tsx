@@ -240,10 +240,10 @@ export default function SettingsPage() {
         <p className="text-neutral-500 mt-1">Manage your company preferences</p>
       </div>
 
-      <div className="flex gap-6">
+      <div className="flex flex-col lg:flex-row gap-6">
         {/* Sidebar */}
-        <div className="w-64 flex-shrink-0">
-          <nav className="bg-white rounded-2xl border border-neutral-100 p-2">
+        <div className="w-full lg:w-64 flex-shrink-0">
+          <nav className="bg-white rounded-2xl border border-neutral-100 p-2 flex flex-row lg:flex-col gap-1 overflow-x-auto">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
@@ -324,7 +324,7 @@ export default function SettingsPage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="col-span-2">
                       <label className="block text-sm font-medium text-neutral-700 mb-1.5">Company Name</label>
                       <input 
@@ -348,7 +348,7 @@ export default function SettingsPage() {
                     />
                   </div>
 
-                  <div className="grid grid-cols-4 gap-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                     <div className="col-span-2">
                       <label className="block text-sm font-medium text-neutral-700 mb-1.5">City</label>
                       <input 
@@ -381,7 +381,7 @@ export default function SettingsPage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-neutral-700 mb-1.5">Phone</label>
                       <input 
@@ -404,7 +404,7 @@ export default function SettingsPage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-neutral-700 mb-1.5">Website</label>
                       <input 
@@ -429,7 +429,7 @@ export default function SettingsPage() {
 
                   <div className="border-t border-neutral-100 pt-6 mt-6">
                     <h3 className="text-lg font-semibold text-neutral-900 mb-4">Default Settings</h3>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-neutral-700 mb-1.5">Default Tax Rate (%)</label>
                         <input 
@@ -742,7 +742,7 @@ function ServiceModal({ service, companyId, onClose, onSave }: {
           </div>
 
           {pricingType === 'per_sqft' ? (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-neutral-700 mb-1.5">Min Rate ($)</label>
                 <input
@@ -936,7 +936,7 @@ function UserManagementTab({ companyId, currentUserId }: { companyId: string; cu
     <div className="space-y-6">
       {/* Sub-tabs */}
       <div className="flex items-center justify-between">
-        <div className="flex gap-1 p-1 bg-neutral-100 rounded-xl">
+        <div className="flex flex-wrap gap-1 p-1 bg-neutral-100 rounded-xl">
           <button
             onClick={() => setActiveSubTab('users')}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
@@ -973,8 +973,8 @@ function UserManagementTab({ companyId, currentUserId }: { companyId: string; cu
 
       {/* Users List */}
       {activeSubTab === 'users' && (
-        <div className="bg-white rounded-2xl border border-neutral-100 overflow-hidden">
-          <table className="w-full">
+        <div className="bg-white rounded-2xl border border-neutral-100 overflow-x-auto">
+          <table className="w-full min-w-[600px]">
             <thead className="bg-neutral-50 border-b border-neutral-100">
               <tr>
                 <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-900 uppercase tracking-wider">User</th>
@@ -1628,7 +1628,7 @@ function RoleModal({ role, companyId, onClose, onSave }: {
             <div className="p-3 bg-neutral-100 border border-red-200 text-red-700 rounded-lg text-sm">{error}</div>
           )}
           
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-neutral-700 mb-1.5">Role Name *</label>
               <input
@@ -2124,7 +2124,7 @@ function InvoicingSettingsTab({ companyId }: { companyId: string }) {
             </div>
 
             {/* City, State, Zip */}
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div className="col-span-2">
                 <label className="block text-sm font-medium text-neutral-700 mb-1.5">City</label>
                 <input
@@ -2170,7 +2170,7 @@ function InvoicingSettingsTab({ companyId }: { companyId: string }) {
             </div>
 
             {/* Phone & Website */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-neutral-700 mb-1.5">Phone</label>
                 <input
@@ -3198,9 +3198,9 @@ function BasicCodesTab({ companyId }: { companyId: string }) {
         ))}
       </div>
 
-      <div className="flex gap-6">
+      <div className="flex flex-col lg:flex-row gap-6">
         {/* Left Panel - List */}
-        <div className="w-80 bg-white rounded-2xl border border-neutral-100 flex flex-col">
+        <div className="w-full lg:w-80 bg-white rounded-2xl border border-neutral-100 flex flex-col">
           <div className="p-4 border-b border-neutral-100 space-y-3">
             <input
               type="text"
@@ -3264,7 +3264,7 @@ function BasicCodesTab({ companyId }: { companyId: string }) {
                 {selectedItem.id ? 'Edit' : 'New'} {activeSubTab === 'categories' ? 'Category' : activeSubTab === 'expense_codes' ? 'Expense Code' : 'Invoice Term'}
               </h3>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-neutral-700 mb-1">Name *</label>
                   <input
@@ -3534,9 +3534,9 @@ function FieldValuesTab({ companyId }: { companyId: string }) {
         ))}
       </div>
 
-      <div className="flex gap-6">
+      <div className="flex flex-col lg:flex-row gap-6">
         {/* Left Panel - List */}
-        <div className="w-80 bg-white rounded-2xl border border-neutral-100 flex flex-col">
+        <div className="w-full lg:w-80 bg-white rounded-2xl border border-neutral-100 flex flex-col">
           <div className="p-4 border-b border-neutral-100 space-y-3">
             <div className="flex items-center justify-between">
               <button
@@ -3740,9 +3740,9 @@ function StatusCodesTab({ companyId }: { companyId: string }) {
         ))}
       </div>
 
-      <div className="flex gap-6">
+      <div className="flex flex-col lg:flex-row gap-6">
         {/* Left Panel - List */}
-        <div className="w-80 bg-white rounded-2xl border border-neutral-100 flex flex-col">
+        <div className="w-full lg:w-80 bg-white rounded-2xl border border-neutral-100 flex flex-col">
           <div className="p-4 border-b border-neutral-100 space-y-3">
             <div className="flex items-center justify-between">
               <button
@@ -3955,9 +3955,9 @@ function CostCentersTab({ companyId }: { companyId: string }) {
         ))}
       </div>
 
-      <div className="flex gap-6">
+      <div className="flex flex-col lg:flex-row gap-6">
         {/* Left Panel - List */}
-        <div className="w-80 bg-white rounded-2xl border border-neutral-100 flex flex-col">
+        <div className="w-full lg:w-80 bg-white rounded-2xl border border-neutral-100 flex flex-col">
           <div className="p-4 border-b border-neutral-100 space-y-3">
             <div className="flex items-center justify-between">
               <button
@@ -4014,7 +4014,7 @@ function CostCentersTab({ companyId }: { companyId: string }) {
                 {selectedItem.id ? 'Edit' : 'New'} Cost Center
               </h3>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-neutral-700 mb-1">Name *</label>
                   <input
