@@ -190,7 +190,7 @@ export default function Layout() {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-50 flex">
+    <div className="min-h-screen flex" style={{ backgroundColor: '#F5F5F3' }}>
       {/* Mobile Overlay */}
       {sidebarOpen && (
         <div 
@@ -204,9 +204,9 @@ export default function Layout() {
         ${sidebarExpanded ? 'lg:w-64' : 'lg:w-20'} 
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} 
         lg:translate-x-0
-        w-64 bg-neutral-900 text-white transition-all duration-300 flex flex-col fixed h-full z-50
-      `}>
-        <div className="p-4 flex items-center justify-between border-b border-neutral-800">
+        w-64 text-white transition-all duration-300 flex flex-col fixed h-full z-50
+      ` } style={{ backgroundColor: '#476E66' }}>
+        <div className="p-4 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(255,255,255,0.2)' }}>
           {(sidebarExpanded || sidebarOpen) && <h1 className="text-xl font-bold">PrimeLedger</h1>}
           <button 
             onClick={() => {
@@ -216,7 +216,7 @@ export default function Layout() {
                 setSidebarOpen(false);
               }
             }} 
-            className="p-2 hover:bg-neutral-800 rounded-lg"
+            className="p-2 hover:bg-white/20 rounded-lg"
           >
             <Menu className="w-5 h-5" />
           </button>
@@ -237,7 +237,7 @@ export default function Layout() {
               to={item.path}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-4 py-3 mx-2 rounded-xl transition-colors ${
-                  isActive ? 'bg-neutral-900 text-white' : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
+                  isActive ? 'bg-white/20 text-white' : 'text-white/70 hover:text-white hover:bg-white/10'
                 }`
               }
             >
@@ -247,10 +247,10 @@ export default function Layout() {
           ))}
         </nav>
 
-        <div className="p-4 border-t border-neutral-800">
+        <div className="p-4" style={{ borderTop: '1px solid rgba(255,255,255,0.2)' }}>
           <button
             onClick={() => signOut()}
-            className="flex items-center gap-3 w-full px-4 py-3 text-neutral-400 hover:text-white hover:bg-neutral-800 rounded-xl transition-colors"
+            className="flex items-center gap-3 w-full px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 rounded-xl transition-colors"
           >
             <LogOut className="w-5 h-5" />
             {(sidebarExpanded || sidebarOpen) && <span className="text-sm font-medium">Sign Out</span>}

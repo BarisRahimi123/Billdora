@@ -17,9 +17,9 @@ module.exports = {
     },
     extend: {
       colors: {
-        // Modern SaaS Neutral Base Palette
+        // Landing page color palette
         background: {
-          DEFAULT: '#F9FAFB', // Main background
+          DEFAULT: '#F5F5F3', // Main background (warm off-white)
           surface: '#FFFFFF', // Cards
         },
         border: {
@@ -27,14 +27,20 @@ module.exports = {
           divider: '#D1D5DB', // Dividers
         },
         text: {
-          primary: '#111827',   // Primary text
-          secondary: '#4B5563', // Secondary text
+          primary: '#474747',   // Primary text (warm dark gray)
+          secondary: '#6B7280', // Secondary text
           muted: '#9CA3AF',     // Muted/hints
         },
-        // Primary accent (keeping red for CTAs)
+        // Primary accent (sage green from landing page)
         primary: {
-          DEFAULT: '#DC143C',
+          DEFAULT: '#476E66',
           foreground: '#FFFFFF',
+          dark: '#3A5B54',
+          light: '#5A8A80',
+        },
+        // Keep legacy red for warnings/errors
+        danger: {
+          DEFAULT: '#DC143C',
           dark: '#A01028',
         },
         // Neutral scale for compatibility
