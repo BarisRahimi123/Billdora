@@ -387,7 +387,7 @@ export default function MakePaymentModal({ clients, invoices, onClose, onSave }:
             <button
               type="submit"
               disabled={saving || !selectedClientId || totalAllocated <= 0}
-              className="px-6 py-2.5 bg-neutral-900-500 text-white rounded-xl hover:bg-neutral-800-600 transition-colors font-medium disabled:opacity-50"
+              className="px-6 py-2.5 bg-neutral-900 text-white rounded-xl hover:bg-neutral-800 transition-colors font-medium disabled:opacity-50"
             >
               {saving ? 'Saving...' : 'Save'}
             </button>

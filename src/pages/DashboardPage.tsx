@@ -157,7 +157,7 @@ export default function DashboardPage() {
         <div className="relative" ref={quickAddRef}>
           <button 
             onClick={() => setShowQuickAdd(!showQuickAdd)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-neutral-900-500 text-white rounded-xl hover:bg-neutral-800-600 transition-colors"
+            className="flex items-center gap-2 px-4 py-2.5 bg-neutral-900 text-white rounded-xl hover:bg-neutral-800 transition-colors"
           >
             <Plus className="w-4 h-4" />
             Quick Add
@@ -295,7 +295,7 @@ export default function DashboardPage() {
             </div>
             <div className="space-y-3">
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-neutral-900-500" />
+                <div className="w-3 h-3 rounded-full bg-neutral-900" />
                 <span className="text-neutral-600">Billable</span>
                 <span className="font-medium text-neutral-900 ml-auto">{stats?.billableHours || 0}h</span>
               </div>
@@ -419,7 +419,7 @@ export default function DashboardPage() {
                 <button 
                   onClick={handleSaveTime} 
                   disabled={saving || !timeEntry.hours}
-                  className="px-4 py-2 bg-neutral-900-500 text-white rounded-lg hover:bg-neutral-800-600 disabled:opacity-50"
+                  className="px-4 py-2 bg-neutral-900 text-white rounded-lg hover:bg-neutral-800 disabled:opacity-50"
                 >
                   {saving ? 'Saving...' : 'Save'}
                 </button>

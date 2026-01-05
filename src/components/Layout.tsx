@@ -211,7 +211,7 @@ export default function Layout() {
               to={item.path}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-4 py-3 mx-2 rounded-xl transition-colors ${
-                  isActive ? 'bg-neutral-900-500 text-white' : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
+                  isActive ? 'bg-neutral-900 text-white' : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
                 }`
               }
             >

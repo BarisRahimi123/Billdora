@@ -521,7 +521,7 @@ export default function ReportsPage() {
             onClick={() => setActiveReport(report.id)}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
               activeReport === report.id
-                ? 'bg-neutral-900-500 text-white'
+                ? 'bg-neutral-900 text-white'
                 : 'bg-white border border-neutral-200 text-neutral-700 hover:bg-neutral-50'
             }`}
           >

@@ -1054,7 +1054,7 @@ function QuoteModal({ quote, clients, companyId, onClose, onSave }: { quote: Quo
           </div>
           <div className="flex gap-3 pt-4">
             <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors">Cancel</button>
-            <button type="submit" disabled={saving} onClick={(e) => { e.preventDefault(); handleSubmit(e as any); }} className="flex-1 px-4 py-2.5 bg-neutral-900-500 text-white rounded-xl hover:bg-neutral-800-600 transition-colors disabled:opacity-50">
+            <button type="submit" disabled={saving} onClick={(e) => { e.preventDefault(); handleSubmit(e as any); }} className="flex-1 px-4 py-2.5 bg-neutral-900 text-white rounded-xl hover:bg-neutral-800 transition-colors disabled:opacity-50">
               {saving ? 'Saving...' : quote ? 'Update Quote' : 'Create Quote'}
             </button>
           </div>
