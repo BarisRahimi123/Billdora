@@ -18,7 +18,7 @@ export default function SettingsPage() {
   const { profile } = useAuth();
   const { canViewFinancials } = usePermissions();
   const { showToast } = useToast();
-  const [activeTab, setActiveTab] = useState('company');
+  const [activeTab, setActiveTab] = useState('profile');
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(false);
   const [showServiceModal, setShowServiceModal] = useState(false);
@@ -45,22 +45,27 @@ export default function SettingsPage() {
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
 
-  const tabs = [
-    { id: 'profile', label: 'My Profile', icon: User },
-    { id: 'company', label: 'Company Info', icon: Building2 },
-    { id: 'users', label: 'User Management', icon: Users },
-    { id: 'services', label: 'Products & Services', icon: Package },
-    { id: 'basic-codes', label: 'Basic Codes', icon: Tag },
-    { id: 'field-values', label: 'Field Values', icon: List },
-    { id: 'status-codes', label: 'Status Codes', icon: Activity },
-    { id: 'cost-centers', label: 'Cost Centers', icon: Target },
-    { id: 'staff', label: 'Staff', icon: Users },
-    { id: 'templates', label: 'Templates', icon: FileText },
-    { id: 'notifications', label: 'Notifications', icon: Bell },
-    { id: 'integrations', label: 'Integrations', icon: Link },
-    { id: 'security', label: 'Security', icon: Shield },
-    { id: 'invoicing', label: 'Invoicing', icon: Receipt },
+  const { canView, isAdmin } = usePermissions();
+  
+  const allTabs = [
+    { id: 'profile', label: 'My Profile', icon: User, adminOnly: false },
+    { id: 'company', label: 'Company Info', icon: Building2, adminOnly: true },
+    { id: 'users', label: 'User Management', icon: Users, adminOnly: true },
+    { id: 'services', label: 'Products & Services', icon: Package, adminOnly: true },
+    { id: 'basic-codes', label: 'Basic Codes', icon: Tag, adminOnly: true },
+    { id: 'field-values', label: 'Field Values', icon: List, adminOnly: true },
+    { id: 'status-codes', label: 'Status Codes', icon: Activity, adminOnly: true },
+    { id: 'cost-centers', label: 'Cost Centers', icon: Target, adminOnly: true },
+    { id: 'staff', label: 'Staff', icon: Users, adminOnly: true },
+    { id: 'templates', label: 'Templates', icon: FileText, adminOnly: true },
+    { id: 'notifications', label: 'Notifications', icon: Bell, adminOnly: false },
+    { id: 'integrations', label: 'Integrations', icon: Link, adminOnly: true },
+    { id: 'security', label: 'Security', icon: Shield, adminOnly: false },
+    { id: 'invoicing', label: 'Invoicing', icon: Receipt, adminOnly: true },
   ];
+  
+  // Filter tabs based on user permissions - staff can see profile, notifications, security
+  const tabs = allTabs.filter(tab => !tab.adminOnly || isAdmin || canView('settings'));
 
   useEffect(() => {
     if (profile?.company_id) {
@@ -1268,7 +1273,7 @@ function InviteUserModal({ companyId, currentUserId, roles, onClose, onInvite }:
             inviterName: inviterData?.full_name || 'A team member',
             companyName: companyData?.name || 'a company',
             roleName: selectedRole?.name || '',
-            signupUrl: `${window.location.origin}/login`,
+            signupUrl: `${window.location.origin}/login?email=${encodeURIComponent(email)}&signup=true`,
           },
         },
       });

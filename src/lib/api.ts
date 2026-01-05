@@ -131,7 +131,7 @@ export interface TimeEntry {
   hourly_rate?: number;
   date: string;
   created_at?: string;
-  approval_status?: 'pending' | 'approved' | 'rejected';
+  approval_status?: 'draft' | 'pending' | 'approved' | 'rejected';
   approved_by?: string;
   approved_at?: string;
   project?: Project;
@@ -150,8 +150,9 @@ export interface Expense {
   billable?: boolean;
   date: string;
   status?: string;
+  receipt_url?: string;
   created_at?: string;
-  approval_status?: 'pending' | 'approved' | 'rejected';
+  approval_status?: 'draft' | 'pending' | 'approved' | 'rejected';
   approved_by?: string;
   approved_at?: string;
   project?: Project;
@@ -169,6 +170,7 @@ export interface Invoice {
   tax_amount: number;
   total: number;
   due_date?: string;
+  sent_date?: string;
   paid_at?: string;
   created_at?: string;
   amount_paid?: number;
@@ -556,27 +558,125 @@ export const api = {
     if (error) throw error;
   },
 
+  async uploadReceipt(file: File, companyId: string): Promise<string> {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${companyId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+    
+    const { error: uploadError } = await supabase.storage
+      .from('receipts')
+      .upload(fileName, file);
+    
+    if (uploadError) throw uploadError;
+    
+    const { data } = supabase.storage.from('receipts').getPublicUrl(fileName);
+    return data.publicUrl;
+  },
+
   // Approval functions
-  async getPendingTimeEntries(companyId: string) {
-    const { data, error } = await supabase
+  async getApprovedTimeEntries(companyId: string, startDate?: string, endDate?: string) {
+    let query = supabase
       .from('time_entries')
-      .select('*, project:projects(id, name), task:tasks(id, name), user:profiles!time_entries_user_id_fkey(id, full_name, email)')
+      .select('*, project:projects(id, name), task:tasks(id, name)')
+      .eq('company_id', companyId)
+      .eq('approval_status', 'approved');
+    
+    if (startDate) query = query.gte('date', startDate);
+    if (endDate) query = query.lte('date', endDate);
+    
+    const { data: entries, error } = await query.order('date', { ascending: false });
+    if (error) throw error;
+    
+    const userIds = [...new Set(entries?.map(e => e.user_id).filter(Boolean))];
+    if (userIds.length > 0) {
+      const { data: profiles } = await supabase.from('profiles').select('id, full_name, email').in('id', userIds);
+      const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
+      return entries?.map(e => ({ ...e, user: profileMap.get(e.user_id) || null })) as TimeEntry[];
+    }
+    return entries as TimeEntry[];
+  },
+
+  async getApprovedExpenses(companyId: string, startDate?: string, endDate?: string) {
+    let query = supabase
+      .from('expenses')
+      .select('*, project:projects(id, name)')
+      .eq('company_id', companyId)
+      .eq('approval_status', 'approved');
+    
+    if (startDate) query = query.gte('date', startDate);
+    if (endDate) query = query.lte('date', endDate);
+    
+    const { data: expenses, error } = await query.order('date', { ascending: false });
+    if (error) throw error;
+    
+    const userIds = [...new Set(expenses?.map(e => e.user_id).filter(Boolean))];
+    if (userIds.length > 0) {
+      const { data: profiles } = await supabase.from('profiles').select('id, full_name, email').in('id', userIds);
+      const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
+      return expenses?.map(e => ({ ...e, user: profileMap.get(e.user_id) || null })) as Expense[];
+    }
+    return expenses as Expense[];
+  },
+
+  async getPendingTimeEntries(companyId: string) {
+    // First get time entries
+    const { data: entries, error } = await supabase
+      .from('time_entries')
+      .select('*, project:projects(id, name), task:tasks(id, name)')
       .eq('company_id', companyId)
       .eq('approval_status', 'pending')
       .order('date', { ascending: false });
     if (error) throw error;
-    return data as TimeEntry[];
+    
+    // Get unique user IDs
+    const userIds = [...new Set(entries?.map(e => e.user_id).filter(Boolean))];
+    
+    // Fetch user profiles
+    if (userIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, full_name, email')
+        .in('id', userIds);
+      
+      // Map profiles to entries
+      const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
+      return entries?.map(e => ({
+        ...e,
+        user: profileMap.get(e.user_id) || null
+      })) as TimeEntry[];
+    }
+    
+    return entries as TimeEntry[];
   },
 
   async getPendingExpenses(companyId: string) {
-    const { data, error } = await supabase
+    // First get expenses
+    const { data: expenses, error } = await supabase
       .from('expenses')
-      .select('*, project:projects(id, name), user:profiles!expenses_user_id_fkey(id, full_name, email)')
+      .select('*, project:projects(id, name)')
       .eq('company_id', companyId)
       .eq('approval_status', 'pending')
       .order('date', { ascending: false });
     if (error) throw error;
-    return data as Expense[];
+    
+    // Get unique user IDs
+    const userIds = [...new Set(expenses?.map(e => e.user_id).filter(Boolean))];
+    
+    // Fetch user profiles
+    if (userIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, full_name, email')
+        .in('id', userIds);
+      
+      // Map profiles to expenses
+      const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
+      return expenses?.map(e => ({
+        ...e,
+        user: profileMap.get(e.user_id) || null
+      })) as Expense[];
+    }
+    
+    return expenses as Expense[];
   },
 
   async approveTimeEntry(id: string, approverId: string) {
@@ -764,6 +864,26 @@ export const api = {
       .single();
     if (error) throw error;
     return data as Invoice;
+  },
+
+  async deleteInvoice(id: string) {
+    // First clear invoice_id from time entries
+    await supabase.from('time_entries').update({ invoice_id: null }).eq('invoice_id', id);
+    // Delete related line items
+    await supabase.from('invoice_line_items').delete().eq('invoice_id', id);
+    // Then delete the invoice
+    const { error } = await supabase.from('invoices').delete().eq('id', id);
+    if (error) throw error;
+  },
+
+  async deleteInvoices(ids: string[]) {
+    // First clear invoice_id from time entries
+    await supabase.from('time_entries').update({ invoice_id: null }).in('invoice_id', ids);
+    // Delete related line items for all invoices
+    await supabase.from('invoice_line_items').delete().in('invoice_id', ids);
+    // Then delete the invoices
+    const { error } = await supabase.from('invoices').delete().in('id', ids);
+    if (error) throw error;
   },
 
   // Quotes

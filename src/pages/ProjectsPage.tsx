@@ -16,15 +16,15 @@ type TaskSubTab = 'overview' | 'editor' | 'schedule' | 'allocations' | 'checklis
 type DetailTab = 'vitals' | 'client' | 'tasks' | 'team' | 'financials' | 'billing' | 'details';
 
 const PROJECT_CATEGORIES = [
-  { value: 'A', label: 'Architectural', color: 'bg-neutral-1000' },
-  { value: 'C', label: 'Civil', color: 'bg-neutral-1000' },
-  { value: 'M', label: 'Mechanical', color: 'bg-neutral-1000' },
-  { value: 'E', label: 'Electrical', color: 'bg-neutral-1000' },
-  { value: 'P', label: 'Plumbing', color: 'bg-neutral-1000' },
-  { value: 'S', label: 'Structural', color: 'bg-neutral-1000' },
-  { value: 'I', label: 'Interior', color: 'bg-pink-500' },
-  { value: 'L', label: 'Landscape', color: 'bg-neutral-1000' },
-  { value: 'O', label: 'Other', color: 'bg-neutral-500' },
+  { value: 'A', label: 'Architectural', color: 'bg-neutral-400' },
+  { value: 'C', label: 'Civil', color: 'bg-neutral-400' },
+  { value: 'M', label: 'Mechanical', color: 'bg-neutral-400' },
+  { value: 'E', label: 'Electrical', color: 'bg-neutral-400' },
+  { value: 'P', label: 'Plumbing', color: 'bg-neutral-400' },
+  { value: 'S', label: 'Structural', color: 'bg-neutral-400' },
+  { value: 'I', label: 'Interior', color: 'bg-neutral-400' },
+  { value: 'L', label: 'Landscape', color: 'bg-neutral-400' },
+  { value: 'O', label: 'Other', color: 'bg-neutral-400' },
 ];
 
 const DEFAULT_COLUMNS = ['project', 'client', 'team', 'budget', 'status'];
@@ -379,7 +379,7 @@ export default function ProjectsPage() {
         {/* Tabs */}
         <div className="flex gap-1 p-1 bg-neutral-100 rounded-xl w-fit">
           {(['vitals', 'client', 'details', 'tasks', 'team', 'financials', 'billing'] as DetailTab[]).filter(tab => {
-            if (!canViewFinancials && (tab === 'financials' || tab === 'billing')) return false;
+            if (!canViewFinancials && (tab === 'financials' || tab === 'billing' || tab === 'team')) return false;
             return true;
           }).map(tab => (
             <button
@@ -397,41 +397,16 @@ export default function ProjectsPage() {
         {/* Tab Content */}
         <div className="bg-white rounded-2xl border border-neutral-100 p-6">
           {activeTab === 'vitals' && (
-            <div className="space-y-6">
-              <h3 className="text-lg font-semibold text-neutral-900">Project Details</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                {canViewFinancials && <div>
-                  <p className="text-sm text-neutral-500 mb-1">Budget</p>
-                  <p className="text-xl font-semibold text-neutral-900">{formatCurrency(selectedProject.budget)}</p>
-                </div>}
-                <div>
-                  <p className="text-sm text-neutral-500 mb-1">Start Date</p>
-                  <p className="text-xl font-semibold text-neutral-900">
-                    {selectedProject.start_date ? new Date(selectedProject.start_date).toLocaleDateString() : '-'}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-neutral-500 mb-1">End Date</p>
-                  <p className="text-xl font-semibold text-neutral-900">
-                    {selectedProject.end_date ? new Date(selectedProject.end_date).toLocaleDateString() : '-'}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-neutral-500 mb-1">Status</p>
-                  <p className="text-xl font-semibold text-neutral-900 capitalize">{selectedProject.status || 'active'}</p>
-                </div>
-              </div>
-              {selectedProject.description && (
-                <div>
-                  <p className="text-sm text-neutral-500 mb-1">Description</p>
-                  <p className="text-neutral-700">{selectedProject.description}</p>
-                </div>
-              )}
-              <div>
-                <p className="text-sm text-neutral-500 mb-1">Client</p>
-                <p className="text-neutral-700">{selectedProject.client?.name || clients.find(c => c.id === selectedProject.client_id)?.name || 'Not assigned'}</p>
-              </div>
-            </div>
+            <ProjectVitalsTab 
+              project={selectedProject}
+              clients={clients}
+              onSave={async (updates) => {
+                await api.updateProject(selectedProject.id, updates);
+                if (projectId) loadProjectDetails(projectId);
+              }}
+              canViewFinancials={canViewFinancials}
+              formatCurrency={formatCurrency}
+            />
           )}
 
           {activeTab === 'client' && (
@@ -442,6 +417,7 @@ export default function ProjectsPage() {
                 loadData();
                 if (projectId) loadProjectDetails(projectId);
               }}
+              canViewFinancials={canViewFinancials}
             />
           )}
 
@@ -453,6 +429,7 @@ export default function ProjectsPage() {
               onTasksChange={() => { if (projectId) loadProjectDetails(projectId); }}
               onEditTask={(task) => { setEditingTask(task); setShowTaskModal(true); }}
               onAddTask={() => { setEditingTask(null); setShowTaskModal(true); }}
+              canViewFinancials={canViewFinancials}
             />
           )}
 
@@ -606,7 +583,10 @@ export default function ProjectsPage() {
                   expenses={expenses}
                   companyId={profile?.company_id || ''}
                   onBack={() => setViewingBillingInvoice(null)}
-                  onUpdate={() => { if (projectId) loadProjectDetails(projectId); }}
+                  onUpdate={() => { 
+                    if (projectId) loadProjectDetails(projectId); 
+                    setViewingBillingInvoice(null);
+                  }}
                   formatCurrency={formatCurrency}
                 />
               ) : (
@@ -615,7 +595,7 @@ export default function ProjectsPage() {
                     <h3 className="text-lg font-semibold text-neutral-900">Billing History</h3>
                     <button 
                       onClick={() => setShowInvoiceModal(true)}
-                      className="flex items-center gap-2 px-3 py-1.5 bg-neutral-900-500 text-white text-sm rounded-lg hover:bg-neutral-800-600"
+                      className="flex items-center gap-2 px-3 py-1.5 bg-neutral-900 text-white text-sm rounded-lg hover:bg-neutral-800"
                     >
                       <Plus className="w-4 h-4" /> Create Invoice
                     </button>
@@ -648,6 +628,24 @@ export default function ProjectsPage() {
                                 {invoice.status || 'draft'}
                               </span>
                             </div>
+                            <button
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                if (confirm('Are you sure you want to delete this invoice?')) {
+                                  try {
+                                    await api.deleteInvoice(invoice.id);
+                                    if (projectId) loadProjectDetails(projectId);
+                                  } catch (err) {
+                                    console.error('Failed to delete invoice:', err);
+                                    alert('Failed to delete invoice');
+                                  }
+                                }
+                              }}
+                              className="p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                              title="Delete invoice"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
                             <ChevronRight className="w-4 h-4 text-neutral-400" />
                           </div>
                         </div>
@@ -685,6 +683,7 @@ export default function ProjectsPage() {
             teamMembers={companyProfiles.map(p => ({ staff_member_id: p.id, profile: p }))}
             onClose={() => { setShowTaskModal(false); setEditingTask(null); }}
             onSave={() => { if (projectId) loadProjectDetails(projectId); setShowTaskModal(false); setEditingTask(null); }}
+            canViewFinancials={canViewFinancials}
           />
         )}
 
@@ -746,7 +745,7 @@ export default function ProjectsPage() {
         {canCreate('projects') && (
           <button
             onClick={() => { setEditingProject(null); setShowProjectModal(true); }}
-            className="flex items-center gap-2 px-4 py-2.5 bg-neutral-900-500 text-white rounded-xl hover:bg-neutral-800-600 transition-colors"
+            className="flex items-center gap-2 px-4 py-2.5 bg-neutral-900 text-white rounded-xl hover:bg-neutral-800 transition-colors"
           >
             <Plus className="w-4 h-4" />
             Add Project
@@ -1251,7 +1250,7 @@ function ProjectModal({ project, clients, companyId, onClose, onSave }: {
           </div>
           <div className="flex gap-3 pt-4">
             <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors">Cancel</button>
-            <button type="submit" disabled={saving} onClick={(e) => { e.preventDefault(); handleSubmit(e as any); }} className="flex-1 px-4 py-2.5 bg-neutral-900-500 text-white rounded-xl hover:bg-neutral-800-600 transition-colors disabled:opacity-50">
+            <button type="submit" disabled={saving} onClick={(e) => { e.preventDefault(); handleSubmit(e as any); }} className="flex-1 px-4 py-2.5 bg-neutral-900 text-white rounded-xl hover:bg-neutral-800 transition-colors disabled:opacity-50">
               {saving ? 'Saving...' : project ? 'Update' : 'Create Project'}
             </button>
           </div>
@@ -1261,13 +1260,14 @@ function ProjectModal({ project, clients, companyId, onClose, onSave }: {
   );
 }
 
-function TaskModal({ task, projectId, companyId, teamMembers, onClose, onSave }: { 
+function TaskModal({ task, projectId, companyId, teamMembers, onClose, onSave, canViewFinancials = true }: { 
   task: Task | null;
   projectId: string;
   companyId: string;
   teamMembers: {staff_member_id: string; profile?: {id?: string; full_name?: string; avatar_url?: string}}[];
   onClose: () => void; 
   onSave: () => void;
+  canViewFinancials?: boolean;
 }) {
   const [name, setName] = useState(task?.name || '');
   const [description, setDescription] = useState(task?.description || '');
@@ -1351,7 +1351,7 @@ function TaskModal({ task, projectId, companyId, teamMembers, onClose, onSave }:
           </div>
           <div>
             <label className="block text-sm font-medium text-neutral-700 mb-1.5">Assignee</label>
-            <select value={assignedTo} onChange={(e) => setAssignedTo(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none">
+            <select value={assignedTo} onChange={(e) => setAssignedTo(e.target.value)} disabled={!canViewFinancials} className={`w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none ${!canViewFinancials ? 'bg-neutral-100 cursor-not-allowed opacity-60' : ''}`}>
               <option value="">Unassigned</option>
               {teamMembers.map(m => (
                 <option key={m.staff_member_id} value={m.staff_member_id}>{m.profile?.full_name || 'Unknown'}</option>
@@ -1368,26 +1368,28 @@ function TaskModal({ task, projectId, companyId, teamMembers, onClose, onSave }:
               <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
             </div>
           </div>
-          <div className="border-t border-neutral-100 pt-4 mt-4">
-            <h4 className="text-sm font-semibold text-neutral-900 mb-3">Time & Budget</h4>
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1.5">Estimated Hours</label>
-                <input type="number" step="0.5" value={estimatedHours} onChange={(e) => setEstimatedHours(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" placeholder="0" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1.5">Estimated Fees ($)</label>
-                <input type="number" step="0.01" value={estimatedFees} onChange={(e) => setEstimatedFees(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" placeholder="0.00" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1.5">Actual Fees ($)</label>
-                <input type="number" step="0.01" value={actualFees} onChange={(e) => setActualFees(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" placeholder="0.00" />
+          {canViewFinancials && (
+            <div className="border-t border-neutral-100 pt-4 mt-4">
+              <h4 className="text-sm font-semibold text-neutral-900 mb-3">Time & Budget</h4>
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1.5">Estimated Hours</label>
+                  <input type="number" step="0.5" value={estimatedHours} onChange={(e) => setEstimatedHours(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" placeholder="0" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1.5">Estimated Fees ($)</label>
+                  <input type="number" step="0.01" value={estimatedFees} onChange={(e) => setEstimatedFees(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" placeholder="0.00" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1.5">Actual Fees ($)</label>
+                  <input type="number" step="0.01" value={actualFees} onChange={(e) => setActualFees(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" placeholder="0.00" />
+                </div>
               </div>
             </div>
-          </div>
+          )}
           <div className="flex gap-3 pt-4">
             <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors">Cancel</button>
-            <button type="submit" disabled={saving} className="flex-1 px-4 py-2.5 bg-neutral-900-500 text-white rounded-xl hover:bg-neutral-800-600 transition-colors disabled:opacity-50">
+            <button type="submit" disabled={saving} className="flex-1 px-4 py-2.5 bg-neutral-900 text-white rounded-xl hover:bg-neutral-800 transition-colors disabled:opacity-50">
               {saving ? 'Saving...' : task ? 'Update Task' : 'Create Task'}
             </button>
           </div>
@@ -1397,10 +1399,186 @@ function TaskModal({ task, projectId, companyId, teamMembers, onClose, onSave }:
   );
 }
 
+// Project Vitals Tab Component
+function ProjectVitalsTab({ project, clients, onSave, canViewFinancials, formatCurrency }: {
+  project: Project;
+  clients: Client[];
+  onSave: (updates: Partial<Project>) => Promise<void>;
+  canViewFinancials: boolean;
+  formatCurrency: (amount?: number) => string;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editData, setEditData] = useState<Partial<Project>>({});
+
+  const startEdit = () => {
+    setEditing(true);
+    setEditData({
+      name: project.name,
+      description: project.description,
+      budget: project.budget,
+      start_date: project.start_date,
+      end_date: project.end_date,
+      status: project.status,
+      client_id: project.client_id,
+    });
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await onSave(editData);
+      setEditing(false);
+      alert('Project saved successfully!');
+    } catch (err) {
+      console.error('Failed to save project:', err);
+      alert('Failed to save project. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold text-neutral-900">Project Details</h3>
+        {editing ? (
+          <div className="flex items-center gap-2">
+            <button onClick={() => setEditing(false)} className="px-3 py-1.5 text-sm text-neutral-600 hover:bg-neutral-100 rounded-lg">Cancel</button>
+            <button onClick={handleSave} disabled={saving} className="px-3 py-1.5 text-sm bg-black text-white rounded-lg hover:bg-neutral-800 disabled:opacity-50">
+              {saving ? 'Saving...' : 'Save'}
+            </button>
+          </div>
+        ) : (
+          <button onClick={startEdit} className="flex items-center gap-2 px-3 py-1.5 text-sm text-neutral-600 hover:bg-neutral-100 rounded-lg">
+            <Edit2 className="w-4 h-4" /> Edit
+          </button>
+        )}
+      </div>
+
+      {editing ? (
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm text-neutral-600 mb-1">Project Name</label>
+              <input 
+                type="text" 
+                value={editData.name || ''} 
+                onChange={(e) => setEditData({...editData, name: e.target.value})} 
+                className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent" 
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-neutral-600 mb-1">Client</label>
+              <select 
+                value={editData.client_id || ''} 
+                onChange={(e) => setEditData({...editData, client_id: e.target.value})} 
+                className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+              >
+                <option value="">Select client...</option>
+                {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm text-neutral-600 mb-1">Description</label>
+            <textarea 
+              value={editData.description || ''} 
+              onChange={(e) => setEditData({...editData, description: e.target.value})} 
+              rows={3}
+              className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent" 
+            />
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {canViewFinancials && (
+              <div>
+                <label className="block text-sm text-neutral-600 mb-1">Budget</label>
+                <input 
+                  type="number" 
+                  value={editData.budget || ''} 
+                  onChange={(e) => setEditData({...editData, budget: parseFloat(e.target.value) || 0})} 
+                  className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent" 
+                />
+              </div>
+            )}
+            <div>
+              <label className="block text-sm text-neutral-600 mb-1">Start Date</label>
+              <input 
+                type="date" 
+                value={editData.start_date || ''} 
+                onChange={(e) => setEditData({...editData, start_date: e.target.value})} 
+                className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent" 
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-neutral-600 mb-1">End Date</label>
+              <input 
+                type="date" 
+                value={editData.end_date || ''} 
+                onChange={(e) => setEditData({...editData, end_date: e.target.value})} 
+                className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent" 
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-neutral-600 mb-1">Status</label>
+              <select 
+                value={editData.status || 'active'} 
+                onChange={(e) => setEditData({...editData, status: e.target.value})} 
+                className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+              >
+                <option value="active">Active</option>
+                <option value="on_hold">On Hold</option>
+                <option value="completed">Completed</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            {canViewFinancials && <div>
+              <p className="text-sm text-neutral-500 mb-1">Budget</p>
+              <p className="text-xl font-semibold text-neutral-900">{formatCurrency(project.budget)}</p>
+            </div>}
+            <div>
+              <p className="text-sm text-neutral-500 mb-1">Start Date</p>
+              <p className="text-xl font-semibold text-neutral-900">
+                {project.start_date ? new Date(project.start_date).toLocaleDateString() : '-'}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-neutral-500 mb-1">End Date</p>
+              <p className="text-xl font-semibold text-neutral-900">
+                {project.end_date ? new Date(project.end_date).toLocaleDateString() : '-'}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-neutral-500 mb-1">Status</p>
+              <p className="text-xl font-semibold text-neutral-900 capitalize">{project.status || 'active'}</p>
+            </div>
+          </div>
+          {project.description && (
+            <div>
+              <p className="text-sm text-neutral-500 mb-1">Description</p>
+              <p className="text-neutral-700">{project.description}</p>
+            </div>
+          )}
+          <div>
+            <p className="text-sm text-neutral-500 mb-1">Client</p>
+            <p className="text-neutral-700">{project.client?.name || clients.find(c => c.id === project.client_id)?.name || 'Not assigned'}</p>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 // Client Tab Component
-function ClientTabContent({ client, onClientUpdate }: {
+function ClientTabContent({ client, onClientUpdate, canViewFinancials = true }: {
   client?: Client;
   onClientUpdate: (client: Client) => Promise<void>;
+  canViewFinancials?: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [editData, setEditData] = useState<Partial<Client>>({});
@@ -1452,7 +1630,7 @@ function ClientTabContent({ client, onClientUpdate }: {
       {/* Header with Edit Menu */}
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold text-neutral-900">Client Information</h3>
-        {editing ? (
+        {canViewFinancials && (editing ? (
           <div className="flex items-center gap-2">
             <button onClick={() => setEditing(false)} className="px-3 py-1.5 text-sm text-neutral-600 hover:bg-neutral-100 rounded-lg">Cancel</button>
             <button onClick={saveEdit} disabled={saving} className="px-3 py-1.5 text-sm bg-black text-white rounded-lg hover:bg-neutral-800 disabled:opacity-50">{saving ? 'Saving...' : 'Save'}</button>
@@ -1470,7 +1648,7 @@ function ClientTabContent({ client, onClientUpdate }: {
               </div>
             )}
           </div>
-        )}
+        ))}
       </div>
 
       {/* Company Information */}
@@ -1546,6 +1724,7 @@ function ClientTabContent({ client, onClientUpdate }: {
       </div>
 
       {/* Primary Contact */}
+      {canViewFinancials && (
       <div className="border border-neutral-200 rounded-xl p-5">
         <h4 className="text-md font-semibold text-neutral-900 mb-4">Primary Contact</h4>
         {editing ? (
@@ -1592,8 +1771,10 @@ function ClientTabContent({ client, onClientUpdate }: {
           </div>
         )}
       </div>
+      )}
 
       {/* Billing Contact */}
+      {canViewFinancials && (
       <div className="border border-neutral-200 rounded-xl p-5">
         <h4 className="text-md font-semibold text-neutral-900 mb-4">Billing Contact</h4>
         {editing ? (
@@ -1640,18 +1821,20 @@ function ClientTabContent({ client, onClientUpdate }: {
           </div>
         )}
       </div>
+      )}
     </div>
   );
 }
 
 // Tasks Tab Component with BigTime-style layout
-function TasksTabContent({ tasks, projectId, companyId, onTasksChange, onEditTask, onAddTask }: {
+function TasksTabContent({ tasks, projectId, companyId, onTasksChange, onEditTask, onAddTask, canViewFinancials = true }: {
   tasks: Task[];
   projectId: string;
   companyId: string;
   onTasksChange: () => void;
   onEditTask: (task: Task) => void;
   onAddTask: () => void;
+  canViewFinancials?: boolean;
 }) {
   const [subTab, setSubTab] = useState<TaskSubTab>('overview');
   const [searchTerm, setSearchTerm] = useState('');
@@ -1787,10 +1970,12 @@ function TasksTabContent({ tasks, projectId, companyId, onTasksChange, onEditTas
             <div className="bg-neutral-100 rounded-lg p-4"><p className="text-sm text-blue-600">In Progress</p><p className="text-2xl font-bold text-blue-700">{taskStats.inProgress}</p></div>
             <div className="bg-neutral-100 rounded-lg p-4"><p className="text-sm text-neutral-900">Not Started</p><p className="text-2xl font-bold text-amber-700">{taskStats.notStarted}</p></div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="bg-white border border-neutral-200 rounded-lg p-4"><p className="text-sm text-neutral-500 mb-1">Total Estimated Hours</p><p className="text-xl font-semibold">{taskStats.totalHours}h</p></div>
-            <div className="bg-white border border-neutral-200 rounded-lg p-4"><p className="text-sm text-neutral-500 mb-1">Estimated Value</p><p className="text-xl font-semibold">${(taskStats.totalHours * 150).toLocaleString()}</p></div>
-          </div>
+          {canViewFinancials && (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-white border border-neutral-200 rounded-lg p-4"><p className="text-sm text-neutral-500 mb-1">Total Estimated Hours</p><p className="text-xl font-semibold">{taskStats.totalHours}h</p></div>
+              <div className="bg-white border border-neutral-200 rounded-lg p-4"><p className="text-sm text-neutral-500 mb-1">Estimated Value</p><p className="text-xl font-semibold">${(taskStats.totalHours * 150).toLocaleString()}</p></div>
+            </div>
+          )}
           <div>
             <div className="flex justify-between text-sm mb-2"><span className="text-neutral-600">Overall Progress</span><span className="font-medium">{taskStats.total > 0 ? Math.round((taskStats.completed / taskStats.total) * 100) : 0}%</span></div>
             <div className="w-full bg-neutral-200 rounded-full h-3"><div className="bg-neutral-1000 h-3 rounded-full transition-all" style={{ width: `${taskStats.total > 0 ? (taskStats.completed / taskStats.total) * 100 : 0}%` }} /></div>
@@ -1933,7 +2118,7 @@ function TasksTabContent({ tasks, projectId, companyId, onTasksChange, onEditTas
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3">
           <div className="relative">
-            <button onClick={() => setShowAddDropdown(!showAddDropdown)} className="flex items-center gap-1 px-4 py-2 bg-neutral-900-500 text-white text-sm font-medium rounded-lg hover:bg-neutral-800-600">
+            <button onClick={() => setShowAddDropdown(!showAddDropdown)} className="flex items-center gap-1 px-4 py-2 bg-neutral-900 text-white text-sm font-medium rounded-lg hover:bg-neutral-800">
               Add Task <ChevronDown className="w-4 h-4" />
             </button>
             {showAddDropdown && (
@@ -1968,7 +2153,7 @@ function TasksTabContent({ tasks, projectId, companyId, onTasksChange, onEditTas
         </div>
         <div className="flex items-center gap-2">
           <span className="text-sm text-neutral-600">AutoSave</span>
-          <button onClick={() => setAutoSave(!autoSave)} className={`relative w-12 h-6 rounded-full transition-colors ${autoSave ? 'bg-neutral-900-500' : 'bg-neutral-300'}`}>
+          <button onClick={() => setAutoSave(!autoSave)} className={`relative w-12 h-6 rounded-full transition-colors ${autoSave ? 'bg-neutral-900' : 'bg-neutral-300'}`}>
             <span className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${autoSave ? 'left-7' : 'left-1'}`} />
           </button>
           <span className={`text-xs font-medium ${autoSave ? 'text-neutral-900-600' : 'text-neutral-400'}`}>{autoSave ? 'ON' : 'OFF'}</span>
@@ -1982,19 +2167,19 @@ function TasksTabContent({ tasks, projectId, companyId, onTasksChange, onEditTas
             <tr>
               <th className="w-[44px] px-2"></th>
               <th className="text-left px-4 py-3 font-medium text-neutral-600 w-[280px]">Task</th>
-              <th className="text-right px-4 py-3 font-medium text-neutral-600 w-[100px]">Fees</th>
+              {canViewFinancials && <th className="text-right px-4 py-3 font-medium text-neutral-600 w-[100px]">Fees</th>}
               <th className="text-right px-4 py-3 font-medium text-neutral-600 w-[80px]">Qty</th>
               <th className="text-center px-4 py-3 font-medium text-neutral-600 w-[80px]">Unit</th>
               <th className="text-left px-4 py-3 font-medium text-neutral-600 w-[120px]">Due Date</th>
               <th className="text-left px-4 py-3 font-medium text-neutral-600 w-[140px]">Assignment</th>
-              <th className="text-right px-4 py-3 font-medium text-neutral-600 w-[100px]">Estimate</th>
+              {canViewFinancials && <th className="text-right px-4 py-3 font-medium text-neutral-600 w-[100px]">Estimate</th>}
               <th className="text-right px-4 py-3 font-medium text-neutral-600 w-[70px]">%</th>
               <th className="w-[50px]"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-neutral-100">
             {filteredTasks.map((task) => (
-              <TaskTableRow key={task.id} task={task} editingCell={editingCell} editValues={editValues} onStartEditing={startEditing} onEditChange={handleEditChange} onSaveEdit={saveEdit} menuOpen={menuOpen} setMenuOpen={setMenuOpen} onEdit={() => onEditTask(task)} onDelete={() => handleDeleteTask(task.id)} onAddSubTask={() => { setParentTaskId(task.id); setMenuOpen(null); }} teamMembers={filteredTeamMembers} onAssignmentChange={async (taskId, userId) => { try { await api.updateTask(taskId, { assigned_to: userId || null }); onTasksChange(); } catch(e) { console.error(e); } }} onStatusChange={async (taskId, status) => { try { await api.updateTask(taskId, { status, completion_percentage: status === 'completed' ? 100 : undefined }); onTasksChange(); } catch(e) { console.error(e); } }} onUnitChange={async (taskId, unit) => { try { await api.updateTask(taskId, { billing_unit: unit }); onTasksChange(); } catch(e) { console.error(e); } }} />
+              <TaskTableRow key={task.id} task={task} editingCell={editingCell} editValues={editValues} onStartEditing={startEditing} onEditChange={handleEditChange} onSaveEdit={saveEdit} menuOpen={menuOpen} setMenuOpen={setMenuOpen} onEdit={() => onEditTask(task)} onDelete={() => handleDeleteTask(task.id)} onAddSubTask={() => { setParentTaskId(task.id); setMenuOpen(null); }} teamMembers={filteredTeamMembers} onAssignmentChange={async (taskId, userId) => { try { await api.updateTask(taskId, { assigned_to: userId || null }); onTasksChange(); } catch(e) { console.error(e); } }} onStatusChange={async (taskId, status) => { try { await api.updateTask(taskId, { status, completion_percentage: status === 'completed' ? 100 : undefined }); onTasksChange(); } catch(e) { console.error(e); } }} onUnitChange={async (taskId, unit) => { try { await api.updateTask(taskId, { billing_unit: unit }); onTasksChange(); } catch(e) { console.error(e); } }} canViewFinancials={canViewFinancials} />
             ))}
             <tr className="bg-neutral-50/50">
               <td className="px-4 py-2" colSpan={9}>
@@ -2018,8 +2203,8 @@ function TasksTabContent({ tasks, projectId, companyId, onTasksChange, onEditTas
   );
 }
 
-function TaskTableRow({ task, editingCell, editValues, onStartEditing, onEditChange, onSaveEdit, menuOpen, setMenuOpen, onEdit, onDelete, onAddSubTask, teamMembers, onAssignmentChange, onStatusChange, onUnitChange }: {
-  task: Task; editingCell: { taskId: string; field: string } | null; editValues: Record<string, Record<string, string>>; onStartEditing: (taskId: string, field: string, value: string) => void; onEditChange: (taskId: string, field: string, value: string) => void; onSaveEdit: (taskId: string, field: string) => void; menuOpen: string | null; setMenuOpen: (id: string | null) => void; onEdit: () => void; onDelete: () => void; onAddSubTask: () => void; teamMembers: {id: string; full_name: string; avatar_url?: string; is_active?: boolean}[]; onAssignmentChange: (taskId: string, userId: string) => void; onStatusChange: (taskId: string, status: string) => void; onUnitChange: (taskId: string, unit: 'hours' | 'unit') => void;
+function TaskTableRow({ task, editingCell, editValues, onStartEditing, onEditChange, onSaveEdit, menuOpen, setMenuOpen, onEdit, onDelete, onAddSubTask, teamMembers, onAssignmentChange, onStatusChange, onUnitChange, canViewFinancials = true }: {
+  task: Task; editingCell: { taskId: string; field: string } | null; editValues: Record<string, Record<string, string>>; onStartEditing: (taskId: string, field: string, value: string) => void; onEditChange: (taskId: string, field: string, value: string) => void; onSaveEdit: (taskId: string, field: string) => void; menuOpen: string | null; setMenuOpen: (id: string | null) => void; onEdit: () => void; onDelete: () => void; onAddSubTask: () => void; teamMembers: {id: string; full_name: string; avatar_url?: string; is_active?: boolean}[]; onAssignmentChange: (taskId: string, userId: string) => void; onStatusChange: (taskId: string, status: string) => void; onUnitChange: (taskId: string, unit: 'hours' | 'unit') => void; canViewFinancials?: boolean;
 }) {
   const isEditing = (field: string) => editingCell?.taskId === task.id && editingCell?.field === field;
   const getValue = (field: string, defaultValue: string) => editValues[task.id]?.[field] ?? defaultValue;
@@ -2050,13 +2235,15 @@ function TaskTableRow({ task, editingCell, editValues, onStartEditing, onEditCha
           <span className={`font-medium ${isCompleted ? 'line-through text-neutral-400' : 'text-neutral-900'}`}>{task.name}</span>
         </div>
       </td>
-      <td className="px-4 py-2 text-right">
-        {isEditing('fees') ? (
-          <input type="number" value={getValue('fees', task.estimated_fees?.toString() || '0')} onChange={(e) => onEditChange(task.id, 'fees', e.target.value)} onBlur={() => onSaveEdit(task.id, 'fees')} onKeyDown={(e) => e.key === 'Enter' && onSaveEdit(task.id, 'fees')} className="w-full px-2 py-1 text-right text-sm border border-neutral-900-300 rounded outline-none" autoFocus />
-        ) : (
-          <span onClick={() => onStartEditing(task.id, 'fees', task.estimated_fees?.toString() || '0')} className="cursor-pointer hover:bg-neutral-100 px-2 py-1 rounded inline-block">{formatCurrency(task.estimated_fees)}</span>
-        )}
-      </td>
+      {canViewFinancials && (
+        <td className="px-4 py-2 text-right">
+          {isEditing('fees') ? (
+            <input type="number" value={getValue('fees', task.estimated_fees?.toString() || '0')} onChange={(e) => onEditChange(task.id, 'fees', e.target.value)} onBlur={() => onSaveEdit(task.id, 'fees')} onKeyDown={(e) => e.key === 'Enter' && onSaveEdit(task.id, 'fees')} className="w-full px-2 py-1 text-right text-sm border border-neutral-900-300 rounded outline-none" autoFocus />
+          ) : (
+            <span onClick={() => onStartEditing(task.id, 'fees', task.estimated_fees?.toString() || '0')} className="cursor-pointer hover:bg-neutral-100 px-2 py-1 rounded inline-block">{formatCurrency(task.estimated_fees)}</span>
+          )}
+        </td>
+      )}
       <td className="px-4 py-2 text-right">
         {isEditing('hours') ? (
           <input type="number" value={getValue('hours', task.estimated_hours?.toString() || '0')} onChange={(e) => onEditChange(task.id, 'hours', e.target.value)} onBlur={() => onSaveEdit(task.id, 'hours')} onKeyDown={(e) => e.key === 'Enter' && onSaveEdit(task.id, 'hours')} className="w-full px-2 py-1 text-right text-sm border border-neutral-900-300 rounded outline-none" autoFocus />
@@ -2103,9 +2290,10 @@ function TaskTableRow({ task, editingCell, editValues, onStartEditing, onEditCha
                 )}
               </div>
               <select 
-                className="absolute inset-0 opacity-0 cursor-pointer w-full" 
+                className={`absolute inset-0 w-full ${canViewFinancials ? 'opacity-0 cursor-pointer' : 'opacity-0 pointer-events-none'}`}
                 value={task.assigned_to || ''} 
                 onChange={(e) => onAssignmentChange(task.id, e.target.value)}
+                disabled={!canViewFinancials}
               >
                 <option value="">Unassigned</option>
                 {teamMembers.map(member => <option key={member.id} value={member.id}>{member.full_name}</option>)}
@@ -2114,7 +2302,7 @@ function TaskTableRow({ task, editingCell, editValues, onStartEditing, onEditCha
           );
         })()}
       </td>
-      <td className="px-4 py-2 text-right text-neutral-600">{formatCurrency(estimate)}</td>
+      {canViewFinancials && <td className="px-4 py-2 text-right text-neutral-600">{formatCurrency(estimate)}</td>}
       <td className="px-4 py-2 text-right">
         {isEditing('percent') ? (
           <input type="number" min="0" max="100" value={getValue('percent', (task.completion_percentage || 0).toString())} onChange={(e) => onEditChange(task.id, 'percent', e.target.value)} onBlur={() => onSaveEdit(task.id, 'percent')} onKeyDown={(e) => e.key === 'Enter' && onSaveEdit(task.id, 'percent')} className="w-16 px-2 py-1 text-right text-sm border border-neutral-900-300 rounded outline-none" autoFocus />
@@ -2206,10 +2394,15 @@ function ProjectInvoiceModal({ project, tasks, timeEntries, expenses, companyId,
           return sum + (totalBudget * pctToBill) / 100;
         }, 0);
     } else {
-      // Standard item-based billing
+      // Standard item-based billing - use remaining amount
       return tasks
         .filter(t => selectedTasks.has(t.id))
-        .reduce((sum, t) => sum + (t.estimated_fees || 0), 0);
+        .reduce((sum, t) => {
+          const totalBudget = t.total_budget || t.estimated_fees || 0;
+          const billedPct = t.billed_percentage || 0;
+          const remainingAmt = (totalBudget * (100 - billedPct)) / 100;
+          return sum + remainingAmt;
+        }, 0);
     }
   }, [billingType, selectedTasks, taskPercentages, tasks]);
 
@@ -2481,7 +2674,7 @@ function ProjectInvoiceModal({ project, tasks, timeEntries, expenses, companyId,
             </button>
             <button
               onClick={() => navigate('/invoicing')}
-              className="flex-1 px-4 py-2.5 bg-neutral-900-500 text-white rounded-xl hover:bg-neutral-800-600 transition-colors flex items-center justify-center gap-2"
+              className="flex-1 px-4 py-2.5 bg-neutral-900 text-white rounded-xl hover:bg-neutral-800 transition-colors flex items-center justify-center gap-2"
             >
               <ExternalLink className="w-4 h-4" /> View Invoice
             </button>
@@ -2613,31 +2806,72 @@ function ProjectInvoiceModal({ project, tasks, timeEntries, expenses, companyId,
                       
                       {/* Show different info based on billing type */}
                       {billingType === 'items' ? (
-                        <span className="font-medium text-neutral-700">{formatCurrency(task.estimated_fees || 0)}</span>
+                        <div className="text-right">
+                          <span className="font-medium text-neutral-700">{formatCurrency(remainingAmt)}</span>
+                          {billedPct > 0 && (
+                            <p className="text-xs text-neutral-500">{remainingPct}% remaining</p>
+                          )}
+                        </div>
                       ) : billingType === 'milestone' ? (
                         <div className="text-right">
                           <p className="font-medium text-neutral-700">{formatCurrency(remainingAmt)}</p>
                           <p className="text-xs text-neutral-500">{remainingPct}% remaining</p>
                         </div>
                       ) : (
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-3">
+                          {/* Prior billing info */}
+                          <div className="text-right text-xs">
+                            <p className="text-neutral-400">Prior</p>
+                            <p className="font-medium text-neutral-600">{formatCurrency((totalBudget * billedPct) / 100)}</p>
+                            <p className="text-neutral-400">{billedPct}%</p>
+                          </div>
                           {isSelected && !isFullyBilled && (
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-1 bg-neutral-100 rounded-lg p-1">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const current = taskPercentages.get(task.id) || 10;
+                                  if (current > 5) updateTaskPercentage(task.id, current - 5);
+                                }}
+                                className="w-7 h-7 flex items-center justify-center text-neutral-600 hover:bg-neutral-200 rounded"
+                              >
+                                -
+                              </button>
                               <input
-                                type="number"
-                                min="1"
-                                max={remainingPct}
+                                type="text"
+                                inputMode="numeric"
+                                pattern="[0-9]*"
                                 value={taskPercentages.get(task.id) || 10}
-                                onChange={(e) => updateTaskPercentage(task.id, parseFloat(e.target.value) || 0)}
+                                onChange={(e) => {
+                                  const val = parseInt(e.target.value) || 0;
+                                  if (val >= 0 && val <= remainingPct) {
+                                    updateTaskPercentage(task.id, val);
+                                  }
+                                }}
                                 onClick={(e) => e.stopPropagation()}
-                                className="w-14 px-2 py-1 text-sm border border-neutral-200 rounded text-center"
+                                onFocus={(e) => e.target.select()}
+                                className="w-12 px-1 py-1 text-sm border-0 bg-white rounded text-center font-medium"
                               />
-                              <span className="text-xs text-neutral-500">%</span>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const current = taskPercentages.get(task.id) || 10;
+                                  if (current + 5 <= remainingPct) updateTaskPercentage(task.id, current + 5);
+                                }}
+                                className="w-7 h-7 flex items-center justify-center text-neutral-600 hover:bg-neutral-200 rounded"
+                              >
+                                +
+                              </button>
+                              <span className="text-xs text-neutral-500 ml-1">%</span>
                             </div>
                           )}
-                          <div className="text-right min-w-[80px]">
-                            <p className="font-medium text-neutral-700">{formatCurrency(totalBudget)}</p>
-                            <p className="text-xs text-neutral-500">{isSelected ? remainingPct - (taskPercentages.get(task.id) || 0) : remainingPct}% left</p>
+                          {/* Current billing info */}
+                          <div className="text-right min-w-[70px] text-xs">
+                            <p className="text-neutral-400">Current</p>
+                            <p className="font-medium text-green-600">{formatCurrency((totalBudget * (taskPercentages.get(task.id) || 0)) / 100)}</p>
+                            <p className="text-green-600">{taskPercentages.get(task.id) || 0}%</p>
                           </div>
                         </div>
                       )}
@@ -2767,6 +3001,38 @@ function ProjectInvoiceModal({ project, tasks, timeEntries, expenses, companyId,
             />
           </div>
 
+          {/* Billing Summary for Percentage Type */}
+          {billingType === 'percentage' && selectedTasks.size > 0 && (
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-2">
+              <h4 className="font-medium text-blue-900 mb-2">Billing Summary</h4>
+              <div className="flex justify-between text-sm">
+                <span className="text-blue-700">Prior Billed (Total)</span>
+                <span className="font-medium text-blue-900">
+                  {formatCurrency(tasks.filter(t => selectedTasks.has(t.id)).reduce((sum, t) => {
+                    const totalBudget = t.total_budget || t.estimated_fees || 0;
+                    const billedPct = t.billed_percentage || 0;
+                    return sum + (totalBudget * billedPct) / 100;
+                  }, 0))}
+                </span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-green-700">Current Invoice</span>
+                <span className="font-medium text-green-700">{formatCurrency(taskFeesTotal)}</span>
+              </div>
+              <div className="flex justify-between text-sm pt-2 border-t border-blue-200">
+                <span className="text-blue-700">After This Invoice</span>
+                <span className="font-medium text-blue-900">
+                  {formatCurrency(tasks.filter(t => selectedTasks.has(t.id)).reduce((sum, t) => {
+                    const totalBudget = t.total_budget || t.estimated_fees || 0;
+                    const billedPct = t.billed_percentage || 0;
+                    const currentPct = taskPercentages.get(t.id) || 0;
+                    return sum + (totalBudget * (billedPct + currentPct)) / 100;
+                  }, 0))}
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* Total Summary */}
           <div className="bg-neutral-900 text-white rounded-xl p-4 space-y-2">
             <div className="flex justify-between text-sm">
@@ -2797,7 +3063,7 @@ function ProjectInvoiceModal({ project, tasks, timeEntries, expenses, companyId,
             <button
               onClick={handleSubmit}
               disabled={saving || total <= 0}
-              className="flex-1 px-4 py-2.5 bg-neutral-900-500 text-white rounded-xl hover:bg-neutral-800-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-4 py-2.5 bg-neutral-900 text-white rounded-xl hover:bg-neutral-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {saving ? 'Creating...' : 'Create Invoice'}
             </button>
@@ -2932,12 +3198,12 @@ function InlineBillingInvoiceView({
 }) {
   const [activeSubTab, setActiveSubTab] = useState<'preview' | 'detail' | 'time' | 'expenses'>('preview');
   const [calculatorType, setCalculatorType] = useState(invoice.calculator_type || 'time_material');
-  const [lineItems, setLineItems] = useState<{id: string; description: string; quantity: number; rate: number; amount: number; unit?: string}[]>([]);
+  const [lineItems, setLineItems] = useState<{id: string; description: string; quantity: number; rate: number; amount: number; unit?: string; taskId?: string; taskBudget?: number; billedPct?: number; priorBilledPct?: number}[]>([]);
   const [saving, setSaving] = useState(false);
   const [invoiceNumber, setInvoiceNumber] = useState(invoice.invoice_number || '');
   const [terms, setTerms] = useState('Net 30');
   const [status, setStatus] = useState(invoice.status || 'draft');
-  const [sentDate, setSentDate] = useState('');
+  const [sentDate, setSentDate] = useState(invoice.sent_date || '');
   const [dueDate, setDueDate] = useState(invoice.due_date || '');
   const [notes, setNotes] = useState('');
 
@@ -2974,15 +3240,55 @@ function InlineBillingInvoiceView({
           .eq('invoice_id', invoice.id);
         
         if (savedLineItems && savedLineItems.length > 0) {
-          // Use the saved line items with actual billed amounts
-          const items = savedLineItems.map(item => ({
-            id: item.id,
-            description: item.description || 'Service',
-            quantity: item.quantity || 1,
-            rate: item.unit_price || item.amount || 0,
-            amount: item.amount || 0,
-            unit: item.unit || 'unit'
-          }));
+          // Get task budgets
+          let taskBudgetMap: Record<string, number> = {};
+          if (invoice.project_id) {
+            const { data: taskData } = await supabase
+              .from('tasks')
+              .select('id, total_budget, estimated_fees')
+              .eq('project_id', invoice.project_id);
+            if (taskData) {
+              taskBudgetMap = Object.fromEntries(taskData.map(t => [t.id, t.total_budget || t.estimated_fees || 0]));
+            }
+          }
+          
+          // Get prior billing from invoices created BEFORE this one
+          const priorBilledMap: Record<string, number> = {};
+          if (invoice.project_id && invoice.created_at) {
+            const { data: priorLineItems } = await supabase
+              .from('invoice_line_items')
+              .select('task_id, billed_percentage, invoice_id, invoices!inner(created_at, project_id)')
+              .eq('invoices.project_id', invoice.project_id)
+              .lt('invoices.created_at', invoice.created_at)
+              .not('task_id', 'is', null);
+            
+            if (priorLineItems) {
+              priorLineItems.forEach((item: any) => {
+                if (item.task_id && item.billed_percentage) {
+                  priorBilledMap[item.task_id] = (priorBilledMap[item.task_id] || 0) + Number(item.billed_percentage);
+                }
+              });
+            }
+          }
+          
+          // Use the saved line items with correct prior billing
+          const items = savedLineItems.map(item => {
+            const taskBudget = item.task_id ? taskBudgetMap[item.task_id] || item.amount : item.amount;
+            const currentPct = item.billed_percentage || (taskBudget > 0 ? (item.amount / taskBudget) * 100 : 0);
+            const priorPct = item.task_id ? (priorBilledMap[item.task_id] || 0) : 0;
+            return {
+              id: item.id,
+              description: item.description || 'Service',
+              quantity: item.quantity || 1,
+              rate: item.unit_price || item.amount || 0,
+              amount: item.amount || 0,
+              unit: item.unit || 'unit',
+              taskId: item.task_id,
+              taskBudget: taskBudget,
+              billedPct: Math.round(currentPct),
+              priorBilledPct: Math.round(priorPct)
+            };
+          });
           setLineItems(items);
           return;
         }
@@ -3085,14 +3391,18 @@ function InlineBillingInvoiceView({
     setSaving(true);
     try {
       await api.updateInvoice(invoice.id, {
+        invoice_number: invoiceNumber,
         subtotal,
         total: subtotal + taxAmount,
         due_date: dueDate || null,
+        sent_date: sentDate || null,
         status,
       });
       onUpdate();
+      alert('Invoice saved successfully!');
     } catch (err) {
       console.error('Failed to save invoice:', err);
+      alert('Failed to save invoice. Please try again.');
     }
     setSaving(false);
   };
@@ -3123,7 +3433,7 @@ function InlineBillingInvoiceView({
           <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(status)}`}>
             {status}
           </span>
-          <button onClick={handleSave} disabled={saving} className="px-4 py-2 bg-neutral-900-500 text-white text-sm rounded-lg hover:bg-neutral-800-600 disabled:opacity-50">
+          <button onClick={handleSave} disabled={saving} className="px-4 py-2 bg-neutral-900 text-white text-sm rounded-lg hover:bg-neutral-800 disabled:opacity-50">
             {saving ? 'Saving...' : 'Save'}
           </button>
         </div>
@@ -3207,75 +3517,164 @@ function InlineBillingInvoiceView({
                   <p className="text-neutral-500">Period: {new Date(invoice.created_at || '').toLocaleDateString()}</p>
                 </div>
               ) : calculatorType === 'milestone' ? (
-                /* Milestone Calculator - Clean minimalist view */
+                /* Milestone Calculator - Use lineItems with correct prior/current billing */
                 <>
                   <h4 className="font-semibold text-neutral-900 mb-4 text-lg">Milestone Billing</h4>
                   <table className="w-full">
                     <thead>
                       <tr className="text-left text-neutral-500 text-sm border-b border-neutral-200">
                         <th className="pb-3 font-medium">Task</th>
-                        <th className="pb-3 font-medium text-center w-24">Billed</th>
-                        <th className="pb-3 font-medium text-right w-32">Budget</th>
-                        <th className="pb-3 font-medium text-right w-32">Amount</th>
+                        <th className="pb-3 font-medium text-center w-24">Prior</th>
+                        <th className="pb-3 font-medium text-center w-24">Current</th>
+                        <th className="pb-3 font-medium text-right w-28">Budget</th>
+                        <th className="pb-3 font-medium text-right w-28">Amount</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-neutral-100">
-                      {tasks.map(task => {
-                        const totalBudget = task.total_budget || task.estimated_fees || 0;
-                        const billedPct = task.billed_percentage || 0;
-                        const billedAmt = task.billed_amount || 0;
+                      {lineItems.filter(item => item.taskId).map(item => {
+                        const budget = item.taskBudget || item.amount;
+                        const priorAmt = (budget * (item.priorBilledPct || 0)) / 100;
+                        const currentAmt = item.amount;
                         return (
-                          <tr key={task.id}>
-                            <td className="py-3">{task.name}</td>
+                          <tr key={item.id}>
+                            <td className="py-3">{item.description}</td>
                             <td className="py-3 text-center">
-                              <span className="inline-flex items-center justify-center w-12 h-6 bg-neutral-100 rounded text-xs font-medium text-neutral-700">
-                                {billedPct}%
-                              </span>
+                              <div className="text-xs">
+                                <span className="inline-flex items-center justify-center w-14 h-5 bg-neutral-100 rounded font-medium text-neutral-600">
+                                  {item.priorBilledPct || 0}%
+                                </span>
+                                <p className="text-neutral-500 mt-0.5">{formatCurrency(priorAmt)}</p>
+                              </div>
                             </td>
-                            <td className="py-3 text-right text-neutral-500">{formatCurrency(totalBudget)}</td>
-                            <td className="py-3 text-right font-medium">{formatCurrency(billedAmt)}</td>
+                            <td className="py-3 text-center">
+                              <div className="text-xs">
+                                <span className="inline-flex items-center justify-center w-14 h-5 bg-green-100 rounded font-medium text-green-700">
+                                  {item.billedPct || 0}%
+                                </span>
+                                <p className="text-green-600 mt-0.5">{formatCurrency(currentAmt)}</p>
+                              </div>
+                            </td>
+                            <td className="py-3 text-right text-neutral-500">{formatCurrency(budget)}</td>
+                            <td className="py-3 text-right font-medium">{formatCurrency(currentAmt)}</td>
                           </tr>
                         );
                       })}
+                      {/* Show non-task line items (time entries etc) */}
+                      {lineItems.filter(item => !item.taskId).map(item => (
+                        <tr key={item.id}>
+                          <td className="py-3">{item.description}</td>
+                          <td className="py-3 text-center text-neutral-400">-</td>
+                          <td className="py-3 text-center text-neutral-400">-</td>
+                          <td className="py-3 text-right text-neutral-400">-</td>
+                          <td className="py-3 text-right font-medium">{formatCurrency(item.amount)}</td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
+                  {/* Billing Summary */}
+                  <div className="mt-4 pt-4 border-t border-neutral-100 bg-blue-50 rounded-lg p-4">
+                    <div className="grid grid-cols-3 gap-4 text-sm">
+                      <div>
+                        <p className="text-neutral-500 mb-1">Prior Billed</p>
+                        <p className="font-medium text-neutral-700">
+                          {formatCurrency(lineItems.filter(i => i.taskId).reduce((sum, i) => sum + ((i.taskBudget || i.amount) * (i.priorBilledPct || 0)) / 100, 0))}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-green-600 mb-1">This Invoice</p>
+                        <p className="font-medium text-green-700">{formatCurrency(subtotal)}</p>
+                      </div>
+                      <div>
+                        <p className="text-neutral-500 mb-1">Total After</p>
+                        <p className="font-medium text-neutral-900">
+                          {formatCurrency(lineItems.filter(i => i.taskId).reduce((sum, i) => {
+                            const budget = i.taskBudget || i.amount;
+                            return sum + (budget * ((i.priorBilledPct || 0) + (i.billedPct || 0))) / 100;
+                          }, 0))}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 </>
               ) : calculatorType === 'percentage' ? (
-                /* Percentage Calculator - Clean minimalist view */
+                /* Percentage Calculator - Use lineItems with correct prior/current billing */
                 <>
                   <h4 className="font-semibold text-neutral-900 mb-4 text-lg">Percentage Billing</h4>
                   <table className="w-full">
                     <thead>
                       <tr className="text-left text-neutral-500 text-sm border-b border-neutral-200">
                         <th className="pb-3 font-medium">Task</th>
-                        <th className="pb-3 font-medium text-center w-20">Billed</th>
+                        <th className="pb-3 font-medium text-center w-24">Prior</th>
+                        <th className="pb-3 font-medium text-center w-24">Current</th>
                         <th className="pb-3 font-medium text-right w-28">Budget</th>
                         <th className="pb-3 font-medium text-right w-28">Amount</th>
-                        <th className="pb-3 font-medium text-right w-28">Remaining</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-neutral-100">
-                      {tasks.map(task => {
-                        const totalBudget = task.total_budget || task.estimated_fees || 0;
-                        const billedPct = task.billed_percentage || 0;
-                        const billedAmt = (totalBudget * billedPct) / 100;
-                        const remainingAmt = totalBudget - billedAmt;
+                      {lineItems.filter(item => item.taskId).map(item => {
+                        const budget = item.taskBudget || item.amount;
+                        const priorAmt = (budget * (item.priorBilledPct || 0)) / 100;
+                        const currentAmt = item.amount;
                         return (
-                          <tr key={task.id}>
-                            <td className="py-3">{task.name}</td>
+                          <tr key={item.id}>
+                            <td className="py-3">{item.description}</td>
                             <td className="py-3 text-center">
-                              <span className="inline-flex items-center justify-center w-12 h-6 bg-neutral-100 rounded text-xs font-medium text-neutral-700">
-                                {billedPct}%
-                              </span>
+                              <div className="text-xs">
+                                <span className="inline-flex items-center justify-center w-14 h-5 bg-neutral-100 rounded font-medium text-neutral-600">
+                                  {item.priorBilledPct || 0}%
+                                </span>
+                                <p className="text-neutral-500 mt-0.5">{formatCurrency(priorAmt)}</p>
+                              </div>
                             </td>
-                            <td className="py-3 text-right text-neutral-500">{formatCurrency(totalBudget)}</td>
-                            <td className="py-3 text-right font-medium">{formatCurrency(billedAmt)}</td>
-                            <td className="py-3 text-right text-neutral-500">{formatCurrency(remainingAmt)}</td>
+                            <td className="py-3 text-center">
+                              <div className="text-xs">
+                                <span className="inline-flex items-center justify-center w-14 h-5 bg-green-100 rounded font-medium text-green-700">
+                                  {item.billedPct || 0}%
+                                </span>
+                                <p className="text-green-600 mt-0.5">{formatCurrency(currentAmt)}</p>
+                              </div>
+                            </td>
+                            <td className="py-3 text-right text-neutral-500">{formatCurrency(budget)}</td>
+                            <td className="py-3 text-right font-medium">{formatCurrency(currentAmt)}</td>
                           </tr>
                         );
                       })}
+                      {/* Show non-task line items (time entries etc) */}
+                      {lineItems.filter(item => !item.taskId).map(item => (
+                        <tr key={item.id}>
+                          <td className="py-3">{item.description}</td>
+                          <td className="py-3 text-center text-neutral-400">-</td>
+                          <td className="py-3 text-center text-neutral-400">-</td>
+                          <td className="py-3 text-right text-neutral-400">-</td>
+                          <td className="py-3 text-right font-medium">{formatCurrency(item.amount)}</td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
+                  {/* Billing Summary */}
+                  <div className="mt-4 pt-4 border-t border-neutral-100 bg-blue-50 rounded-lg p-4">
+                    <div className="grid grid-cols-3 gap-4 text-sm">
+                      <div>
+                        <p className="text-neutral-500 mb-1">Prior Billed</p>
+                        <p className="font-medium text-neutral-700">
+                          {formatCurrency(lineItems.filter(i => i.taskId).reduce((sum, i) => sum + ((i.taskBudget || i.amount) * (i.priorBilledPct || 0)) / 100, 0))}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-green-600 mb-1">This Invoice</p>
+                        <p className="font-medium text-green-700">{formatCurrency(subtotal)}</p>
+                      </div>
+                      <div>
+                        <p className="text-neutral-500 mb-1">Total After</p>
+                        <p className="font-medium text-neutral-900">
+                          {formatCurrency(lineItems.filter(i => i.taskId).reduce((sum, i) => {
+                            const budget = i.taskBudget || i.amount;
+                            return sum + (budget * ((i.priorBilledPct || 0) + (i.billedPct || 0))) / 100;
+                          }, 0))}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 </>
               ) : calculatorType === 'time_material' ? (
                 /* Time & Material - Detailed breakdown with hours */
@@ -3425,7 +3824,7 @@ function InlineBillingInvoiceView({
               </table>
             </div>
 
-            <button onClick={addLineItem} className="flex items-center gap-2 px-3 py-1.5 bg-neutral-900-500 text-white text-sm rounded-lg hover:bg-neutral-800-600">
+            <button onClick={addLineItem} className="flex items-center gap-2 px-3 py-1.5 bg-neutral-900 text-white text-sm rounded-lg hover:bg-neutral-800">
               <Plus className="w-4 h-4" /> Add Line Item
             </button>
 
@@ -3563,6 +3962,15 @@ function InlineBillingInvoiceView({
                 </label>
               </div>
             </div>
+
+            {/* Save Button */}
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="w-full py-2.5 bg-neutral-900 text-white rounded-lg font-medium hover:bg-neutral-800 disabled:opacity-50 transition-colors"
+            >
+              {saving ? 'Saving...' : 'Save Changes'}
+            </button>
           </div>
         </div>
       )}
@@ -3759,6 +4167,7 @@ function ProjectDetailsTab({
         salesforce_link: formData.salesforce_link || null,
       };
       await onUpdate(cleanedData);
+      alert('Project details saved successfully!');
     } catch (error) {
       console.error('Failed to save:', error);
       alert('Failed to save changes. Please try again.');
@@ -3795,7 +4204,7 @@ function ProjectDetailsTab({
         <button
           onClick={handleSave}
           disabled={saving}
-          className="px-4 py-2 bg-neutral-900-500 text-white rounded-lg hover:bg-neutral-800-600 disabled:opacity-50"
+          className="px-4 py-2 bg-neutral-900 text-white rounded-lg hover:bg-neutral-800 disabled:opacity-50"
         >
           {saving ? 'Saving...' : 'Save Changes'}
         </button>

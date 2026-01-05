@@ -1,5 +1,5 @@
-import { useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useRef, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { motion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
@@ -10,11 +10,25 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { signIn, signUp, signInWithGoogle, signInWithApple, signInWithFacebook } = useAuth();
   
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
   const fullNameRef = useRef<HTMLInputElement>(null);
+
+  // Check for invitation params in URL
+  useEffect(() => {
+    const emailParam = searchParams.get('email');
+    const signupParam = searchParams.get('signup');
+    
+    if (emailParam && emailRef.current) {
+      emailRef.current.value = emailParam;
+    }
+    if (signupParam === 'true') {
+      setIsSignUp(true);
+    }
+  }, [searchParams]);
 
   const handleSubmit = async () => {
     const email = emailRef.current?.value || '';

@@ -2,9 +2,155 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { usePermissions } from '../contexts/PermissionsContext';
 import { api, Project, Task, TimeEntry, Expense } from '../lib/api';
-import { Plus, ChevronLeft, ChevronRight, Clock, Receipt, Trash2, X, Edit2, Play, Pause, Square, Copy, Paperclip, Upload, CheckCircle, XCircle, AlertCircle, Send, Save } from 'lucide-react';
+import { Plus, ChevronLeft, ChevronRight, Clock, Receipt, Trash2, X, Edit2, Play, Pause, Square, Copy, Paperclip, Upload, CheckCircle, XCircle, AlertCircle, Send, Save, Calendar, ChevronDown } from 'lucide-react';
 
-type TimeTab = 'timesheet' | 'expenses' | 'approvals';
+type TimeTab = 'timesheet' | 'expenses' | 'approvals' | 'approved';
+type DatePreset = 'this_week' | 'last_week' | 'this_month' | 'last_month' | 'this_year' | 'custom';
+
+// Date Range Picker Component
+function DateRangePicker({ 
+  startDate, 
+  endDate, 
+  onDateChange 
+}: { 
+  startDate: string; 
+  endDate: string; 
+  onDateChange: (start: string, end: string) => void;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [preset, setPreset] = useState<DatePreset>('this_month');
+  const [customStart, setCustomStart] = useState(startDate);
+  const [customEnd, setCustomEnd] = useState(endDate);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const applyPreset = (p: DatePreset) => {
+    const now = new Date();
+    let start: Date, end: Date;
+    
+    switch (p) {
+      case 'this_week':
+        start = new Date(now);
+        start.setDate(now.getDate() - now.getDay());
+        end = new Date(start);
+        end.setDate(start.getDate() + 6);
+        break;
+      case 'last_week':
+        start = new Date(now);
+        start.setDate(now.getDate() - now.getDay() - 7);
+        end = new Date(start);
+        end.setDate(start.getDate() + 6);
+        break;
+      case 'this_month':
+        start = new Date(now.getFullYear(), now.getMonth(), 1);
+        end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        break;
+      case 'last_month':
+        start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        end = new Date(now.getFullYear(), now.getMonth(), 0);
+        break;
+      case 'this_year':
+        start = new Date(now.getFullYear(), 0, 1);
+        end = new Date(now.getFullYear(), 11, 31);
+        break;
+      default:
+        return;
+    }
+    
+    const startStr = start.toISOString().split('T')[0];
+    const endStr = end.toISOString().split('T')[0];
+    setPreset(p);
+    setCustomStart(startStr);
+    setCustomEnd(endStr);
+    onDateChange(startStr, endStr);
+    setIsOpen(false);
+  };
+
+  const applyCustom = () => {
+    setPreset('custom');
+    onDateChange(customStart, customEnd);
+    setIsOpen(false);
+  };
+
+  const presetLabels: Record<DatePreset, string> = {
+    this_week: 'This Week',
+    last_week: 'Last Week',
+    this_month: 'This Month',
+    last_month: 'Last Month',
+    this_year: 'This Year',
+    custom: 'Custom Range'
+  };
+
+  const formatDisplayDate = (dateStr: string) => {
+    return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center gap-2 px-4 py-2 bg-white border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors"
+      >
+        <Calendar className="w-4 h-4 text-neutral-500" />
+        <span className="text-sm font-medium text-neutral-700">
+          {formatDisplayDate(startDate)} - {formatDisplayDate(endDate)}
+        </span>
+        <ChevronDown className={`w-4 h-4 text-neutral-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+      
+      {isOpen && (
+        <div className="absolute top-full left-0 mt-2 w-72 bg-white rounded-xl shadow-lg border border-neutral-200 z-50 overflow-hidden">
+          <div className="p-2 border-b border-neutral-100">
+            <p className="text-xs font-medium text-neutral-500 uppercase px-2 py-1">Quick Select</p>
+            {(['this_week', 'last_week', 'this_month', 'last_month', 'this_year'] as DatePreset[]).map((p) => (
+              <button
+                key={p}
+                onClick={() => applyPreset(p)}
+                className={`w-full text-left px-3 py-2 text-sm rounded-lg transition-colors ${
+                  preset === p ? 'bg-neutral-900 text-white' : 'hover:bg-neutral-100 text-neutral-700'
+                }`}
+              >
+                {presetLabels[p]}
+              </button>
+            ))}
+          </div>
+          <div className="p-3">
+            <p className="text-xs font-medium text-neutral-500 uppercase mb-2">Custom Range</p>
+            <div className="flex gap-2 mb-3">
+              <input
+                type="date"
+                value={customStart}
+                onChange={(e) => setCustomStart(e.target.value)}
+                className="flex-1 px-3 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-neutral-900"
+              />
+              <input
+                type="date"
+                value={customEnd}
+                onChange={(e) => setCustomEnd(e.target.value)}
+                className="flex-1 px-3 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-neutral-900"
+              />
+            </div>
+            <button
+              onClick={applyCustom}
+              className="w-full px-3 py-2 bg-neutral-900 text-white text-sm font-medium rounded-lg hover:bg-neutral-800 transition-colors"
+            >
+              Apply Custom Range
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface DraftRow {
   id: string;
@@ -28,9 +174,22 @@ export default function TimeExpensePage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [tasks, setTasks] = useState<{ [projectId: string]: Task[] }>({});
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
+  const [allDraftEntries, setAllDraftEntries] = useState<TimeEntry[]>([]); // All draft entries regardless of week
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [pendingTimeEntries, setPendingTimeEntries] = useState<TimeEntry[]>([]);
   const [pendingExpenses, setPendingExpenses] = useState<Expense[]>([]);
+  const [approvedTimeEntries, setApprovedTimeEntries] = useState<TimeEntry[]>([]);
+  const [approvedExpenses, setApprovedExpenses] = useState<Expense[]>([]);
+  // Unified date range for approvals and approved tabs
+  const [dateRange, setDateRange] = useState(() => {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    return {
+      startDate: start.toISOString().split('T')[0],
+      endDate: end.toISOString().split('T')[0]
+    };
+  });
   const [loading, setLoading] = useState(true);
   const [weekStart, setWeekStart] = useState(() => {
     const today = new Date();
@@ -48,16 +207,49 @@ export default function TimeExpensePage() {
   const timerInterval = useRef<NodeJS.Timeout | null>(null);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [draftRows, setDraftRows] = useState<DraftRow[]>([]);
+  const [selectedTimeEntries, setSelectedTimeEntries] = useState<Set<string>>(new Set());
+  const [selectedExpenses, setSelectedExpenses] = useState<Set<string>>(new Set());
   const [draftValues, setDraftValues] = useState<{ [key: string]: number }>({});
+  const [rejectedEdits, setRejectedEdits] = useState<{ [entryId: string]: number }>({});
   const [savingTimesheet, setSavingTimesheet] = useState(false);
 
-  // Computed: group submitted entries by project/task
+  // Computed: group saved draft entries by project/task (from timer or copy) - includes rejected entries
+  // Uses allDraftEntries for row generation (persists across weeks) but timeEntries for current week values
+  const savedDraftRows = useMemo(() => {
+    const rows: SubmittedRow[] = [];
+    const seen = new Set<string>();
+    
+    // First, create rows from all draft entries (regardless of week)
+    allDraftEntries.forEach(entry => {
+      const key = `${entry.project_id}-${entry.task_id || 'null'}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        const project = projects.find(p => p.id === entry.project_id) || null;
+        const task = entry.task_id ? tasks[entry.project_id]?.find(t => t.id === entry.task_id) || null : null;
+        rows.push({ id: key, project, task, entries: {} });
+      }
+    });
+    
+    // Then, populate entries from current week's timeEntries
+    timeEntries.forEach(entry => {
+      if (entry.approval_status !== 'draft' && entry.approval_status !== 'rejected') return;
+      const row = rows.find(r => r.id === `${entry.project_id}-${entry.task_id || 'null'}`);
+      if (row) {
+        row.entries[entry.date] = entry;
+      }
+    });
+    
+    return rows;
+  }, [allDraftEntries, timeEntries, projects, tasks]);
+
+  // Computed: group submitted entries by project/task (only pending and approved)
   const submittedRows = useMemo(() => {
     const rows: SubmittedRow[] = [];
     const seen = new Set<string>();
     
     timeEntries.forEach(entry => {
-      if (!entry.approval_status) return; // Only show entries with status (pending/approved/rejected)
+      // Only show pending and approved entries in the submitted section (not rejected)
+      if (entry.approval_status !== 'pending' && entry.approval_status !== 'approved') return;
       const key = `${entry.project_id}-${entry.task_id || 'null'}`;
       if (!seen.has(key)) {
         seen.add(key);
@@ -73,9 +265,24 @@ export default function TimeExpensePage() {
     return rows;
   }, [timeEntries, projects, tasks]);
 
+  // Filter pending entries by date range
+  const filteredPendingTimeEntries = useMemo(() => {
+    return pendingTimeEntries.filter(entry => {
+      if (!entry.date) return true;
+      return entry.date >= dateRange.startDate && entry.date <= dateRange.endDate;
+    });
+  }, [pendingTimeEntries, dateRange]);
+
+  const filteredPendingExpenses = useMemo(() => {
+    return pendingExpenses.filter(expense => {
+      if (!expense.date) return true;
+      return expense.date >= dateRange.startDate && expense.date <= dateRange.endDate;
+    });
+  }, [pendingExpenses, dateRange]);
+
   useEffect(() => {
     loadData();
-  }, [profile?.company_id, user?.id, weekStart]);
+  }, [profile?.company_id, user?.id, weekStart, canApprove]);
 
   useEffect(() => {
     if (timerRunning) {
@@ -99,29 +306,41 @@ export default function TimeExpensePage() {
   const pauseTimer = () => setTimerRunning(false);
   const stopTimer = async () => {
     setTimerRunning(false);
-    if (timerSeconds > 0 && profile?.company_id && user?.id && timerProjectId) {
-      const hours = Math.max(0.25, Math.round((timerSeconds / 3600) * 4) / 4); // Round to nearest 0.25, min 0.25
-      try {
-        await api.createTimeEntry({
-          company_id: profile.company_id,
-          user_id: user.id,
-          project_id: timerProjectId,
-          task_id: timerTaskId || undefined,
-          hours,
-          description: timerDescription,
-          date: new Date().toISOString().split('T')[0],
-          billable: true,
-          hourly_rate: profile.hourly_rate || 150,
-        });
-        await loadData();
-      } catch (error) {
-        console.error('Failed to save time:', error);
-      }
+    if (!timerProjectId) {
+      alert('Please select a project before stopping the timer.');
+      return;
     }
-    setTimerSeconds(0);
-    setTimerDescription('');
-    setTimerProjectId('');
-    setTimerTaskId('');
+    if (timerSeconds === 0) {
+      alert('No time recorded to save.');
+      return;
+    }
+    if (!profile?.company_id || !user?.id) {
+      alert('Unable to save: User session not found. Please refresh the page.');
+      return;
+    }
+    const hours = Math.max(0.25, Math.round((timerSeconds / 3600) * 4) / 4); // Round to nearest 0.25, min 0.25
+    try {
+      await api.createTimeEntry({
+        company_id: profile.company_id,
+        user_id: user.id,
+        project_id: timerProjectId,
+        task_id: timerTaskId || undefined,
+        hours,
+        description: timerDescription,
+        date: new Date().toISOString().split('T')[0],
+        billable: true,
+        hourly_rate: profile.hourly_rate || 150,
+        approval_status: 'draft',
+      });
+      setTimerSeconds(0);
+      setTimerDescription('');
+      setTimerProjectId('');
+      setTimerTaskId('');
+      await loadData();
+    } catch (error: any) {
+      console.error('Failed to save time:', error);
+      alert(`Failed to save time entry: ${error?.message || 'Unknown error'}`);
+    }
   };
 
   const copyPreviousWeek = async () => {
@@ -145,6 +364,7 @@ export default function TimeExpensePage() {
           date: newDate.toISOString().split('T')[0],
           billable: entry.billable,
           hourly_rate: entry.hourly_rate,
+          approval_status: 'draft',
         });
       }
       loadData();
@@ -160,17 +380,22 @@ export default function TimeExpensePage() {
       const weekEnd = new Date(weekStart);
       weekEnd.setDate(weekEnd.getDate() + 6);
       
-      const [projectsData, entriesData, expensesData] = await Promise.all([
+      const [projectsData, entriesData, expensesData, allDraftData] = await Promise.all([
         api.getProjects(profile.company_id),
         api.getTimeEntries(profile.company_id, user.id, weekStart.toISOString().split('T')[0], weekEnd.toISOString().split('T')[0]),
         api.getExpenses(profile.company_id, user.id),
+        // Load all draft/rejected entries (no date filter) for persistent rows
+        api.getTimeEntries(profile.company_id, user.id).then(entries => 
+          entries.filter(e => e.approval_status === 'draft' || e.approval_status === 'rejected')
+        ),
       ]);
       
       setProjects(projectsData);
       setTimeEntries(entriesData);
+      setAllDraftEntries(allDraftData);
       setExpenses(expensesData);
 
-      // Load pending approvals for managers/admins
+      // Load pending and approved data for managers/admins
       if (canApprove) {
         const [pendingTime, pendingExp] = await Promise.all([
           api.getPendingTimeEntries(profile.company_id),
@@ -178,6 +403,9 @@ export default function TimeExpensePage() {
         ]);
         setPendingTimeEntries(pendingTime);
         setPendingExpenses(pendingExp);
+        
+        // Load approved entries
+        await loadApprovedData();
       }
 
       // Load tasks for each project
@@ -197,6 +425,20 @@ export default function TimeExpensePage() {
       setLoading(false);
     }
   }
+
+  const loadApprovedData = async () => {
+    if (!profile?.company_id || !canApprove) return;
+    const [approvedTime, approvedExp] = await Promise.all([
+      api.getApprovedTimeEntries(profile.company_id, dateRange.startDate, dateRange.endDate),
+      api.getApprovedExpenses(profile.company_id, dateRange.startDate, dateRange.endDate),
+    ]);
+    setApprovedTimeEntries(approvedTime);
+    setApprovedExpenses(approvedExp);
+  };
+
+  useEffect(() => {
+    if (canApprove) loadApprovedData();
+  }, [dateRange, canApprove]);
 
   const weekDays = useMemo(() => {
     const days = [];
@@ -250,11 +492,13 @@ export default function TimeExpensePage() {
   };
 
   const hasUnsavedDrafts = Object.values(draftValues).some(v => v > 0);
+  const hasSavedDrafts = savedDraftRows.length > 0;
 
   const submitTimesheet = async () => {
-    if (!profile?.company_id || !user?.id || !hasUnsavedDrafts) return;
+    if (!profile?.company_id || !user?.id || (!hasUnsavedDrafts && !hasSavedDrafts)) return;
     setSavingTimesheet(true);
     try {
+      // Submit local draft values
       for (const row of draftRows) {
         for (const day of weekDays) {
           const dateKey = formatDateKey(day);
@@ -274,6 +518,18 @@ export default function TimeExpensePage() {
           }
         }
       }
+      // Submit saved draft entries (from timer or copy) - include any edited hours
+      for (const row of savedDraftRows) {
+        for (const [date, entry] of Object.entries(row.entries)) {
+          const editedHours = rejectedEdits[entry.id];
+          if (editedHours !== undefined) {
+            await api.updateTimeEntry(entry.id, { hours: editedHours, approval_status: 'pending' });
+          } else {
+            await api.updateTimeEntry(entry.id, { approval_status: 'pending' });
+          }
+        }
+      }
+      setRejectedEdits({});
       setDraftValues({});
       await loadData();
     } catch (error) {
@@ -323,8 +579,11 @@ export default function TimeExpensePage() {
     const task = taskId ? tasks[projectId]?.find(t => t.id === taskId) || null : null;
     const key = `${projectId}-${taskId || 'null'}`;
     
-    // Check if row already exists in drafts or submitted
-    if (draftRows.some(r => r.id === key) || submittedRows.some(r => r.id === key)) return;
+    // Check if row already exists in drafts, saved drafts (from timer), or submitted
+    if (draftRows.some(r => r.id === key) || savedDraftRows.some(r => r.id === key) || submittedRows.some(r => r.id === key)) {
+      alert('This project/task already has a row. Please use the existing row.');
+      return;
+    }
     
     setDraftRows([...draftRows, { id: key, project, task, projectId, taskId }]);
     setShowTimeEntryModal(false);
@@ -372,7 +631,7 @@ export default function TimeExpensePage() {
         </div>
         <button
           onClick={() => activeTab === 'timesheet' ? setShowTimeEntryModal(true) : setShowExpenseModal(true)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-neutral-900-500 text-white rounded-xl hover:bg-neutral-800-600 transition-colors"
+          className="flex items-center gap-2 px-4 py-2.5 bg-neutral-900 text-white rounded-xl hover:bg-neutral-800 transition-colors"
         >
           <Plus className="w-4 h-4" />
           {activeTab === 'timesheet' ? 'Add Row' : 'Add Expense'}
@@ -410,6 +669,16 @@ export default function TimeExpensePage() {
                 {pendingTimeEntries.length + pendingExpenses.length}
               </span>
             )}
+          </button>
+        )}
+        {canApprove && (
+          <button
+            onClick={() => setActiveTab('approved')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              activeTab === 'approved' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-600 hover:text-neutral-900'
+            }`}
+          >
+            <Calendar className="w-4 h-4" /> Approved History
           </button>
         )}
       </div>
@@ -450,15 +719,15 @@ export default function TimeExpensePage() {
             />
             <div className="flex items-center gap-2">
               {!timerRunning ? (
-                <button onClick={startTimer} className="p-2.5 bg-neutral-1000 text-white rounded-lg hover:bg-emerald-600">
+                <button onClick={startTimer} className="p-2.5 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600">
                   <Play className="w-5 h-5" />
                 </button>
               ) : (
-                <button onClick={pauseTimer} className="p-2.5 bg-neutral-1000 text-white rounded-lg hover:bg-amber-600">
+                <button onClick={pauseTimer} className="p-2.5 bg-amber-500 text-white rounded-lg hover:bg-amber-600">
                   <Pause className="w-5 h-5" />
                 </button>
               )}
-              <button onClick={stopTimer} disabled={timerSeconds === 0 || !timerProjectId} className="p-2.5 bg-neutral-1000 text-white rounded-lg hover:bg-red-600 disabled:opacity-50" title={!timerProjectId ? 'Select a project first' : 'Stop and save'}>
+              <button onClick={stopTimer} disabled={timerSeconds === 0 || !timerProjectId} className="p-2.5 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50" title={!timerProjectId ? 'Select a project first' : 'Stop and save'}>
                 <Square className="w-5 h-5" />
               </button>
             </div>
@@ -477,13 +746,13 @@ export default function TimeExpensePage() {
                 <span className="text-neutral-500 text-sm">Enter your hours below</span>
               </div>
               <div className="flex items-center gap-2">
-                <button onClick={() => navigateWeek(-1)} className="p-2 hover:bg-neutral-100 rounded-lg">
+                <button type="button" onClick={() => navigateWeek(-1)} className="p-2 hover:bg-neutral-100 rounded-lg cursor-pointer">
                   <ChevronLeft className="w-5 h-5" />
                 </button>
-                <h3 className="text-lg font-semibold text-neutral-900">
+                <h3 className="text-lg font-semibold text-neutral-900 select-none">
                   {formatDate(weekDays[0])} - {formatDate(weekDays[6])}, {weekDays[0].getFullYear()}
                 </h3>
-                <button onClick={() => navigateWeek(1)} className="p-2 hover:bg-neutral-100 rounded-lg">
+                <button type="button" onClick={() => navigateWeek(1)} className="p-2 hover:bg-neutral-100 rounded-lg cursor-pointer">
                   <ChevronRight className="w-5 h-5" />
                 </button>
               </div>
@@ -494,24 +763,102 @@ export default function TimeExpensePage() {
                 <thead className="bg-neutral-50 border-b border-neutral-100">
                   <tr>
                     <th className="text-left px-4 py-3 text-xs font-medium text-neutral-500 uppercase w-64">Project / Task</th>
-                    {weekDays.map((day, i) => (
-                      <th key={i} className="text-center px-2 py-3 text-xs font-medium text-neutral-500 uppercase w-20">
-                        <div>{['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][day.getDay()]}</div>
-                        <div className="text-lg font-semibold text-neutral-900">{day.getDate()}</div>
-                      </th>
-                    ))}
+                    {weekDays.map((day, i) => {
+                      const todayStr = new Date().toISOString().split('T')[0];
+                      const dateKey = formatDateKey(day);
+                      const isFutureDate = dateKey > todayStr;
+                      const isToday = dateKey === todayStr;
+                      return (
+                        <th key={i} className={`text-center px-2 py-3 text-xs font-medium uppercase w-20 ${isFutureDate ? 'text-neutral-300' : 'text-neutral-500'}`}>
+                          <div>{['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][day.getDay()]}</div>
+                          <div className={`text-lg font-semibold ${isToday ? 'text-blue-600' : isFutureDate ? 'text-neutral-300' : 'text-neutral-900'}`}>{day.getDate()}</div>
+                        </th>
+                      );
+                    })}
                     <th className="text-center px-4 py-3 text-xs font-medium text-neutral-500 uppercase w-20">Total</th>
                     <th className="w-12"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-100">
-                  {draftRows.length === 0 && (
+                  {draftRows.length === 0 && savedDraftRows.length === 0 && (
                     <tr>
                       <td colSpan={10} className="text-center py-8 text-neutral-500">
-                        <p>No draft entries. Add a project row to start tracking.</p>
+                        <p>No draft entries. Add a project row or use the timer to start tracking.</p>
                       </td>
                     </tr>
                   )}
+                  {/* Saved draft entries from timer/copy - includes rejected entries */}
+                  {savedDraftRows.map((row) => {
+                    const hasRejected = Object.values(row.entries).some(e => e.approval_status === 'rejected');
+                    return (
+                    <tr key={`saved-${row.id}`} className={hasRejected ? "hover:bg-red-50/50 bg-red-50/30" : "hover:bg-green-50/50 bg-green-50/30"}>
+                      <td className="px-4 py-3">
+                        <div className="font-medium text-neutral-900">
+                          {row.project?.name || 'Unknown Project'}
+                          {row.task && <span className="text-neutral-600"> / {row.task.name}</span>}
+                        </div>
+                        {hasRejected ? (
+                          <span className="text-xs text-red-600 font-medium">⚠️ Rejected - Please revise and resubmit</span>
+                        ) : (
+                          <span className="text-xs text-green-600 font-medium">From Timer</span>
+                        )}
+                      </td>
+                      {weekDays.map((day, i) => {
+                        const dateKey = formatDateKey(day);
+                        const entry = row.entries[dateKey];
+                        const isRejected = entry?.approval_status === 'rejected';
+                        const todayStr = new Date().toISOString().split('T')[0];
+                        const isFutureDate = dateKey > todayStr;
+                        return (
+                          <td key={i} className="px-2 py-3">
+                            {isRejected ? (
+                              <input
+                                type="number"
+                                min="0"
+                                max="24"
+                                step="0.5"
+                                defaultValue={entry?.hours || ''}
+                                disabled={isFutureDate}
+                                className={`w-full h-10 text-center rounded-lg border-2 outline-none ${
+                                  isFutureDate 
+                                    ? 'border-neutral-200 bg-neutral-50 text-neutral-400 cursor-not-allowed' 
+                                    : 'border-red-300 bg-red-50 focus:ring-2 focus:ring-red-400 focus:border-transparent'
+                                }`}
+                                onChange={(e) => {
+                                  const val = parseFloat(e.target.value) || 0;
+                                  if (entry) {
+                                    setRejectedEdits(prev => ({ ...prev, [entry.id]: val }));
+                                  }
+                                }}
+                              />
+                            ) : (
+                              <div className="w-full h-10 flex items-center justify-center text-center rounded-lg border-2 border-green-200 bg-green-50">
+                                {entry ? entry.hours : ''}
+                              </div>
+                            )}
+                          </td>
+                        );
+                      })}
+                      <td className="px-4 py-3 text-center font-semibold text-neutral-900">
+                        {Object.values(row.entries).reduce((sum, e) => sum + (rejectedEdits[e.id] !== undefined ? rejectedEdits[e.id] : (e.hours || 0)), 0)}h
+                      </td>
+                      <td className="px-2 py-3">
+                        <button 
+                          onClick={async () => {
+                            for (const entry of Object.values(row.entries)) {
+                              await api.deleteTimeEntry(entry.id);
+                            }
+                            await loadData();
+                          }}
+                          className="p-1.5 hover:bg-red-100 text-neutral-400 hover:text-neutral-900 rounded-lg"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </td>
+                    </tr>
+                    );
+                  })}
+                  {/* Local draft rows */}
                   {draftRows.map((row) => (
                     <tr key={row.id} className="hover:bg-neutral-100/50">
                       <td className="px-4 py-3">
@@ -523,6 +870,8 @@ export default function TimeExpensePage() {
                       {weekDays.map((day, i) => {
                         const dateKey = formatDateKey(day);
                         const draftVal = getDraftValue(row.id, dateKey);
+                        const todayStr = new Date().toISOString().split('T')[0];
+                        const isFutureDate = dateKey > todayStr;
                         return (
                           <td key={i} className="px-2 py-3">
                             <input
@@ -532,7 +881,13 @@ export default function TimeExpensePage() {
                               step="0.5"
                               value={draftVal || ''}
                               placeholder=""
-                              className="w-full h-10 text-center rounded-lg border-2 border-blue-200 bg-neutral-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                              disabled={isFutureDate}
+                              title={isFutureDate ? 'Cannot enter time for future dates' : ''}
+                              className={`w-full h-10 text-center rounded-lg border-2 outline-none ${
+                                isFutureDate 
+                                  ? 'border-neutral-200 bg-neutral-50 text-neutral-400 cursor-not-allowed' 
+                                  : 'border-blue-200 bg-neutral-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent'
+                              }`}
                               onChange={(e) => {
                                 const val = parseFloat(e.target.value) || 0;
                                 setDraftValue(row.id, dateKey, val);
@@ -597,8 +952,8 @@ export default function TimeExpensePage() {
               )}
               <button
                 onClick={submitTimesheet}
-                disabled={!hasUnsavedDrafts || savingTimesheet}
-                className="flex items-center gap-2 px-6 py-2.5 bg-neutral-900-500 text-white rounded-xl hover:bg-neutral-800-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                disabled={(!hasUnsavedDrafts && !hasSavedDrafts) || savingTimesheet}
+                className="flex items-center gap-2 px-6 py-2.5 bg-neutral-900 text-white rounded-xl hover:bg-neutral-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
               >
                 <Send className="w-4 h-4" />
                 {savingTimesheet ? 'Submitting...' : 'Submit for Approval'}
@@ -728,7 +1083,7 @@ export default function TimeExpensePage() {
               ) : (
                 expenses.map(expense => (
                   <tr key={expense.id} className="hover:bg-neutral-50">
-                    <td className="px-6 py-4 text-neutral-600">{new Date(expense.date).toLocaleDateString()}</td>
+                    <td className="px-6 py-4 text-neutral-600">{expense.date ? new Date(expense.date + 'T00:00:00').toLocaleDateString() : '-'}</td>
                     <td className="px-6 py-4 font-medium text-neutral-900">{expense.description}</td>
                     <td className="px-6 py-4 text-neutral-600">{expense.project?.name || '-'}</td>
                     <td className="px-6 py-4 text-neutral-600">{expense.category || '-'}</td>
@@ -768,117 +1123,468 @@ export default function TimeExpensePage() {
       {/* Approvals Tab */}
       {activeTab === 'approvals' && canApprove && (
         <div className="space-y-6">
-          {/* Pending Time Entries */}
+          {/* Date Range Picker */}
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-neutral-900">Pending Approvals</h2>
+            <DateRangePicker
+              startDate={dateRange.startDate}
+              endDate={dateRange.endDate}
+              onDateChange={(start, end) => setDateRange({ startDate: start, endDate: end })}
+            />
+          </div>
+
+          {/* Pending Time Entries - Grouped by Project */}
           <div className="bg-white rounded-2xl border border-neutral-100 overflow-hidden">
-            <div className="px-6 py-4 border-b border-neutral-100">
+            <div className="px-6 py-4 border-b border-neutral-100 flex items-center justify-between">
               <h3 className="text-lg font-semibold text-neutral-900">Pending Time Entries</h3>
+              {selectedTimeEntries.size > 0 && (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-neutral-500">{selectedTimeEntries.size} selected</span>
+                  <button
+                    onClick={async () => {
+                      for (const id of selectedTimeEntries) {
+                        await api.approveTimeEntry(id, user?.id || '');
+                      }
+                      setSelectedTimeEntries(new Set());
+                      loadData();
+                    }}
+                    className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm font-medium"
+                  >
+                    Approve
+                  </button>
+                  <button
+                    onClick={async () => {
+                      for (const id of selectedTimeEntries) {
+                        await api.rejectTimeEntry(id, user?.id || '');
+                      }
+                      setSelectedTimeEntries(new Set());
+                      loadData();
+                    }}
+                    className="px-4 py-2 bg-neutral-200 text-neutral-700 rounded-lg hover:bg-neutral-300 text-sm font-medium"
+                  >
+                    Reject
+                  </button>
+                </div>
+              )}
             </div>
-            {pendingTimeEntries.length === 0 ? (
-              <div className="p-8 text-center text-neutral-500">No pending time entries</div>
+            {filteredPendingTimeEntries.length === 0 ? (
+              <div className="p-8 text-center text-neutral-500">No pending time entries for this period</div>
             ) : (
-              <table className="w-full">
-                <thead className="bg-neutral-50 border-b border-neutral-100">
-                  <tr>
-                    <th className="text-left px-6 py-3 text-xs font-medium text-neutral-500 uppercase">Date</th>
-                    <th className="text-left px-6 py-3 text-xs font-medium text-neutral-500 uppercase">Project</th>
-                    <th className="text-left px-6 py-3 text-xs font-medium text-neutral-500 uppercase">Description</th>
-                    <th className="text-right px-6 py-3 text-xs font-medium text-neutral-500 uppercase">Hours</th>
-                    <th className="w-32"></th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-neutral-100">
-                  {pendingTimeEntries.map(entry => (
-                    <tr key={entry.id} className="hover:bg-neutral-50">
-                      <td className="px-6 py-4 text-neutral-600">{new Date(entry.date).toLocaleDateString()}</td>
-                      <td className="px-6 py-4 font-medium text-neutral-900">{entry.project?.name || '-'}</td>
-                      <td className="px-6 py-4 text-neutral-600">{entry.description || '-'}</td>
-                      <td className="px-6 py-4 text-right font-medium text-neutral-900">{entry.hours}h</td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={async () => {
-                              await api.approveTimeEntry(entry.id, user?.id || '');
-                              loadData();
+              <div className="divide-y divide-neutral-100">
+                {/* Group by project */}
+                {Object.entries(
+                  filteredPendingTimeEntries.reduce((groups, entry) => {
+                    const projectId = entry.project?.id || 'unknown';
+                    const projectName = entry.project?.name || 'Unknown Project';
+                    if (!groups[projectId]) {
+                      groups[projectId] = { name: projectName, entries: [] };
+                    }
+                    groups[projectId].entries.push(entry);
+                    return groups;
+                  }, {} as Record<string, { name: string; entries: TimeEntry[] }>)
+                ).map(([projectId, group]) => {
+                  const allSelected = group.entries.every(e => selectedTimeEntries.has(e.id));
+                  const someSelected = group.entries.some(e => selectedTimeEntries.has(e.id));
+                  const totalHours = group.entries.reduce((sum, e) => sum + Number(e.hours), 0);
+                  
+                  return (
+                    <div key={projectId}>
+                      {/* Project Header */}
+                      <div className="bg-neutral-50 px-6 py-3 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="checkbox"
+                            checked={allSelected}
+                            ref={(el) => { if (el) el.indeterminate = someSelected && !allSelected; }}
+                            onChange={(e) => {
+                              const newSelected = new Set(selectedTimeEntries);
+                              group.entries.forEach(entry => {
+                                if (e.target.checked) {
+                                  newSelected.add(entry.id);
+                                } else {
+                                  newSelected.delete(entry.id);
+                                }
+                              });
+                              setSelectedTimeEntries(newSelected);
                             }}
-                            className="p-1.5 bg-emerald-100 text-neutral-900 hover:bg-emerald-200 rounded-lg"
-                            title="Approve"
-                          >
-                            <CheckCircle className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={async () => {
-                              await api.rejectTimeEntry(entry.id, user?.id || '');
-                              loadData();
-                            }}
-                            className="p-1.5 bg-red-100 text-neutral-900 hover:bg-red-200 rounded-lg"
-                            title="Reject"
-                          >
-                            <XCircle className="w-4 h-4" />
-                          </button>
+                            className="w-4 h-4 rounded border-neutral-300 text-emerald-600 focus:ring-emerald-500"
+                          />
+                          <span className="font-semibold text-neutral-900">{group.name}</span>
+                          <span className="text-sm text-neutral-500">({group.entries.length})</span>
                         </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                        <div className="text-sm">
+                          <span className="text-neutral-500">Total: </span>
+                          <span className="font-medium text-neutral-900">{totalHours.toFixed(2)}h</span>
+                        </div>
+                      </div>
+                      {/* Entries Table */}
+                      <table className="w-full">
+                        <thead className="bg-white border-b border-neutral-100">
+                          <tr>
+                            <th className="w-10 px-6 py-2"></th>
+                            <th className="text-left px-4 py-2 text-xs font-medium text-neutral-500 uppercase">Period</th>
+                            <th className="text-left px-4 py-2 text-xs font-medium text-neutral-500 uppercase">Submitted By</th>
+                            <th className="text-left px-4 py-2 text-xs font-medium text-neutral-500 uppercase">Task</th>
+                            <th className="text-right px-4 py-2 text-xs font-medium text-neutral-500 uppercase">Total Hours</th>
+                            <th className="text-right px-6 py-2 text-xs font-medium text-neutral-500 uppercase">Pending Hours</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-neutral-50">
+                          {group.entries.map(entry => (
+                            <tr key={entry.id} className={`hover:bg-neutral-50 ${selectedTimeEntries.has(entry.id) ? 'bg-emerald-50' : ''}`}>
+                              <td className="px-6 py-3">
+                                <input
+                                  type="checkbox"
+                                  checked={selectedTimeEntries.has(entry.id)}
+                                  onChange={(e) => {
+                                    const newSelected = new Set(selectedTimeEntries);
+                                    if (e.target.checked) {
+                                      newSelected.add(entry.id);
+                                    } else {
+                                      newSelected.delete(entry.id);
+                                    }
+                                    setSelectedTimeEntries(newSelected);
+                                  }}
+                                  className="w-4 h-4 rounded border-neutral-300 text-emerald-600 focus:ring-emerald-500"
+                                />
+                              </td>
+                              <td className="px-4 py-3 text-neutral-600">{entry.date ? new Date(entry.date + 'T00:00:00').toLocaleDateString() : '-'}</td>
+                              <td className="px-4 py-3 font-medium text-neutral-900">{entry.user?.full_name || entry.user?.email || '-'}</td>
+                              <td className="px-4 py-3 text-neutral-600">{entry.task?.name || entry.description || '-'}</td>
+                              <td className="px-4 py-3 text-right font-medium text-neutral-900">{Number(entry.hours).toFixed(2)}</td>
+                              <td className="px-6 py-3 text-right font-medium text-emerald-600">{Number(entry.hours).toFixed(2)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </div>
 
-          {/* Pending Expenses */}
+          {/* Pending Expenses - Grouped by Project */}
+          <div className="bg-white rounded-2xl border border-neutral-100 overflow-hidden">
+            <div className="px-6 py-4 border-b border-neutral-100 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-neutral-900">Pending Expenses</h3>
+              {selectedExpenses.size > 0 && (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-neutral-500">{selectedExpenses.size} selected</span>
+                  <button
+                    onClick={async () => {
+                      for (const id of selectedExpenses) {
+                        await api.approveExpense(id, user?.id || '');
+                      }
+                      setSelectedExpenses(new Set());
+                      loadData();
+                    }}
+                    className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm font-medium"
+                  >
+                    Approve
+                  </button>
+                  <button
+                    onClick={async () => {
+                      for (const id of selectedExpenses) {
+                        await api.rejectExpense(id, user?.id || '');
+                      }
+                      setSelectedExpenses(new Set());
+                      loadData();
+                    }}
+                    className="px-4 py-2 bg-neutral-200 text-neutral-700 rounded-lg hover:bg-neutral-300 text-sm font-medium"
+                  >
+                    Reject
+                  </button>
+                </div>
+              )}
+            </div>
+            {filteredPendingExpenses.length === 0 ? (
+              <div className="p-8 text-center text-neutral-500">No pending expenses for this period</div>
+            ) : (
+              <div className="divide-y divide-neutral-100">
+                {Object.entries(
+                  filteredPendingExpenses.reduce((groups, expense) => {
+                    const projectId = expense.project?.id || 'unknown';
+                    const projectName = expense.project?.name || 'Unknown Project';
+                    if (!groups[projectId]) {
+                      groups[projectId] = { name: projectName, expenses: [] };
+                    }
+                    groups[projectId].expenses.push(expense);
+                    return groups;
+                  }, {} as Record<string, { name: string; expenses: Expense[] }>)
+                ).map(([projectId, group]) => {
+                  const allSelected = group.expenses.every(e => selectedExpenses.has(e.id));
+                  const someSelected = group.expenses.some(e => selectedExpenses.has(e.id));
+                  const totalAmount = group.expenses.reduce((sum, e) => sum + Number(e.amount), 0);
+                  
+                  return (
+                    <div key={projectId}>
+                      <div className="bg-neutral-50 px-6 py-3 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="checkbox"
+                            checked={allSelected}
+                            ref={(el) => { if (el) el.indeterminate = someSelected && !allSelected; }}
+                            onChange={(e) => {
+                              const newSelected = new Set(selectedExpenses);
+                              group.expenses.forEach(expense => {
+                                if (e.target.checked) {
+                                  newSelected.add(expense.id);
+                                } else {
+                                  newSelected.delete(expense.id);
+                                }
+                              });
+                              setSelectedExpenses(newSelected);
+                            }}
+                            className="w-4 h-4 rounded border-neutral-300 text-emerald-600 focus:ring-emerald-500"
+                          />
+                          <span className="font-semibold text-neutral-900">{group.name}</span>
+                          <span className="text-sm text-neutral-500">({group.expenses.length})</span>
+                        </div>
+                        <div className="text-sm">
+                          <span className="text-neutral-500">Total: </span>
+                          <span className="font-medium text-neutral-900">{formatCurrency(totalAmount)}</span>
+                        </div>
+                      </div>
+                      <table className="w-full">
+                        <thead className="bg-white border-b border-neutral-100">
+                          <tr>
+                            <th className="w-10 px-6 py-2"></th>
+                            <th className="text-left px-4 py-2 text-xs font-medium text-neutral-500 uppercase">Date</th>
+                            <th className="text-left px-4 py-2 text-xs font-medium text-neutral-500 uppercase">Submitted By</th>
+                            <th className="text-left px-4 py-2 text-xs font-medium text-neutral-500 uppercase">Description</th>
+                            <th className="text-left px-4 py-2 text-xs font-medium text-neutral-500 uppercase">Category</th>
+                            <th className="text-center px-4 py-2 text-xs font-medium text-neutral-500 uppercase">Receipt</th>
+                            <th className="text-right px-6 py-2 text-xs font-medium text-neutral-500 uppercase">Amount</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-neutral-50">
+                          {group.expenses.map(expense => (
+                            <tr key={expense.id} className={`hover:bg-neutral-50 ${selectedExpenses.has(expense.id) ? 'bg-emerald-50' : ''}`}>
+                              <td className="px-6 py-3">
+                                <input
+                                  type="checkbox"
+                                  checked={selectedExpenses.has(expense.id)}
+                                  onChange={(e) => {
+                                    const newSelected = new Set(selectedExpenses);
+                                    if (e.target.checked) {
+                                      newSelected.add(expense.id);
+                                    } else {
+                                      newSelected.delete(expense.id);
+                                    }
+                                    setSelectedExpenses(newSelected);
+                                  }}
+                                  className="w-4 h-4 rounded border-neutral-300 text-emerald-600 focus:ring-emerald-500"
+                                />
+                              </td>
+                              <td className="px-4 py-3 text-neutral-600">{expense.date ? new Date(expense.date + 'T00:00:00').toLocaleDateString() : '-'}</td>
+                              <td className="px-4 py-3 font-medium text-neutral-900">{expense.user?.full_name || expense.user?.email || '-'}</td>
+                              <td className="px-4 py-3 text-neutral-600">{expense.description}</td>
+                              <td className="px-4 py-3 text-neutral-600">{expense.category || '-'}</td>
+                              <td className="px-4 py-3 text-center">
+                                {expense.receipt_url ? (
+                                  <a
+                                    href={expense.receipt_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 text-blue-600 rounded-lg text-xs font-medium hover:bg-blue-100 transition-colors"
+                                  >
+                                    <Paperclip className="w-3 h-3" />
+                                    View
+                                  </a>
+                                ) : (
+                                  <span className="text-neutral-400 text-xs">-</span>
+                                )}
+                              </td>
+                              <td className="px-6 py-3 text-right font-medium text-emerald-600">{formatCurrency(expense.amount)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Approved History Tab */}
+      {activeTab === 'approved' && canApprove && (
+        <div className="space-y-6">
+          {/* Date Range Picker */}
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-neutral-900">Approved History</h2>
+            <DateRangePicker
+              startDate={dateRange.startDate}
+              endDate={dateRange.endDate}
+              onDateChange={(start, end) => setDateRange({ startDate: start, endDate: end })}
+            />
+          </div>
+
+          {/* Approved Time Entries - Grouped by Project then User */}
           <div className="bg-white rounded-2xl border border-neutral-100 overflow-hidden">
             <div className="px-6 py-4 border-b border-neutral-100">
-              <h3 className="text-lg font-semibold text-neutral-900">Pending Expenses</h3>
+              <h3 className="text-lg font-semibold text-neutral-900">Approved Time Entries</h3>
+              <p className="text-sm text-neutral-500 mt-1">
+                Total: {approvedTimeEntries.reduce((sum, e) => sum + Number(e.hours), 0).toFixed(2)} hours
+              </p>
             </div>
-            {pendingExpenses.length === 0 ? (
-              <div className="p-8 text-center text-neutral-500">No pending expenses</div>
+            {approvedTimeEntries.length === 0 ? (
+              <div className="p-8 text-center text-neutral-500">No approved time entries for this period</div>
             ) : (
-              <table className="w-full">
-                <thead className="bg-neutral-50 border-b border-neutral-100">
-                  <tr>
-                    <th className="text-left px-6 py-3 text-xs font-medium text-neutral-500 uppercase">Date</th>
-                    <th className="text-left px-6 py-3 text-xs font-medium text-neutral-500 uppercase">Description</th>
-                    <th className="text-left px-6 py-3 text-xs font-medium text-neutral-500 uppercase">Project</th>
-                    <th className="text-left px-6 py-3 text-xs font-medium text-neutral-500 uppercase">Category</th>
-                    <th className="text-right px-6 py-3 text-xs font-medium text-neutral-500 uppercase">Amount</th>
-                    <th className="w-32"></th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-neutral-100">
-                  {pendingExpenses.map(expense => (
-                    <tr key={expense.id} className="hover:bg-neutral-50">
-                      <td className="px-6 py-4 text-neutral-600">{new Date(expense.date).toLocaleDateString()}</td>
-                      <td className="px-6 py-4 font-medium text-neutral-900">{expense.description}</td>
-                      <td className="px-6 py-4 text-neutral-600">{expense.project?.name || '-'}</td>
-                      <td className="px-6 py-4 text-neutral-600">{expense.category || '-'}</td>
-                      <td className="px-6 py-4 text-right font-medium text-neutral-900">{formatCurrency(expense.amount)}</td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={async () => {
-                              await api.approveExpense(expense.id, user?.id || '');
-                              loadData();
-                            }}
-                            className="p-1.5 bg-emerald-100 text-neutral-900 hover:bg-emerald-200 rounded-lg"
-                            title="Approve"
-                          >
-                            <CheckCircle className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={async () => {
-                              await api.rejectExpense(expense.id, user?.id || '');
-                              loadData();
-                            }}
-                            className="p-1.5 bg-red-100 text-neutral-900 hover:bg-red-200 rounded-lg"
-                            title="Reject"
-                          >
-                            <XCircle className="w-4 h-4" />
-                          </button>
+              <div className="divide-y divide-neutral-100">
+                {/* Group by project */}
+                {Object.entries(
+                  approvedTimeEntries.reduce((groups, entry) => {
+                    const projectId = entry.project?.id || 'unknown';
+                    const projectName = entry.project?.name || 'Unknown Project';
+                    if (!groups[projectId]) {
+                      groups[projectId] = { name: projectName, users: {} };
+                    }
+                    const userId = entry.user?.id || 'unknown';
+                    const userName = entry.user?.full_name || entry.user?.email || 'Unknown User';
+                    if (!groups[projectId].users[userId]) {
+                      groups[projectId].users[userId] = { name: userName, entries: [] };
+                    }
+                    groups[projectId].users[userId].entries.push(entry);
+                    return groups;
+                  }, {} as Record<string, { name: string; users: Record<string, { name: string; entries: TimeEntry[] }> }>)
+                ).map(([projectId, project]) => {
+                  const projectTotalHours = Object.values(project.users).reduce(
+                    (sum, user) => sum + user.entries.reduce((s, e) => s + Number(e.hours), 0), 0
+                  );
+                  
+                  return (
+                    <div key={projectId}>
+                      {/* Project Header */}
+                      <div className="bg-neutral-50 px-6 py-3 flex items-center justify-between">
+                        <span className="font-semibold text-neutral-900">{project.name}</span>
+                        <div className="text-sm">
+                          <span className="text-neutral-500">Total: </span>
+                          <span className="font-medium text-neutral-900">{projectTotalHours.toFixed(2)}h</span>
                         </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      </div>
+                      {/* Users under project */}
+                      {Object.entries(project.users).map(([userId, user]) => {
+                        const userTotalHours = user.entries.reduce((sum, e) => sum + Number(e.hours), 0);
+                        return (
+                          <div key={userId} className="border-l-4 border-emerald-200 ml-4">
+                            {/* User Header */}
+                            <div className="bg-emerald-50/50 px-6 py-2 flex items-center justify-between">
+                              <span className="font-medium text-neutral-800">{user.name}</span>
+                              <span className="text-sm font-medium text-emerald-600">{userTotalHours.toFixed(2)}h</span>
+                            </div>
+                            {/* Entries Table */}
+                            <table className="w-full">
+                              <thead className="bg-white border-b border-neutral-100">
+                                <tr>
+                                  <th className="text-left px-6 py-2 text-xs font-medium text-neutral-500 uppercase">Date</th>
+                                  <th className="text-left px-4 py-2 text-xs font-medium text-neutral-500 uppercase">Task</th>
+                                  <th className="text-right px-4 py-2 text-xs font-medium text-neutral-500 uppercase">Hours</th>
+                                  <th className="text-left px-4 py-2 text-xs font-medium text-neutral-500 uppercase">Approved By</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-neutral-50">
+                                {user.entries.map(entry => (
+                                  <tr key={entry.id} className="hover:bg-neutral-50">
+                                    <td className="px-6 py-3 text-neutral-600">{entry.date ? new Date(entry.date + 'T00:00:00').toLocaleDateString() : '-'}</td>
+                                    <td className="px-4 py-3 text-neutral-600">{entry.task?.name || entry.description || '-'}</td>
+                                    <td className="px-4 py-3 text-right font-medium text-neutral-900">{Number(entry.hours).toFixed(2)}</td>
+                                    <td className="px-4 py-3 text-neutral-500 text-sm">
+                                      {entry.approved_at ? new Date(entry.approved_at).toLocaleDateString() : '-'}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Approved Expenses - Grouped by Project then User */}
+          <div className="bg-white rounded-2xl border border-neutral-100 overflow-hidden">
+            <div className="px-6 py-4 border-b border-neutral-100">
+              <h3 className="text-lg font-semibold text-neutral-900">Approved Expenses</h3>
+              <p className="text-sm text-neutral-500 mt-1">
+                Total: {formatCurrency(approvedExpenses.reduce((sum, e) => sum + Number(e.amount), 0))}
+              </p>
+            </div>
+            {approvedExpenses.length === 0 ? (
+              <div className="p-8 text-center text-neutral-500">No approved expenses for this period</div>
+            ) : (
+              <div className="divide-y divide-neutral-100">
+                {Object.entries(
+                  approvedExpenses.reduce((groups, expense) => {
+                    const projectId = expense.project?.id || 'unknown';
+                    const projectName = expense.project?.name || 'Unknown Project';
+                    if (!groups[projectId]) {
+                      groups[projectId] = { name: projectName, users: {} };
+                    }
+                    const userId = expense.user?.id || 'unknown';
+                    const userName = expense.user?.full_name || expense.user?.email || 'Unknown User';
+                    if (!groups[projectId].users[userId]) {
+                      groups[projectId].users[userId] = { name: userName, expenses: [] };
+                    }
+                    groups[projectId].users[userId].expenses.push(expense);
+                    return groups;
+                  }, {} as Record<string, { name: string; users: Record<string, { name: string; expenses: Expense[] }> }>)
+                ).map(([projectId, project]) => {
+                  const projectTotal = Object.values(project.users).reduce(
+                    (sum, user) => sum + user.expenses.reduce((s, e) => s + Number(e.amount), 0), 0
+                  );
+                  
+                  return (
+                    <div key={projectId}>
+                      <div className="bg-neutral-50 px-6 py-3 flex items-center justify-between">
+                        <span className="font-semibold text-neutral-900">{project.name}</span>
+                        <div className="text-sm">
+                          <span className="text-neutral-500">Total: </span>
+                          <span className="font-medium text-neutral-900">{formatCurrency(projectTotal)}</span>
+                        </div>
+                      </div>
+                      {Object.entries(project.users).map(([userId, user]) => {
+                        const userTotal = user.expenses.reduce((sum, e) => sum + Number(e.amount), 0);
+                        return (
+                          <div key={userId} className="border-l-4 border-emerald-200 ml-4">
+                            <div className="bg-emerald-50/50 px-6 py-2 flex items-center justify-between">
+                              <span className="font-medium text-neutral-800">{user.name}</span>
+                              <span className="text-sm font-medium text-emerald-600">{formatCurrency(userTotal)}</span>
+                            </div>
+                            <table className="w-full">
+                              <thead className="bg-white border-b border-neutral-100">
+                                <tr>
+                                  <th className="text-left px-6 py-2 text-xs font-medium text-neutral-500 uppercase">Date</th>
+                                  <th className="text-left px-4 py-2 text-xs font-medium text-neutral-500 uppercase">Description</th>
+                                  <th className="text-left px-4 py-2 text-xs font-medium text-neutral-500 uppercase">Category</th>
+                                  <th className="text-right px-6 py-2 text-xs font-medium text-neutral-500 uppercase">Amount</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-neutral-50">
+                                {user.expenses.map(expense => (
+                                  <tr key={expense.id} className="hover:bg-neutral-50">
+                                    <td className="px-6 py-3 text-neutral-600">{expense.date ? new Date(expense.date + 'T00:00:00').toLocaleDateString() : '-'}</td>
+                                    <td className="px-4 py-3 text-neutral-600">{expense.description}</td>
+                                    <td className="px-4 py-3 text-neutral-600">{expense.category || '-'}</td>
+                                    <td className="px-6 py-3 text-right font-medium text-emerald-600">{formatCurrency(expense.amount)}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </div>
         </div>
@@ -890,6 +1596,7 @@ export default function TimeExpensePage() {
           projects={projects}
           tasks={tasks}
           existingDraftRows={draftRows}
+          existingSavedDraftRows={savedDraftRows}
           existingSubmittedRows={submittedRows}
           onClose={() => setShowTimeEntryModal(false)}
           onAdd={addDraftRow}
@@ -911,10 +1618,11 @@ export default function TimeExpensePage() {
   );
 }
 
-function AddTimeRowModal({ projects, tasks: initialTasks, existingDraftRows, existingSubmittedRows, onClose, onAdd }: { 
+function AddTimeRowModal({ projects, tasks: initialTasks, existingDraftRows, existingSavedDraftRows, existingSubmittedRows, onClose, onAdd }: { 
   projects: Project[]; 
   tasks: { [projectId: string]: Task[] }; 
   existingDraftRows: DraftRow[];
+  existingSavedDraftRows: SubmittedRow[];
   existingSubmittedRows: SubmittedRow[];
   onClose: () => void; 
   onAdd: (projectId: string, taskId: string | null) => void;
@@ -944,7 +1652,7 @@ function AddTimeRowModal({ projects, tasks: initialTasks, existingDraftRows, exi
   }, [projectId, initialTasks]);
 
   const rowKey = `${projectId}-${taskId || 'null'}`;
-  const isRowExists = existingDraftRows.some(r => r.id === rowKey) || existingSubmittedRows.some(r => r.id === rowKey);
+  const isRowExists = existingDraftRows.some(r => r.id === rowKey) || existingSavedDraftRows.some(r => r.id === rowKey) || existingSubmittedRows.some(r => r.id === rowKey);
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -985,7 +1693,7 @@ function AddTimeRowModal({ projects, tasks: initialTasks, existingDraftRows, exi
             <button 
               onClick={() => onAdd(projectId, taskId || null)} 
               disabled={!projectId || isRowExists}
-              className="flex-1 px-4 py-2.5 bg-neutral-900-500 text-white rounded-xl hover:bg-neutral-800-600 transition-colors disabled:opacity-50"
+              className="flex-1 px-4 py-2.5 bg-neutral-900 text-white rounded-xl hover:bg-neutral-800 transition-colors disabled:opacity-50"
             >
               Add Row
             </button>
@@ -1038,6 +1746,13 @@ function ExpenseModal({ expense, projects, companyId, userId, onClose, onSave }:
     setError(null);
     setSaving(true);
     try {
+      let receiptUrl = expense?.receipt_url;
+      
+      // Upload receipt if a new file is selected
+      if (receiptFile) {
+        receiptUrl = await api.uploadReceipt(receiptFile, companyId);
+      }
+      
       const data = {
         description,
         project_id: projectId || null,
@@ -1045,6 +1760,7 @@ function ExpenseModal({ expense, projects, companyId, userId, onClose, onSave }:
         category: category || null,
         date,
         billable,
+        receipt_url: receiptUrl,
         status: 'pending' as const,
       };
       if (expense) {
@@ -1147,7 +1863,7 @@ function ExpenseModal({ expense, projects, companyId, userId, onClose, onSave }:
           </div>
           <div className="flex gap-3 pt-4">
             <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors">Cancel</button>
-            <button type="submit" disabled={saving} onClick={(e) => { e.preventDefault(); handleSubmit(e as any); }} className="flex-1 px-4 py-2.5 bg-neutral-900-500 text-white rounded-xl hover:bg-neutral-800-600 transition-colors disabled:opacity-50">
+            <button type="submit" disabled={saving} onClick={(e) => { e.preventDefault(); handleSubmit(e as any); }} className="flex-1 px-4 py-2.5 bg-neutral-900 text-white rounded-xl hover:bg-neutral-800 transition-colors disabled:opacity-50">
               {saving ? 'Saving...' : expense ? 'Update' : 'Add Expense'}
             </button>
           </div>

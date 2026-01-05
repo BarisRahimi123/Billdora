@@ -261,15 +261,17 @@ export default function DashboardPage() {
           <p className="text-3xl font-bold text-neutral-900">{stats?.utilization || 0}%</p>
         </div>
 
-        <div className="bg-white rounded-2xl p-6 border border-neutral-100">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center">
-              <FileText className="w-5 h-5 text-neutral-700" />
+        {canViewFinancials && (
+          <div className="bg-white rounded-2xl p-6 border border-neutral-100">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center">
+                <FileText className="w-5 h-5 text-neutral-700" />
+              </div>
+              <span className="text-neutral-500 text-sm">Draft Invoices</span>
             </div>
-            <span className="text-neutral-500 text-sm">Draft Invoices</span>
+            <p className="text-3xl font-bold text-neutral-900">{stats?.draftInvoices || 0}</p>
           </div>
-          <p className="text-3xl font-bold text-neutral-900">{stats?.draftInvoices || 0}</p>
-        </div>
+        )}
       </div>
 
       {/* Charts Row */}
@@ -310,23 +312,25 @@ export default function DashboardPage() {
         </div>
 
         {/* Invoicing Summary */}
-        <div className="bg-white rounded-2xl p-6 border border-neutral-100">
-          <h3 className="text-lg font-semibold text-neutral-900 mb-6">Invoicing Summary</h3>
-          <div className="grid grid-cols-3 gap-4">
-            <div className="text-center p-4 bg-neutral-50 rounded-xl">
-              <p className="text-2xl font-bold text-neutral-900">{formatCurrency(stats?.unbilledWIP || 0)}</p>
-              <p className="text-sm text-neutral-500 mt-1">Unbilled WIP</p>
-            </div>
-            <div className="text-center p-4 bg-neutral-50 rounded-xl">
-              <p className="text-2xl font-bold text-neutral-900">{stats?.draftInvoices || 0}</p>
-              <p className="text-sm text-neutral-500 mt-1">Drafts</p>
-            </div>
-            <div className="text-center p-4 bg-neutral-50 rounded-xl">
-              <p className="text-2xl font-bold text-neutral-900">{stats?.sentInvoices || 0}</p>
-              <p className="text-sm text-neutral-500 mt-1">Finalized</p>
+        {canViewFinancials && (
+          <div className="bg-white rounded-2xl p-6 border border-neutral-100">
+            <h3 className="text-lg font-semibold text-neutral-900 mb-6">Invoicing Summary</h3>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="text-center p-4 bg-neutral-50 rounded-xl">
+                <p className="text-2xl font-bold text-neutral-900">{formatCurrency(stats?.unbilledWIP || 0)}</p>
+                <p className="text-sm text-neutral-500 mt-1">Unbilled WIP</p>
+              </div>
+              <div className="text-center p-4 bg-neutral-50 rounded-xl">
+                <p className="text-2xl font-bold text-neutral-900">{stats?.draftInvoices || 0}</p>
+                <p className="text-sm text-neutral-500 mt-1">Drafts</p>
+              </div>
+              <div className="text-center p-4 bg-neutral-50 rounded-xl">
+                <p className="text-2xl font-bold text-neutral-900">{stats?.sentInvoices || 0}</p>
+                <p className="text-sm text-neutral-500 mt-1">Finalized</p>
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Recent Activity */}

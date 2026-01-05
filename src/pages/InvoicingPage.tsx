@@ -26,6 +26,8 @@ export default function InvoicingPage() {
   const [viewingInvoice, setViewingInvoice] = useState<Invoice | null>(null);
   const [pendingOpenInvoiceId, setPendingOpenInvoiceId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'client'>('list');
+  const [selectedInvoices, setSelectedInvoices] = useState<Set<string>>(new Set());
+  const [deleting, setDeleting] = useState(false);
   const [expandedClients, setExpandedClients] = useState<Set<string>>(() => {
     const saved = localStorage.getItem('invoicesExpandedClients');
     return saved ? new Set(JSON.parse(saved)) : new Set();
@@ -37,6 +39,56 @@ export default function InvoicingPage() {
     else newExpanded.add(clientName);
     setExpandedClients(newExpanded);
     localStorage.setItem('invoicesExpandedClients', JSON.stringify([...newExpanded]));
+  };
+
+  const toggleInvoiceSelection = (invoiceId: string) => {
+    const newSelected = new Set(selectedInvoices);
+    if (newSelected.has(invoiceId)) newSelected.delete(invoiceId);
+    else newSelected.add(invoiceId);
+    setSelectedInvoices(newSelected);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedInvoices.size === filteredInvoices.length) {
+      setSelectedInvoices(new Set());
+    } else {
+      setSelectedInvoices(new Set(filteredInvoices.map(i => i.id)));
+    }
+  };
+
+  const handleDeleteInvoice = async (invoiceId: string) => {
+    if (!confirm('Are you sure you want to delete this invoice?')) return;
+    setDeleting(true);
+    try {
+      await api.deleteInvoice(invoiceId);
+      showToast('Invoice deleted successfully', 'success');
+      loadData();
+      setSelectedInvoices(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(invoiceId);
+        return newSet;
+      });
+    } catch (err) {
+      console.error('Failed to delete invoice:', err);
+      showToast('Failed to delete invoice', 'error');
+    }
+    setDeleting(false);
+  };
+
+  const handleBatchDelete = async () => {
+    if (selectedInvoices.size === 0) return;
+    if (!confirm(`Are you sure you want to delete ${selectedInvoices.size} invoice(s)?`)) return;
+    setDeleting(true);
+    try {
+      await api.deleteInvoices(Array.from(selectedInvoices));
+      showToast(`${selectedInvoices.size} invoice(s) deleted successfully`, 'success');
+      loadData();
+      setSelectedInvoices(new Set());
+    } catch (err) {
+      console.error('Failed to delete invoices:', err);
+      showToast('Failed to delete invoices', 'error');
+    }
+    setDeleting(false);
   };
 
   // Check for navigation state to open a specific invoice
@@ -322,7 +374,7 @@ export default function InvoicingPage() {
           </button>
           <button
             onClick={() => setShowInvoiceModal(true)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-neutral-900-500 text-white rounded-xl hover:bg-neutral-800-600 transition-colors"
+            className="flex items-center gap-2 px-4 py-2.5 bg-neutral-900 text-white rounded-xl hover:bg-neutral-800 transition-colors"
           >
             <Plus className="w-4 h-4" />
             Create Invoice
@@ -413,23 +465,51 @@ export default function InvoicingPage() {
           <table className="w-full">
             <thead className="bg-neutral-50 border-b border-neutral-100">
               <tr>
+                <th className="w-12 px-4 py-4">
+                  <input
+                    type="checkbox"
+                    checked={filteredInvoices.length > 0 && selectedInvoices.size === filteredInvoices.length}
+                    onChange={toggleSelectAll}
+                    onClick={(e) => e.stopPropagation()}
+                    className="w-4 h-4 rounded border-neutral-300 text-blue-600 focus:ring-blue-500"
+                  />
+                </th>
                 <th className="text-left px-6 py-4 text-xs font-medium text-neutral-500 uppercase tracking-wider">Invoice</th>
                 <th className="text-left px-6 py-4 text-xs font-medium text-neutral-500 uppercase tracking-wider">Client</th>
                 <th className="text-left px-6 py-4 text-xs font-medium text-neutral-500 uppercase tracking-wider">Project</th>
                 <th className="text-right px-6 py-4 text-xs font-medium text-neutral-500 uppercase tracking-wider">Amount</th>
                 <th className="text-left px-6 py-4 text-xs font-medium text-neutral-500 uppercase tracking-wider">Status</th>
                 <th className="text-left px-6 py-4 text-xs font-medium text-neutral-500 uppercase tracking-wider">Due Date</th>
-                <th className="w-12"></th>
+                <th className="w-12">
+                  {selectedInvoices.size > 0 && (
+                    <button
+                      onClick={handleBatchDelete}
+                      disabled={deleting}
+                      className="p-1 text-red-600 hover:bg-red-50 rounded"
+                      title={`Delete ${selectedInvoices.size} selected`}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100">
               {filteredInvoices.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-12 text-neutral-500">No invoices found</td>
+                  <td colSpan={8} className="text-center py-12 text-neutral-500">No invoices found</td>
                 </tr>
               ) : (
                 filteredInvoices.map((invoice) => (
-                  <tr key={invoice.id} className="hover:bg-neutral-50 transition-colors cursor-pointer" onClick={() => setViewingInvoice(invoice)}>
+                  <tr key={invoice.id} className={`hover:bg-neutral-50 transition-colors cursor-pointer ${selectedInvoices.has(invoice.id) ? 'bg-blue-50' : ''}`} onClick={() => setViewingInvoice(invoice)}>
+                    <td className="px-4 py-4" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selectedInvoices.has(invoice.id)}
+                        onChange={() => toggleInvoiceSelection(invoice.id)}
+                        className="w-4 h-4 rounded border-neutral-300 text-blue-600 focus:ring-blue-500"
+                      />
+                    </td>
                     <td className="px-6 py-4">
                       <p className="font-medium text-neutral-900">{invoice.invoice_number}</p>
                       <p className="text-sm text-neutral-500">{new Date(invoice.created_at || '').toLocaleDateString()}</p>
@@ -478,6 +558,10 @@ export default function InvoicingPage() {
                               <CreditCard className="w-4 h-4" /> Record Payment
                             </button>
                           )}
+                          <div className="border-t border-neutral-100 my-1"></div>
+                          <button onClick={(e) => { e.stopPropagation(); setActiveMenu(null); handleDeleteInvoice(invoice.id); }} className="w-full flex items-center gap-2 px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50">
+                            <Trash2 className="w-4 h-4" /> Delete Invoice
+                          </button>
                         </div>
                       )}
                     </td>
@@ -1034,7 +1118,7 @@ function InvoiceModal({ clients, projects, companyId, onClose, onSave }: { clien
           </div>
           <div className="flex gap-3 pt-4">
             <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors">Cancel</button>
-            <button type="submit" disabled={saving} className="flex-1 px-4 py-2.5 bg-neutral-900-500 text-white rounded-xl hover:bg-neutral-800-600 transition-colors disabled:opacity-50">
+            <button type="submit" disabled={saving} className="flex-1 px-4 py-2.5 bg-neutral-900 text-white rounded-xl hover:bg-neutral-800 transition-colors disabled:opacity-50">
               {saving ? 'Creating...' : 'Create Invoice'}
             </button>
           </div>
@@ -1052,6 +1136,9 @@ interface InvoiceLineItem {
   rate: number;
   amount: number;
   unit?: string; // 'hr', 'unit', 'ea', etc.
+  billedPercentage?: number; // Percentage billed with this invoice
+  priorBilledPercentage?: number; // Cumulative prior billing percentage
+  taskBudget?: number; // Total task budget
 }
 
 // PDF Template type for detail view
@@ -1148,15 +1235,57 @@ function InvoiceDetailView({
         .eq('invoice_id', invoice.id);
       
       if (savedLineItems && savedLineItems.length > 0) {
-        // Use the saved line items with actual billed amounts
-        const items: InvoiceLineItem[] = savedLineItems.map(item => ({
-          id: item.id,
-          description: item.description || 'Service',
-          quantity: item.quantity || 1,
-          rate: item.unit_price || item.amount || 0,
-          amount: item.amount || 0,
-          unit: 'unit'
-        }));
+        // Get task budgets
+        let taskMap: Record<string, any> = {};
+        if (invoice.project_id) {
+          const { data: tasks } = await supabase
+            .from('tasks')
+            .select('id, name, total_budget, estimated_fees')
+            .eq('project_id', invoice.project_id);
+          if (tasks) {
+            taskMap = Object.fromEntries(tasks.map(t => [t.id, t]));
+          }
+        }
+        
+        // Get prior invoice line items (from invoices created BEFORE this one)
+        const priorBilledMap: Record<string, number> = {};
+        if (invoice.project_id && invoice.created_at) {
+          const { data: priorLineItems } = await supabase
+            .from('invoice_line_items')
+            .select('task_id, billed_percentage, invoice_id, invoices!inner(created_at, project_id)')
+            .eq('invoices.project_id', invoice.project_id)
+            .lt('invoices.created_at', invoice.created_at)
+            .not('task_id', 'is', null);
+          
+          if (priorLineItems) {
+            // Sum up prior billing percentages for each task
+            priorLineItems.forEach((item: any) => {
+              if (item.task_id && item.billed_percentage) {
+                priorBilledMap[item.task_id] = (priorBilledMap[item.task_id] || 0) + Number(item.billed_percentage);
+              }
+            });
+          }
+        }
+        
+        // Use the saved line items with correct prior billing
+        const items: InvoiceLineItem[] = savedLineItems.map(item => {
+          const task = item.task_id ? taskMap[item.task_id] : null;
+          const taskBudget = task?.total_budget || task?.estimated_fees || item.amount;
+          const itemBilledPct = item.billed_percentage || (taskBudget > 0 ? (item.amount / taskBudget) * 100 : 0);
+          const priorBilledPct = item.task_id ? (priorBilledMap[item.task_id] || 0) : 0;
+          
+          return {
+            id: item.id,
+            description: item.description || 'Service',
+            quantity: item.quantity || 1,
+            rate: item.unit_price || item.amount || 0,
+            amount: item.amount || 0,
+            unit: 'unit',
+            billedPercentage: Math.round(itemBilledPct),
+            priorBilledPercentage: Math.round(priorBilledPct),
+            taskBudget: taskBudget
+          };
+        });
         setLineItems(items);
         setLineItemsLoaded(true);
         return;
@@ -1449,33 +1578,73 @@ function InvoiceDetailView({
                     <p className="text-neutral-500">Period: {draftDate ? new Date(draftDate).toLocaleDateString() : new Date().toLocaleDateString()}</p>
                   </div>
                 ) : calculatorType === 'milestone' || calculatorType === 'percentage' ? (
-                  /* Milestone/Percentage - Clean minimalist view */
+                  /* Milestone/Percentage - Show prior and current billing */
                   <>
                     <h4 className="font-semibold text-neutral-900 mb-4 text-lg">{calculatorType === 'milestone' ? 'Milestone Billing' : 'Percentage Billing'}</h4>
                     <table className="w-full">
                       <thead>
                         <tr className="text-left text-neutral-500 text-sm border-b border-neutral-200">
                           <th className="pb-3 font-medium">Task</th>
-                          <th className="pb-3 font-medium text-center w-24">Billed</th>
-                          <th className="pb-3 font-medium text-right w-32">Budget</th>
-                          <th className="pb-3 font-medium text-right w-32">Amount</th>
+                          <th className="pb-3 font-medium text-center w-20">Prior</th>
+                          <th className="pb-3 font-medium text-center w-20">Current</th>
+                          <th className="pb-3 font-medium text-right w-28">Budget</th>
+                          <th className="pb-3 font-medium text-right w-28">Amount</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-neutral-100">
-                        {lineItems.map(item => (
+                        {lineItems.map(item => {
+                          const priorAmt = ((item.taskBudget || item.amount) * (item.priorBilledPercentage || 0)) / 100;
+                          const currentAmt = ((item.taskBudget || item.amount) * (item.billedPercentage || 0)) / 100;
+                          return (
                           <tr key={item.id}>
                             <td className="py-3">{item.description}</td>
                             <td className="py-3 text-center">
-                              <span className="inline-flex items-center justify-center w-12 h-6 bg-neutral-100 rounded text-xs font-medium text-neutral-700">
-                                100%
-                              </span>
+                              <div className="text-xs">
+                                <span className="inline-flex items-center justify-center w-14 h-5 bg-neutral-100 rounded font-medium text-neutral-500">
+                                  {item.priorBilledPercentage || 0}%
+                                </span>
+                                <p className="text-neutral-500 mt-0.5">{formatCurrency(priorAmt)}</p>
+                              </div>
                             </td>
-                            <td className="py-3 text-right text-neutral-500">{formatCurrency(item.amount)}</td>
+                            <td className="py-3 text-center">
+                              <div className="text-xs">
+                                <span className="inline-flex items-center justify-center w-14 h-5 bg-green-100 rounded font-medium text-green-700">
+                                  {item.billedPercentage || 0}%
+                                </span>
+                                <p className="text-green-600 mt-0.5">{formatCurrency(currentAmt)}</p>
+                              </div>
+                            </td>
+                            <td className="py-3 text-right text-neutral-500">{formatCurrency(item.taskBudget || item.amount)}</td>
                             <td className="py-3 text-right font-medium">{formatCurrency(item.amount)}</td>
                           </tr>
-                        ))}
+                        );})}
                       </tbody>
                     </table>
+                    {/* Billing Summary */}
+                    <div className="mt-4 pt-4 border-t border-neutral-100 bg-blue-50 rounded-lg p-4">
+                      <div className="grid grid-cols-3 gap-4 text-sm">
+                        <div>
+                          <p className="text-neutral-500 mb-1">Prior Billed</p>
+                          <p className="font-medium text-neutral-700">
+                            {formatCurrency(lineItems.reduce((sum, item) => sum + ((item.taskBudget || item.amount) * (item.priorBilledPercentage || 0)) / 100, 0))}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-green-600 mb-1">This Invoice</p>
+                          <p className="font-medium text-green-700">{formatCurrency(subtotal)}</p>
+                        </div>
+                        <div>
+                          <p className="text-neutral-500 mb-1">Total After</p>
+                          <p className="font-medium text-neutral-900">
+                            {formatCurrency(lineItems.reduce((sum, item) => {
+                              const budget = item.taskBudget || item.amount;
+                              const totalPct = (item.priorBilledPercentage || 0) + (item.billedPercentage || 0);
+                              return sum + (budget * totalPct) / 100;
+                            }, 0))}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
                   </>
                 ) : calculatorType === 'time_material' ? (
                   /* Time & Material - Detailed breakdown with hours */
@@ -1654,7 +1823,7 @@ function InvoiceDetailView({
 
               <button
                 onClick={addLineItem}
-                className="flex items-center gap-2 px-3 py-1.5 bg-neutral-900-500 text-white text-sm rounded-lg hover:bg-neutral-800-600 mb-6"
+                className="flex items-center gap-2 px-3 py-1.5 bg-neutral-900 text-white text-sm rounded-lg hover:bg-neutral-800 mb-6"
               >
                 <Plus className="w-4 h-4" /> Add Line Item
               </button>

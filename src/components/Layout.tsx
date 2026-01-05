@@ -30,7 +30,7 @@ interface SearchResult {
 
 export default function Layout() {
   const { profile, signOut } = useAuth();
-  const { canViewFinancials } = usePermissions();
+  const { canViewFinancials, isAdmin } = usePermissions();
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -146,7 +146,6 @@ export default function Layout() {
   const stopTimer = async () => {
     setTimerRunning(false);
     if (timerSeconds >= 60 && profile?.company_id) {
-      const { user } = useAuth();
       const hours = Math.round((timerSeconds / 3600) * 4) / 4;
       try {
         await api.createTimeEntry({
@@ -158,6 +157,7 @@ export default function Layout() {
           date: new Date().toISOString().split('T')[0],
           billable: true,
           hourly_rate: profile.hourly_rate || 150,
+          approval_status: 'draft',
         });
       } catch (error) {
         console.error('Failed to save timer:', error);
@@ -198,6 +198,10 @@ export default function Layout() {
           {navItems.filter(item => {
             // Hide Invoicing and Sales for users without financial access
             if (!canViewFinancials && (item.path === '/invoicing' || item.path === '/sales')) {
+              return false;
+            }
+            // Hide Reports, Analytics, Settings, Resourcing for non-admin users
+            if (!isAdmin && (item.path === '/reports' || item.path === '/analytics' || item.path === '/settings' || item.path === '/resourcing')) {
               return false;
             }
             return true;
@@ -326,6 +330,7 @@ export default function Layout() {
 
                 {userMenuOpen && (
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-neutral-100 py-2 z-50">
+                    {isAdmin && (
                     <button
                       onClick={() => { navigate('/settings'); setUserMenuOpen(false); }}
                       className="w-full flex items-center gap-2 px-4 py-2.5 text-left text-neutral-700 hover:bg-neutral-50"
@@ -333,6 +338,7 @@ export default function Layout() {
                       <Settings className="w-4 h-4" />
                       Settings
                     </button>
+                    )}
                     <button
                       onClick={() => { signOut(); setUserMenuOpen(false); }}
                       className="w-full flex items-center gap-2 px-4 py-2.5 text-left text-neutral-900 hover:bg-neutral-100"

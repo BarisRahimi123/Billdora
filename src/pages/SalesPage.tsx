@@ -7,6 +7,16 @@ import { useToast } from '../components/Toast';
 
 type Tab = 'clients' | 'quotes';
 
+// Generate quote number in format: YYMMDD-XXX (e.g., 250102-001)
+function generateQuoteNumber(): string {
+  const now = new Date();
+  const yy = String(now.getFullYear()).slice(-2);
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const dd = String(now.getDate()).padStart(2, '0');
+  const seq = String(Math.floor(Math.random() * 999) + 1).padStart(3, '0');
+  return `${yy}${mm}${dd}-${seq}`;
+}
+
 export default function SalesPage() {
   const navigate = useNavigate();
   const { profile } = useAuth();
@@ -978,7 +988,7 @@ function QuoteModal({ quote, clients, companyId, onClose, onSave }: { quote: Quo
       if (quote) {
         await api.updateQuote(quote.id, quoteData);
       } else {
-        await api.createQuote({ ...quoteData, company_id: companyId, quote_number: `QT-${Date.now().toString().slice(-6)}` });
+        await api.createQuote({ ...quoteData, company_id: companyId, quote_number: generateQuoteNumber() });
       }
       onSave();
     } catch (err: any) {

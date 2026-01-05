@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Users, Plus, Search, Mail, Phone, Edit2, X, UserCheck, UserX, Clock, DollarSign, Activity, UsersRound, Shield, User, ChevronRight, Calendar, Briefcase, CheckCircle2, MoreVertical, Trash2, UserPlus, Send } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { api, userManagementApi, UserProfile, Role, TimeEntry, Expense, Task } from '../lib/api';
+import { supabase } from '../lib/supabase';
 
 type TabType = 'basic' | 'rights' | 'contact' | 'time' | 'expenses' | 'activity' | 'teams';
 
@@ -1162,10 +1163,23 @@ function StaffModal({ staff, companyId, onClose, onSave }: {
           emergency_contact_email: emergencyContactEmail,
         } as any);
       } else {
-        // Create staff profile directly
+        // Check if email already exists
+        const { data: existingUser } = await supabase
+          .from('profiles')
+          .select('id, email')
+          .eq('email', email.toLowerCase())
+          .maybeSingle();
+        
+        if (existingUser) {
+          setError('A user with this email already exists');
+          setSaving(false);
+          return;
+        }
+        
+        // Create staff profile
         await userManagementApi.createStaffProfile({
           company_id: companyId,
-          email: email,
+          email: email.toLowerCase(),
           full_name: fullName,
           role: role,
           hourly_rate: parseFloat(hourlyRate) || 0,
@@ -1188,6 +1202,24 @@ function StaffModal({ staff, companyId, onClose, onSave }: {
           emergency_contact_phone: emergencyContactPhone,
           emergency_contact_email: emergencyContactEmail,
         } as any);
+        
+        // Send invitation email
+        const { data: companyData } = await supabase.from('companies').select('name').eq('id', companyId).single();
+        
+        await supabase.functions.invoke('send-email', {
+          body: {
+            to: email.toLowerCase(),
+            subject: `You've been added to ${companyData?.name || 'a company'} on PrimeLedger`,
+            type: 'invitation',
+            data: {
+              inviterName: 'Your administrator',
+              companyName: companyData?.name || 'a company',
+              roleName: role,
+              signupUrl: `${window.location.origin}/login?email=${encodeURIComponent(email.toLowerCase())}&signup=true`,
+            },
+          },
+        });
+        
         setError(null);
       }
       onSave();
@@ -1577,6 +1609,24 @@ function InviteModal({ companyId, onClose, onSent }: {
         company_id: companyId,
         email: email.toLowerCase(),
       });
+      
+      // Send invitation email via edge function
+      const { data: companyData } = await supabase.from('companies').select('name').eq('id', companyId).single();
+      
+      await supabase.functions.invoke('send-email', {
+        body: {
+          to: email.toLowerCase(),
+          subject: `You've been invited to join ${companyData?.name || 'a company'} on PrimeLedger`,
+          type: 'invitation',
+          data: {
+            inviterName: 'A team member',
+            companyName: companyData?.name || 'a company',
+            roleName: role,
+            signupUrl: `${window.location.origin}/login?email=${encodeURIComponent(email.toLowerCase())}&signup=true`,
+          },
+        },
+      });
+      
       setSuccess(true);
       setTimeout(() => {
         onSent();

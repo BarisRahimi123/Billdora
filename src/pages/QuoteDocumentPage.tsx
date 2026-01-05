@@ -14,6 +14,16 @@ interface LineItem {
   taxed: boolean;
 }
 
+// Generate quote number in format: YYMMDD-XXX (e.g., 250102-001)
+function generateQuoteNumber(): string {
+  const now = new Date();
+  const yy = String(now.getFullYear()).slice(-2);
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const dd = String(now.getDate()).padStart(2, '0');
+  const seq = String(Math.floor(Math.random() * 999) + 1).padStart(3, '0');
+  return `${yy}${mm}${dd}-${seq}`;
+}
+
 export default function QuoteDocumentPage() {
   const { quoteId } = useParams();
   const navigate = useNavigate();
@@ -30,10 +40,11 @@ export default function QuoteDocumentPage() {
 
   // Editable fields
   const [documentTitle, setDocumentTitle] = useState('New Quote');
+  const [projectName, setProjectName] = useState('');
   const [description, setDescription] = useState('');
   const [selectedClientId, setSelectedClientId] = useState('');
   const [validUntil, setValidUntil] = useState('');
-  const [volumeNumber, setVolumeNumber] = useState('Volume I');
+  const [volumeNumber, setVolumeNumber] = useState('Proposal');
   const [coverBgUrl, setCoverBgUrl] = useState('https://images.unsplash.com/photo-1497366216548-37526070297c?w=1200&q=80');
   
   const [companySettings, setCompanySettings] = useState<CompanySettings | null>(null);
@@ -280,7 +291,7 @@ export default function QuoteDocumentPage() {
           title: documentTitle.trim(),
           description: description || '',
           total_amount: total,
-          quote_number: `QT-${Date.now().toString().slice(-6)}`,
+          quote_number: generateQuoteNumber(),
           valid_until: validUntil || undefined,
           cover_background_url: coverBgUrl,
           cover_volume_number: volumeNumber,
@@ -474,8 +485,9 @@ export default function QuoteDocumentPage() {
                     <div className="inline-flex items-center gap-2">
                       <input
                         type="text"
-                        value={documentTitle}
-                        onChange={(e) => { setDocumentTitle(e.target.value); setHasUnsavedChanges(true); }}
+                        value={projectName || documentTitle}
+                        onChange={(e) => { setProjectName(e.target.value); setHasUnsavedChanges(true); }}
+                        placeholder="Project Name"
                         className="text-4xl md:text-5xl font-bold tracking-tight bg-transparent border-b-2 border-white/50 text-center outline-none"
                         autoFocus
                       />
@@ -488,21 +500,10 @@ export default function QuoteDocumentPage() {
                       onClick={() => setEditingTitle(true)}
                       className="text-4xl md:text-5xl font-bold tracking-tight cursor-pointer hover:opacity-80 print:cursor-default"
                     >
-                      {documentTitle || 'QUOTE'}
+                      {projectName || documentTitle || 'PROJECT NAME'}
                     </h1>
                   )}
-                  <div className="mt-4 flex items-center justify-center gap-2">
-                    <input
-                      type="text"
-                      value={volumeNumber}
-                      onChange={(e) => { setVolumeNumber(e.target.value); setHasUnsavedChanges(true); }}
-                      className="text-lg text-white/70 bg-transparent border-b border-transparent hover:border-white/30 focus:border-white/50 text-center outline-none print:border-none"
-                    />
-                  </div>
-                  <div className="mt-8">
-                    <p className="text-white/50 text-sm uppercase tracking-wider mb-2">Project</p>
-                    <h2 className="text-2xl md:text-3xl font-semibold">{documentTitle || 'Project Name'}</h2>
-                  </div>
+                  <p className="text-lg text-white/70 mt-4">Proposal #{quote?.quote_number || 'New'}</p>
                 </div>
 
                 {/* Footer */}
@@ -934,12 +935,8 @@ export default function QuoteDocumentPage() {
                     <p className="text-white/60 mt-4">{formatDate(quote?.created_at)}</p>
                   </div>
                   <div className="text-center py-16">
-                    <h1 className="text-5xl font-bold tracking-tight">{documentTitle || 'QUOTE'}</h1>
-                    <p className="text-lg text-white/70 mt-4">{volumeNumber}</p>
-                    <div className="mt-8">
-                      <p className="text-white/50 text-sm uppercase tracking-wider mb-2">Project</p>
-                      <h2 className="text-3xl font-semibold">{documentTitle}</h2>
-                    </div>
+                    <h1 className="text-5xl font-bold tracking-tight">{projectName || documentTitle || 'PROJECT NAME'}</h1>
+                    <p className="text-lg text-white/70 mt-4">Proposal #{quote?.quote_number || 'New'}</p>
                   </div>
                   <div className="mt-auto pt-8 border-t border-white/20">
                     <div className="flex items-center justify-between">
