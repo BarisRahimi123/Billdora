@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Download, Send, Upload, Plus, Trash2, Check, Save, X, Package, UserPlus } from 'lucide-react';
+import { ArrowLeft, Download, Send, Upload, Plus, Trash2, Check, Save, X, Package, UserPlus, Settings, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { api, Quote, Client, QuoteLineItem, CompanySettings, Service } from '../lib/api';
 import { useToast } from '../components/Toast';
@@ -82,6 +82,21 @@ export default function QuoteDocumentPage() {
   const [services, setServices] = useState<Service[]>([]);
   const [showServicesModal, setShowServicesModal] = useState(false);
   const [showNewClientModal, setShowNewClientModal] = useState(false);
+
+  // Section visibility toggles
+  const [showSections, setShowSections] = useState({
+    cover: true,
+    letter: true,
+    scopeOfWork: true,
+    quoteDetails: true,
+    timeline: true,
+    terms: true,
+    additionalOfferings: true,
+  });
+  const [showSectionSettings, setShowSectionSettings] = useState(false);
+
+  // Letter content
+  const [letterContent, setLetterContent] = useState('');
 
   useEffect(() => {
     loadData();
@@ -420,6 +435,13 @@ export default function QuoteDocumentPage() {
           <button onClick={handlePrint} className="flex items-center gap-2 px-3 py-2 text-neutral-500 hover:text-neutral-900 text-sm" title="Preview">
             Preview
           </button>
+          <button 
+            onClick={() => setShowSectionSettings(!showSectionSettings)} 
+            className="flex items-center gap-2 px-3 py-2 text-neutral-500 hover:text-neutral-900 text-sm"
+            title="Section Settings"
+          >
+            <Settings className="w-4 h-4" />
+          </button>
           {!isNewQuote && (
             <button onClick={handleSendToCustomer} className="hidden md:flex items-center gap-2 px-4 py-2 border border-neutral-900 text-neutral-900 rounded-lg hover:bg-neutral-50 text-sm flex-shrink-0">
               <Send className="w-4 h-4" />
@@ -430,11 +452,45 @@ export default function QuoteDocumentPage() {
         </div>
       </div>
 
+      {/* Section Settings Panel */}
+      {showSectionSettings && (
+        <div className="bg-white border-b border-neutral-200 px-4 lg:px-6 py-4 print:hidden">
+          <div className="max-w-[850px] mx-auto">
+            <h3 className="text-sm font-semibold text-neutral-900 mb-3">Show/Hide Proposal Sections</h3>
+            <div className="flex flex-wrap gap-3">
+              {[
+                { key: 'cover', label: 'Cover Page' },
+                { key: 'letter', label: 'Letter' },
+                { key: 'scopeOfWork', label: 'Scope of Work' },
+                { key: 'quoteDetails', label: 'Quote Details' },
+                { key: 'timeline', label: 'Timeline' },
+                { key: 'terms', label: 'Terms & Signature' },
+                { key: 'additionalOfferings', label: 'Additional Offerings' },
+              ].map((section) => (
+                <button
+                  key={section.key}
+                  onClick={() => setShowSections(prev => ({ ...prev, [section.key]: !prev[section.key as keyof typeof prev] }))}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                    showSections[section.key as keyof typeof showSections]
+                      ? 'bg-[#476E66] text-white'
+                      : 'bg-neutral-100 text-neutral-500'
+                  }`}
+                >
+                  {showSections[section.key as keyof typeof showSections] ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                  {section.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Document Container */}
       <div className="py-8 px-4 flex justify-center">
         <div className="w-full max-w-[850px] space-y-8">
           
           {/* COVER PAGE */}
+          {showSections.cover && (
           <div 
             className="bg-white shadow-xl rounded-lg overflow-hidden relative"
             style={{ minHeight: '600px' }}
@@ -523,8 +579,73 @@ export default function QuoteDocumentPage() {
                 </div>
               </div>
             </div>
+          )}
+
+          {/* LETTER PAGE */}
+          {showSections.letter && (
+          <div className="bg-white shadow-xl rounded-lg overflow-hidden p-8">
+            {/* Letterhead */}
+            <div className="flex justify-between items-start mb-8">
+              <div className="flex gap-4">
+                {companyInfo.logo ? (
+                  <img src={companyInfo.logo} alt={companyInfo.name} className="w-14 h-14 object-contain rounded-lg bg-neutral-100" />
+                ) : (
+                  <div className="w-14 h-14 bg-neutral-100 rounded-lg flex items-center justify-center text-xl font-bold text-neutral-700">
+                    {companyInfo.name?.charAt(0) || 'C'}
+                  </div>
+                )}
+                <div>
+                  <h2 className="text-xl font-bold text-neutral-900">{companyInfo.name}</h2>
+                  <p className="text-sm text-neutral-600">{companyInfo.address}</p>
+                  <p className="text-sm text-neutral-600">{companyInfo.city}, {companyInfo.state} {companyInfo.zip}</p>
+                  <p className="text-sm text-neutral-500">{companyInfo.phone} | {companyInfo.website}</p>
+                </div>
+              </div>
+              <div className="text-right text-sm text-neutral-500">
+                <p>{formatDate(quote?.created_at)}</p>
+              </div>
+            </div>
+
+            {/* Recipient */}
+            <div className="mb-6">
+              <p className="font-semibold text-neutral-900">{client?.name || 'Client Name'}</p>
+              {client?.display_name && client.display_name !== client.name && (
+                <p className="text-neutral-600">{client.display_name}</p>
+              )}
+              {client?.email && <p className="text-neutral-500 text-sm">{client.email}</p>}
+            </div>
+
+            {/* Subject */}
+            <div className="mb-6">
+              <p className="text-neutral-600">
+                <span className="font-semibold">Subject:</span> {documentTitle || projectName || 'Project Proposal'}
+              </p>
+            </div>
+
+            {/* Letter Body */}
+            <div className="mb-6">
+              <p className="text-neutral-900 mb-4">Dear {client?.name?.split(' ')[0] || 'Valued Client'},</p>
+              <textarea
+                value={letterContent || `Thank you for the potential opportunity to work together on the ${documentTitle || projectName || 'project'}. I have attached the proposal for your consideration which includes a thorough Scope of Work, deliverable schedule, and Fee.\n\nPlease review and let me know if you have any questions or comments. If you are ready for us to start working on the project, please sign the proposal sheet.`}
+                onChange={(e) => { setLetterContent(e.target.value); setHasUnsavedChanges(true); }}
+                className="w-full h-32 p-0 text-neutral-700 bg-transparent resize-none outline-none border-none focus:ring-0"
+                placeholder="Enter your letter content..."
+              />
+            </div>
+
+            {/* Closing */}
+            <div className="mt-8">
+              <p className="text-neutral-900 mb-4">Sincerely,</p>
+              <div className="mt-8">
+                <p className="font-semibold text-neutral-900">{profile?.full_name || companyInfo.name}</p>
+                <p className="text-sm text-neutral-600">{companyInfo.name}</p>
+              </div>
+            </div>
+          </div>
+          )}
 
           {/* DETAILS PAGE */}
+          {showSections.quoteDetails && (
           <div className="bg-white shadow-xl rounded-lg overflow-hidden">
             {/* Header */}
               <div className="p-8 border-b border-neutral-200">
@@ -640,6 +761,7 @@ export default function QuoteDocumentPage() {
               </div>
 
               {/* Scope of Work Section */}
+              {showSections.scopeOfWork && (
               <div className="px-8 py-4">
                 <h3 className="text-sm font-semibold text-neutral-900 uppercase tracking-wider mb-3">Scope of Work</h3>
                 <div className="border border-neutral-200 rounded-lg">
@@ -651,6 +773,7 @@ export default function QuoteDocumentPage() {
                   />
                 </div>
               </div>
+              )}
 
               {/* Line Items - Clean Minimal Design */}
               <div className="px-8 py-4">
@@ -827,7 +950,7 @@ export default function QuoteDocumentPage() {
               </div>
 
               {/* Project Timeline */}
-              {lineItems.filter(item => item.description.trim()).length > 0 && (
+              {showSections.timeline && lineItems.filter(item => item.description.trim()).length > 0 && (
                 <div className="px-8 py-4">
                   <h3 className="text-sm font-semibold text-neutral-900 uppercase tracking-wider mb-3">Project Timeline</h3>
                   <div className="border border-neutral-200 rounded-lg p-4">
@@ -880,6 +1003,8 @@ export default function QuoteDocumentPage() {
               )}
 
               {/* Terms and Conditions */}
+              {showSections.terms && (
+              <>
               <div className="px-8 py-4">
                 <h3 className="font-bold text-neutral-900 mb-2">TERMS AND CONDITIONS</h3>
                 <textarea
@@ -942,27 +1067,7 @@ export default function QuoteDocumentPage() {
                   )}
                 </div>
               </div>
-
-              {/* Additional Offerings Section */}
-              {services.length > 0 && (
-                <div className="px-8 py-6 border-t border-neutral-200">
-                  <h3 className="text-sm font-semibold text-neutral-900 uppercase tracking-wider mb-4">Additional Services We Offer</h3>
-                  <p className="text-sm text-neutral-600 mb-4">Explore our complete range of professional services:</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {services.slice(0, 9).map((service) => (
-                      <div key={service.id} className="border border-neutral-200 rounded-lg p-3 hover:bg-neutral-50 transition-colors">
-                        <p className="font-medium text-neutral-900 text-sm">{service.name}</p>
-                        <p className="text-xs text-neutral-500">{service.category}</p>
-                        {service.base_rate && (
-                          <p className="text-xs text-[#476E66] mt-1">Starting at ${service.base_rate}/{service.unit_label}</p>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                  {services.length > 9 && (
-                    <p className="text-xs text-neutral-500 mt-3 text-center">+ {services.length - 9} more services available</p>
-                  )}
-                </div>
+              </>
               )}
 
               {/* Footer */}
@@ -973,6 +1078,58 @@ export default function QuoteDocumentPage() {
                 </div>
               </div>
             </div>
+          )}
+
+          {/* ADDITIONAL OFFERINGS PAGE - Separate Section */}
+          {showSections.additionalOfferings && services.length > 0 && (
+            <div className="bg-white shadow-xl rounded-lg overflow-hidden">
+              <div className="p-8">
+                <h2 className="text-2xl font-bold text-neutral-900 mb-2">Additional Offerings</h2>
+                <p className="text-neutral-600 mb-6">Explore our complete range of professional services:</p>
+                
+                {/* Services Table */}
+                <div className="border border-neutral-200 rounded-lg overflow-hidden">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="bg-neutral-50 border-b border-neutral-200">
+                        <th className="text-left px-6 py-3 font-semibold text-neutral-900">Service / Product</th>
+                        <th className="text-right px-6 py-3 font-semibold text-neutral-900 w-40">Unit Cost</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-neutral-100">
+                      {services.map((service) => (
+                        <tr key={service.id} className="hover:bg-neutral-50">
+                          <td className="px-6 py-4">
+                            <p className="font-medium text-neutral-900">{service.name}</p>
+                            {service.description && (
+                              <p className="text-sm text-neutral-500 mt-0.5">{service.description}</p>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            {service.pricing_type === 'per_sqft' && service.min_rate && service.max_rate ? (
+                              <span className="text-neutral-900">${service.min_rate} - ${service.max_rate}</span>
+                            ) : service.base_rate ? (
+                              <span className="text-neutral-900">${service.base_rate}</span>
+                            ) : (
+                              <span className="text-neutral-500">Contact us</span>
+                            )}
+                            {service.unit_label && (
+                              <p className="text-xs text-neutral-500">per {service.unit_label}</p>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Thank You Footer */}
+              <div className="px-8 py-6 bg-[#476E66] text-white text-center">
+                <p className="text-lg font-semibold">Thank you and looking forward to doing business with you again!</p>
+              </div>
+            </div>
+          )}
 
         </div>
       </div>
