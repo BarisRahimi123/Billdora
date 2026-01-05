@@ -371,60 +371,62 @@ export default function QuoteDocumentPage() {
   return (
     <div className="min-h-screen bg-neutral-100">
       {/* Toolbar */}
-      <div className="sticky top-0 z-50 bg-white border-b border-neutral-200 px-6 py-3 flex items-center justify-between print:hidden">
-        <div className="flex items-center gap-4">
-          <button onClick={() => {
-            if (hasUnsavedChanges && !confirm('You have unsaved changes. Are you sure you want to leave?')) return;
-            navigate('/sales');
-          }} className="flex items-center gap-2 text-neutral-600 hover:text-neutral-900">
-            <ArrowLeft className="w-5 h-5" />
-            Back to Sales
-          </button>
-          <div className="h-6 w-px bg-neutral-200" />
-          <div className="flex gap-1 p-1 bg-neutral-100 rounded-lg">
-            <button
-              onClick={() => setCurrentPage('cover')}
-              className={`px-3 py-1.5 text-sm font-medium rounded ${currentPage === 'cover' ? 'bg-white shadow-sm text-neutral-900' : 'text-neutral-600'}`}
-            >
-              Cover Page
+      <div className="sticky top-0 z-50 bg-white border-b border-neutral-200 px-4 lg:px-6 py-3 print:hidden">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex items-center gap-2 sm:gap-4 overflow-x-auto">
+            <button onClick={() => {
+              if (hasUnsavedChanges && !confirm('You have unsaved changes. Are you sure you want to leave?')) return;
+              navigate('/sales');
+            }} className="flex items-center gap-1 sm:gap-2 text-neutral-600 hover:text-neutral-900 flex-shrink-0">
+              <ArrowLeft className="w-5 h-5" />
+              <span className="hidden sm:inline">Back to Sales</span>
             </button>
-            <button
-              onClick={() => setCurrentPage('details')}
-              className={`px-3 py-1.5 text-sm font-medium rounded ${currentPage === 'details' ? 'bg-white shadow-sm text-neutral-900' : 'text-neutral-600'}`}
-            >
-              Quote Details
-            </button>
+            <div className="h-6 w-px bg-neutral-200 hidden sm:block" />
+            <div className="flex gap-1 p-1 bg-neutral-100 rounded-lg flex-shrink-0">
+              <button
+                onClick={() => setCurrentPage('cover')}
+                className={`px-2 sm:px-3 py-1.5 text-xs sm:text-sm font-medium rounded whitespace-nowrap ${currentPage === 'cover' ? 'bg-white shadow-sm text-neutral-900' : 'text-neutral-600'}`}
+              >
+                Cover Page
+              </button>
+              <button
+                onClick={() => setCurrentPage('details')}
+                className={`px-2 sm:px-3 py-1.5 text-xs sm:text-sm font-medium rounded whitespace-nowrap ${currentPage === 'details' ? 'bg-white shadow-sm text-neutral-900' : 'text-neutral-600'}`}
+              >
+                Quote Details
+              </button>
+            </div>
           </div>
-        </div>
-        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto">
           {hasUnsavedChanges && (
             <span className="text-sm text-neutral-900">Unsaved changes</span>
           )}
           <button
             onClick={saveChanges}
             disabled={saving}
-            className="flex items-center gap-2 px-4 py-2 bg-neutral-900 text-white rounded-lg hover:bg-neutral-800 disabled:opacity-50"
+            className="flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 bg-neutral-900 text-white rounded-lg hover:bg-neutral-800 disabled:opacity-50 text-sm flex-shrink-0"
           >
             <Save className="w-4 h-4" />
-            {saving ? 'Saving...' : isNewQuote ? 'Create Quote' : 'Save Changes'}
+            <span className="hidden xs:inline">{saving ? 'Saving...' : isNewQuote ? 'Create' : 'Save'}</span>
           </button>
           <button 
             onClick={handleServerPdf} 
             disabled={generatingPdf}
-            className="flex items-center gap-2 px-4 py-2 border border-neutral-200 rounded-lg hover:bg-neutral-50 disabled:opacity-50"
+            className="hidden sm:flex items-center gap-2 px-4 py-2 border border-neutral-200 rounded-lg hover:bg-neutral-50 disabled:opacity-50 text-sm flex-shrink-0"
           >
             <Download className="w-4 h-4" />
             {generatingPdf ? 'Generating...' : 'Export PDF'}
           </button>
-          <button onClick={handlePrint} className="flex items-center gap-2 px-3 py-2 text-neutral-500 hover:text-neutral-900" title="Preview">
+          <button onClick={handlePrint} className="hidden lg:flex items-center gap-2 px-3 py-2 text-neutral-500 hover:text-neutral-900 text-sm" title="Preview">
             Preview
           </button>
           {!isNewQuote && (
-            <button onClick={handleSendToCustomer} className="flex items-center gap-2 px-4 py-2 border border-neutral-900 text-neutral-900 rounded-lg hover:bg-neutral-50">
+            <button onClick={handleSendToCustomer} className="hidden md:flex items-center gap-2 px-4 py-2 border border-neutral-900 text-neutral-900 rounded-lg hover:bg-neutral-50 text-sm flex-shrink-0">
               <Send className="w-4 h-4" />
-              Send to Customer
+              Send
             </button>
           )}
+          </div>
         </div>
       </div>
 

@@ -300,8 +300,12 @@ export default function SalesPage() {
       {/* Clients Section - Inline editing */}
       {activeTab === 'clients' && (
         <div className="flex gap-6">
-          {/* Client List */}
-          <div className={`bg-white rounded-2xl border border-neutral-100 overflow-hidden ${selectedClient || isAddingNewClient ? 'w-80 flex-shrink-0' : 'flex-1'}`}>
+          {/* Client List - Hidden on mobile when client selected */}
+          <div className={`bg-white rounded-2xl border border-neutral-100 overflow-hidden ${
+            selectedClient || isAddingNewClient 
+              ? 'hidden lg:block lg:w-80 lg:flex-shrink-0' 
+              : 'flex-1'
+          }`}>
             <div className="max-h-[calc(100vh-320px)] overflow-y-auto">
               {filteredClients.map((client) => (
                 <div
@@ -331,9 +335,9 @@ export default function SalesPage() {
             </div>
           </div>
 
-          {/* Client Detail Panel */}
+          {/* Client Detail Panel - Full width on mobile */}
           {(selectedClient || isAddingNewClient) && (
-            <div className="flex-1 bg-white rounded-2xl border border-neutral-100 p-6">
+            <div className="flex-1 bg-white rounded-2xl border border-neutral-100 p-4 lg:p-6">
               <InlineClientEditor
                 client={isAddingNewClient ? null : selectedClient}
                 companyId={profile?.company_id || ''}
@@ -754,7 +758,7 @@ function InlineClientEditor({ client, companyId, onClose, onSave, onDelete }: {
         <h3 className="text-lg font-semibold text-neutral-900 mb-4">Company Information</h3>
         {editing ? (
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm text-neutral-600 mb-1">Company Name *</label>
                 <input type="text" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none" placeholder="Acme Corporation" />
@@ -764,7 +768,7 @@ function InlineClientEditor({ client, companyId, onClose, onSave, onDelete }: {
                 <input type="text" value={formData.display_name} onChange={(e) => setFormData({...formData, display_name: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none" placeholder="Acme" />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm text-neutral-600 mb-1">Type</label>
                 <select value={formData.type} onChange={(e) => setFormData({...formData, type: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none">
@@ -781,7 +785,7 @@ function InlineClientEditor({ client, companyId, onClose, onSave, onDelete }: {
                 </select>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm text-neutral-600 mb-1">Email</label>
                 <input type="email" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none" placeholder="contact@company.com" />
@@ -799,7 +803,7 @@ function InlineClientEditor({ client, companyId, onClose, onSave, onDelete }: {
               <label className="block text-sm text-neutral-600 mb-1">Address</label>
               <input type="text" value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none" placeholder="123 Main Street" />
             </div>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm text-neutral-600 mb-1">City</label>
                 <input type="text" value={formData.city} onChange={(e) => setFormData({...formData, city: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none" />
@@ -861,7 +865,7 @@ function InlineClientEditor({ client, companyId, onClose, onSave, onDelete }: {
           <h3 className="text-lg font-semibold text-neutral-900 mb-4">Primary Contact</h3>
           {editing ? (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm text-neutral-600 mb-1">Name</label>
                   <input type="text" value={formData.primary_contact_name} onChange={(e) => setFormData({...formData, primary_contact_name: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none" />
@@ -871,7 +875,7 @@ function InlineClientEditor({ client, companyId, onClose, onSave, onDelete }: {
                   <input type="text" value={formData.primary_contact_title} onChange={(e) => setFormData({...formData, primary_contact_title: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none" />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm text-neutral-600 mb-1">Email</label>
                   <input type="email" value={formData.primary_contact_email} onChange={(e) => setFormData({...formData, primary_contact_email: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none" />
@@ -883,7 +887,7 @@ function InlineClientEditor({ client, companyId, onClose, onSave, onDelete }: {
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <p className="text-sm text-neutral-500">Name</p>
                 <p className="font-medium text-neutral-900">{client?.primary_contact_name || '-'}</p>
@@ -911,7 +915,7 @@ function InlineClientEditor({ client, companyId, onClose, onSave, onDelete }: {
           <h3 className="text-lg font-semibold text-neutral-900 mb-4">Billing Contact</h3>
           {editing ? (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm text-neutral-600 mb-1">Name</label>
                   <input type="text" value={formData.billing_contact_name} onChange={(e) => setFormData({...formData, billing_contact_name: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none" />
@@ -921,7 +925,7 @@ function InlineClientEditor({ client, companyId, onClose, onSave, onDelete }: {
                   <input type="text" value={formData.billing_contact_title} onChange={(e) => setFormData({...formData, billing_contact_title: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none" />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm text-neutral-600 mb-1">Email</label>
                   <input type="email" value={formData.billing_contact_email} onChange={(e) => setFormData({...formData, billing_contact_email: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none" />
@@ -933,7 +937,7 @@ function InlineClientEditor({ client, companyId, onClose, onSave, onDelete }: {
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <p className="text-sm text-neutral-500">Name</p>
                 <p className="font-medium text-neutral-900">{client?.billing_contact_name || '-'}</p>
