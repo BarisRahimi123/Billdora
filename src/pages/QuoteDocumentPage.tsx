@@ -1147,7 +1147,7 @@ export default function QuoteDocumentPage() {
         }
       `}</style>
 
-      {/* Export Preview Modal - Shows Cover + Details */}
+      {/* Export Preview Modal - Shows All Enabled Sections */}
       {showExportPreview && (
         <div className="fixed inset-0 bg-black/80 z-50 overflow-auto print:bg-white print:overflow-visible">
           {/* Toolbar */}
@@ -1171,7 +1171,9 @@ export default function QuoteDocumentPage() {
           </div>
 
           <div className="py-8 flex flex-col items-center gap-8 print:p-0 print:gap-0">
+            
             {/* Cover Page */}
+            {showSections.cover && (
             <div className="export-page w-[850px] bg-white shadow-xl print:shadow-none print:w-full" style={{ minHeight: '1100px', aspectRatio: '8.5/11' }}>
               <div className="relative h-full">
                 <div 
@@ -1219,8 +1221,80 @@ export default function QuoteDocumentPage() {
                 </div>
               </div>
             </div>
+            )}
 
-            {/* Details Page */}
+            {/* Letter Page */}
+            {showSections.letter && (
+            <div className="export-page w-[850px] bg-white shadow-xl print:shadow-none print:w-full p-12" style={{ minHeight: '1100px' }}>
+              {/* Letterhead */}
+              <div className="flex justify-between items-start mb-12">
+                <div className="flex gap-4">
+                  {companyInfo.logo ? (
+                    <img src={companyInfo.logo} alt={companyInfo.name} className="w-14 h-14 object-contain rounded-lg bg-neutral-100" />
+                  ) : (
+                    <div className="w-14 h-14 bg-neutral-100 rounded-lg flex items-center justify-center text-xl font-bold text-neutral-700">
+                      {companyInfo.name?.charAt(0) || 'C'}
+                    </div>
+                  )}
+                  <div>
+                    <h2 className="text-xl font-bold text-neutral-900">{companyInfo.name}</h2>
+                    <p className="text-sm text-neutral-600">{companyInfo.address}</p>
+                    <p className="text-sm text-neutral-600">{companyInfo.city}, {companyInfo.state} {companyInfo.zip}</p>
+                    <p className="text-sm text-neutral-500">{companyInfo.phone} | {companyInfo.website}</p>
+                  </div>
+                </div>
+                <div className="text-right text-sm text-neutral-500">
+                  <p>{formatDate(quote?.created_at)}</p>
+                </div>
+              </div>
+
+              {/* Recipient */}
+              <div className="mb-8">
+                <p className="font-semibold text-neutral-900">{client?.name || 'Client Name'}</p>
+                {client?.display_name && client.display_name !== client.name && (
+                  <p className="text-neutral-600">{client.display_name}</p>
+                )}
+                {client?.email && <p className="text-neutral-500 text-sm">{client.email}</p>}
+              </div>
+
+              {/* Subject */}
+              <div className="mb-8">
+                <p className="text-neutral-900">
+                  <span className="font-semibold">Subject:</span> {documentTitle || projectName || 'Project Proposal'}
+                </p>
+              </div>
+
+              {/* Letter Body */}
+              <div className="mb-8">
+                <p className="text-neutral-900 mb-6">Dear {client?.name?.split(' ')[0] || 'Valued Client'},</p>
+                <div className="text-neutral-700 whitespace-pre-line leading-relaxed">
+                  {letterContent || `Thank you for the potential opportunity to work together on the ${documentTitle || projectName || 'project'}. I have attached the proposal for your consideration which includes a thorough Scope of Work, deliverable schedule, and Fee.\n\nPlease review and let me know if you have any questions or comments. If you are ready for us to start working on the project, please sign the proposal sheet.`}
+                </div>
+              </div>
+
+              {/* Closing */}
+              <div className="mt-16">
+                <p className="text-neutral-900 mb-8">Sincerely,</p>
+                <div className="mt-12">
+                  <p className="font-semibold text-neutral-900">{profile?.full_name || companyInfo.name}</p>
+                  <p className="text-sm text-neutral-600">{companyInfo.name}</p>
+                </div>
+              </div>
+            </div>
+            )}
+
+            {/* Scope of Work Page */}
+            {showSections.scopeOfWork && scopeOfWork && (
+            <div className="export-page w-[850px] bg-white shadow-xl print:shadow-none print:w-full p-12" style={{ minHeight: '1100px' }}>
+              <h2 className="text-2xl font-bold text-neutral-900 mb-8">Scope of Work</h2>
+              <div className="text-neutral-700 whitespace-pre-line leading-relaxed">
+                {scopeOfWork}
+              </div>
+            </div>
+            )}
+
+            {/* Quote Details Page */}
+            {showSections.quoteDetails && (
             <div className="export-page w-[850px] bg-white shadow-xl print:shadow-none print:w-full" style={{ minHeight: '1100px' }}>
               {/* Header */}
               <div className="p-8 border-b border-neutral-200">
@@ -1277,21 +1351,19 @@ export default function QuoteDocumentPage() {
                     <thead>
                       <tr className="bg-neutral-50 border-b border-neutral-200">
                         <th className="text-left px-5 py-3 font-medium text-neutral-600 text-xs uppercase tracking-wider">Description</th>
-                        <th className="text-right px-4 py-3 font-medium text-neutral-600 text-xs uppercase tracking-wider w-28">Unit Price</th>
-                        <th className="text-center px-4 py-3 font-medium text-neutral-600 text-xs uppercase tracking-wider w-20">Unit</th>
-                        <th className="text-center px-4 py-3 font-medium text-neutral-600 text-xs uppercase tracking-wider w-16">Qty</th>
-                        <th className="text-center px-4 py-3 font-medium text-neutral-600 text-xs uppercase tracking-wider w-16">Tax</th>
-                        <th className="text-right px-5 py-3 font-medium text-neutral-600 text-xs uppercase tracking-wider w-28">Amount</th>
+                        <th className="text-right px-4 py-3 font-medium text-neutral-600 text-xs uppercase tracking-wider w-24">Unit Price</th>
+                        <th className="text-center px-4 py-3 font-medium text-neutral-600 text-xs uppercase tracking-wider w-16">Unit</th>
+                        <th className="text-center px-4 py-3 font-medium text-neutral-600 text-xs uppercase tracking-wider w-12">Qty</th>
+                        <th className="text-right px-5 py-3 font-medium text-neutral-600 text-xs uppercase tracking-wider w-24">Amount</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-neutral-100">
-                      {lineItems.map((item) => (
+                      {lineItems.filter(item => item.description.trim()).map((item) => (
                         <tr key={item.id}>
                           <td className="px-5 py-3 text-neutral-900">{item.description}</td>
                           <td className="px-4 py-3 text-right text-neutral-900">{formatCurrency(item.unitPrice)}</td>
                           <td className="px-4 py-3 text-center text-neutral-500 text-xs">{item.unit}</td>
                           <td className="px-4 py-3 text-center text-neutral-900">{item.qty}</td>
-                          <td className="px-4 py-3 text-center text-neutral-900">{item.taxed ? '✓' : '-'}</td>
                           <td className="px-5 py-3 text-right font-medium text-neutral-900">{formatCurrency(item.unitPrice * item.qty)}</td>
                         </tr>
                       ))}
@@ -1313,7 +1385,51 @@ export default function QuoteDocumentPage() {
                 </div>
               </div>
 
+              {/* Timeline */}
+              {showSections.timeline && lineItems.filter(item => item.description.trim()).length > 0 && (
+              <div className="px-8 py-4">
+                <h3 className="text-sm font-semibold text-neutral-900 uppercase tracking-wider mb-3">Project Timeline</h3>
+                <div className="border border-neutral-200 rounded-lg p-4">
+                  {(() => {
+                    const validItems = lineItems.filter(item => item.description.trim());
+                    const maxEnd = Math.max(...validItems.map(item => item.startOffset + item.estimatedDays));
+                    const totalDays = maxEnd || 1;
+                    return (
+                      <div className="space-y-2">
+                        {validItems.map((item, idx) => {
+                          const widthPercent = (item.estimatedDays / totalDays) * 100;
+                          const leftPercent = (item.startOffset / totalDays) * 100;
+                          const colors = ['bg-[#476E66]', 'bg-[#5A8A80]', 'bg-[#3A5B54]', 'bg-neutral-600'];
+                          return (
+                            <div key={item.id} className="flex items-center text-sm">
+                              <div className="w-32 flex-shrink-0 text-neutral-700 truncate pr-2">
+                                {item.description.substring(0, 20)}{item.description.length > 20 ? '...' : ''}
+                              </div>
+                              <div className="flex-1 h-5 bg-neutral-100 rounded relative">
+                                <div 
+                                  className={`absolute h-full ${colors[idx % colors.length]} rounded flex items-center justify-center text-white text-xs`}
+                                  style={{ left: `${leftPercent}%`, width: `${widthPercent}%`, minWidth: '25px' }}
+                                >
+                                  {item.estimatedDays}d
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                        <div className="pt-2 border-t text-sm text-neutral-600 flex justify-between">
+                          <span>Total Duration:</span>
+                          <span className="font-medium text-neutral-900">{totalDays} days</span>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
+              )}
+
               {/* Terms */}
+              {showSections.terms && (
+              <>
               <div className="px-8 py-4">
                 <h3 className="font-bold text-neutral-900 mb-2">TERMS AND CONDITIONS</h3>
                 <div className="text-sm text-neutral-700 whitespace-pre-line">{terms}</div>
@@ -1333,6 +1449,8 @@ export default function QuoteDocumentPage() {
                   </div>
                 </div>
               </div>
+              </>
+              )}
 
               {/* Footer */}
               <div className="px-8 py-6 bg-neutral-50 border-t border-neutral-200">
@@ -1342,6 +1460,59 @@ export default function QuoteDocumentPage() {
                 </div>
               </div>
             </div>
+            )}
+
+            {/* Additional Offerings Page */}
+            {showSections.additionalOfferings && services.length > 0 && (
+            <div className="export-page w-[850px] bg-white shadow-xl print:shadow-none print:w-full" style={{ minHeight: '1100px' }}>
+              <div className="p-12">
+                <h2 className="text-2xl font-bold text-neutral-900 mb-2">Additional Offerings</h2>
+                <p className="text-neutral-600 mb-8">Explore our complete range of professional services:</p>
+                
+                {/* Services Table */}
+                <div className="border border-neutral-200 rounded-lg overflow-hidden">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="bg-neutral-50 border-b border-neutral-200">
+                        <th className="text-left px-6 py-4 font-semibold text-neutral-900">Service / Product</th>
+                        <th className="text-right px-6 py-4 font-semibold text-neutral-900 w-40">Unit Cost</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-neutral-100">
+                      {services.map((service) => (
+                        <tr key={service.id}>
+                          <td className="px-6 py-4">
+                            <p className="font-medium text-neutral-900">{service.name}</p>
+                            {service.description && (
+                              <p className="text-sm text-neutral-500 mt-0.5">{service.description}</p>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            {service.pricing_type === 'per_sqft' && service.min_rate && service.max_rate ? (
+                              <span className="text-neutral-900">${service.min_rate} - ${service.max_rate}</span>
+                            ) : service.base_rate ? (
+                              <span className="text-neutral-900">${service.base_rate}</span>
+                            ) : (
+                              <span className="text-neutral-500">Contact us</span>
+                            )}
+                            {service.unit_label && (
+                              <p className="text-xs text-neutral-500">per {service.unit_label}</p>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Thank You Footer */}
+              <div className="absolute bottom-0 left-0 right-0 px-8 py-6 bg-[#476E66] text-white text-center">
+                <p className="text-lg font-semibold">Thank you and looking forward to doing business with you again!</p>
+              </div>
+            </div>
+            )}
+
           </div>
         </div>
       )}
