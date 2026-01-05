@@ -12,6 +12,8 @@ interface LineItem {
   qty: number;
   unit: string;
   taxed: boolean;
+  estimatedDays: number;
+  startOffset: number;
 }
 
 // Generate quote number in format: YYMMDD-XXX (e.g., 250102-001)
@@ -36,7 +38,6 @@ export default function QuoteDocumentPage() {
   const [client, setClient] = useState<Client | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [currentPage, setCurrentPage] = useState<'cover' | 'details'>('details');
 
   // Editable fields
   const [documentTitle, setDocumentTitle] = useState('New Quote');
@@ -61,9 +62,10 @@ export default function QuoteDocumentPage() {
   };
 
   const [lineItems, setLineItems] = useState<LineItem[]>([
-    { id: '1', description: '', unitPrice: 0, qty: 1, unit: 'each', taxed: false }
+    { id: '1', description: '', unitPrice: 0, qty: 1, unit: 'each', taxed: false, estimatedDays: 1, startOffset: 0 }
   ]);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [scopeOfWork, setScopeOfWork] = useState('');
 
   const [taxRate, setTaxRate] = useState(8.25);
   const [otherCharges, setOtherCharges] = useState(0);
@@ -129,6 +131,7 @@ export default function QuoteDocumentPage() {
           setValidUntil(foundQuote.valid_until?.split('T')[0] || '');
           setCoverBgUrl(foundQuote.cover_background_url || 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=1200&q=80');
           setVolumeNumber(foundQuote.cover_volume_number || 'Volume I');
+          setScopeOfWork(foundQuote.scope_of_work || '');
           
           const foundClient = clientsData.find(c => c.id === foundQuote.client_id);
           setClient(foundClient || null);
@@ -142,7 +145,9 @@ export default function QuoteDocumentPage() {
               unitPrice: item.unit_price,
               qty: item.quantity,
               unit: item.unit || 'each',
-              taxed: item.taxed
+              taxed: item.taxed,
+              estimatedDays: item.estimated_days || 1,
+              startOffset: item.start_offset || 0
             })));
           } else if (foundQuote.total_amount) {
             setLineItems([{
@@ -151,7 +156,9 @@ export default function QuoteDocumentPage() {
               unitPrice: foundQuote.total_amount,
               qty: 1,
               unit: 'each',
-              taxed: false
+              taxed: false,
+              estimatedDays: 1,
+              startOffset: 0
             }]);
           }
         }
@@ -184,7 +191,9 @@ export default function QuoteDocumentPage() {
       unitPrice: 0, 
       qty: 1,
       unit: 'each',
-      taxed: false 
+      taxed: false,
+      estimatedDays: 1,
+      startOffset: 0
     }]);
     setHasUnsavedChanges(true);
   };
@@ -295,6 +304,7 @@ export default function QuoteDocumentPage() {
           valid_until: validUntil || undefined,
           cover_background_url: coverBgUrl,
           cover_volume_number: volumeNumber,
+          scope_of_work: scopeOfWork || undefined,
           status: 'draft'
         });
         savedQuoteId = newQuote.id;
@@ -309,6 +319,7 @@ export default function QuoteDocumentPage() {
           valid_until: validUntil || undefined,
           cover_background_url: coverBgUrl,
           cover_volume_number: volumeNumber,
+          scope_of_work: scopeOfWork || undefined,
         });
         savedQuoteId = quoteId;
       }
@@ -322,7 +333,9 @@ export default function QuoteDocumentPage() {
           quantity: item.qty || 1,
           unit: item.unit || 'each',
           taxed: item.taxed || false,
-          amount: (item.unitPrice || 0) * (item.qty || 1)
+          amount: (item.unitPrice || 0) * (item.qty || 1),
+          estimated_days: item.estimatedDays || 1,
+          start_offset: item.startOffset || 0
         })));
       }
 
@@ -382,20 +395,7 @@ export default function QuoteDocumentPage() {
               <span className="hidden sm:inline">Back to Sales</span>
             </button>
             <div className="h-6 w-px bg-neutral-200 hidden sm:block" />
-            <div className="flex gap-1 p-1 bg-neutral-100 rounded-lg flex-shrink-0">
-              <button
-                onClick={() => setCurrentPage('cover')}
-                className={`px-2 sm:px-3 py-1.5 text-xs sm:text-sm font-medium rounded whitespace-nowrap ${currentPage === 'cover' ? 'bg-white shadow-sm text-neutral-900' : 'text-neutral-600'}`}
-              >
-                Cover Page
-              </button>
-              <button
-                onClick={() => setCurrentPage('details')}
-                className={`px-2 sm:px-3 py-1.5 text-xs sm:text-sm font-medium rounded whitespace-nowrap ${currentPage === 'details' ? 'bg-white shadow-sm text-neutral-900' : 'text-neutral-600'}`}
-              >
-                Quote Details
-              </button>
-            </div>
+            <span className="text-sm font-medium text-neutral-900">Proposal Builder</span>
           </div>
           <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto">
           {hasUnsavedChanges && (
@@ -432,13 +432,12 @@ export default function QuoteDocumentPage() {
 
       {/* Document Container */}
       <div className="py-8 px-4 flex justify-center">
-        <div className="w-full max-w-[850px]">
+        <div className="w-full max-w-[850px] space-y-8">
           
           {/* COVER PAGE */}
-          {currentPage === 'cover' && (
-            <div 
-              className="bg-white shadow-xl rounded-lg overflow-hidden relative"
-              style={{ minHeight: '1100px', aspectRatio: '8.5/11' }}
+          <div 
+            className="bg-white shadow-xl rounded-lg overflow-hidden relative"
+            style={{ minHeight: '600px' }}
             >
               {/* Background Image */}
               <div 
@@ -524,12 +523,10 @@ export default function QuoteDocumentPage() {
                 </div>
               </div>
             </div>
-          )}
 
           {/* DETAILS PAGE */}
-          {currentPage === 'details' && (
-            <div className="bg-white shadow-xl rounded-lg overflow-hidden" style={{ minHeight: '1100px' }}>
-              {/* Header */}
+          <div className="bg-white shadow-xl rounded-lg overflow-hidden">
+            {/* Header */}
               <div className="p-8 border-b border-neutral-200">
                 <div className="flex justify-between">
                   <div className="flex gap-6">
@@ -642,6 +639,19 @@ export default function QuoteDocumentPage() {
                 </div>
               </div>
 
+              {/* Scope of Work Section */}
+              <div className="px-8 py-4">
+                <h3 className="text-sm font-semibold text-neutral-900 uppercase tracking-wider mb-3">Scope of Work</h3>
+                <div className="border border-neutral-200 rounded-lg">
+                  <textarea
+                    value={scopeOfWork}
+                    onChange={(e) => { setScopeOfWork(e.target.value); setHasUnsavedChanges(true); }}
+                    className="w-full h-40 p-4 text-sm text-neutral-700 rounded-lg resize-none focus:ring-2 focus:ring-neutral-400 focus:border-transparent outline-none"
+                    placeholder="Describe the scope of work for this project. Include deliverables, milestones, and key objectives..."
+                  />
+                </div>
+              </div>
+
               {/* Line Items - Clean Minimal Design */}
               <div className="px-8 py-4">
                 <h3 className="text-sm font-semibold text-neutral-900 uppercase tracking-wider mb-3">Line Items</h3>
@@ -650,11 +660,13 @@ export default function QuoteDocumentPage() {
                     <thead>
                       <tr className="bg-neutral-50 border-b border-neutral-200">
                         <th className="text-left px-5 py-3 font-medium text-neutral-600 text-xs uppercase tracking-wider">Description</th>
-                        <th className="text-right px-4 py-3 font-medium text-neutral-600 text-xs uppercase tracking-wider w-28">Unit Price</th>
-                        <th className="text-center px-4 py-3 font-medium text-neutral-600 text-xs uppercase tracking-wider w-24">Unit</th>
-                        <th className="text-center px-4 py-3 font-medium text-neutral-600 text-xs uppercase tracking-wider w-16">Qty</th>
-                        <th className="text-center px-4 py-3 font-medium text-neutral-600 text-xs uppercase tracking-wider w-16">Tax</th>
-                        <th className="text-right px-5 py-3 font-medium text-neutral-600 text-xs uppercase tracking-wider w-28">Amount</th>
+                        <th className="text-right px-4 py-3 font-medium text-neutral-600 text-xs uppercase tracking-wider w-24">Unit Price</th>
+                        <th className="text-center px-4 py-3 font-medium text-neutral-600 text-xs uppercase tracking-wider w-20">Unit</th>
+                        <th className="text-center px-4 py-3 font-medium text-neutral-600 text-xs uppercase tracking-wider w-14">Qty</th>
+                        <th className="text-center px-4 py-3 font-medium text-neutral-600 text-xs uppercase tracking-wider w-14">Tax</th>
+                        <th className="text-center px-3 py-3 font-medium text-neutral-600 text-xs uppercase tracking-wider w-16">Days</th>
+                        <th className="text-center px-3 py-3 font-medium text-neutral-600 text-xs uppercase tracking-wider w-16">Start</th>
+                        <th className="text-right px-5 py-3 font-medium text-neutral-600 text-xs uppercase tracking-wider w-24">Amount</th>
                         <th className="w-10 print:hidden"></th>
                       </tr>
                     </thead>
@@ -708,6 +720,26 @@ export default function QuoteDocumentPage() {
                               checked={item.taxed}
                               onChange={(e) => updateLineItem(item.id, { taxed: e.target.checked })}
                               className="w-4 h-4 rounded border-neutral-300 text-neutral-900 focus:ring-neutral-500"
+                            />
+                          </td>
+                          <td className="px-3 py-3 text-center">
+                            <input
+                              type="number"
+                              value={item.estimatedDays}
+                              onChange={(e) => updateLineItem(item.id, { estimatedDays: parseInt(e.target.value) || 1 })}
+                              className="w-12 text-center bg-transparent outline-none text-neutral-900 text-xs"
+                              min="1"
+                              title="Estimated days to complete"
+                            />
+                          </td>
+                          <td className="px-3 py-3 text-center">
+                            <input
+                              type="number"
+                              value={item.startOffset}
+                              onChange={(e) => updateLineItem(item.id, { startOffset: parseInt(e.target.value) || 0 })}
+                              className="w-12 text-center bg-transparent outline-none text-neutral-900 text-xs"
+                              min="0"
+                              title="Days from project start"
                             />
                           </td>
                           <td className="px-5 py-3 text-right font-medium text-neutral-900">
@@ -794,6 +826,59 @@ export default function QuoteDocumentPage() {
                 </div>
               </div>
 
+              {/* Project Timeline */}
+              {lineItems.filter(item => item.description.trim()).length > 0 && (
+                <div className="px-8 py-4">
+                  <h3 className="text-sm font-semibold text-neutral-900 uppercase tracking-wider mb-3">Project Timeline</h3>
+                  <div className="border border-neutral-200 rounded-lg p-4">
+                    {(() => {
+                      const validItems = lineItems.filter(item => item.description.trim());
+                      const maxEnd = Math.max(...validItems.map(item => item.startOffset + item.estimatedDays));
+                      const totalDays = maxEnd || 1;
+                      return (
+                        <div className="space-y-3">
+                          {/* Timeline header */}
+                          <div className="flex items-center text-xs text-neutral-500 border-b pb-2">
+                            <div className="w-40 flex-shrink-0">Task</div>
+                            <div className="flex-1 flex justify-between px-2">
+                              <span>Day 1</span>
+                              <span>Day {Math.ceil(totalDays / 2)}</span>
+                              <span>Day {totalDays}</span>
+                            </div>
+                          </div>
+                          {/* Timeline bars */}
+                          {validItems.map((item, idx) => {
+                            const widthPercent = (item.estimatedDays / totalDays) * 100;
+                            const leftPercent = (item.startOffset / totalDays) * 100;
+                            const colors = ['bg-[#476E66]', 'bg-[#5A8A80]', 'bg-[#3A5B54]', 'bg-neutral-600', 'bg-neutral-500'];
+                            return (
+                              <div key={item.id} className="flex items-center">
+                                <div className="w-40 flex-shrink-0 text-sm text-neutral-700 truncate pr-2" title={item.description}>
+                                  {item.description.length > 25 ? item.description.substring(0, 25) + '...' : item.description}
+                                </div>
+                                <div className="flex-1 h-6 bg-neutral-100 rounded relative">
+                                  <div 
+                                    className={`absolute h-full ${colors[idx % colors.length]} rounded flex items-center justify-center text-white text-xs font-medium`}
+                                    style={{ left: `${leftPercent}%`, width: `${widthPercent}%`, minWidth: '30px' }}
+                                  >
+                                    {item.estimatedDays}d
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                          {/* Summary */}
+                          <div className="pt-2 border-t text-sm text-neutral-600 flex justify-between">
+                            <span>Total Project Duration:</span>
+                            <span className="font-medium text-neutral-900">{totalDays} days</span>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
+              )}
+
               {/* Terms and Conditions */}
               <div className="px-8 py-4">
                 <h3 className="font-bold text-neutral-900 mb-2">TERMS AND CONDITIONS</h3>
@@ -858,6 +943,28 @@ export default function QuoteDocumentPage() {
                 </div>
               </div>
 
+              {/* Additional Offerings Section */}
+              {services.length > 0 && (
+                <div className="px-8 py-6 border-t border-neutral-200">
+                  <h3 className="text-sm font-semibold text-neutral-900 uppercase tracking-wider mb-4">Additional Services We Offer</h3>
+                  <p className="text-sm text-neutral-600 mb-4">Explore our complete range of professional services:</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {services.slice(0, 9).map((service) => (
+                      <div key={service.id} className="border border-neutral-200 rounded-lg p-3 hover:bg-neutral-50 transition-colors">
+                        <p className="font-medium text-neutral-900 text-sm">{service.name}</p>
+                        <p className="text-xs text-neutral-500">{service.category}</p>
+                        {service.base_rate && (
+                          <p className="text-xs text-[#476E66] mt-1">Starting at ${service.base_rate}/{service.unit_label}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  {services.length > 9 && (
+                    <p className="text-xs text-neutral-500 mt-3 text-center">+ {services.length - 9} more services available</p>
+                  )}
+                </div>
+              )}
+
               {/* Footer */}
               <div className="px-8 py-6 bg-neutral-50 border-t border-neutral-200">
                 <div className="text-center">
@@ -866,7 +973,6 @@ export default function QuoteDocumentPage() {
                 </div>
               </div>
             </div>
-          )}
 
         </div>
       </div>
@@ -1121,7 +1227,9 @@ export default function QuoteDocumentPage() {
                             unitPrice: rate,
                             qty: 1,
                             unit,
-                            taxed: false
+                            taxed: false,
+                            estimatedDays: 1,
+                            startOffset: 0
                           };
                           // Remove empty rows before adding
                           const filteredItems = lineItems.filter(item => item.description.trim() !== '');

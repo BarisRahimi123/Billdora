@@ -196,6 +196,7 @@ export interface Quote {
   valid_until?: string;
   cover_background_url?: string;
   cover_volume_number?: string;
+  scope_of_work?: string;
   created_at?: string;
   client?: Client;
 }
@@ -212,6 +213,8 @@ export interface QuoteLineItem {
   task_type?: string;
   staff_role?: string;
   sort_order?: number;
+  estimated_days?: number;
+  start_offset?: number;
   created_at?: string;
 }
 
