@@ -330,7 +330,7 @@ export default function Layout() {
               {!showTimerWidget && (
                 <button
                   onClick={() => setShowTimerWidget(true)}
-                  className="hidden sm:flex items-center gap-2 px-3 py-2 bg-neutral-900-50 text-neutral-900-600 rounded-xl hover:bg-neutral-800-100 transition-colors"
+                  className="hidden sm:flex items-center gap-2 px-3 py-2 bg-[#476E66]-50 text-neutral-900-600 rounded-xl hover:bg-[#3A5B54]-100 transition-colors"
                 >
                   <Clock className="w-4 h-4" />
                   <span className="text-sm font-medium hidden md:inline">Timer</span>
@@ -356,7 +356,7 @@ export default function Layout() {
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
                   className="flex items-center gap-2 px-2 lg:px-3 py-2 hover:bg-neutral-100 rounded-xl transition-colors"
                 >
-                  <div className="w-8 h-8 rounded-full bg-neutral-900-100 flex items-center justify-center text-neutral-900-600 font-medium">
+                  <div className="w-8 h-8 rounded-full bg-[#476E66]-100 flex items-center justify-center text-neutral-900-600 font-medium">
                     {profile?.full_name?.charAt(0) || 'U'}
                   </div>
                   {profile?.full_name && <span className="text-sm font-medium text-neutral-700 hidden lg:inline">{profile.full_name}</span>}

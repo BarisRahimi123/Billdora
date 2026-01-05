@@ -238,7 +238,7 @@ export default function PaymentModal({ invoice, onClose, onSave }: PaymentModalP
               <button
                 type="submit"
                 disabled={saving}
-                className="flex-1 px-4 py-2.5 bg-neutral-900 text-white rounded-lg hover:bg-neutral-800 disabled:opacity-50 font-medium transition-colors flex items-center justify-center gap-2"
+                className="flex-1 px-4 py-2.5 bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54] disabled:opacity-50 font-medium transition-colors flex items-center justify-center gap-2"
               >
                 {saving ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</> : 'Record Payment'}
               </button>

@@ -78,14 +78,14 @@ export default function ResourcingPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowInviteModal(true)}
-            className="flex items-center gap-2 px-4 py-2.5 border border-neutral-900-500 text-neutral-900-600 rounded-lg hover:bg-neutral-800-50 transition-colors"
+            className="flex items-center gap-2 px-4 py-2.5 border border-neutral-900-500 text-neutral-900-600 rounded-lg hover:bg-[#3A5B54]-50 transition-colors"
           >
             <Send className="w-4 h-4" />
             Invite
           </button>
           <button
             onClick={() => { setEditingStaff(null); setShowModal(true); }}
-            className="flex items-center gap-2 px-4 py-2.5 bg-neutral-900 text-white rounded-lg hover:bg-black transition-colors"
+            className="flex items-center gap-2 px-4 py-2.5 bg-[#476E66] text-white rounded-lg hover:bg-black transition-colors"
           >
             <Plus className="w-4 h-4" />
             Add Staff
@@ -130,13 +130,13 @@ export default function ResourcingPage() {
                 key={member.id}
                 onClick={() => { setSelectedStaff(member); setActiveTab('basic'); }}
                 className={`w-full px-3 py-2.5 text-left flex items-center gap-2 hover:bg-neutral-50 border-b border-neutral-50 transition-colors ${
-                  selectedStaff?.id === member.id ? 'bg-neutral-900-50 border-l-2 border-l-primary-500' : ''
+                  selectedStaff?.id === member.id ? 'bg-[#476E66]-50 border-l-2 border-l-primary-500' : ''
                 }`}
               >
                 {member.avatar_url ? (
                   <img src={member.avatar_url} alt="" className="w-8 h-8 rounded-full object-cover" />
                 ) : (
-                  <div className="w-8 h-8 rounded-full bg-neutral-900-100 flex items-center justify-center text-neutral-900-700 text-sm font-medium">
+                  <div className="w-8 h-8 rounded-full bg-[#476E66]-100 flex items-center justify-center text-neutral-900-700 text-sm font-medium">
                     {member.full_name?.charAt(0) || '?'}
                   </div>
                 )}
@@ -170,7 +170,7 @@ export default function ResourcingPage() {
                       onClick={() => setActiveTab(tab.id)}
                       className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors ${
                         activeTab === tab.id
-                          ? 'bg-neutral-900-50 text-neutral-900-700 border border-neutral-200 border-b-white -mb-px'
+                          ? 'bg-[#476E66]-50 text-neutral-900-700 border border-neutral-200 border-b-white -mb-px'
                           : 'text-neutral-500 hover:text-neutral-700 hover:bg-neutral-50'
                       }`}
                     >
@@ -239,7 +239,7 @@ function BasicInfoTab({ staff, onEdit, onDelete, onToggleActive }: { staff: User
           {staff.avatar_url ? (
             <img src={staff.avatar_url} alt="" className="w-20 h-20 rounded-full object-cover" />
           ) : (
-            <div className="w-20 h-20 rounded-full bg-neutral-900-100 flex items-center justify-center text-neutral-900-700 text-2xl font-medium">
+            <div className="w-20 h-20 rounded-full bg-[#476E66]-100 flex items-center justify-center text-neutral-900-700 text-2xl font-medium">
               {staff.full_name?.charAt(0) || '?'}
             </div>
           )}
@@ -532,7 +532,7 @@ function UserRightsTab({ staff, companyId, onUpdate }: { staff: UserProfile; com
               <button 
                 onClick={() => saveSection('groups')} 
                 disabled={saving}
-                className="px-3 py-1 text-sm bg-neutral-900 text-white rounded-lg hover:bg-black disabled:opacity-50"
+                className="px-3 py-1 text-sm bg-[#476E66] text-white rounded-lg hover:bg-black disabled:opacity-50"
               >
                 {saving ? 'Saving...' : 'Save'}
               </button>
@@ -599,7 +599,7 @@ function UserRightsTab({ staff, companyId, onUpdate }: { staff: UserProfile; com
               <button 
                 onClick={() => saveSection('departments')} 
                 disabled={saving}
-                className="px-3 py-1 text-sm bg-neutral-900 text-white rounded-lg hover:bg-black disabled:opacity-50"
+                className="px-3 py-1 text-sm bg-[#476E66] text-white rounded-lg hover:bg-black disabled:opacity-50"
               >
                 {saving ? 'Saving...' : 'Save'}
               </button>
@@ -666,7 +666,7 @@ function UserRightsTab({ staff, companyId, onUpdate }: { staff: UserProfile; com
               <button 
                 onClick={() => saveSection('teams')} 
                 disabled={saving}
-                className="px-3 py-1 text-sm bg-neutral-900 text-white rounded-lg hover:bg-black disabled:opacity-50"
+                className="px-3 py-1 text-sm bg-[#476E66] text-white rounded-lg hover:bg-black disabled:opacity-50"
               >
                 {saving ? 'Saving...' : 'Save'}
               </button>
@@ -813,7 +813,7 @@ function TimeTab({ staff, companyId }: { staff: UserProfile; companyId: string }
             key={mode}
             onClick={() => setViewMode(mode)}
             className={`px-3 py-1.5 text-sm rounded-lg capitalize ${
-              viewMode === mode ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
+              viewMode === mode ? 'bg-[#476E66] text-white' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
             }`}
           >
             {mode}
@@ -977,7 +977,7 @@ function ActivityTab({ staff, companyId }: { staff: UserProfile; companyId: stri
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <button className="px-3 py-1.5 text-sm bg-neutral-900 text-white rounded-lg">Add Activity</button>
+          <button className="px-3 py-1.5 text-sm bg-[#476E66] text-white rounded-lg">Add Activity</button>
           <button className="px-3 py-1.5 text-sm border border-neutral-300 rounded-lg">Bulk Actions</button>
           <label className="flex items-center gap-2 ml-4 text-sm text-neutral-600 cursor-pointer">
             <input
@@ -1064,7 +1064,7 @@ function TeamsTab({ staff }: { staff: UserProfile }) {
           <div key={pm.id} className="border border-neutral-200 rounded-lg p-4 hover:border-neutral-900-300 transition-colors">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-neutral-900-100 rounded-lg flex items-center justify-center">
+                <div className="w-10 h-10 bg-[#476E66]-100 rounded-lg flex items-center justify-center">
                   <Briefcase className="w-5 h-5 text-neutral-900-600" />
                 </div>
                 <div>
@@ -1074,7 +1074,7 @@ function TeamsTab({ staff }: { staff: UserProfile }) {
               </div>
               <div className="flex items-center gap-3">
                 <span className="px-2.5 py-1 bg-neutral-100 text-neutral-700 rounded text-sm">{pm.role || 'Team Member'}</span>
-                {pm.is_lead && <span className="px-2.5 py-1 bg-neutral-900-100 text-neutral-900-700 rounded text-sm">Lead</span>}
+                {pm.is_lead && <span className="px-2.5 py-1 bg-[#476E66]-100 text-neutral-900-700 rounded text-sm">Lead</span>}
               </div>
             </div>
           </div>
@@ -1573,7 +1573,7 @@ function StaffModal({ staff, companyId, onClose, onSave }: {
           <button
             onClick={handleSubmit}
             disabled={saving || !fullName || (!staff && !email)}
-            className="px-4 py-2 bg-neutral-900 text-white rounded-xl hover:bg-black transition-colors disabled:opacity-50"
+            className="px-4 py-2 bg-[#476E66] text-white rounded-xl hover:bg-black transition-colors disabled:opacity-50"
           >
             {saving ? 'Saving...' : staff ? 'Save Changes' : 'Add Staff'}
           </button>
@@ -1644,7 +1644,7 @@ function InviteModal({ companyId, onClose, onSent }: {
       <div className="bg-white rounded-2xl w-full max-w-md">
         <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-100">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-neutral-900-100 rounded-lg flex items-center justify-center">
+            <div className="w-10 h-10 bg-[#476E66]-100 rounded-lg flex items-center justify-center">
               <Send className="w-5 h-5 text-neutral-900-600" />
             </div>
             <h2 className="text-lg font-semibold text-neutral-900">Invite Team Member</h2>
@@ -1715,7 +1715,7 @@ function InviteModal({ companyId, onClose, onSent }: {
             <button
               onClick={handleSend}
               disabled={sending || !email}
-              className="px-4 py-2 bg-neutral-900 text-white rounded-xl hover:bg-black transition-colors disabled:opacity-50 flex items-center gap-2"
+              className="px-4 py-2 bg-[#476E66] text-white rounded-xl hover:bg-black transition-colors disabled:opacity-50 flex items-center gap-2"
             >
               {sending ? 'Sending...' : (
                 <>

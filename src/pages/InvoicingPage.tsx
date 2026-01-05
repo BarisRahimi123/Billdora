@@ -374,7 +374,7 @@ export default function InvoicingPage() {
           </button>
           <button
             onClick={() => setShowInvoiceModal(true)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-neutral-900 text-white rounded-xl hover:bg-neutral-800 transition-colors"
+            className="flex items-center gap-2 px-4 py-2.5 bg-[#476E66] text-white rounded-xl hover:bg-[#3A5B54] transition-colors"
           >
             <Plus className="w-4 h-4" />
             Create Invoice
@@ -935,7 +935,7 @@ function InvoiceModal({ clients, projects, companyId, onClose, onSave }: { clien
                   key={calc.id}
                   className={`p-3 border rounded-xl cursor-pointer transition-colors ${
                     calculatorType === calc.id 
-                      ? 'border-neutral-900-500 bg-neutral-900-50' 
+                      ? 'border-neutral-900-500 bg-[#476E66]-50' 
                       : 'border-neutral-200 hover:border-neutral-300'
                   }`}
                 >
@@ -1118,7 +1118,7 @@ function InvoiceModal({ clients, projects, companyId, onClose, onSave }: { clien
           </div>
           <div className="flex gap-3 pt-4">
             <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors">Cancel</button>
-            <button type="submit" disabled={saving} className="flex-1 px-4 py-2.5 bg-neutral-900 text-white rounded-xl hover:bg-neutral-800 transition-colors disabled:opacity-50">
+            <button type="submit" disabled={saving} className="flex-1 px-4 py-2.5 bg-[#476E66] text-white rounded-xl hover:bg-[#3A5B54] transition-colors disabled:opacity-50">
               {saving ? 'Creating...' : 'Create Invoice'}
             </button>
           </div>
@@ -1673,7 +1673,7 @@ function InvoiceDetailView({
               {/* Header */}
               <div className="flex justify-between items-start mb-8">
                 <div>
-                  <div className="w-16 h-16 bg-neutral-900 rounded-xl flex items-center justify-center text-white font-bold text-2xl mb-4">P</div>
+                  <div className="w-16 h-16 bg-[#476E66] rounded-xl flex items-center justify-center text-white font-bold text-2xl mb-4">P</div>
                   <div className="text-sm text-neutral-600">
                     <p className="font-semibold text-neutral-900 text-base">Your Company</p>
                     <p>123 Business Ave</p>
@@ -1954,7 +1954,7 @@ function InvoiceDetailView({
 
               <button
                 onClick={addLineItem}
-                className="flex items-center gap-2 px-3 py-1.5 bg-neutral-900 text-white text-sm rounded-lg hover:bg-neutral-800 mb-6"
+                className="flex items-center gap-2 px-3 py-1.5 bg-[#476E66] text-white text-sm rounded-lg hover:bg-[#3A5B54] mb-6"
               >
                 <Plus className="w-4 h-4" /> Add Line Item
               </button>

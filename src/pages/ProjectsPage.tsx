@@ -439,7 +439,7 @@ export default function ProjectsPage() {
                 <h3 className="text-lg font-semibold text-neutral-900">Team Members</h3>
                 <button 
                   onClick={() => setShowAddTeamMemberModal(true)}
-                  className="flex items-center gap-2 px-3 py-1.5 bg-neutral-900 text-white text-sm rounded-lg hover:bg-neutral-800"
+                  className="flex items-center gap-2 px-3 py-1.5 bg-[#476E66] text-white text-sm rounded-lg hover:bg-[#3A5B54]"
                 >
                   <UserPlus className="w-4 h-4" /> Add Member
                 </button>
@@ -595,7 +595,7 @@ export default function ProjectsPage() {
                     <h3 className="text-lg font-semibold text-neutral-900">Billing History</h3>
                     <button 
                       onClick={() => setShowInvoiceModal(true)}
-                      className="flex items-center gap-2 px-3 py-1.5 bg-neutral-900 text-white text-sm rounded-lg hover:bg-neutral-800"
+                      className="flex items-center gap-2 px-3 py-1.5 bg-[#476E66] text-white text-sm rounded-lg hover:bg-[#3A5B54]"
                     >
                       <Plus className="w-4 h-4" /> Create Invoice
                     </button>
@@ -745,7 +745,7 @@ export default function ProjectsPage() {
         {canCreate('projects') && (
           <button
             onClick={() => { setEditingProject(null); setShowProjectModal(true); }}
-            className="flex items-center gap-2 px-4 py-2.5 bg-neutral-900 text-white rounded-xl hover:bg-neutral-800 transition-colors"
+            className="flex items-center gap-2 px-4 py-2.5 bg-[#476E66] text-white rounded-xl hover:bg-[#3A5B54] transition-colors"
           >
             <Plus className="w-4 h-4" />
             Add Project
@@ -917,7 +917,7 @@ export default function ProjectsPage() {
                 return (
                   <tr 
                     key={project.id} 
-                    className={`hover:bg-neutral-50 transition-colors cursor-pointer ${selectedProjects.has(project.id) ? 'bg-neutral-900-50' : ''}`}
+                    className={`hover:bg-neutral-50 transition-colors cursor-pointer ${selectedProjects.has(project.id) ? 'bg-[#476E66]-50' : ''}`}
                     onClick={() => navigate(`/projects/${project.id}`)}
                   >
                     <td className="px-4 py-4" onClick={(e) => e.stopPropagation()}>
@@ -961,7 +961,7 @@ export default function ProjectsPage() {
                             member.avatar_url ? (
                               <img key={idx} src={member.avatar_url} alt="" className="w-7 h-7 rounded-full border-2 border-white object-cover" title={member.full_name} />
                             ) : (
-                              <div key={idx} className="w-7 h-7 rounded-full border-2 border-white bg-neutral-900-100 flex items-center justify-center text-xs font-medium text-neutral-900-700" title={member.full_name}>
+                              <div key={idx} className="w-7 h-7 rounded-full border-2 border-white bg-[#476E66]-100 flex items-center justify-center text-xs font-medium text-neutral-900-700" title={member.full_name}>
                                 {member.full_name?.charAt(0) || '?'}
                               </div>
                             )
@@ -1250,7 +1250,7 @@ function ProjectModal({ project, clients, companyId, onClose, onSave }: {
           </div>
           <div className="flex gap-3 pt-4">
             <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors">Cancel</button>
-            <button type="submit" disabled={saving} onClick={(e) => { e.preventDefault(); handleSubmit(e as any); }} className="flex-1 px-4 py-2.5 bg-neutral-900 text-white rounded-xl hover:bg-neutral-800 transition-colors disabled:opacity-50">
+            <button type="submit" disabled={saving} onClick={(e) => { e.preventDefault(); handleSubmit(e as any); }} className="flex-1 px-4 py-2.5 bg-[#476E66] text-white rounded-xl hover:bg-[#3A5B54] transition-colors disabled:opacity-50">
               {saving ? 'Saving...' : project ? 'Update' : 'Create Project'}
             </button>
           </div>
@@ -1389,7 +1389,7 @@ function TaskModal({ task, projectId, companyId, teamMembers, onClose, onSave, c
           )}
           <div className="flex gap-3 pt-4">
             <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors">Cancel</button>
-            <button type="submit" disabled={saving} className="flex-1 px-4 py-2.5 bg-neutral-900 text-white rounded-xl hover:bg-neutral-800 transition-colors disabled:opacity-50">
+            <button type="submit" disabled={saving} className="flex-1 px-4 py-2.5 bg-[#476E66] text-white rounded-xl hover:bg-[#3A5B54] transition-colors disabled:opacity-50">
               {saving ? 'Saving...' : task ? 'Update Task' : 'Create Task'}
             </button>
           </div>
@@ -1445,7 +1445,7 @@ function ProjectVitalsTab({ project, clients, onSave, canViewFinancials, formatC
         {editing ? (
           <div className="flex items-center gap-2">
             <button onClick={() => setEditing(false)} className="px-3 py-1.5 text-sm text-neutral-600 hover:bg-neutral-100 rounded-lg">Cancel</button>
-            <button onClick={handleSave} disabled={saving} className="px-3 py-1.5 text-sm bg-black text-white rounded-lg hover:bg-neutral-800 disabled:opacity-50">
+            <button onClick={handleSave} disabled={saving} className="px-3 py-1.5 text-sm bg-black text-white rounded-lg hover:bg-[#3A5B54] disabled:opacity-50">
               {saving ? 'Saving...' : 'Save'}
             </button>
           </div>
@@ -1633,7 +1633,7 @@ function ClientTabContent({ client, onClientUpdate, canViewFinancials = true }: 
         {canViewFinancials && (editing ? (
           <div className="flex items-center gap-2">
             <button onClick={() => setEditing(false)} className="px-3 py-1.5 text-sm text-neutral-600 hover:bg-neutral-100 rounded-lg">Cancel</button>
-            <button onClick={saveEdit} disabled={saving} className="px-3 py-1.5 text-sm bg-black text-white rounded-lg hover:bg-neutral-800 disabled:opacity-50">{saving ? 'Saving...' : 'Save'}</button>
+            <button onClick={saveEdit} disabled={saving} className="px-3 py-1.5 text-sm bg-black text-white rounded-lg hover:bg-[#3A5B54] disabled:opacity-50">{saving ? 'Saving...' : 'Save'}</button>
           </div>
         ) : (
           <div className="relative">
@@ -2118,7 +2118,7 @@ function TasksTabContent({ tasks, projectId, companyId, onTasksChange, onEditTas
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3">
           <div className="relative">
-            <button onClick={() => setShowAddDropdown(!showAddDropdown)} className="flex items-center gap-1 px-4 py-2 bg-neutral-900 text-white text-sm font-medium rounded-lg hover:bg-neutral-800">
+            <button onClick={() => setShowAddDropdown(!showAddDropdown)} className="flex items-center gap-1 px-4 py-2 bg-[#476E66] text-white text-sm font-medium rounded-lg hover:bg-[#3A5B54]">
               Add Task <ChevronDown className="w-4 h-4" />
             </button>
             {showAddDropdown && (
@@ -2153,7 +2153,7 @@ function TasksTabContent({ tasks, projectId, companyId, onTasksChange, onEditTas
         </div>
         <div className="flex items-center gap-2">
           <span className="text-sm text-neutral-600">AutoSave</span>
-          <button onClick={() => setAutoSave(!autoSave)} className={`relative w-12 h-6 rounded-full transition-colors ${autoSave ? 'bg-neutral-900' : 'bg-neutral-300'}`}>
+          <button onClick={() => setAutoSave(!autoSave)} className={`relative w-12 h-6 rounded-full transition-colors ${autoSave ? 'bg-[#476E66]' : 'bg-neutral-300'}`}>
             <span className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${autoSave ? 'left-7' : 'left-1'}`} />
           </button>
           <span className={`text-xs font-medium ${autoSave ? 'text-neutral-900-600' : 'text-neutral-400'}`}>{autoSave ? 'ON' : 'OFF'}</span>
@@ -2279,7 +2279,7 @@ function TaskTableRow({ task, editingCell, editValues, onStartEditing, onEditCha
                     {assignee.avatar_url ? (
                       <img src={assignee.avatar_url} alt="" className="w-6 h-6 rounded-full object-cover" />
                     ) : (
-                      <div className="w-6 h-6 rounded-full bg-neutral-900-100 flex items-center justify-center text-xs font-medium text-neutral-900-700">
+                      <div className="w-6 h-6 rounded-full bg-[#476E66]-100 flex items-center justify-center text-xs font-medium text-neutral-900-700">
                         {assignee.full_name?.charAt(0) || '?'}
                       </div>
                     )}
@@ -2674,7 +2674,7 @@ function ProjectInvoiceModal({ project, tasks, timeEntries, expenses, companyId,
             </button>
             <button
               onClick={() => navigate('/invoicing')}
-              className="flex-1 px-4 py-2.5 bg-neutral-900 text-white rounded-xl hover:bg-neutral-800 transition-colors flex items-center justify-center gap-2"
+              className="flex-1 px-4 py-2.5 bg-[#476E66] text-white rounded-xl hover:bg-[#3A5B54] transition-colors flex items-center justify-center gap-2"
             >
               <ExternalLink className="w-4 h-4" /> View Invoice
             </button>
@@ -2710,7 +2710,7 @@ function ProjectInvoiceModal({ project, tasks, timeEntries, expenses, companyId,
                 type="button"
                 onClick={() => { setBillingType('items'); setSelectedTasks(new Set()); }}
                 className={`p-3 border rounded-xl text-left transition-colors ${
-                  billingType === 'items' ? 'border-neutral-900-500 bg-neutral-900-50' : 'border-neutral-200 hover:border-neutral-300'
+                  billingType === 'items' ? 'border-neutral-900-500 bg-[#476E66]-50' : 'border-neutral-200 hover:border-neutral-300'
                 }`}
               >
                 <p className="font-medium text-sm text-neutral-900">By Items</p>
@@ -2720,7 +2720,7 @@ function ProjectInvoiceModal({ project, tasks, timeEntries, expenses, companyId,
                 type="button"
                 onClick={() => { setBillingType('milestone'); setSelectedTasks(new Set()); }}
                 className={`p-3 border rounded-xl text-left transition-colors ${
-                  billingType === 'milestone' ? 'border-neutral-900-500 bg-neutral-900-50' : 'border-neutral-200 hover:border-neutral-300'
+                  billingType === 'milestone' ? 'border-neutral-900-500 bg-[#476E66]-50' : 'border-neutral-200 hover:border-neutral-300'
                 }`}
               >
                 <p className="font-medium text-sm text-neutral-900">By Milestone</p>
@@ -2730,7 +2730,7 @@ function ProjectInvoiceModal({ project, tasks, timeEntries, expenses, companyId,
                 type="button"
                 onClick={() => { setBillingType('percentage'); setSelectedTasks(new Set()); }}
                 className={`p-3 border rounded-xl text-left transition-colors ${
-                  billingType === 'percentage' ? 'border-neutral-900-500 bg-neutral-900-50' : 'border-neutral-200 hover:border-neutral-300'
+                  billingType === 'percentage' ? 'border-neutral-900-500 bg-[#476E66]-50' : 'border-neutral-200 hover:border-neutral-300'
                 }`}
               >
                 <p className="font-medium text-sm text-neutral-900">By Percentage</p>
@@ -3034,7 +3034,7 @@ function ProjectInvoiceModal({ project, tasks, timeEntries, expenses, companyId,
           )}
 
           {/* Total Summary */}
-          <div className="bg-neutral-900 text-white rounded-xl p-4 space-y-2">
+          <div className="bg-[#476E66] text-white rounded-xl p-4 space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-neutral-400">Subtotal</span>
               <span>{formatCurrency(subtotal)}</span>
@@ -3063,7 +3063,7 @@ function ProjectInvoiceModal({ project, tasks, timeEntries, expenses, companyId,
             <button
               onClick={handleSubmit}
               disabled={saving || total <= 0}
-              className="flex-1 px-4 py-2.5 bg-neutral-900 text-white rounded-xl hover:bg-neutral-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-4 py-2.5 bg-[#476E66] text-white rounded-xl hover:bg-[#3A5B54] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {saving ? 'Creating...' : 'Create Invoice'}
             </button>
@@ -3162,7 +3162,7 @@ function AddTeamMemberModal({ projectId, companyId, existingMemberIds, companyPr
             <button
               onClick={handleSubmit}
               disabled={saving || !selectedUserId}
-              className="flex-1 px-4 py-2 bg-neutral-900 text-white rounded-lg hover:bg-neutral-800 disabled:opacity-50"
+              className="flex-1 px-4 py-2 bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54] disabled:opacity-50"
             >
               {saving ? 'Adding...' : 'Add Member'}
             </button>
@@ -3433,7 +3433,7 @@ function InlineBillingInvoiceView({
           <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(status)}`}>
             {status}
           </span>
-          <button onClick={handleSave} disabled={saving} className="px-4 py-2 bg-neutral-900 text-white text-sm rounded-lg hover:bg-neutral-800 disabled:opacity-50">
+          <button onClick={handleSave} disabled={saving} className="px-4 py-2 bg-[#476E66] text-white text-sm rounded-lg hover:bg-[#3A5B54] disabled:opacity-50">
             {saving ? 'Saving...' : 'Save'}
           </button>
         </div>
@@ -3481,7 +3481,7 @@ function InlineBillingInvoiceView({
             {/* Header */}
             <div className="flex justify-between items-start mb-8">
               <div>
-                <div className="w-16 h-16 bg-neutral-900 rounded-xl flex items-center justify-center text-white font-bold text-2xl mb-4">P</div>
+                <div className="w-16 h-16 bg-[#476E66] rounded-xl flex items-center justify-center text-white font-bold text-2xl mb-4">P</div>
                 <div className="text-sm text-neutral-600">
                   <p className="font-semibold text-neutral-900 text-base">Your Company</p>
                   <p>123 Business Ave</p>
@@ -3824,7 +3824,7 @@ function InlineBillingInvoiceView({
               </table>
             </div>
 
-            <button onClick={addLineItem} className="flex items-center gap-2 px-3 py-1.5 bg-neutral-900 text-white text-sm rounded-lg hover:bg-neutral-800">
+            <button onClick={addLineItem} className="flex items-center gap-2 px-3 py-1.5 bg-[#476E66] text-white text-sm rounded-lg hover:bg-[#3A5B54]">
               <Plus className="w-4 h-4" /> Add Line Item
             </button>
 
@@ -3967,7 +3967,7 @@ function InlineBillingInvoiceView({
             <button
               onClick={handleSave}
               disabled={saving}
-              className="w-full py-2.5 bg-neutral-900 text-white rounded-lg font-medium hover:bg-neutral-800 disabled:opacity-50 transition-colors"
+              className="w-full py-2.5 bg-[#476E66] text-white rounded-lg font-medium hover:bg-[#3A5B54] disabled:opacity-50 transition-colors"
             >
               {saving ? 'Saving...' : 'Save Changes'}
             </button>
@@ -4204,14 +4204,14 @@ function ProjectDetailsTab({
         <button
           onClick={handleSave}
           disabled={saving}
-          className="px-4 py-2 bg-neutral-900 text-white rounded-lg hover:bg-neutral-800 disabled:opacity-50"
+          className="px-4 py-2 bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54] disabled:opacity-50"
         >
           {saving ? 'Saving...' : 'Save Changes'}
         </button>
       </div>
 
       {/* Status & Category - Primary Fields */}
-      <div className="grid grid-cols-2 gap-6 p-4 bg-neutral-900-50 rounded-xl border border-neutral-900-100">
+      <div className="grid grid-cols-2 gap-6 p-4 bg-[#476E66]-50 rounded-xl border border-neutral-900-100">
         <div>
           <label className="block text-sm font-medium text-neutral-700 mb-1">Project Status</label>
           <select

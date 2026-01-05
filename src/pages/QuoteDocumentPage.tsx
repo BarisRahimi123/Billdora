@@ -404,7 +404,7 @@ export default function QuoteDocumentPage() {
           <button
             onClick={saveChanges}
             disabled={saving}
-            className="flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 bg-neutral-900 text-white rounded-lg hover:bg-neutral-800 disabled:opacity-50 text-sm flex-shrink-0"
+            className="flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54] disabled:opacity-50 text-sm flex-shrink-0"
           >
             <Save className="w-4 h-4" />
             <span className="hidden xs:inline">{saving ? 'Saving...' : isNewQuote ? 'Create' : 'Save'}</span>
@@ -850,7 +850,7 @@ export default function QuoteDocumentPage() {
                         placeholder="Enter your comments or requested changes..."
                         className="w-full h-24 p-3 text-sm border border-neutral-200 rounded-lg resize-none focus:ring-2 focus:ring-neutral-400 focus:border-transparent outline-none"
                       />
-                      <button className="mt-2 px-4 py-2 bg-neutral-900 text-white rounded-lg hover:bg-neutral-800 text-sm font-medium">
+                      <button className="mt-2 px-4 py-2 bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54] text-sm font-medium">
                         Submit Revision Request
                       </button>
                     </div>
@@ -899,7 +899,7 @@ export default function QuoteDocumentPage() {
               </button>
               <button
                 onClick={() => window.print()}
-                className="px-4 py-2 bg-neutral-900 text-white rounded-lg hover:bg-neutral-800"
+                className="px-4 py-2 bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54]"
               >
                 <Download className="w-4 h-4 inline mr-2" />
                 Download PDF
@@ -1288,7 +1288,7 @@ function NewClientModal({ companyId, onClose, onSave }: {
             <button
               type="submit"
               disabled={saving}
-              className="flex-1 px-4 py-2.5 bg-neutral-900 text-white rounded-xl hover:bg-neutral-800 transition-colors disabled:opacity-50"
+              className="flex-1 px-4 py-2.5 bg-[#476E66] text-white rounded-xl hover:bg-[#3A5B54] transition-colors disabled:opacity-50"
             >
               {saving ? 'Creating...' : 'Create Client'}
             </button>

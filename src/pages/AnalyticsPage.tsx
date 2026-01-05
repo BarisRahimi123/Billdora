@@ -16,7 +16,7 @@ export default function AnalyticsPage() {
           { icon: FileBarChart, title: 'Time Reports', desc: 'Hours, billability, trends' },
         ].map((item, i) => (
           <div key={i} className="bg-white rounded-2xl p-6 border border-neutral-100 hover:shadow-md transition-shadow cursor-pointer">
-            <div className="w-12 h-12 bg-neutral-900-50 rounded-xl flex items-center justify-center mb-4">
+            <div className="w-12 h-12 bg-[#476E66]-50 rounded-xl flex items-center justify-center mb-4">
               <item.icon className="w-6 h-6 text-neutral-900-500" />
             </div>
             <h3 className="font-semibold text-neutral-900 mb-1">{item.title}</h3>
@@ -26,7 +26,7 @@ export default function AnalyticsPage() {
       </div>
 
       <div className="bg-white rounded-2xl p-12 border border-neutral-100 text-center">
-        <div className="w-20 h-20 bg-neutral-900-50 rounded-2xl flex items-center justify-center mx-auto mb-6">
+        <div className="w-20 h-20 bg-[#476E66]-50 rounded-2xl flex items-center justify-center mx-auto mb-6">
           <BarChart3 className="w-10 h-10 text-neutral-900-500" />
         </div>
         <h2 className="text-2xl font-semibold text-neutral-900 mb-3">Report Center</h2>

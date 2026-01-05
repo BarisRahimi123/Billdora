@@ -86,7 +86,7 @@ export default function LoginPage() {
             transition={{ duration: 0.4 }}
             className="flex items-center gap-2 mb-8 sm:mb-16"
           >
-            <div className="w-8 h-8 bg-neutral-900 flex items-center justify-center">
+            <div className="w-8 h-8 bg-[#476E66] flex items-center justify-center">
               <span className="text-white font-bold text-lg">P</span>
             </div>
             <span className="font-bold text-xl tracking-tight text-neutral-900">PrimeLedger</span>
@@ -182,7 +182,7 @@ export default function LoginPage() {
               type="button"
               disabled={loading}
               onClick={handleSubmit}
-              className="w-full h-14 bg-neutral-900 hover:bg-black text-white text-sm font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-6"
+              className="w-full h-14 bg-[#476E66] hover:bg-black text-white text-sm font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-6"
             >
               {loading ? 'Please wait...' : isSignUp ? 'Create Account' : 'Log In'} 
               {!loading && <ArrowRight size={16} />}
@@ -208,7 +208,7 @@ export default function LoginPage() {
       </div>
 
       {/* Right Side - Swiss Grid Design */}
-      <div className="hidden lg:flex w-1/2 bg-neutral-900 items-center justify-center p-12 relative overflow-hidden">
+      <div className="hidden lg:flex w-1/2 bg-[#476E66] items-center justify-center p-12 relative overflow-hidden">
         {/* Swiss Grid Pattern */}
         <div className="absolute inset-0 grid grid-cols-6 opacity-10">
           {[...Array(6)].map((_, i) => (

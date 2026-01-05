@@ -116,7 +116,7 @@ function DateRangePicker({
                 key={p}
                 onClick={() => applyPreset(p)}
                 className={`w-full text-left px-3 py-2 text-sm rounded-lg transition-colors ${
-                  preset === p ? 'bg-neutral-900 text-white' : 'hover:bg-neutral-100 text-neutral-700'
+                  preset === p ? 'bg-[#476E66] text-white' : 'hover:bg-neutral-100 text-neutral-700'
                 }`}
               >
                 {presetLabels[p]}
@@ -141,7 +141,7 @@ function DateRangePicker({
             </div>
             <button
               onClick={applyCustom}
-              className="w-full px-3 py-2 bg-neutral-900 text-white text-sm font-medium rounded-lg hover:bg-neutral-800 transition-colors"
+              className="w-full px-3 py-2 bg-[#476E66] text-white text-sm font-medium rounded-lg hover:bg-[#3A5B54] transition-colors"
             >
               Apply Custom Range
             </button>
@@ -631,7 +631,7 @@ export default function TimeExpensePage() {
         </div>
         <button
           onClick={() => activeTab === 'timesheet' ? setShowTimeEntryModal(true) : setShowExpenseModal(true)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-neutral-900 text-white rounded-xl hover:bg-neutral-800 transition-colors"
+          className="flex items-center gap-2 px-4 py-2.5 bg-[#476E66] text-white rounded-xl hover:bg-[#3A5B54] transition-colors"
         >
           <Plus className="w-4 h-4" />
           {activeTab === 'timesheet' ? 'Add Row' : 'Add Expense'}
@@ -953,7 +953,7 @@ export default function TimeExpensePage() {
               <button
                 onClick={submitTimesheet}
                 disabled={(!hasUnsavedDrafts && !hasSavedDrafts) || savingTimesheet}
-                className="flex items-center gap-2 px-6 py-2.5 bg-neutral-900 text-white rounded-xl hover:bg-neutral-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                className="flex items-center gap-2 px-6 py-2.5 bg-[#476E66] text-white rounded-xl hover:bg-[#3A5B54] transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
               >
                 <Send className="w-4 h-4" />
                 {savingTimesheet ? 'Submitting...' : 'Submit for Approval'}
@@ -1693,7 +1693,7 @@ function AddTimeRowModal({ projects, tasks: initialTasks, existingDraftRows, exi
             <button 
               onClick={() => onAdd(projectId, taskId || null)} 
               disabled={!projectId || isRowExists}
-              className="flex-1 px-4 py-2.5 bg-neutral-900 text-white rounded-xl hover:bg-neutral-800 transition-colors disabled:opacity-50"
+              className="flex-1 px-4 py-2.5 bg-[#476E66] text-white rounded-xl hover:bg-[#3A5B54] transition-colors disabled:opacity-50"
             >
               Add Row
             </button>
@@ -1854,7 +1854,7 @@ function ExpenseModal({ expense, projects, companyId, userId, onClose, onSave }:
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="w-full px-4 py-3 border-2 border-dashed border-neutral-300 rounded-xl hover:border-neutral-900-400 hover:bg-neutral-800-50 transition-colors flex items-center justify-center gap-2 text-neutral-600"
+                className="w-full px-4 py-3 border-2 border-dashed border-neutral-300 rounded-xl hover:border-neutral-900-400 hover:bg-[#3A5B54]-50 transition-colors flex items-center justify-center gap-2 text-neutral-600"
               >
                 <Upload className="w-5 h-5" />
                 <span>Click to upload receipt</span>
@@ -1863,7 +1863,7 @@ function ExpenseModal({ expense, projects, companyId, userId, onClose, onSave }:
           </div>
           <div className="flex gap-3 pt-4">
             <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors">Cancel</button>
-            <button type="submit" disabled={saving} onClick={(e) => { e.preventDefault(); handleSubmit(e as any); }} className="flex-1 px-4 py-2.5 bg-neutral-900 text-white rounded-xl hover:bg-neutral-800 transition-colors disabled:opacity-50">
+            <button type="submit" disabled={saving} onClick={(e) => { e.preventDefault(); handleSubmit(e as any); }} className="flex-1 px-4 py-2.5 bg-[#476E66] text-white rounded-xl hover:bg-[#3A5B54] transition-colors disabled:opacity-50">
               {saving ? 'Saving...' : expense ? 'Update' : 'Add Expense'}
             </button>
           </div>

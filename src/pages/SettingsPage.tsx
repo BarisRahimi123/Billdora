@@ -250,7 +250,7 @@ export default function SettingsPage() {
                 onClick={() => setActiveTab(tab.id)}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-colors ${
                   activeTab === tab.id 
-                    ? 'bg-neutral-900 text-white' 
+                    ? 'bg-[#476E66] text-white' 
                     : 'text-neutral-600 hover:bg-neutral-50'
                 }`}
               >
@@ -458,7 +458,7 @@ export default function SettingsPage() {
                     <button 
                       type="submit"
                       disabled={savingCompany}
-                      className="h-12 px-6 bg-neutral-900 text-white font-medium rounded-xl hover:bg-neutral-800 transition-colors disabled:opacity-50"
+                      className="h-12 px-6 bg-[#476E66] text-white font-medium rounded-xl hover:bg-[#3A5B54] transition-colors disabled:opacity-50"
                     >
                       {savingCompany ? 'Saving...' : 'Save Changes'}
                     </button>
@@ -481,7 +481,7 @@ export default function SettingsPage() {
                 </div>
                 <button
                   onClick={() => { setEditingService(null); setShowServiceModal(true); }}
-                  className="flex items-center gap-2 px-4 py-2.5 bg-neutral-900 text-white rounded-xl hover:bg-neutral-800 transition-colors"
+                  className="flex items-center gap-2 px-4 py-2.5 bg-[#476E66] text-white rounded-xl hover:bg-[#3A5B54] transition-colors"
                 >
                   <Plus className="w-4 h-4" />
                   Add Service
@@ -501,7 +501,7 @@ export default function SettingsPage() {
                   <p className="text-neutral-500 mb-4">Add your first service to start building quotes faster</p>
                   <button
                     onClick={() => { setEditingService(null); setShowServiceModal(true); }}
-                    className="px-4 py-2 bg-neutral-900 text-white rounded-lg hover:bg-neutral-800"
+                    className="px-4 py-2 bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54]"
                   >
                     Add Your First Service
                   </button>
@@ -799,7 +799,7 @@ function ServiceModal({ service, companyId, onClose, onSave }: {
                 onChange={(e) => setIsActive(e.target.checked)}
                 className="sr-only peer"
               />
-              <div className="w-11 h-6 bg-neutral-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-neutral-400 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-neutral-900"></div>
+              <div className="w-11 h-6 bg-neutral-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-neutral-400 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#476E66]"></div>
             </label>
             <span className="text-sm font-medium text-neutral-700">Active</span>
           </div>
@@ -815,7 +815,7 @@ function ServiceModal({ service, companyId, onClose, onSave }: {
             <button
               type="submit"
               disabled={saving}
-              className="flex-1 px-4 py-2.5 bg-neutral-900 text-white rounded-xl hover:bg-neutral-800 transition-colors disabled:opacity-50"
+              className="flex-1 px-4 py-2.5 bg-[#476E66] text-white rounded-xl hover:bg-[#3A5B54] transition-colors disabled:opacity-50"
             >
               {saving ? 'Saving...' : service ? 'Update Service' : 'Create Service'}
             </button>
@@ -964,7 +964,7 @@ function UserManagementTab({ companyId, currentUserId }: { companyId: string; cu
         </div>
         <button
           onClick={() => setShowInviteModal(true)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-neutral-900 text-white rounded-xl hover:bg-neutral-800 transition-colors"
+          className="flex items-center gap-2 px-4 py-2.5 bg-[#476E66] text-white rounded-xl hover:bg-[#3A5B54] transition-colors"
         >
           <Mail className="w-4 h-4" />
           Invite User
@@ -1068,7 +1068,7 @@ function UserManagementTab({ companyId, currentUserId }: { companyId: string; cu
             </div>
             <button
               onClick={() => { setEditingRole(null); setShowRoleModal(true); }}
-              className="flex items-center gap-2 px-4 py-2 bg-neutral-900 text-white rounded-lg hover:bg-neutral-800 text-sm"
+              className="flex items-center gap-2 px-4 py-2 bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54] text-sm"
             >
               <Plus className="w-4 h-4" /> Add Role
             </button>
@@ -1151,7 +1151,7 @@ function UserManagementTab({ companyId, currentUserId }: { companyId: string; cu
               <p className="text-neutral-500 mb-4">Invite team members to join your company</p>
               <button
                 onClick={() => setShowInviteModal(true)}
-                className="px-4 py-2 bg-neutral-900 text-white rounded-lg hover:bg-neutral-800"
+                className="px-4 py-2 bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54]"
               >
                 Send Invitation
               </button>
@@ -1338,7 +1338,7 @@ function InviteUserModal({ companyId, currentUserId, roles, onClose, onInvite }:
             <button
               type="submit"
               disabled={saving}
-              className="flex-1 px-4 py-2.5 bg-neutral-900 text-white rounded-xl hover:bg-neutral-800 transition-colors disabled:opacity-50"
+              className="flex-1 px-4 py-2.5 bg-[#476E66] text-white rounded-xl hover:bg-[#3A5B54] transition-colors disabled:opacity-50"
             >
               {saving ? 'Sending...' : 'Send Invitation'}
             </button>
@@ -1460,7 +1460,7 @@ function EditUserModal({ user, roles, onClose, onSave }: {
             <button
               type="submit"
               disabled={saving}
-              className="flex-1 px-4 py-2.5 bg-neutral-900 text-white rounded-xl hover:bg-neutral-800 transition-colors disabled:opacity-50"
+              className="flex-1 px-4 py-2.5 bg-[#476E66] text-white rounded-xl hover:bg-[#3A5B54] transition-colors disabled:opacity-50"
             >
               {saving ? 'Saving...' : 'Save Changes'}
             </button>
@@ -1774,7 +1774,7 @@ function RoleModal({ role, companyId, onClose, onSave }: {
             <button
               type="submit"
               disabled={saving}
-              className="flex-1 px-4 py-2.5 bg-neutral-900 text-white rounded-xl hover:bg-neutral-800 transition-colors disabled:opacity-50"
+              className="flex-1 px-4 py-2.5 bg-[#476E66] text-white rounded-xl hover:bg-[#3A5B54] transition-colors disabled:opacity-50"
             >
               {saving ? 'Saving...' : role ? 'Update Role' : 'Create Role'}
             </button>
@@ -1871,7 +1871,7 @@ function ProfileTab() {
           <button
             type="submit"
             disabled={saving}
-            className="h-12 px-6 bg-neutral-900 text-white font-medium rounded-xl hover:bg-neutral-800 transition-colors disabled:opacity-50"
+            className="h-12 px-6 bg-[#476E66] text-white font-medium rounded-xl hover:bg-[#3A5B54] transition-colors disabled:opacity-50"
           >
             {saving ? 'Saving...' : 'Save Changes'}
           </button>
@@ -2212,7 +2212,7 @@ function InvoicingSettingsTab({ companyId }: { companyId: string }) {
                   <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
                     addressBlockPosition === 'left' ? 'border-neutral-900' : 'border-neutral-300'
                   }`}>
-                    {addressBlockPosition === 'left' && <div className="w-2 h-2 rounded-full bg-neutral-900" />}
+                    {addressBlockPosition === 'left' && <div className="w-2 h-2 rounded-full bg-[#476E66]" />}
                   </div>
                   <span className="text-sm font-medium text-neutral-700">Left Side</span>
                 </label>
@@ -2230,7 +2230,7 @@ function InvoicingSettingsTab({ companyId }: { companyId: string }) {
                   <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
                     addressBlockPosition === 'right' ? 'border-neutral-900' : 'border-neutral-300'
                   }`}>
-                    {addressBlockPosition === 'right' && <div className="w-2 h-2 rounded-full bg-neutral-900" />}
+                    {addressBlockPosition === 'right' && <div className="w-2 h-2 rounded-full bg-[#476E66]" />}
                   </div>
                   <span className="text-sm font-medium text-neutral-700">Right Side</span>
                 </label>
@@ -2241,7 +2241,7 @@ function InvoicingSettingsTab({ companyId }: { companyId: string }) {
               <button
                 type="submit"
                 disabled={saving}
-                className="h-12 px-6 bg-neutral-900 text-white font-medium rounded-xl hover:bg-neutral-800 transition-colors disabled:opacity-50"
+                className="h-12 px-6 bg-[#476E66] text-white font-medium rounded-xl hover:bg-[#3A5B54] transition-colors disabled:opacity-50"
               >
                 {saving ? 'Saving...' : 'Save Address Info'}
               </button>
@@ -2435,7 +2435,7 @@ function CalculatorsTab({ companyId }: { companyId: string }) {
                     onChange={() => toggleCalculator(calc.id)}
                     className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-neutral-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-neutral-400 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-neutral-900"></div>
+                  <div className="w-11 h-6 bg-neutral-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-neutral-400 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#476E66]"></div>
                 </label>
               </div>
             </div>
@@ -2446,7 +2446,7 @@ function CalculatorsTab({ companyId }: { companyId: string }) {
       <button
         onClick={handleSave}
         disabled={saving}
-        className="h-12 px-6 bg-neutral-900 text-white font-medium rounded-xl hover:bg-neutral-800 transition-colors disabled:opacity-50"
+        className="h-12 px-6 bg-[#476E66] text-white font-medium rounded-xl hover:bg-[#3A5B54] transition-colors disabled:opacity-50"
       >
         {saving ? 'Saving...' : 'Save Calculator Settings'}
       </button>
@@ -2551,7 +2551,7 @@ function PDFFormatsTab({ companyId }: { companyId: string }) {
           </div>
           <button
             onClick={() => { setEditingTemplate(null); setShowModal(true); }}
-            className="flex items-center gap-2 px-4 py-2.5 bg-neutral-900 text-white rounded-xl hover:bg-neutral-800 transition-colors"
+            className="flex items-center gap-2 px-4 py-2.5 bg-[#476E66] text-white rounded-xl hover:bg-[#3A5B54] transition-colors"
           >
             <Plus className="w-4 h-4" />
             Create Template
@@ -2567,7 +2567,7 @@ function PDFFormatsTab({ companyId }: { companyId: string }) {
             <p className="text-neutral-500 mb-4">Create your first PDF template to customize how your invoices look</p>
             <button
               onClick={() => { setEditingTemplate(null); setShowModal(true); }}
-              className="px-4 py-2 bg-neutral-900 text-white rounded-lg hover:bg-neutral-800"
+              className="px-4 py-2 bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54]"
             >
               Create Your First Template
             </button>
@@ -2828,7 +2828,7 @@ function PDFTemplateModal({ template, companyId, onClose, onSave }: {
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input type="checkbox" checked={showLogo} onChange={(e) => setShowLogo(e.target.checked)} className="sr-only peer" />
-                  <div className="w-11 h-6 bg-neutral-200 peer-checked:bg-neutral-900 rounded-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+                  <div className="w-11 h-6 bg-neutral-200 peer-checked:bg-[#476E66] rounded-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
                 </label>
               </div>
 
@@ -2855,7 +2855,7 @@ function PDFTemplateModal({ template, companyId, onClose, onSave }: {
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input type="checkbox" checked={showCompanyAddress} onChange={(e) => setShowCompanyAddress(e.target.checked)} className="sr-only peer" />
-                  <div className="w-11 h-6 bg-neutral-200 peer-checked:bg-neutral-900 rounded-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+                  <div className="w-11 h-6 bg-neutral-200 peer-checked:bg-[#476E66] rounded-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
                 </label>
               </div>
 
@@ -2866,7 +2866,7 @@ function PDFTemplateModal({ template, companyId, onClose, onSave }: {
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input type="checkbox" checked={showClientAddress} onChange={(e) => setShowClientAddress(e.target.checked)} className="sr-only peer" />
-                  <div className="w-11 h-6 bg-neutral-200 peer-checked:bg-neutral-900 rounded-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+                  <div className="w-11 h-6 bg-neutral-200 peer-checked:bg-[#476E66] rounded-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
                 </label>
               </div>
             </div>
@@ -2910,7 +2910,7 @@ function PDFTemplateModal({ template, companyId, onClose, onSave }: {
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input type="checkbox" checked={includeLineItems} onChange={(e) => setIncludeLineItems(e.target.checked)} className="sr-only peer" />
-                  <div className="w-11 h-6 bg-neutral-200 peer-checked:bg-neutral-900 rounded-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+                  <div className="w-11 h-6 bg-neutral-200 peer-checked:bg-[#476E66] rounded-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
                 </label>
               </div>
 
@@ -2921,7 +2921,7 @@ function PDFTemplateModal({ template, companyId, onClose, onSave }: {
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input type="checkbox" checked={includeTimeDetail} onChange={(e) => setIncludeTimeDetail(e.target.checked)} className="sr-only peer" />
-                  <div className="w-11 h-6 bg-neutral-200 peer-checked:bg-neutral-900 rounded-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+                  <div className="w-11 h-6 bg-neutral-200 peer-checked:bg-[#476E66] rounded-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
                 </label>
               </div>
 
@@ -2932,7 +2932,7 @@ function PDFTemplateModal({ template, companyId, onClose, onSave }: {
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input type="checkbox" checked={includeExpenseDetail} onChange={(e) => setIncludeExpenseDetail(e.target.checked)} className="sr-only peer" />
-                  <div className="w-11 h-6 bg-neutral-200 peer-checked:bg-neutral-900 rounded-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+                  <div className="w-11 h-6 bg-neutral-200 peer-checked:bg-[#476E66] rounded-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
                 </label>
               </div>
 
@@ -2943,7 +2943,7 @@ function PDFTemplateModal({ template, companyId, onClose, onSave }: {
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input type="checkbox" checked={includeBudgetStatus} onChange={(e) => setIncludeBudgetStatus(e.target.checked)} className="sr-only peer" />
-                  <div className="w-11 h-6 bg-neutral-200 peer-checked:bg-neutral-900 rounded-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+                  <div className="w-11 h-6 bg-neutral-200 peer-checked:bg-[#476E66] rounded-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
                 </label>
               </div>
 
@@ -2954,7 +2954,7 @@ function PDFTemplateModal({ template, companyId, onClose, onSave }: {
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input type="checkbox" checked={includeReceipts} onChange={(e) => setIncludeReceipts(e.target.checked)} className="sr-only peer" />
-                  <div className="w-11 h-6 bg-neutral-200 peer-checked:bg-neutral-900 rounded-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+                  <div className="w-11 h-6 bg-neutral-200 peer-checked:bg-[#476E66] rounded-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
                 </label>
               </div>
 
@@ -2968,7 +2968,7 @@ function PDFTemplateModal({ template, companyId, onClose, onSave }: {
                         type="button"
                         onClick={() => setReceiptsPerPage(num)}
                         className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                          receiptsPerPage === num ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
+                          receiptsPerPage === num ? 'bg-[#476E66] text-white' : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
                         }`}
                       >
                         {num}
@@ -3048,7 +3048,7 @@ function PDFTemplateModal({ template, companyId, onClose, onSave }: {
           <button
             onClick={handleSubmit}
             disabled={saving}
-            className="flex-1 px-4 py-2.5 bg-neutral-900 text-white rounded-xl hover:bg-neutral-800 transition-colors disabled:opacity-50"
+            className="flex-1 px-4 py-2.5 bg-[#476E66] text-white rounded-xl hover:bg-[#3A5B54] transition-colors disabled:opacity-50"
           >
             {saving ? 'Saving...' : template ? 'Update Template' : 'Create Template'}
           </button>
@@ -3212,7 +3212,7 @@ function BasicCodesTab({ companyId }: { companyId: string }) {
             <div className="flex items-center justify-between">
               <button
                 onClick={addNewItem}
-                className="flex items-center gap-2 px-3 py-1.5 bg-neutral-900 text-white text-sm rounded-lg hover:bg-neutral-800"
+                className="flex items-center gap-2 px-3 py-1.5 bg-[#476E66] text-white text-sm rounded-lg hover:bg-[#3A5B54]"
               >
                 <Plus className="w-4 h-4" /> Add New Value
               </button>
@@ -3422,7 +3422,7 @@ function BasicCodesTab({ companyId }: { companyId: string }) {
                 <button
                   onClick={handleSave}
                   disabled={saving || !selectedItem.name}
-                  className="px-4 py-2 bg-neutral-900 text-white rounded-lg hover:bg-neutral-800 transition-colors disabled:opacity-50"
+                  className="px-4 py-2 bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54] transition-colors disabled:opacity-50"
                 >
                   {saving ? 'Saving...' : 'Save'}
                 </button>
@@ -3541,7 +3541,7 @@ function FieldValuesTab({ companyId }: { companyId: string }) {
             <div className="flex items-center justify-between">
               <button
                 onClick={addNewItem}
-                className="flex items-center gap-2 px-3 py-1.5 bg-neutral-900 text-white text-sm rounded-lg hover:bg-neutral-800"
+                className="flex items-center gap-2 px-3 py-1.5 bg-[#476E66] text-white text-sm rounded-lg hover:bg-[#3A5B54]"
               >
                 <Plus className="w-4 h-4" /> Add New Value
               </button>
@@ -3642,7 +3642,7 @@ function FieldValuesTab({ companyId }: { companyId: string }) {
                 <button
                   onClick={handleSave}
                   disabled={saving || !selectedItem.value}
-                  className="px-4 py-2 bg-neutral-900 text-white rounded-lg hover:bg-neutral-800 transition-colors disabled:opacity-50"
+                  className="px-4 py-2 bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54] transition-colors disabled:opacity-50"
                 >
                   {saving ? 'Saving...' : 'Save'}
                 </button>
@@ -3747,7 +3747,7 @@ function StatusCodesTab({ companyId }: { companyId: string }) {
             <div className="flex items-center justify-between">
               <button
                 onClick={addNewItem}
-                className="flex items-center gap-2 px-3 py-1.5 bg-neutral-900 text-white text-sm rounded-lg hover:bg-neutral-800"
+                className="flex items-center gap-2 px-3 py-1.5 bg-[#476E66] text-white text-sm rounded-lg hover:bg-[#3A5B54]"
               >
                 <Plus className="w-4 h-4" /> Add Status
               </button>
@@ -3857,7 +3857,7 @@ function StatusCodesTab({ companyId }: { companyId: string }) {
                 <button
                   onClick={handleSave}
                   disabled={saving || !selectedItem.value}
-                  className="px-4 py-2 bg-neutral-900 text-white rounded-lg hover:bg-neutral-800 transition-colors disabled:opacity-50"
+                  className="px-4 py-2 bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54] transition-colors disabled:opacity-50"
                 >
                   {saving ? 'Saving...' : 'Save'}
                 </button>
@@ -3962,7 +3962,7 @@ function CostCentersTab({ companyId }: { companyId: string }) {
             <div className="flex items-center justify-between">
               <button
                 onClick={addNewItem}
-                className="flex items-center gap-2 px-3 py-1.5 bg-neutral-900 text-white text-sm rounded-lg hover:bg-neutral-800"
+                className="flex items-center gap-2 px-3 py-1.5 bg-[#476E66] text-white text-sm rounded-lg hover:bg-[#3A5B54]"
               >
                 <Plus className="w-4 h-4" /> Add Cost Center
               </button>
@@ -4074,7 +4074,7 @@ function CostCentersTab({ companyId }: { companyId: string }) {
                 <button
                   onClick={handleSave}
                   disabled={saving || !selectedItem.name}
-                  className="px-4 py-2 bg-neutral-900 text-white rounded-lg hover:bg-neutral-800 transition-colors disabled:opacity-50"
+                  className="px-4 py-2 bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54] transition-colors disabled:opacity-50"
                 >
                   {saving ? 'Saving...' : 'Save'}
                 </button>

@@ -157,7 +157,7 @@ export default function DashboardPage() {
         <div className="relative" ref={quickAddRef}>
           <button 
             onClick={() => setShowQuickAdd(!showQuickAdd)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-neutral-900 text-white rounded-xl hover:bg-neutral-800 transition-colors text-sm sm:text-base"
+            className="flex items-center gap-2 px-4 py-2.5 bg-[#476E66] text-white rounded-xl hover:bg-[#3A5B54] transition-colors text-sm sm:text-base"
           >
             <Plus className="w-4 h-4" />
             <span className="hidden sm:inline">Quick Add</span>
@@ -209,7 +209,7 @@ export default function DashboardPage() {
 
         <div className="bg-white rounded-2xl p-6 border border-neutral-100">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-neutral-900-50 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-[#476E66]-50 flex items-center justify-center">
               <Clock className="w-5 h-5 text-neutral-900-500" />
             </div>
             <span className="text-neutral-500 text-sm">Hours This Week</span>
@@ -296,7 +296,7 @@ export default function DashboardPage() {
             </div>
             <div className="space-y-3">
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-neutral-900" />
+                <div className="w-3 h-3 rounded-full bg-[#476E66]" />
                 <span className="text-neutral-600">Billable</span>
                 <span className="font-medium text-neutral-900 ml-auto">{stats?.billableHours || 0}h</span>
               </div>
@@ -343,7 +343,7 @@ export default function DashboardPage() {
           <div className="space-y-3">
             {activities.map((activity) => (
               <div key={activity.id} className="flex items-center gap-4 p-3 bg-neutral-50 rounded-xl">
-                <div className="w-10 h-10 rounded-xl bg-neutral-900-100 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-xl bg-[#476E66]-100 flex items-center justify-center">
                   <Clock className="w-5 h-5 text-neutral-900-600" />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -420,7 +420,7 @@ export default function DashboardPage() {
                 <button 
                   onClick={handleSaveTime} 
                   disabled={saving || !timeEntry.hours}
-                  className="px-4 py-2 bg-neutral-900 text-white rounded-lg hover:bg-neutral-800 disabled:opacity-50"
+                  className="px-4 py-2 bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54] disabled:opacity-50"
                 >
                   {saving ? 'Saving...' : 'Save'}
                 </button>
