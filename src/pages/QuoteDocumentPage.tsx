@@ -1070,13 +1070,6 @@ export default function QuoteDocumentPage() {
               </>
               )}
 
-              {/* Footer */}
-              <div className="px-8 py-6 bg-neutral-50 border-t border-neutral-200">
-                <div className="text-center">
-                  <p className="text-neutral-600">{companyInfo.phone} | {companyInfo.website}</p>
-                  <p className="text-lg font-semibold text-neutral-900 mt-2">Thank You For Your Business!</p>
-                </div>
-              </div>
             </div>
           )}
 
@@ -1125,8 +1118,9 @@ export default function QuoteDocumentPage() {
               </div>
 
               {/* Thank You Footer */}
-              <div className="px-8 py-6 bg-[#476E66] text-white text-center">
-                <p className="text-lg font-semibold">Thank you and looking forward to doing business with you again!</p>
+              <div className="px-8 py-6 border-t border-neutral-200 text-center">
+                <p className="text-neutral-600">{companyInfo.phone} | {companyInfo.website}</p>
+                <p className="text-lg font-semibold text-neutral-900 mt-2">Thank you and looking forward to doing business with you again!</p>
               </div>
             </div>
           )}
@@ -1452,13 +1446,6 @@ export default function QuoteDocumentPage() {
               </>
               )}
 
-              {/* Footer */}
-              <div className="px-8 py-6 bg-neutral-50 border-t border-neutral-200">
-                <div className="text-center">
-                  <p className="text-neutral-600">{companyInfo.phone} | {companyInfo.website}</p>
-                  <p className="text-lg font-semibold text-neutral-900 mt-2">Thank You For Your Business!</p>
-                </div>
-              </div>
             </div>
             )}
 
@@ -1507,8 +1494,9 @@ export default function QuoteDocumentPage() {
               </div>
 
               {/* Thank You Footer */}
-              <div className="absolute bottom-0 left-0 right-0 px-8 py-6 bg-[#476E66] text-white text-center">
-                <p className="text-lg font-semibold">Thank you and looking forward to doing business with you again!</p>
+              <div className="px-8 py-6 border-t border-neutral-200 text-center mt-auto">
+                <p className="text-neutral-600">{companyInfo.phone} | {companyInfo.website}</p>
+                <p className="text-lg font-semibold text-neutral-900 mt-2">Thank you and looking forward to doing business with you again!</p>
               </div>
             </div>
             )}
