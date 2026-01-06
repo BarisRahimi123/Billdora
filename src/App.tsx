@@ -14,6 +14,7 @@ import AnalyticsPage from './pages/AnalyticsPage';
 import ReportsPage from './pages/ReportsPage';
 import SettingsPage from './pages/SettingsPage';
 import QuoteDocumentPage from './pages/QuoteDocumentPage';
+import ProposalPortalPage from './pages/ProposalPortalPage';
 
 import LandingPage from './pages/LandingPage';
 
@@ -51,6 +52,7 @@ function AppRoutes() {
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <LoginPage />} />
       <Route path="/quotes/:quoteId/document" element={<ProtectedRoute><QuoteDocumentPage /></ProtectedRoute>} />
+      <Route path="/proposal/:token" element={<ProposalPortalPage />} />
       
       <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
         <Route path="/dashboard" element={<DashboardPage />} />

@@ -101,6 +101,12 @@ export default function QuoteDocumentPage() {
   // Letter content
   const [letterContent, setLetterContent] = useState('');
 
+  // Send Proposal Modal
+  const [showSendModal, setShowSendModal] = useState(false);
+  const [sendingProposal, setSendingProposal] = useState(false);
+  const [sentAccessCode, setSentAccessCode] = useState('');
+  const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+
   useEffect(() => {
     loadData();
   }, [quoteId, profile?.company_id]);
@@ -423,18 +429,50 @@ export default function QuoteDocumentPage() {
   };
 
   const handleSendToCustomer = async () => {
-    if (!quote) {
-      await saveChanges();
+    if (!client?.email) {
+      showToast('Please select a client with an email address', 'error');
+      return;
     }
-    if (quote) {
-      try {
-        await api.updateQuote(quote.id, { status: 'sent' });
-        showToast('Quote sent to customer successfully!', 'success');
-        loadData();
-      } catch (error) {
-        console.error('Failed to send quote:', error);
-      }
+    if (!quote && isNewQuote) {
+      showToast('Please save the quote first', 'error');
+      return;
     }
+    setShowSendModal(true);
+  };
+
+  const sendProposalEmail = async () => {
+    if (!quote || !client?.email) return;
+    
+    setSendingProposal(true);
+    try {
+      const portalUrl = window.location.origin;
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/send-proposal`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          quoteId: quote.id,
+          companyId: profile?.company_id,
+          clientEmail: client.email,
+          clientName: client.name,
+          projectName: projectName || documentTitle,
+          companyName: companyInfo.name,
+          senderName: profile?.full_name || companyInfo.name,
+          validUntil,
+          portalUrl
+        })
+      });
+      
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      
+      setSentAccessCode(data.accessCode);
+      await api.updateQuote(quote.id, { status: 'sent' });
+      showToast('Proposal sent successfully!', 'success');
+    } catch (error: any) {
+      console.error('Failed to send proposal:', error);
+      showToast(error?.message || 'Failed to send proposal', 'error');
+    }
+    setSendingProposal(false);
   };
 
   const formatCurrency = (amount: number) => {
@@ -1780,6 +1818,89 @@ export default function QuoteDocumentPage() {
             setShowNewClientModal(false);
           }}
         />
+      )}
+
+      {/* Send Proposal Modal */}
+      {showSendModal && (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
+          {!sentAccessCode ? (
+            <>
+              <div className="p-6 border-b">
+                <h2 className="text-xl font-semibold text-neutral-900">Send Proposal</h2>
+                <p className="text-sm text-neutral-500 mt-1">Send this proposal to your client via email</p>
+              </div>
+              <div className="p-6 space-y-4">
+                <div className="bg-neutral-50 rounded-xl p-4">
+                  <p className="text-sm text-neutral-500 mb-1">Sending to</p>
+                  <p className="font-medium text-neutral-900">{client?.name}</p>
+                  <p className="text-sm text-neutral-600">{client?.email}</p>
+                </div>
+                <div className="bg-neutral-50 rounded-xl p-4">
+                  <p className="text-sm text-neutral-500 mb-1">Proposal</p>
+                  <p className="font-medium text-neutral-900">{projectName || documentTitle}</p>
+                  <p className="text-sm text-neutral-600">Total: {formatCurrency(total)}</p>
+                </div>
+                <p className="text-xs text-neutral-500">
+                  The client will receive an email with a secure link and 4-digit access code to view and respond to this proposal.
+                </p>
+              </div>
+              <div className="p-6 bg-neutral-50 flex gap-3">
+                <button
+                  onClick={() => setShowSendModal(false)}
+                  className="flex-1 px-4 py-2.5 border border-neutral-300 rounded-xl hover:bg-white transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={sendProposalEmail}
+                  disabled={sendingProposal}
+                  className="flex-1 px-4 py-2.5 bg-neutral-900 text-white rounded-xl hover:bg-neutral-800 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {sendingProposal ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4" />
+                      Send Proposal
+                    </>
+                  )}
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="p-6 text-center">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Check className="w-8 h-8 text-green-600" />
+                </div>
+                <h2 className="text-xl font-semibold text-neutral-900 mb-2">Proposal Sent!</h2>
+                <p className="text-neutral-600 mb-6">
+                  Your proposal has been sent to {client?.email}
+                </p>
+                <div className="bg-neutral-100 rounded-xl p-4 mb-4">
+                  <p className="text-sm text-neutral-500 mb-1">Access Code</p>
+                  <p className="text-3xl font-bold tracking-widest text-neutral-900">{sentAccessCode}</p>
+                </div>
+                <p className="text-xs text-neutral-500 mb-6">
+                  The access code was included in the email. You can also share it manually if needed.
+                </p>
+              </div>
+              <div className="p-6 bg-neutral-50">
+                <button
+                  onClick={() => { setShowSendModal(false); setSentAccessCode(''); }}
+                  className="w-full px-4 py-2.5 bg-neutral-900 text-white rounded-xl hover:bg-neutral-800 transition-colors"
+                >
+                  Done
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
       )}
     </div>
   );
