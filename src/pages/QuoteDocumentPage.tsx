@@ -105,6 +105,74 @@ export default function QuoteDocumentPage() {
   const [showSendModal, setShowSendModal] = useState(false);
   const [sendingProposal, setSendingProposal] = useState(false);
   const [sentAccessCode, setSentAccessCode] = useState('');
+  const [showEmailPreview, setShowEmailPreview] = useState(false);
+
+  // Generate email preview HTML
+  const getEmailPreviewHtml = () => {
+    const accessCodePreview = '****';
+    const proposalLinkPreview = `${window.location.origin}/proposal/[secure-token]`;
+    return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f4f4f5;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f5; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+          <tr>
+            <td style="background-color: #18181b; padding: 32px 40px; text-align: center;">
+              <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">${companyInfo.name}</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 40px;">
+              <p style="margin: 0 0 20px; color: #18181b; font-size: 18px; font-weight: 600;">
+                Hello ${client?.name || 'Client'},
+              </p>
+              <p style="margin: 0 0 24px; color: #52525b; font-size: 16px; line-height: 1.6;">
+                Your proposal for <strong style="color: #18181b;">${projectName || documentTitle}</strong> is ready for your review.
+              </p>
+              <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #fafafa; border-radius: 8px; margin-bottom: 24px;">
+                <tr>
+                  <td style="padding: 24px; text-align: center;">
+                    <p style="margin: 0 0 8px; color: #71717a; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">Your Access Code</p>
+                    <p style="margin: 0; color: #18181b; font-size: 36px; font-weight: 700; letter-spacing: 8px;">${accessCodePreview}</p>
+                  </td>
+                </tr>
+              </table>
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center" style="padding: 8px 0 24px;">
+                    <a href="#" style="display: inline-block; background-color: #18181b; color: #ffffff; text-decoration: none; padding: 16px 48px; border-radius: 8px; font-size: 16px; font-weight: 600;">
+                      View Proposal
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin: 0 0 16px; color: #52525b; font-size: 14px; line-height: 1.6;">
+                You'll need to enter the access code above to view your proposal. This ensures your proposal remains secure and private.
+              </p>
+              ${validUntil ? `<p style="margin: 0; color: #71717a; font-size: 14px;">This proposal is valid until <strong>${new Date(validUntil).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</strong>.</p>` : ''}
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color: #fafafa; padding: 24px 40px; border-top: 1px solid #e4e4e7;">
+              <p style="margin: 0; color: #71717a; font-size: 14px; text-align: center;">
+                Sent by ${profile?.full_name || companyInfo.name} from ${companyInfo.name}
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+  };
   const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
   useEffect(() => {
@@ -1823,8 +1891,49 @@ export default function QuoteDocumentPage() {
       {/* Send Proposal Modal */}
       {showSendModal && (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
+        <div className={`bg-white rounded-2xl shadow-2xl ${showEmailPreview ? 'max-w-2xl' : 'max-w-md'} w-full overflow-hidden`}>
           {!sentAccessCode ? (
+            showEmailPreview ? (
+              <>
+                <div className="p-6 border-b">
+                  <h2 className="text-xl font-semibold text-neutral-900">Email Preview</h2>
+                  <p className="text-sm text-neutral-500 mt-1">This is what your client will receive</p>
+                </div>
+                <div className="p-4 bg-neutral-100">
+                  <iframe
+                    srcDoc={getEmailPreviewHtml()}
+                    title="Email Preview"
+                    className="w-full h-[400px] bg-white rounded-lg border"
+                    sandbox=""
+                  />
+                </div>
+                <div className="p-6 bg-neutral-50 flex gap-3">
+                  <button
+                    onClick={() => setShowEmailPreview(false)}
+                    className="flex-1 px-4 py-2.5 border border-neutral-300 rounded-xl hover:bg-white transition-colors"
+                  >
+                    Back
+                  </button>
+                  <button
+                    onClick={sendProposalEmail}
+                    disabled={sendingProposal}
+                    className="flex-1 px-4 py-2.5 bg-neutral-900 text-white rounded-xl hover:bg-neutral-800 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {sendingProposal ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4" />
+                        Send Proposal
+                      </>
+                    )}
+                  </button>
+                </div>
+              </>
+            ) : (
             <>
               <div className="p-6 border-b">
                 <h2 className="text-xl font-semibold text-neutral-900">Send Proposal</h2>
@@ -1853,24 +1962,15 @@ export default function QuoteDocumentPage() {
                   Cancel
                 </button>
                 <button
-                  onClick={sendProposalEmail}
-                  disabled={sendingProposal}
-                  className="flex-1 px-4 py-2.5 bg-neutral-900 text-white rounded-xl hover:bg-neutral-800 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                  onClick={() => setShowEmailPreview(true)}
+                  className="flex-1 px-4 py-2.5 bg-neutral-900 text-white rounded-xl hover:bg-neutral-800 transition-colors flex items-center justify-center gap-2"
                 >
-                  {sendingProposal ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Sending...
-                    </>
-                  ) : (
-                    <>
-                      <Send className="w-4 h-4" />
-                      Send Proposal
-                    </>
-                  )}
+                  <Eye className="w-4 h-4" />
+                  Preview Email
                 </button>
               </div>
             </>
+            )
           ) : (
             <>
               <div className="p-6 text-center">
@@ -1891,7 +1991,7 @@ export default function QuoteDocumentPage() {
               </div>
               <div className="p-6 bg-neutral-50">
                 <button
-                  onClick={() => { setShowSendModal(false); setSentAccessCode(''); }}
+                  onClick={() => { setShowSendModal(false); setSentAccessCode(''); setShowEmailPreview(false); }}
                   className="w-full px-4 py-2.5 bg-neutral-900 text-white rounded-xl hover:bg-neutral-800 transition-colors"
                 >
                   Done
