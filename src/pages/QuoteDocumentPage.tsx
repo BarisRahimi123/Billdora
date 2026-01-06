@@ -644,6 +644,81 @@ export default function QuoteDocumentPage() {
           </div>
           )}
 
+          {/* SCOPE OF WORK & TIMELINE PAGE */}
+          {(showSections.scopeOfWork || showSections.timeline) && (
+          <div className="bg-white shadow-xl rounded-lg overflow-hidden p-8">
+            <h2 className="text-2xl font-bold text-neutral-900 mb-6">Scope of Work & Project Timeline</h2>
+            
+            {/* Scope of Work */}
+            {showSections.scopeOfWork && (
+            <div className="mb-8">
+              <h3 className="text-sm font-semibold text-neutral-900 uppercase tracking-wider mb-3">Scope of Work</h3>
+              <div className="border border-neutral-200 rounded-lg">
+                <textarea
+                  value={scopeOfWork}
+                  onChange={(e) => { setScopeOfWork(e.target.value); setHasUnsavedChanges(true); }}
+                  className="w-full h-48 p-4 text-sm text-neutral-700 rounded-lg resize-none focus:ring-2 focus:ring-neutral-400 focus:border-transparent outline-none"
+                  placeholder="Describe the scope of work for this project. Include deliverables, milestones, and key objectives..."
+                />
+              </div>
+            </div>
+            )}
+
+            {/* Project Timeline / Gantt Chart */}
+            {showSections.timeline && lineItems.filter(item => item.description.trim()).length > 0 && (
+            <div>
+              <h3 className="text-sm font-semibold text-neutral-900 uppercase tracking-wider mb-3">Project Timeline</h3>
+              <div className="border border-neutral-200 rounded-lg p-4">
+                {(() => {
+                  const validItems = lineItems.filter(item => item.description.trim());
+                  const maxEnd = Math.max(...validItems.map(item => item.startOffset + item.estimatedDays));
+                  const totalDays = maxEnd || 1;
+                  return (
+                    <div className="space-y-3">
+                      {/* Timeline header */}
+                      <div className="flex items-center text-xs text-neutral-500 border-b pb-2">
+                        <div className="w-48 flex-shrink-0 font-medium">Task</div>
+                        <div className="flex-1 flex justify-between px-2">
+                          <span>Day 1</span>
+                          <span>Day {Math.ceil(totalDays / 2)}</span>
+                          <span>Day {totalDays}</span>
+                        </div>
+                      </div>
+                      {/* Timeline bars */}
+                      {validItems.map((item, idx) => {
+                        const widthPercent = (item.estimatedDays / totalDays) * 100;
+                        const leftPercent = (item.startOffset / totalDays) * 100;
+                        const colors = ['bg-neutral-700', 'bg-neutral-600', 'bg-neutral-500', 'bg-neutral-400'];
+                        return (
+                          <div key={item.id} className="flex items-center">
+                            <div className="w-48 flex-shrink-0 text-sm text-neutral-700 truncate pr-2" title={item.description}>
+                              {item.description.length > 30 ? item.description.substring(0, 30) + '...' : item.description}
+                            </div>
+                            <div className="flex-1 h-8 bg-neutral-100 rounded relative">
+                              <div 
+                                className={`absolute h-full ${colors[idx % colors.length]} rounded flex items-center justify-center text-white text-xs font-medium`}
+                                style={{ left: `${leftPercent}%`, width: `${Math.max(widthPercent, 8)}%`, minWidth: '40px' }}
+                              >
+                                {item.estimatedDays} day{item.estimatedDays > 1 ? 's' : ''}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                      {/* Summary */}
+                      <div className="pt-3 border-t text-sm text-neutral-600 flex justify-between">
+                        <span>Total Project Duration:</span>
+                        <span className="font-semibold text-neutral-900">{totalDays} day{totalDays > 1 ? 's' : ''}</span>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+            )}
+          </div>
+          )}
+
           {/* DETAILS PAGE */}
           {showSections.quoteDetails && (
           <div className="bg-white shadow-xl rounded-lg overflow-hidden">
@@ -759,21 +834,6 @@ export default function QuoteDocumentPage() {
                   {!client && <p className="text-neutral-400 text-sm italic">No client selected</p>}
                 </div>
               </div>
-
-              {/* Scope of Work Section */}
-              {showSections.scopeOfWork && (
-              <div className="px-8 py-4">
-                <h3 className="text-sm font-semibold text-neutral-900 uppercase tracking-wider mb-3">Scope of Work</h3>
-                <div className="border border-neutral-200 rounded-lg">
-                  <textarea
-                    value={scopeOfWork}
-                    onChange={(e) => { setScopeOfWork(e.target.value); setHasUnsavedChanges(true); }}
-                    className="w-full h-40 p-4 text-sm text-neutral-700 rounded-lg resize-none focus:ring-2 focus:ring-neutral-400 focus:border-transparent outline-none"
-                    placeholder="Describe the scope of work for this project. Include deliverables, milestones, and key objectives..."
-                  />
-                </div>
-              </div>
-              )}
 
               {/* Line Items - Clean Minimal Design */}
               <div className="px-8 py-4">
@@ -948,59 +1008,6 @@ export default function QuoteDocumentPage() {
                   </div>
                 </div>
               </div>
-
-              {/* Project Timeline */}
-              {showSections.timeline && lineItems.filter(item => item.description.trim()).length > 0 && (
-                <div className="px-8 py-4">
-                  <h3 className="text-sm font-semibold text-neutral-900 uppercase tracking-wider mb-3">Project Timeline</h3>
-                  <div className="border border-neutral-200 rounded-lg p-4">
-                    {(() => {
-                      const validItems = lineItems.filter(item => item.description.trim());
-                      const maxEnd = Math.max(...validItems.map(item => item.startOffset + item.estimatedDays));
-                      const totalDays = maxEnd || 1;
-                      return (
-                        <div className="space-y-3">
-                          {/* Timeline header */}
-                          <div className="flex items-center text-xs text-neutral-500 border-b pb-2">
-                            <div className="w-40 flex-shrink-0">Task</div>
-                            <div className="flex-1 flex justify-between px-2">
-                              <span>Day 1</span>
-                              <span>Day {Math.ceil(totalDays / 2)}</span>
-                              <span>Day {totalDays}</span>
-                            </div>
-                          </div>
-                          {/* Timeline bars */}
-                          {validItems.map((item, idx) => {
-                            const widthPercent = (item.estimatedDays / totalDays) * 100;
-                            const leftPercent = (item.startOffset / totalDays) * 100;
-                            const colors = ['bg-[#476E66]', 'bg-[#5A8A80]', 'bg-[#3A5B54]', 'bg-neutral-600', 'bg-neutral-500'];
-                            return (
-                              <div key={item.id} className="flex items-center">
-                                <div className="w-40 flex-shrink-0 text-sm text-neutral-700 truncate pr-2" title={item.description}>
-                                  {item.description.length > 25 ? item.description.substring(0, 25) + '...' : item.description}
-                                </div>
-                                <div className="flex-1 h-6 bg-neutral-100 rounded relative">
-                                  <div 
-                                    className={`absolute h-full ${colors[idx % colors.length]} rounded flex items-center justify-center text-white text-xs font-medium`}
-                                    style={{ left: `${leftPercent}%`, width: `${widthPercent}%`, minWidth: '30px' }}
-                                  >
-                                    {item.estimatedDays}d
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })}
-                          {/* Summary */}
-                          <div className="pt-2 border-t text-sm text-neutral-600 flex justify-between">
-                            <span>Total Project Duration:</span>
-                            <span className="font-medium text-neutral-900">{totalDays} days</span>
-                          </div>
-                        </div>
-                      );
-                    })()}
-                  </div>
-                </div>
-              )}
 
               {/* Terms and Conditions */}
               {showSections.terms && (
@@ -1277,13 +1284,73 @@ export default function QuoteDocumentPage() {
             </div>
             )}
 
-            {/* Scope of Work Page */}
-            {showSections.scopeOfWork && scopeOfWork && (
+            {/* Scope of Work & Timeline Page */}
+            {(showSections.scopeOfWork || showSections.timeline) && (
             <div className="export-page w-[850px] bg-white shadow-xl print:shadow-none print:w-full p-12" style={{ minHeight: '1100px' }}>
-              <h2 className="text-2xl font-bold text-neutral-900 mb-8">Scope of Work</h2>
-              <div className="text-neutral-700 whitespace-pre-line leading-relaxed">
-                {scopeOfWork}
+              <h2 className="text-2xl font-bold text-neutral-900 mb-8">Scope of Work & Project Timeline</h2>
+              
+              {/* Scope of Work */}
+              {showSections.scopeOfWork && scopeOfWork && (
+              <div className="mb-8">
+                <h3 className="text-sm font-semibold text-neutral-900 uppercase tracking-wider mb-3">Scope of Work</h3>
+                <div className="text-neutral-700 whitespace-pre-line leading-relaxed border border-neutral-200 rounded-lg p-4">
+                  {scopeOfWork}
+                </div>
               </div>
+              )}
+
+              {/* Project Timeline / Gantt Chart */}
+              {showSections.timeline && lineItems.filter(item => item.description.trim()).length > 0 && (
+              <div>
+                <h3 className="text-sm font-semibold text-neutral-900 uppercase tracking-wider mb-3">Project Timeline</h3>
+                <div className="border border-neutral-200 rounded-lg p-4">
+                  {(() => {
+                    const validItems = lineItems.filter(item => item.description.trim());
+                    const maxEnd = Math.max(...validItems.map(item => item.startOffset + item.estimatedDays));
+                    const totalDays = maxEnd || 1;
+                    return (
+                      <div className="space-y-3">
+                        {/* Timeline header */}
+                        <div className="flex items-center text-xs text-neutral-500 border-b pb-2">
+                          <div className="w-48 flex-shrink-0 font-medium">Task</div>
+                          <div className="flex-1 flex justify-between px-2">
+                            <span>Day 1</span>
+                            <span>Day {Math.ceil(totalDays / 2)}</span>
+                            <span>Day {totalDays}</span>
+                          </div>
+                        </div>
+                        {/* Timeline bars */}
+                        {validItems.map((item, idx) => {
+                          const widthPercent = (item.estimatedDays / totalDays) * 100;
+                          const leftPercent = (item.startOffset / totalDays) * 100;
+                          const colors = ['bg-neutral-700', 'bg-neutral-600', 'bg-neutral-500', 'bg-neutral-400'];
+                          return (
+                            <div key={item.id} className="flex items-center">
+                              <div className="w-48 flex-shrink-0 text-sm text-neutral-700 truncate pr-2" title={item.description}>
+                                {item.description.length > 30 ? item.description.substring(0, 30) + '...' : item.description}
+                              </div>
+                              <div className="flex-1 h-8 bg-neutral-100 rounded relative">
+                                <div 
+                                  className={`absolute h-full ${colors[idx % colors.length]} rounded flex items-center justify-center text-white text-xs font-medium`}
+                                  style={{ left: `${leftPercent}%`, width: `${Math.max(widthPercent, 8)}%`, minWidth: '40px' }}
+                                >
+                                  {item.estimatedDays} day{item.estimatedDays > 1 ? 's' : ''}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                        {/* Summary */}
+                        <div className="pt-3 border-t text-sm text-neutral-600 flex justify-between">
+                          <span>Total Project Duration:</span>
+                          <span className="font-semibold text-neutral-900">{totalDays} day{totalDays > 1 ? 's' : ''}</span>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
+              )}
             </div>
             )}
 
@@ -1378,48 +1445,6 @@ export default function QuoteDocumentPage() {
                   </div>
                 </div>
               </div>
-
-              {/* Timeline */}
-              {showSections.timeline && lineItems.filter(item => item.description.trim()).length > 0 && (
-              <div className="px-8 py-4">
-                <h3 className="text-sm font-semibold text-neutral-900 uppercase tracking-wider mb-3">Project Timeline</h3>
-                <div className="border border-neutral-200 rounded-lg p-4">
-                  {(() => {
-                    const validItems = lineItems.filter(item => item.description.trim());
-                    const maxEnd = Math.max(...validItems.map(item => item.startOffset + item.estimatedDays));
-                    const totalDays = maxEnd || 1;
-                    return (
-                      <div className="space-y-2">
-                        {validItems.map((item, idx) => {
-                          const widthPercent = (item.estimatedDays / totalDays) * 100;
-                          const leftPercent = (item.startOffset / totalDays) * 100;
-                          const colors = ['bg-[#476E66]', 'bg-[#5A8A80]', 'bg-[#3A5B54]', 'bg-neutral-600'];
-                          return (
-                            <div key={item.id} className="flex items-center text-sm">
-                              <div className="w-32 flex-shrink-0 text-neutral-700 truncate pr-2">
-                                {item.description.substring(0, 20)}{item.description.length > 20 ? '...' : ''}
-                              </div>
-                              <div className="flex-1 h-5 bg-neutral-100 rounded relative">
-                                <div 
-                                  className={`absolute h-full ${colors[idx % colors.length]} rounded flex items-center justify-center text-white text-xs`}
-                                  style={{ left: `${leftPercent}%`, width: `${widthPercent}%`, minWidth: '25px' }}
-                                >
-                                  {item.estimatedDays}d
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                        <div className="pt-2 border-t text-sm text-neutral-600 flex justify-between">
-                          <span>Total Duration:</span>
-                          <span className="font-medium text-neutral-900">{totalDays} days</span>
-                        </div>
-                      </div>
-                    );
-                  })()}
-                </div>
-              </div>
-              )}
 
               {/* Terms */}
               {showSections.terms && (
