@@ -138,7 +138,7 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         personalizations: [{ to: [{ email: clientEmail, name: clientName }] }],
-        from: { email: 'noreply@primeledger.app', name: companyName },
+        from: { email: 'info@billdora.com', name: companyName },
         subject: `Proposal for ${projectName} - ${companyName}`,
         content: [
           { type: 'text/plain', value: `Hello ${clientName},\n\nYour proposal for ${projectName} is ready.\n\nAccess Code: ${accessCode}\nView Proposal: ${proposalLink}\n\nBest regards,\n${senderName}\n${companyName}` },
