@@ -225,42 +225,49 @@ export default function QuoteDocumentPage() {
     setHasUnsavedChanges(true);
   };
 
-  // Calculate computed start offset based on dependencies
+  // Calculate computed start offset based on dependencies (with cycle detection)
   const getComputedStartOffsets = (items: LineItem[]): Map<string, number> => {
     const offsets = new Map<string, number>();
     const itemMap = new Map(items.map(i => [i.id, i]));
     
-    // Iteratively resolve dependencies (handles chains)
-    let changed = true;
-    let iterations = 0;
-    while (changed && iterations < 100) {
-      changed = false;
-      iterations++;
-      for (const item of items) {
-        let computedStart = 0;
-        
-        if (item.startType === 'parallel' || !item.dependsOn) {
-          computedStart = 0;
-        } else if (item.startType === 'sequential' && item.dependsOn) {
-          const dep = itemMap.get(item.dependsOn);
-          if (dep) {
-            const depStart = offsets.get(dep.id) ?? 0;
-            computedStart = depStart + dep.estimatedDays;
-          }
-        } else if (item.startType === 'overlap' && item.dependsOn) {
-          const dep = itemMap.get(item.dependsOn);
-          if (dep) {
-            const depStart = offsets.get(dep.id) ?? 0;
-            computedStart = depStart + (item.overlapDays || 0);
-          }
-        }
-        
-        if (offsets.get(item.id) !== computedStart) {
-          offsets.set(item.id, computedStart);
-          changed = true;
-        }
+    // Detect cycles: build dependency graph and check for circular refs
+    const hasCycle = (startId: string, visited: Set<string>): boolean => {
+      if (visited.has(startId)) return true;
+      const item = itemMap.get(startId);
+      if (!item || !item.dependsOn || item.startType === 'parallel') return false;
+      visited.add(startId);
+      return hasCycle(item.dependsOn, visited);
+    };
+    
+    // Calculate start for each item (with cycle protection)
+    const getStart = (itemId: string, visited: Set<string>): number => {
+      if (visited.has(itemId)) return 0; // Cycle detected, return 0
+      visited.add(itemId);
+      
+      const item = itemMap.get(itemId);
+      if (!item) return 0;
+      
+      if (item.startType === 'parallel' || !item.dependsOn) {
+        return 0;
       }
+      
+      const dep = itemMap.get(item.dependsOn);
+      if (!dep) return 0;
+      
+      const depStart = getStart(dep.id, visited);
+      
+      if (item.startType === 'sequential') {
+        return depStart + dep.estimatedDays;
+      } else if (item.startType === 'overlap') {
+        return depStart + Math.floor(item.overlapDays || 0);
+      }
+      return 0;
+    };
+    
+    for (const item of items) {
+      offsets.set(item.id, getStart(item.id, new Set()));
     }
+    
     return offsets;
   };
 
@@ -969,44 +976,70 @@ export default function QuoteDocumentPage() {
                             />
                           </td>
                           <td className="px-3 py-3 text-center">
-                            <select
-                              value={item.startType === 'parallel' ? 'parallel' : `${item.startType}:${item.dependsOn}`}
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                if (val === 'parallel') {
-                                  updateLineItem(item.id, { startType: 'parallel', dependsOn: '', overlapDays: 0 });
-                                } else {
-                                  const [type, depId] = val.split(':');
-                                  updateLineItem(item.id, { 
-                                    startType: type as 'sequential' | 'overlap', 
-                                    dependsOn: depId,
-                                    overlapDays: type === 'overlap' ? (item.overlapDays || Math.ceil(lineItems.find(i => i.id === depId)?.estimatedDays || 1) / 2) : 0
-                                  });
+                            {(() => {
+                              // Find items that would NOT create a circular dependency
+                              const wouldCreateCycle = (depId: string): boolean => {
+                                const visited = new Set<string>();
+                                let current = depId;
+                                while (current) {
+                                  if (current === item.id) return true;
+                                  if (visited.has(current)) return false;
+                                  visited.add(current);
+                                  const dep = lineItems.find(i => i.id === current);
+                                  current = dep?.dependsOn || '';
                                 }
-                              }}
-                              className="w-full text-center bg-transparent outline-none text-neutral-900 text-xs"
-                            >
-                              <option value="parallel">Starts Day 1</option>
-                              {lineItems.filter(other => other.id !== item.id && other.description.trim()).map(other => (
-                                <optgroup key={other.id} label={other.description.substring(0, 20)}>
-                                  <option value={`sequential:${other.id}`}>After "{other.description.substring(0, 15)}"</option>
-                                  <option value={`overlap:${other.id}`}>Overlaps "{other.description.substring(0, 12)}"</option>
-                                </optgroup>
-                              ))}
-                            </select>
-                            {item.startType === 'overlap' && item.dependsOn && (
-                              <div className="flex items-center gap-1 mt-1 text-xs text-neutral-500">
-                                <span>+</span>
-                                <input
-                                  type="number"
-                                  value={item.overlapDays}
-                                  onChange={(e) => updateLineItem(item.id, { overlapDays: parseInt(e.target.value) || 0 })}
-                                  className="w-10 text-center bg-neutral-100 rounded px-1"
-                                  min="0"
-                                />
-                                <span>days</span>
-                              </div>
-                            )}
+                                return false;
+                              };
+                              const availableDeps = lineItems.filter(other => 
+                                other.id !== item.id && 
+                                other.description.trim() && 
+                                !wouldCreateCycle(other.id)
+                              );
+                              return (
+                                <>
+                                  <select
+                                    value={item.startType === 'parallel' ? 'parallel' : `${item.startType}:${item.dependsOn}`}
+                                    onChange={(e) => {
+                                      const val = e.target.value;
+                                      if (val === 'parallel') {
+                                        updateLineItem(item.id, { startType: 'parallel', dependsOn: '', overlapDays: 0 });
+                                      } else {
+                                        const [type, depId] = val.split(':');
+                                        const depItem = lineItems.find(i => i.id === depId);
+                                        updateLineItem(item.id, { 
+                                          startType: type as 'sequential' | 'overlap', 
+                                          dependsOn: depId,
+                                          overlapDays: type === 'overlap' ? Math.ceil((depItem?.estimatedDays || 2) / 2) : 0
+                                        });
+                                      }
+                                    }}
+                                    className="w-full text-center bg-transparent outline-none text-neutral-900 text-xs"
+                                  >
+                                    <option value="parallel">Starts Day 1</option>
+                                    {availableDeps.map(other => (
+                                      <optgroup key={other.id} label={other.description.substring(0, 20)}>
+                                        <option value={`sequential:${other.id}`}>After "{other.description.substring(0, 15)}"</option>
+                                        <option value={`overlap:${other.id}`}>Overlaps "{other.description.substring(0, 12)}"</option>
+                                      </optgroup>
+                                    ))}
+                                  </select>
+                                  {item.startType === 'overlap' && item.dependsOn && (
+                                    <div className="flex items-center gap-1 mt-1 text-xs text-neutral-500">
+                                      <span>+</span>
+                                      <input
+                                        type="number"
+                                        value={item.overlapDays}
+                                        onChange={(e) => updateLineItem(item.id, { overlapDays: Math.max(0, parseInt(e.target.value) || 0) })}
+                                        className="w-10 text-center bg-neutral-100 rounded px-1"
+                                        min="0"
+                                        step="1"
+                                      />
+                                      <span>days</span>
+                                    </div>
+                                  )}
+                                </>
+                              );
+                            })()}
                           </td>
                           <td className="px-5 py-3 text-right font-medium text-neutral-900">
                             {formatCurrency(item.unitPrice * item.qty)}
