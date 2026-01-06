@@ -1149,7 +1149,34 @@ export default function QuoteDocumentPage() {
       `}</style>
 
       {/* Export Preview Modal - Shows All Enabled Sections */}
-      {showExportPreview && (
+      {showExportPreview && (() => {
+        // Calculate total pages and page numbers
+        const visiblePages: string[] = [];
+        if (showSections.cover) visiblePages.push('cover');
+        if (showSections.letter) visiblePages.push('letter');
+        if (showSections.scopeOfWork || showSections.timeline) visiblePages.push('scope');
+        if (showSections.quoteDetails) visiblePages.push('details');
+        if (showSections.additionalOfferings && services.length > 0) visiblePages.push('offerings');
+        const totalPages = visiblePages.length;
+        
+        const PageFooter = ({ pageNum }: { pageNum: number }) => (
+          <div className="absolute bottom-0 left-0 right-0 px-8 py-4 border-t border-neutral-200 bg-white">
+            <div className="flex items-center justify-between text-xs text-neutral-500">
+              <div className="flex items-center gap-4">
+                <span className="font-medium">Proposal #{quote?.quote_number || 'Draft'}</span>
+                <span>|</span>
+                <span>{projectName || documentTitle}</span>
+              </div>
+              <div className="flex items-center gap-4">
+                <span>{client?.name}</span>
+                <span>|</span>
+                <span className="font-medium">Page {pageNum} of {totalPages}</span>
+              </div>
+            </div>
+          </div>
+        );
+        
+        return (
         <div className="fixed inset-0 bg-black/80 z-50 overflow-auto print:bg-white print:overflow-visible">
           {/* Toolbar */}
           <div className="sticky top-0 bg-white border-b px-6 py-3 flex items-center justify-between print:hidden">
@@ -1163,7 +1190,7 @@ export default function QuoteDocumentPage() {
               </button>
               <button
                 onClick={() => window.print()}
-                className="px-4 py-2 bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54]"
+                className="px-4 py-2 bg-neutral-800 text-white rounded-lg hover:bg-neutral-700"
               >
                 <Download className="w-4 h-4 inline mr-2" />
                 Download PDF
@@ -1226,7 +1253,8 @@ export default function QuoteDocumentPage() {
 
             {/* Letter Page */}
             {showSections.letter && (
-            <div className="export-page w-[850px] bg-white shadow-xl print:shadow-none print:w-full p-12" style={{ minHeight: '1100px' }}>
+            <div className="export-page w-[850px] bg-white shadow-xl print:shadow-none print:w-full relative" style={{ minHeight: '1100px' }}>
+              <div className="p-12 pb-20">
               {/* Letterhead */}
               <div className="flex justify-between items-start mb-12">
                 <div className="flex gap-4">
@@ -1281,12 +1309,15 @@ export default function QuoteDocumentPage() {
                   <p className="text-sm text-neutral-600">{companyInfo.name}</p>
                 </div>
               </div>
+              </div>
+              <PageFooter pageNum={visiblePages.indexOf('letter') + 1} />
             </div>
             )}
 
             {/* Scope of Work & Timeline Page */}
             {(showSections.scopeOfWork || showSections.timeline) && (
-            <div className="export-page w-[850px] bg-white shadow-xl print:shadow-none print:w-full p-12" style={{ minHeight: '1100px' }}>
+            <div className="export-page w-[850px] bg-white shadow-xl print:shadow-none print:w-full relative" style={{ minHeight: '1100px' }}>
+              <div className="p-12 pb-20">
               <h2 className="text-2xl font-bold text-neutral-900 mb-8">Scope of Work & Project Timeline</h2>
               
               {/* Scope of Work */}
@@ -1351,12 +1382,15 @@ export default function QuoteDocumentPage() {
                 </div>
               </div>
               )}
+              </div>
+              <PageFooter pageNum={visiblePages.indexOf('scope') + 1} />
             </div>
             )}
 
             {/* Quote Details Page */}
             {showSections.quoteDetails && (
-            <div className="export-page w-[850px] bg-white shadow-xl print:shadow-none print:w-full" style={{ minHeight: '1100px' }}>
+            <div className="export-page w-[850px] bg-white shadow-xl print:shadow-none print:w-full relative" style={{ minHeight: '1100px' }}>
+              <div className="pb-20">
               {/* Header */}
               <div className="p-8 border-b border-neutral-200">
                 <div className="flex justify-between">
@@ -1470,14 +1504,15 @@ export default function QuoteDocumentPage() {
               </div>
               </>
               )}
-
+              </div>
+              <PageFooter pageNum={visiblePages.indexOf('details') + 1} />
             </div>
             )}
 
             {/* Additional Offerings Page */}
             {showSections.additionalOfferings && services.length > 0 && (
-            <div className="export-page w-[850px] bg-white shadow-xl print:shadow-none print:w-full" style={{ minHeight: '1100px' }}>
-              <div className="p-12">
+            <div className="export-page w-[850px] bg-white shadow-xl print:shadow-none print:w-full relative" style={{ minHeight: '1100px' }}>
+              <div className="p-12 pb-32">
                 <h2 className="text-2xl font-bold text-neutral-900 mb-2">Additional Offerings</h2>
                 <p className="text-neutral-600 mb-8">Explore our complete range of professional services:</p>
                 
@@ -1516,19 +1551,21 @@ export default function QuoteDocumentPage() {
                     </tbody>
                   </table>
                 </div>
-              </div>
 
-              {/* Thank You Footer */}
-              <div className="px-8 py-6 border-t border-neutral-200 text-center mt-auto">
-                <p className="text-neutral-600">{companyInfo.phone} | {companyInfo.website}</p>
-                <p className="text-lg font-semibold text-neutral-900 mt-2">Thank you and looking forward to doing business with you again!</p>
+                {/* Thank You Message */}
+                <div className="mt-12 text-center">
+                  <p className="text-lg font-semibold text-neutral-900">Thank you and looking forward to doing business with you again!</p>
+                  <p className="text-neutral-500 mt-2">{companyInfo.phone} | {companyInfo.website}</p>
+                </div>
               </div>
+              <PageFooter pageNum={visiblePages.indexOf('offerings') + 1} />
             </div>
             )}
 
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* Services Modal - Minimalistic Design */}
       {showServicesModal && (
