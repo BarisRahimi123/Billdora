@@ -14,6 +14,9 @@ interface LineItem {
   taxed: boolean;
   estimatedDays: number;
   startOffset: number;
+  dependsOn: string; // '' = starts day 1, 'item-id' = starts after that item
+  startType: 'parallel' | 'sequential' | 'overlap'; // parallel=day 1, sequential=after dep ends, overlap=custom offset from dep start
+  overlapDays: number; // for 'overlap' type: start N days after dependency starts
 }
 
 // Generate quote number in format: YYMMDD-XXX (e.g., 250102-001)
@@ -62,7 +65,7 @@ export default function QuoteDocumentPage() {
   };
 
   const [lineItems, setLineItems] = useState<LineItem[]>([
-    { id: '1', description: '', unitPrice: 0, qty: 1, unit: 'each', taxed: false, estimatedDays: 1, startOffset: 0 }
+    { id: '1', description: '', unitPrice: 0, qty: 1, unit: 'each', taxed: false, estimatedDays: 1, startOffset: 0, dependsOn: '', startType: 'parallel', overlapDays: 0 }
   ]);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [scopeOfWork, setScopeOfWork] = useState('');
@@ -162,7 +165,10 @@ export default function QuoteDocumentPage() {
               unit: item.unit || 'each',
               taxed: item.taxed,
               estimatedDays: item.estimated_days || 1,
-              startOffset: item.start_offset || 0
+              startOffset: item.start_offset || 0,
+              dependsOn: (item as any).depends_on || '',
+              startType: (item as any).start_type || 'parallel',
+              overlapDays: (item as any).overlap_days || 0
             })));
           } else if (foundQuote.total_amount) {
             setLineItems([{
@@ -173,7 +179,10 @@ export default function QuoteDocumentPage() {
               unit: 'each',
               taxed: false,
               estimatedDays: 1,
-              startOffset: 0
+              startOffset: 0,
+              dependsOn: '',
+              startType: 'parallel',
+              overlapDays: 0
             }]);
           }
         }
@@ -208,9 +217,51 @@ export default function QuoteDocumentPage() {
       unit: 'each',
       taxed: false,
       estimatedDays: 1,
-      startOffset: 0
+      startOffset: 0,
+      dependsOn: '',
+      startType: 'parallel',
+      overlapDays: 0
     }]);
     setHasUnsavedChanges(true);
+  };
+
+  // Calculate computed start offset based on dependencies
+  const getComputedStartOffsets = (items: LineItem[]): Map<string, number> => {
+    const offsets = new Map<string, number>();
+    const itemMap = new Map(items.map(i => [i.id, i]));
+    
+    // Iteratively resolve dependencies (handles chains)
+    let changed = true;
+    let iterations = 0;
+    while (changed && iterations < 100) {
+      changed = false;
+      iterations++;
+      for (const item of items) {
+        let computedStart = 0;
+        
+        if (item.startType === 'parallel' || !item.dependsOn) {
+          computedStart = 0;
+        } else if (item.startType === 'sequential' && item.dependsOn) {
+          const dep = itemMap.get(item.dependsOn);
+          if (dep) {
+            const depStart = offsets.get(dep.id) ?? 0;
+            computedStart = depStart + dep.estimatedDays;
+          }
+        } else if (item.startType === 'overlap' && item.dependsOn) {
+          const dep = itemMap.get(item.dependsOn);
+          if (dep) {
+            const depStart = offsets.get(dep.id) ?? 0;
+            computedStart = depStart + (item.overlapDays || 0);
+          }
+        }
+        
+        if (offsets.get(item.id) !== computedStart) {
+          offsets.set(item.id, computedStart);
+          changed = true;
+        }
+      }
+    }
+    return offsets;
   };
 
   const updateLineItem = (id: string, updates: Partial<LineItem>) => {
@@ -671,7 +722,8 @@ export default function QuoteDocumentPage() {
               <div className="border border-neutral-200 rounded-lg p-4">
                 {(() => {
                   const validItems = lineItems.filter(item => item.description.trim());
-                  const maxEnd = Math.max(...validItems.map(item => item.startOffset + item.estimatedDays));
+                  const computedOffsets = getComputedStartOffsets(validItems);
+                  const maxEnd = Math.max(...validItems.map(item => (computedOffsets.get(item.id) || 0) + item.estimatedDays));
                   const totalDays = maxEnd || 1;
                   return (
                     <div className="space-y-3">
@@ -686,8 +738,9 @@ export default function QuoteDocumentPage() {
                       </div>
                       {/* Timeline bars */}
                       {validItems.map((item, idx) => {
+                        const startDay = computedOffsets.get(item.id) || 0;
                         const widthPercent = (item.estimatedDays / totalDays) * 100;
-                        const leftPercent = (item.startOffset / totalDays) * 100;
+                        const leftPercent = (startDay / totalDays) * 100;
                         const colors = ['bg-neutral-700', 'bg-neutral-600', 'bg-neutral-500', 'bg-neutral-400'];
                         return (
                           <div key={item.id} className="flex items-center">
@@ -848,7 +901,7 @@ export default function QuoteDocumentPage() {
                         <th className="text-center px-4 py-3 font-medium text-neutral-600 text-xs uppercase tracking-wider w-14">Qty</th>
                         <th className="text-center px-4 py-3 font-medium text-neutral-600 text-xs uppercase tracking-wider w-14">Tax</th>
                         <th className="text-center px-3 py-3 font-medium text-neutral-600 text-xs uppercase tracking-wider w-16">Days</th>
-                        <th className="text-center px-3 py-3 font-medium text-neutral-600 text-xs uppercase tracking-wider w-16">Start</th>
+                        <th className="text-center px-3 py-3 font-medium text-neutral-600 text-xs uppercase tracking-wider w-40">Scheduling</th>
                         <th className="text-right px-5 py-3 font-medium text-neutral-600 text-xs uppercase tracking-wider w-24">Amount</th>
                         <th className="w-10 print:hidden"></th>
                       </tr>
@@ -916,14 +969,44 @@ export default function QuoteDocumentPage() {
                             />
                           </td>
                           <td className="px-3 py-3 text-center">
-                            <input
-                              type="number"
-                              value={item.startOffset}
-                              onChange={(e) => updateLineItem(item.id, { startOffset: parseInt(e.target.value) || 0 })}
-                              className="w-12 text-center bg-transparent outline-none text-neutral-900 text-xs"
-                              min="0"
-                              title="Days from project start"
-                            />
+                            <select
+                              value={item.startType === 'parallel' ? 'parallel' : `${item.startType}:${item.dependsOn}`}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                if (val === 'parallel') {
+                                  updateLineItem(item.id, { startType: 'parallel', dependsOn: '', overlapDays: 0 });
+                                } else {
+                                  const [type, depId] = val.split(':');
+                                  updateLineItem(item.id, { 
+                                    startType: type as 'sequential' | 'overlap', 
+                                    dependsOn: depId,
+                                    overlapDays: type === 'overlap' ? (item.overlapDays || Math.ceil(lineItems.find(i => i.id === depId)?.estimatedDays || 1) / 2) : 0
+                                  });
+                                }
+                              }}
+                              className="w-full text-center bg-transparent outline-none text-neutral-900 text-xs"
+                            >
+                              <option value="parallel">Starts Day 1</option>
+                              {lineItems.filter(other => other.id !== item.id && other.description.trim()).map(other => (
+                                <optgroup key={other.id} label={other.description.substring(0, 20)}>
+                                  <option value={`sequential:${other.id}`}>After "{other.description.substring(0, 15)}"</option>
+                                  <option value={`overlap:${other.id}`}>Overlaps "{other.description.substring(0, 12)}"</option>
+                                </optgroup>
+                              ))}
+                            </select>
+                            {item.startType === 'overlap' && item.dependsOn && (
+                              <div className="flex items-center gap-1 mt-1 text-xs text-neutral-500">
+                                <span>+</span>
+                                <input
+                                  type="number"
+                                  value={item.overlapDays}
+                                  onChange={(e) => updateLineItem(item.id, { overlapDays: parseInt(e.target.value) || 0 })}
+                                  className="w-10 text-center bg-neutral-100 rounded px-1"
+                                  min="0"
+                                />
+                                <span>days</span>
+                              </div>
+                            )}
                           </td>
                           <td className="px-5 py-3 text-right font-medium text-neutral-900">
                             {formatCurrency(item.unitPrice * item.qty)}
@@ -1337,7 +1420,8 @@ export default function QuoteDocumentPage() {
                 <div className="border border-neutral-200 rounded-lg p-4">
                   {(() => {
                     const validItems = lineItems.filter(item => item.description.trim());
-                    const maxEnd = Math.max(...validItems.map(item => item.startOffset + item.estimatedDays));
+                    const computedOffsets = getComputedStartOffsets(validItems);
+                    const maxEnd = Math.max(...validItems.map(item => (computedOffsets.get(item.id) || 0) + item.estimatedDays));
                     const totalDays = maxEnd || 1;
                     return (
                       <div className="space-y-3">
@@ -1352,8 +1436,9 @@ export default function QuoteDocumentPage() {
                         </div>
                         {/* Timeline bars */}
                         {validItems.map((item, idx) => {
+                          const startDay = computedOffsets.get(item.id) || 0;
                           const widthPercent = (item.estimatedDays / totalDays) * 100;
-                          const leftPercent = (item.startOffset / totalDays) * 100;
+                          const leftPercent = (startDay / totalDays) * 100;
                           const colors = ['bg-neutral-700', 'bg-neutral-600', 'bg-neutral-500', 'bg-neutral-400'];
                           return (
                             <div key={item.id} className="flex items-center">
@@ -1599,7 +1684,7 @@ export default function QuoteDocumentPage() {
                             : service.pricing_type === 'hourly' ? 'hour' 
                             : service.pricing_type === 'fixed' ? 'project' 
                             : 'each';
-                          const newItem = {
+                          const newItem: LineItem = {
                             id: Date.now().toString(),
                             description: service.name + (service.description ? ` - ${service.description}` : ''),
                             unitPrice: rate,
@@ -1607,7 +1692,10 @@ export default function QuoteDocumentPage() {
                             unit,
                             taxed: false,
                             estimatedDays: 1,
-                            startOffset: 0
+                            startOffset: 0,
+                            dependsOn: '',
+                            startType: 'parallel',
+                            overlapDays: 0
                           };
                           // Remove empty rows before adding
                           const filteredItems = lineItems.filter(item => item.description.trim() !== '');
