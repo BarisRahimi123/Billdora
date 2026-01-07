@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { PermissionsProvider } from './contexts/PermissionsContext';
 import { SubscriptionProvider } from './contexts/SubscriptionContext';
 import { ToastProvider } from './components/Toast';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import Layout from './components/Layout';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
@@ -17,8 +18,13 @@ import SettingsPage from './pages/SettingsPage';
 import QuoteDocumentPage from './pages/QuoteDocumentPage';
 import ProposalPortalPage from './pages/ProposalPortalPage';
 import InvoiceViewPage from './pages/InvoiceViewPage';
+import ClientPortalPage from './pages/ClientPortalPage';
 
 import LandingPage from './pages/LandingPage';
+import CheckEmailPage from './pages/CheckEmailPage';
+import TermsPage from './pages/TermsPage';
+import PrivacyPage from './pages/PrivacyPage';
+import CookieConsent from './components/CookieConsent';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -26,7 +32,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-neutral-50">
-        <div className="animate-spin w-8 h-8 border-2 border-neutral-900-500 border-t-transparent rounded-full" />
+        <div className="animate-spin w-8 h-8 border-2 border-neutral-500 border-t-transparent rounded-full" />
       </div>
     );
   }
@@ -40,22 +46,18 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 function AppRoutes() {
   const { user, loading } = useAuth();
-  
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-neutral-50">
-        <div className="animate-spin w-8 h-8 border-2 border-neutral-900-500 border-t-transparent rounded-full" />
-      </div>
-    );
-  }
 
   return (
     <Routes>
       <Route path="/" element={<LandingPage />} />
-      <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <LoginPage />} />
+      <Route path="/login" element={loading ? <div className="min-h-screen flex items-center justify-center bg-neutral-50"><div className="animate-spin w-8 h-8 border-2 border-neutral-500 border-t-transparent rounded-full" /></div> : (user ? <Navigate to="/dashboard" replace /> : <LoginPage />)} />
+      <Route path="/check-email" element={<CheckEmailPage />} />
+      <Route path="/terms" element={<TermsPage />} />
+      <Route path="/privacy" element={<PrivacyPage />} />
       <Route path="/quotes/:quoteId/document" element={<ProtectedRoute><QuoteDocumentPage /></ProtectedRoute>} />
       <Route path="/proposal/:token" element={<ProposalPortalPage />} />
       <Route path="/invoice-view/:invoiceId" element={<InvoiceViewPage />} />
+      <Route path="/portal/:token" element={<ClientPortalPage />} />
       
       <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
         <Route path="/dashboard" element={<DashboardPage />} />
@@ -76,16 +78,19 @@ function AppRoutes() {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <PermissionsProvider>
-          <SubscriptionProvider>
-            <ToastProvider>
-              <AppRoutes />
-            </ToastProvider>
-          </SubscriptionProvider>
-        </PermissionsProvider>
-      </AuthProvider>
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <AuthProvider>
+          <PermissionsProvider>
+            <SubscriptionProvider>
+              <ToastProvider>
+                <AppRoutes />
+                <CookieConsent />
+              </ToastProvider>
+            </SubscriptionProvider>
+          </PermissionsProvider>
+        </AuthProvider>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }

@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, Filter, Download, MoreHorizontal, X, FileText, ArrowRight, Eye, Printer, Send, Check, XCircle, Mail, Trash2, List, LayoutGrid, ChevronDown, ChevronRight, ArrowLeft, Edit2 } from 'lucide-react';
+import { Plus, Search, Filter, Download, MoreHorizontal, X, FileText, ArrowRight, Eye, Printer, Send, Check, XCircle, Mail, Trash2, List, LayoutGrid, ChevronDown, ChevronRight, ArrowLeft, Edit2, Loader2, Link2, Copy } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { api, Client, Quote } from '../lib/api';
+import { api, Client, Quote, clientPortalApi } from '../lib/api';
 import { useToast } from '../components/Toast';
+import { FieldError } from '../components/ErrorBoundary';
+import { validateEmail } from '../lib/validation';
 
 type Tab = 'clients' | 'quotes' | 'responses';
 
@@ -19,7 +21,7 @@ function generateQuoteNumber(): string {
 
 export default function SalesPage() {
   const navigate = useNavigate();
-  const { profile } = useAuth();
+  const { profile, loading: authLoading } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>('quotes');
   const [clients, setClients] = useState<Client[]>([]);
   const [quotes, setQuotes] = useState<Quote[]>([]);
@@ -236,7 +238,15 @@ export default function SalesPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin w-8 h-8 border-2 border-neutral-900-500 border-t-transparent rounded-full" />
+        <div className="animate-spin w-8 h-8 border-2 border-neutral-500 border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  if (!profile?.company_id) {
+    return (
+      <div className="p-12 text-center">
+        <p className="text-neutral-500">Unable to load data. Please log in again.</p>
       </div>
     );
   }
@@ -357,7 +367,7 @@ export default function SalesPage() {
                     selectedClient?.id === client.id ? 'bg-neutral-100' : 'hover:bg-neutral-50'
                   }`}
                 >
-                  <div className="w-10 h-10 rounded-full bg-[#476E66]-100 flex items-center justify-center text-neutral-900-600 font-medium flex-shrink-0">
+                  <div className="w-10 h-10 rounded-full bg-[#476E66]/20 flex items-center justify-center text-neutral-600 font-medium flex-shrink-0">
                     {client.name.charAt(0)}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -770,6 +780,48 @@ function InlineClientEditor({ client, companyId, onClose, onSave, onDelete }: {
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState(isNew);
   const [openMenu, setOpenMenu] = useState(false);
+  const [portalToken, setPortalToken] = useState<string | null>(null);
+  const [portalLoading, setPortalLoading] = useState(false);
+  const [portalCopied, setPortalCopied] = useState(false);
+  // Load portal token when client changes
+  useEffect(() => {
+    if (client?.id && companyId) {
+      loadPortalToken();
+    }
+  }, [client?.id, companyId]);
+
+  const loadPortalToken = async () => {
+    if (!client?.id) return;
+    try {
+      const token = await clientPortalApi.getTokenByClient(client.id);
+      setPortalToken(token?.token || null);
+    } catch (err) {
+      console.error('Failed to load portal token:', err);
+    }
+  };
+
+  const handleGeneratePortalLink = async () => {
+    if (!client?.id || !companyId) return;
+    try {
+      setPortalLoading(true);
+      const newToken = portalToken 
+        ? await clientPortalApi.regenerateToken(client.id, companyId)
+        : await clientPortalApi.createToken(client.id, companyId);
+      setPortalToken(newToken.token);
+    } catch (err) {
+      console.error('Failed to generate portal link:', err);
+    } finally {
+      setPortalLoading(false);
+    }
+  };
+
+  const handleCopyPortalLink = async () => {
+    if (!portalToken) return;
+    const url = clientPortalApi.getPortalUrl(portalToken);
+    await navigator.clipboard.writeText(url);
+    setPortalCopied(true);
+    setTimeout(() => setPortalCopied(false), 2000);
+  };
   
   const [formData, setFormData] = useState({
     name: client?.name || '',
@@ -819,11 +871,36 @@ function InlineClientEditor({ client, companyId, onClose, onSave, onDelete }: {
     setEditing(isNew);
   }, [client?.id]);
 
-  const handleSave = async () => {
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  const validateForm = (): boolean => {
+    const errors: Record<string, string> = {};
+    
     if (!formData.name.trim()) {
-      setError('Company name is required');
-      return;
+      errors.name = 'Company name is required';
+    } else if (formData.name.trim().length < 2) {
+      errors.name = 'Company name must be at least 2 characters';
     }
+    
+    if (formData.email && !validateEmail(formData.email)) {
+      errors.email = 'Please enter a valid email address';
+    }
+    
+    if (formData.primary_contact_email && !validateEmail(formData.primary_contact_email)) {
+      errors.primary_contact_email = 'Please enter a valid email address';
+    }
+    
+    if (formData.billing_contact_email && !validateEmail(formData.billing_contact_email)) {
+      errors.billing_contact_email = 'Please enter a valid email address';
+    }
+    
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleSave = async () => {
+    if (!validateForm()) return;
+    
     setError(null);
     setSaving(true);
     try {
@@ -919,7 +996,14 @@ function InlineClientEditor({ client, companyId, onClose, onSave, onDelete }: {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm text-neutral-600 mb-1">Company Name *</label>
-                <input type="text" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none" placeholder="Acme Corporation" />
+                <input 
+                  type="text" 
+                  value={formData.name} 
+                  onChange={(e) => { setFormData({...formData, name: e.target.value}); setFieldErrors(prev => ({ ...prev, name: '' })); }} 
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none ${fieldErrors.name ? 'border-red-300' : 'border-neutral-300'}`} 
+                  placeholder="Acme Corporation" 
+                />
+                <FieldError message={fieldErrors.name} />
               </div>
               <div>
                 <label className="block text-sm text-neutral-600 mb-1">Display Name</label>
@@ -946,7 +1030,14 @@ function InlineClientEditor({ client, companyId, onClose, onSave, onDelete }: {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm text-neutral-600 mb-1">Email</label>
-                <input type="email" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none" placeholder="contact@company.com" />
+                <input 
+                  type="email" 
+                  value={formData.email} 
+                  onChange={(e) => { setFormData({...formData, email: e.target.value}); setFieldErrors(prev => ({ ...prev, email: '' })); }} 
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none ${fieldErrors.email ? 'border-red-300' : 'border-neutral-300'}`} 
+                  placeholder="contact@company.com" 
+                />
+                <FieldError message={fieldErrors.email} />
               </div>
               <div>
                 <label className="block text-sm text-neutral-600 mb-1">Phone</label>
@@ -1113,6 +1204,49 @@ function InlineClientEditor({ client, companyId, onClose, onSave, onDelete }: {
                 <p className="font-medium text-neutral-900">{client?.billing_contact_phone || '-'}</p>
               </div>
             </div>
+          )}
+        </div>
+      )}
+
+      {/* Client Portal Link */}
+      {!isNew && (
+        <div className="border border-neutral-200 rounded-xl p-5">
+          <h3 className="text-lg font-semibold text-neutral-900 mb-4">Client Portal</h3>
+          <p className="text-sm text-neutral-500 mb-4">
+            Generate a secure link for this client to view their invoices and payment status.
+          </p>
+          {portalToken ? (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 p-3 bg-neutral-50 rounded-lg">
+                <Link2 className="w-4 h-4 text-neutral-500 flex-shrink-0" />
+                <span className="text-sm text-neutral-600 truncate flex-1">
+                  {clientPortalApi.getPortalUrl(portalToken)}
+                </span>
+                <button
+                  onClick={handleCopyPortalLink}
+                  className="flex items-center gap-1 px-3 py-1.5 text-sm bg-white border border-neutral-200 rounded-lg hover:bg-neutral-50"
+                >
+                  {portalCopied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                  {portalCopied ? 'Copied' : 'Copy'}
+                </button>
+              </div>
+              <button
+                onClick={handleGeneratePortalLink}
+                disabled={portalLoading}
+                className="text-sm text-neutral-600 hover:text-neutral-900"
+              >
+                {portalLoading ? 'Regenerating...' : 'Regenerate Link'}
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={handleGeneratePortalLink}
+              disabled={portalLoading}
+              className="flex items-center gap-2 px-4 py-2 bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54] disabled:opacity-50"
+            >
+              <Link2 className="w-4 h-4" />
+              {portalLoading ? 'Generating...' : 'Generate Portal Link'}
+            </button>
           )}
         </div>
       )}

@@ -1,5 +1,7 @@
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
+import Lottie from 'lottie-react';
+import { useEffect, useState } from 'react';
 import { FileText, FolderKanban, Clock, Receipt, FileCheck } from 'lucide-react';
 
 const workflowSteps = [
@@ -20,28 +22,21 @@ const floatAnimation = {
 };
 
 export default function Hero() {
+  const [animationData, setAnimationData] = useState<any>(null);
+
+  useEffect(() => {
+    fetch('/hero-animation.json')
+      .then(res => res.json())
+      .then(data => setAnimationData(data))
+      .catch(err => console.error('Failed to load animation:', err));
+  }, []);
+
   return (
     <section className="pt-24 md:pt-32 pb-12 md:pb-20 px-4" style={{ backgroundColor: '#F5F5F3' }}>
       <div className="max-w-6xl mx-auto">
-        <div className="flex items-center justify-center gap-4 md:gap-8 mb-10 md:mb-16">
-          {/* Mascot on the left */}
-          <motion.div
-            initial={{ opacity: 0, x: -30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6 }}
-            className="hidden md:block flex-shrink-0"
-          >
-            <motion.img 
-              src="/billdora-mascot.png" 
-              alt="Billdora Mascot" 
-              className="w-32 lg:w-40 h-auto"
-              animate={{ y: [0, -8, 0] }}
-              transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-            />
-          </motion.div>
-          
-          {/* Title content */}
-          <div className="text-center">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-8 md:gap-12">
+          {/* Left side - Text content */}
+          <div className="flex-1 text-center md:text-left">
             <motion.h1
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -57,7 +52,7 @@ export default function Hero() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
-              className="text-base md:text-xl mb-6 md:mb-8 max-w-2xl mx-auto px-2"
+              className="text-base md:text-xl mb-6 md:mb-8 max-w-lg"
               style={{ color: '#6B6B6B' }}
             >
               From proposal to payment — manage your entire business cycle in one elegant platform.
@@ -68,7 +63,7 @@ export default function Hero() {
               transition={{ duration: 0.6, delay: 0.4 }}
             >
               <Link
-                to="/register"
+                to="/login?signup=true"
                 className="inline-block px-6 md:px-8 py-3 md:py-4 text-white font-semibold rounded-lg transition-all hover:opacity-90 hover:scale-105"
                 style={{ backgroundColor: '#476E66' }}
               >
@@ -76,11 +71,29 @@ export default function Hero() {
               </Link>
             </motion.div>
           </div>
+
+          {/* Right side - Lottie Animation */}
+          <motion.div
+            initial={{ opacity: 0, x: 30 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+            className="flex-1 w-full max-w-md md:max-w-lg lg:max-w-xl"
+          >
+            {animationData ? (
+              <Lottie 
+                animationData={animationData} 
+                loop={true}
+                className="w-full h-auto"
+              />
+            ) : (
+              <div className="w-full aspect-video bg-neutral-200 rounded-xl animate-pulse" />
+            )}
+          </motion.div>
         </div>
 
         {/* Workflow visualization */}
-        <div className="relative mt-10 md:mt-20">
-          {/* Animated connecting path - hidden on mobile */}
+        <div className="relative mt-16 md:mt-24">
+          {/* Animated connecting path */}
           <svg
             className="absolute top-1/2 left-0 w-full h-4 -translate-y-1/2 overflow-visible hidden md:block"
             preserveAspectRatio="none"
@@ -97,7 +110,7 @@ export default function Hero() {
             />
           </svg>
 
-          {/* Workflow icons - horizontal scroll on mobile, flex on desktop */}
+          {/* Workflow icons */}
           <div className="relative flex justify-between items-center max-w-4xl mx-auto gap-2 md:gap-4 overflow-x-auto pb-4 md:pb-0 px-2">
             {workflowSteps.map((step, index) => {
               const Icon = step.icon;

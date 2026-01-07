@@ -1,10 +1,13 @@
 import { useEffect, useState, useRef } from 'react';
-import { Clock, CheckSquare, DollarSign, TrendingUp, Plus, FileText, FolderPlus, Timer, ChevronDown, X, CheckCircle, XCircle } from 'lucide-react';
+import { Clock, CheckSquare, DollarSign, TrendingUp, Plus, FileText, FolderPlus, Timer, ChevronDown, X, CheckCircle, XCircle, BarChart3 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { usePermissions } from '../contexts/PermissionsContext';
 import { useSubscription } from '../contexts/SubscriptionContext';
-import { api, Project, Client, TimeEntry } from '../lib/api';
+import { api, Project, Client, TimeEntry, Invoice } from '../lib/api';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { DashboardSkeleton } from '../components/Skeleton';
+import { useToast } from '../components/Toast';
+import { InlineError } from '../components/ErrorBoundary';
 
 interface DashboardStats {
   hoursToday: number;
@@ -29,20 +32,36 @@ interface ActivityItem {
   meta?: string;
 }
 
+interface RevenueData {
+  month: string;
+  revenue: number;
+}
+
+interface AgingData {
+  range: string;
+  count: number;
+  amount: number;
+}
+
 export default function DashboardPage() {
   const { user, profile } = useAuth();
   const { canViewFinancials } = usePermissions();
   const { refreshSubscription } = useSubscription();
+  const { showToast } = useToast();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [showTimeModal, setShowTimeModal] = useState(false);
   const [projects, setProjects] = useState<Project[]>([]);
   const [timeEntry, setTimeEntry] = useState({ project_id: '', hours: '', description: '', date: new Date().toISOString().split('T')[0] });
+  const [timeErrors, setTimeErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  const [revenueData, setRevenueData] = useState<RevenueData[]>([]);
+  const [agingData, setAgingData] = useState<AgingData[]>([]);
   const quickAddRef = useRef<HTMLDivElement>(null);
   const [subscriptionNotice, setSubscriptionNotice] = useState<{ type: 'success' | 'canceled'; message: string } | null>(null);
 
@@ -106,8 +125,42 @@ export default function DashboardPage() {
           meta: te.description,
         }));
         setActivities(recentActivities);
-      } catch (error) {
-        console.error('Failed to load dashboard data:', error);
+        
+        // Calculate revenue trends (last 6 months)
+        const monthlyRevenue: Record<string, number> = {};
+        const now = new Date();
+        for (let i = 5; i >= 0; i--) {
+          const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+          const key = d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+          monthlyRevenue[key] = 0;
+        }
+        invoicesData.filter(i => i.status === 'paid').forEach(inv => {
+          if (inv.created_at) {
+            const d = new Date(inv.created_at);
+            const key = d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+            if (monthlyRevenue[key] !== undefined) {
+              monthlyRevenue[key] += Number(inv.total) || 0;
+            }
+          }
+        });
+        setRevenueData(Object.entries(monthlyRevenue).map(([month, revenue]) => ({ month, revenue })));
+        
+        // Calculate aging report
+        const aging = { '0-30': { count: 0, amount: 0 }, '31-60': { count: 0, amount: 0 }, '61-90': { count: 0, amount: 0 }, '90+': { count: 0, amount: 0 } };
+        const today = new Date();
+        invoicesData.filter(i => i.status === 'sent' && i.due_date).forEach(inv => {
+          const due = new Date(inv.due_date!);
+          const daysOverdue = Math.floor((today.getTime() - due.getTime()) / (1000 * 60 * 60 * 24));
+          const amount = Number(inv.total) || 0;
+          if (daysOverdue <= 30) { aging['0-30'].count++; aging['0-30'].amount += amount; }
+          else if (daysOverdue <= 60) { aging['31-60'].count++; aging['31-60'].amount += amount; }
+          else if (daysOverdue <= 90) { aging['61-90'].count++; aging['61-90'].amount += amount; }
+          else { aging['90+'].count++; aging['90+'].amount += amount; }
+        });
+        setAgingData(Object.entries(aging).map(([range, data]) => ({ range, ...data })));
+      } catch (err) {
+        console.error('Failed to load dashboard data:', err);
+        setError('Failed to load dashboard data. Please try again.');
       } finally {
         setLoading(false);
       }
@@ -140,8 +193,30 @@ export default function DashboardPage() {
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
+  const validateTimeEntry = () => {
+    const errors: Record<string, string> = {};
+    const hours = parseFloat(timeEntry.hours);
+    
+    if (!timeEntry.hours || isNaN(hours)) {
+      errors.hours = 'Hours is required';
+    } else if (hours < 0.25) {
+      errors.hours = 'Minimum 0.25 hours';
+    } else if (hours > 24) {
+      errors.hours = 'Maximum 24 hours per entry';
+    }
+    
+    if (!timeEntry.date) {
+      errors.date = 'Date is required';
+    }
+    
+    setTimeErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleSaveTime = async () => {
-    if (!profile?.company_id || !user?.id || !timeEntry.hours) return;
+    if (!profile?.company_id || !user?.id) return;
+    if (!validateTimeEntry()) return;
+    
     setSaving(true);
     try {
       await api.createTimeEntry({
@@ -154,21 +229,31 @@ export default function DashboardPage() {
         billable: true,
         hourly_rate: profile.hourly_rate || 150,
       });
+      showToast('Time entry saved successfully', 'success');
       setShowTimeModal(false);
       setTimeEntry({ project_id: '', hours: '', description: '', date: new Date().toISOString().split('T')[0] });
+      setTimeErrors({});
       // Reload page to refresh all stats
       window.location.reload();
-    } catch (error) {
-      console.error('Failed to save time entry:', error);
+    } catch (err) {
+      console.error('Failed to save time entry:', err);
+      showToast('Failed to save time entry. Please try again.', 'error');
     } finally {
       setSaving(false);
     }
   };
 
   if (loading) {
+    return <DashboardSkeleton />;
+  }
+
+  if (error) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin w-8 h-8 border-2 border-neutral-900-500 border-t-transparent rounded-full" />
+      <div className="space-y-6">
+        <InlineError 
+          message={error} 
+          onDismiss={() => setError(null)} 
+        />
       </div>
     );
   }
@@ -257,8 +342,8 @@ export default function DashboardPage() {
 
         <div className="bg-white rounded-2xl p-6 border border-neutral-100">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-[#476E66]-50 flex items-center justify-center">
-              <Clock className="w-5 h-5 text-neutral-900-500" />
+            <div className="w-10 h-10 rounded-xl bg-[#476E66]/10 flex items-center justify-center">
+              <Clock className="w-5 h-5 text-neutral-500" />
             </div>
             <span className="text-neutral-500 text-sm">Hours This Week</span>
           </div>
@@ -354,7 +439,7 @@ export default function DashboardPage() {
                 <span className="font-medium text-neutral-900 ml-auto">{stats?.nonBillableHours || 0}h</span>
               </div>
               <div className="pt-2 border-t border-neutral-100">
-                <p className="text-neutral-900-600 font-medium">{stats?.utilization || 0}% Overall Utilization</p>
+                <p className="text-neutral-600 font-medium">{stats?.utilization || 0}% Overall Utilization</p>
               </div>
             </div>
           </div>
@@ -382,6 +467,79 @@ export default function DashboardPage() {
         )}
       </div>
 
+      {/* Analytics Charts Row */}
+      {canViewFinancials && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Revenue Trend Chart */}
+          <div className="bg-white rounded-2xl p-6 border border-neutral-100">
+            <div className="flex items-center gap-3 mb-6">
+              <BarChart3 className="w-5 h-5 text-neutral-700" />
+              <h3 className="text-lg font-semibold text-neutral-900">Revenue Trend (6 Months)</h3>
+            </div>
+            <div className="h-48">
+              {revenueData.length > 0 ? (
+                <div className="flex items-end justify-between h-full gap-2">
+                  {revenueData.map((d, i) => {
+                    const maxRevenue = Math.max(...revenueData.map(r => r.revenue), 1);
+                    const height = (d.revenue / maxRevenue) * 100;
+                    return (
+                      <div key={i} className="flex-1 flex flex-col items-center gap-2">
+                        <div className="w-full flex flex-col items-center justify-end h-36">
+                          <span className="text-xs font-medium text-neutral-600 mb-1">
+                            {formatCurrency(d.revenue)}
+                          </span>
+                          <div 
+                            className="w-full max-w-10 bg-[#476E66] rounded-t-lg transition-all"
+                            style={{ height: `${Math.max(height, 4)}%` }}
+                          />
+                        </div>
+                        <span className="text-xs text-neutral-500">{d.month}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="h-full flex items-center justify-center text-neutral-500">
+                  No revenue data available
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Payment Aging Report */}
+          <div className="bg-white rounded-2xl p-6 border border-neutral-100">
+            <div className="flex items-center gap-3 mb-6">
+              <Clock className="w-5 h-5 text-neutral-700" />
+              <h3 className="text-lg font-semibold text-neutral-900">Payment Aging Report</h3>
+            </div>
+            <div className="space-y-4">
+              {agingData.map((d, i) => {
+                const maxAmount = Math.max(...agingData.map(a => a.amount), 1);
+                const width = (d.amount / maxAmount) * 100;
+                const colors = ['bg-emerald-500', 'bg-yellow-500', 'bg-orange-500', 'bg-red-500'];
+                return (
+                  <div key={d.range} className="space-y-1">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-neutral-700 font-medium">{d.range} days</span>
+                      <span className="text-neutral-900 font-semibold">{formatCurrency(d.amount)} ({d.count})</span>
+                    </div>
+                    <div className="h-3 bg-neutral-100 rounded-full overflow-hidden">
+                      <div 
+                        className={`h-full ${colors[i]} rounded-full transition-all`}
+                        style={{ width: `${Math.max(width, 2)}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+              {agingData.every(d => d.amount === 0) && (
+                <div className="text-center text-neutral-500 py-4">No outstanding invoices</div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Recent Activity */}
       <div className="bg-white rounded-2xl p-6 border border-neutral-100">
         <h3 className="text-lg font-semibold text-neutral-900 mb-4">Recent Activity</h3>
@@ -391,8 +549,8 @@ export default function DashboardPage() {
           <div className="space-y-3">
             {activities.map((activity) => (
               <div key={activity.id} className="flex items-center gap-4 p-3 bg-neutral-50 rounded-xl">
-                <div className="w-10 h-10 rounded-xl bg-[#476E66]-100 flex items-center justify-center">
-                  <Clock className="w-5 h-5 text-neutral-900-600" />
+                <div className="w-10 h-10 rounded-xl bg-[#476E66]/20 flex items-center justify-center">
+                  <Clock className="w-5 h-5 text-neutral-600" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-neutral-900">{activity.description}</p>
@@ -431,24 +589,26 @@ export default function DashboardPage() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-1">Hours</label>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1">Hours *</label>
                   <input 
                     type="number" 
                     step="0.25"
                     value={timeEntry.hours} 
-                    onChange={(e) => setTimeEntry({ ...timeEntry, hours: e.target.value })}
-                    className="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    onChange={(e) => { setTimeEntry({ ...timeEntry, hours: e.target.value }); setTimeErrors(prev => ({ ...prev, hours: '' })); }}
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${timeErrors.hours ? 'border-red-300' : 'border-neutral-200'}`}
                     placeholder="1.5"
                   />
+                  {timeErrors.hours && <p className="mt-1 text-sm text-red-600">{timeErrors.hours}</p>}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-1">Date</label>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1">Date *</label>
                   <input 
                     type="date" 
                     value={timeEntry.date} 
-                    onChange={(e) => setTimeEntry({ ...timeEntry, date: e.target.value })}
-                    className="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    onChange={(e) => { setTimeEntry({ ...timeEntry, date: e.target.value }); setTimeErrors(prev => ({ ...prev, date: '' })); }}
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${timeErrors.date ? 'border-red-300' : 'border-neutral-200'}`}
                   />
+                  {timeErrors.date && <p className="mt-1 text-sm text-red-600">{timeErrors.date}</p>}
                 </div>
               </div>
               <div>

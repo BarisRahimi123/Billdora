@@ -1,4 +1,10 @@
 import { supabase } from './supabase';
+import { withRetry, formatApiError } from './apiUtils';
+
+// Wrapper for API calls with retry logic
+async function apiCall<T>(fn: () => Promise<T>): Promise<T> {
+  return withRetry(fn, { maxRetries: 3, baseDelay: 500 });
+}
 
 // Types
 export interface Client {
@@ -254,94 +260,112 @@ export interface Service {
   updated_at?: string;
 }
 
-// API functions
+// API functions with retry logic
 export const api = {
   // Clients
   async getClients(companyId: string) {
-    const { data, error } = await supabase
-      .from('clients')
-      .select('*')
-      .eq('company_id', companyId)
-      .eq('is_archived', false)
-      .order('name');
-    if (error) throw error;
-    return data as Client[];
+    return apiCall(async () => {
+      const { data, error } = await supabase
+        .from('clients')
+        .select('*')
+        .eq('company_id', companyId)
+        .eq('is_archived', false)
+        .order('name');
+      if (error) throw error;
+      return data as Client[];
+    });
   },
 
   async createClient(client: Partial<Client>) {
-    const { data, error } = await supabase
-      .from('clients')
-      .insert(client)
-      .select()
-      .single();
-    if (error) throw error;
-    return data as Client;
+    return apiCall(async () => {
+      const { data, error } = await supabase
+        .from('clients')
+        .insert(client)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as Client;
+    });
   },
 
   async updateClient(id: string, updates: Partial<Client>) {
-    const { data, error } = await supabase
-      .from('clients')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
-    if (error) throw error;
-    return data as Client;
+    return apiCall(async () => {
+      const { data, error } = await supabase
+        .from('clients')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as Client;
+    });
   },
 
   async deleteClient(id: string) {
-    const { error } = await supabase
-      .from('clients')
-      .update({ is_archived: true })
-      .eq('id', id);
-    if (error) throw error;
+    return apiCall(async () => {
+      const { error } = await supabase
+        .from('clients')
+        .update({ is_archived: true })
+        .eq('id', id);
+      if (error) throw error;
+    });
   },
 
   // Projects
   async getProjects(companyId: string) {
-    const { data, error } = await supabase
-      .from('projects')
-      .select('*, client:clients(id, name, display_name)')
-      .eq('company_id', companyId)
-      .order('created_at', { ascending: false });
-    if (error) throw error;
-    return data as Project[];
+    return apiCall(async () => {
+      const { data, error } = await supabase
+        .from('projects')
+        .select('*, client:clients(id, name, display_name)')
+        .eq('company_id', companyId)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data as Project[];
+    });
   },
 
   async getProject(id: string) {
-    const { data, error } = await supabase
-      .from('projects')
-      .select('*, client:clients(*)')
-      .eq('id', id)
-      .single();
-    if (error) throw error;
-    return data as Project;
+    return apiCall(async () => {
+      const { data, error } = await supabase
+        .from('projects')
+        .select('*, client:clients(*)')
+        .eq('id', id)
+        .single();
+      if (error) throw error;
+      return data as Project;
+    });
   },
 
   async createProject(project: Partial<Project>) {
-    const { data, error } = await supabase
-      .from('projects')
-      .insert(project)
-      .select()
-      .single();
-    if (error) throw error;
-    return data as Project;
+    return apiCall(async () => {
+      const { data, error } = await supabase
+        .from('projects')
+        .insert(project)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as Project;
+    });
   },
 
   async updateProject(id: string, updates: Partial<Project>) {
-    const { data, error } = await supabase
-      .from('projects')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
-    if (error) throw error;
-    return data as Project;
+    return apiCall(async () => {
+      const { data, error } = await supabase
+        .from('projects')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as Project;
+    });
   },
 
   async deleteProject(id: string) {
-    const { error } = await supabase.from('projects').delete().eq('id', id);
-    if (error) throw error;
+    return apiCall(async () => {
+      const { error } = await supabase.from('projects').delete().eq('id', id);
+      if (error) throw error;
+    });
   },
 
   // Tasks
@@ -482,44 +506,52 @@ export const api = {
 
   // Time Entries
   async getTimeEntries(companyId: string, userId?: string, startDate?: string, endDate?: string) {
-    let query = supabase
-      .from('time_entries')
-      .select('*, project:projects(id, name, client:clients(id, name)), task:tasks(id, name)')
-      .eq('company_id', companyId);
-    
-    if (userId) query = query.eq('user_id', userId);
-    if (startDate) query = query.gte('date', startDate);
-    if (endDate) query = query.lte('date', endDate);
-    
-    const { data, error } = await query.order('date', { ascending: false });
-    if (error) throw error;
-    return data as TimeEntry[];
+    return apiCall(async () => {
+      let query = supabase
+        .from('time_entries')
+        .select('*, project:projects(id, name, client:clients(id, name)), task:tasks(id, name)')
+        .eq('company_id', companyId);
+      
+      if (userId) query = query.eq('user_id', userId);
+      if (startDate) query = query.gte('date', startDate);
+      if (endDate) query = query.lte('date', endDate);
+      
+      const { data, error } = await query.order('date', { ascending: false });
+      if (error) throw error;
+      return data as TimeEntry[];
+    });
   },
 
   async createTimeEntry(entry: Partial<TimeEntry>) {
-    const { data, error } = await supabase
-      .from('time_entries')
-      .insert(entry)
-      .select()
-      .single();
-    if (error) throw error;
-    return data as TimeEntry;
+    return apiCall(async () => {
+      const { data, error } = await supabase
+        .from('time_entries')
+        .insert(entry)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as TimeEntry;
+    });
   },
 
   async updateTimeEntry(id: string, updates: Partial<TimeEntry>) {
-    const { data, error } = await supabase
-      .from('time_entries')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
-    if (error) throw error;
-    return data as TimeEntry;
+    return apiCall(async () => {
+      const { data, error } = await supabase
+        .from('time_entries')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as TimeEntry;
+    });
   },
 
   async deleteTimeEntry(id: string) {
-    const { error } = await supabase.from('time_entries').delete().eq('id', id);
-    if (error) throw error;
+    return apiCall(async () => {
+      const { error } = await supabase.from('time_entries').delete().eq('id', id);
+      if (error) throw error;
+    });
   },
 
   // Expenses
@@ -775,23 +807,27 @@ export const api = {
 
   // Invoices
   async getInvoices(companyId: string) {
-    const { data, error } = await supabase
-      .from('invoices')
-      .select('*, client:clients(id, name, display_name, email), project:projects(id, name)')
-      .eq('company_id', companyId)
-      .order('created_at', { ascending: false });
-    if (error) throw error;
-    return data as Invoice[];
+    return apiCall(async () => {
+      const { data, error } = await supabase
+        .from('invoices')
+        .select('*, client:clients(id, name, display_name, email), project:projects(id, name)')
+        .eq('company_id', companyId)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data as Invoice[];
+    });
   },
 
   async createInvoice(invoice: Partial<Invoice>) {
-    const { data, error } = await supabase
-      .from('invoices')
-      .insert(invoice)
-      .select()
-      .single();
-    if (error) throw error;
-    return data as Invoice;
+    return apiCall(async () => {
+      const { data, error } = await supabase
+        .from('invoices')
+        .insert(invoice)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as Invoice;
+    });
   },
 
   async createInvoiceWithTaskBilling(
@@ -860,14 +896,16 @@ export const api = {
   },
 
   async updateInvoice(id: string, updates: Partial<Invoice>) {
-    const { data, error } = await supabase
-      .from('invoices')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
-    if (error) throw error;
-    return data as Invoice;
+    return apiCall(async () => {
+      const { data, error } = await supabase
+        .from('invoices')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as Invoice;
+    });
   },
 
   async deleteInvoice(id: string) {
@@ -1668,5 +1706,315 @@ export const settingsApi = {
     for (const item of items) {
       await supabase.from(tableName).update({ sort_order: item.sort_order }).eq('id', item.id);
     }
+  },
+};
+
+// Email Templates Types & API
+export interface EmailTemplate {
+  id: string;
+  company_id: string;
+  template_type: string;
+  subject: string;
+  body: string;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface ReminderHistory {
+  id: string;
+  company_id: string;
+  invoice_id: string;
+  recipient_email: string;
+  subject?: string;
+  body?: string;
+  status: string;
+  error_message?: string;
+  sent_at?: string;
+  created_at?: string;
+}
+
+export interface Notification {
+  id: string;
+  company_id: string;
+  user_id?: string;
+  type: string;
+  title: string;
+  message?: string;
+  reference_id?: string;
+  reference_type?: string;
+  is_read: boolean;
+  created_at?: string;
+}
+
+export const emailTemplatesApi = {
+  async getTemplates(companyId: string) {
+    const { data, error } = await supabase
+      .from('email_templates')
+      .select('*')
+      .eq('company_id', companyId)
+      .order('template_type');
+    if (error) throw error;
+    return (data || []) as EmailTemplate[];
+  },
+
+  async getTemplate(companyId: string, templateType: string) {
+    const { data, error } = await supabase
+      .from('email_templates')
+      .select('*')
+      .eq('company_id', companyId)
+      .eq('template_type', templateType)
+      .eq('is_active', true)
+      .maybeSingle();
+    if (error) throw error;
+    return data as EmailTemplate | null;
+  },
+
+  async upsertTemplate(template: Partial<EmailTemplate>) {
+    const { data, error } = await supabase
+      .from('email_templates')
+      .upsert(template, { onConflict: 'company_id,template_type' })
+      .select()
+      .single();
+    if (error) throw error;
+    return data as EmailTemplate;
+  },
+
+  async createTemplate(template: Partial<EmailTemplate>) {
+    const { data, error } = await supabase
+      .from('email_templates')
+      .insert(template)
+      .select()
+      .single();
+    if (error) throw error;
+    return data as EmailTemplate;
+  },
+
+  async updateTemplate(id: string, updates: Partial<EmailTemplate>) {
+    const { data, error } = await supabase
+      .from('email_templates')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data as EmailTemplate;
+  },
+};
+
+export const reminderHistoryApi = {
+  async getHistory(companyId: string, invoiceId?: string) {
+    let query = supabase
+      .from('reminder_history')
+      .select('*')
+      .eq('company_id', companyId);
+    if (invoiceId) query = query.eq('invoice_id', invoiceId);
+    const { data, error } = await query.order('sent_at', { ascending: false });
+    if (error) throw error;
+    return (data || []) as ReminderHistory[];
+  },
+
+  async logReminder(history: Partial<ReminderHistory>) {
+    const { data, error } = await supabase
+      .from('reminder_history')
+      .insert(history)
+      .select()
+      .single();
+    if (error) throw error;
+    return data as ReminderHistory;
+  },
+};
+
+export const notificationsApi = {
+  async getNotifications(companyId: string, userId?: string, limit = 20) {
+    let query = supabase
+      .from('notifications')
+      .select('*')
+      .eq('company_id', companyId);
+    if (userId) query = query.eq('user_id', userId);
+    const { data, error } = await query
+      .order('created_at', { ascending: false })
+      .limit(limit);
+    if (error) throw error;
+    return (data || []) as Notification[];
+  },
+
+  async getUnreadCount(companyId: string, userId?: string) {
+    let query = supabase
+      .from('notifications')
+      .select('id', { count: 'exact', head: true })
+      .eq('company_id', companyId)
+      .eq('is_read', false);
+    if (userId) query = query.eq('user_id', userId);
+    const { count, error } = await query;
+    if (error) throw error;
+    return count || 0;
+  },
+
+  async markAsRead(id: string) {
+    const { error } = await supabase
+      .from('notifications')
+      .update({ is_read: true })
+      .eq('id', id);
+    if (error) throw error;
+  },
+
+  async markAllAsRead(companyId: string, userId?: string) {
+    let query = supabase
+      .from('notifications')
+      .update({ is_read: true })
+      .eq('company_id', companyId)
+      .eq('is_read', false);
+    if (userId) query = query.eq('user_id', userId);
+    const { error } = await query;
+    if (error) throw error;
+  },
+
+  async createNotification(notification: Partial<Notification>) {
+    const { data, error } = await supabase
+      .from('notifications')
+      .insert(notification)
+      .select()
+      .single();
+    if (error) throw error;
+    return data as Notification;
+  },
+};
+
+// Recurring Invoices
+export interface RecurringInvoice {
+  id: string;
+  company_id: string;
+  client_id: string;
+  project_id?: string;
+  template_invoice_id?: string;
+  frequency: 'weekly' | 'bi-weekly' | 'monthly' | 'quarterly' | 'yearly';
+  next_run_date: string;
+  last_run_date?: string;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+  client?: Client;
+  template_invoice?: Invoice;
+}
+
+export const recurringInvoicesApi = {
+  async getAll(companyId: string) {
+    const { data, error } = await supabase
+      .from('recurring_invoices')
+      .select('*, client:clients(*), template_invoice:invoices(*)')
+      .eq('company_id', companyId)
+      .order('next_run_date', { ascending: true });
+    if (error) throw error;
+    return (data || []) as RecurringInvoice[];
+  },
+
+  async getById(id: string) {
+    const { data, error } = await supabase
+      .from('recurring_invoices')
+      .select('*, client:clients(*), template_invoice:invoices(*)')
+      .eq('id', id)
+      .single();
+    if (error) throw error;
+    return data as RecurringInvoice;
+  },
+
+  async create(recurring: Partial<RecurringInvoice>) {
+    const { data, error } = await supabase
+      .from('recurring_invoices')
+      .insert(recurring)
+      .select()
+      .single();
+    if (error) throw error;
+    return data as RecurringInvoice;
+  },
+
+  async update(id: string, updates: Partial<RecurringInvoice>) {
+    const { data, error } = await supabase
+      .from('recurring_invoices')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data as RecurringInvoice;
+  },
+
+  async delete(id: string) {
+    const { error } = await supabase
+      .from('recurring_invoices')
+      .delete()
+      .eq('id', id);
+    if (error) throw error;
+  },
+
+  async toggleActive(id: string, isActive: boolean) {
+    return this.update(id, { is_active: isActive });
+  },
+};
+
+// Client Portal Tokens
+export interface ClientPortalToken {
+  id: string;
+  client_id: string;
+  company_id: string;
+  token: string;
+  expires_at?: string;
+  created_at?: string;
+  last_accessed_at?: string;
+  client?: Client;
+}
+
+export const clientPortalApi = {
+  async getTokenByClient(clientId: string) {
+    const { data, error } = await supabase
+      .from('client_portal_tokens')
+      .select('*')
+      .eq('client_id', clientId)
+      .maybeSingle();
+    if (error) throw error;
+    return data as ClientPortalToken | null;
+  },
+
+  async createToken(clientId: string, companyId: string) {
+    // Generate a random 64-char token
+    const token = Array.from(crypto.getRandomValues(new Uint8Array(32)))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+
+    const { data, error } = await supabase
+      .from('client_portal_tokens')
+      .insert({
+        client_id: clientId,
+        company_id: companyId,
+        token,
+      })
+      .select()
+      .single();
+    if (error) throw error;
+    return data as ClientPortalToken;
+  },
+
+  async regenerateToken(clientId: string, companyId: string) {
+    // Delete existing token
+    await supabase
+      .from('client_portal_tokens')
+      .delete()
+      .eq('client_id', clientId);
+
+    // Create new token
+    return this.createToken(clientId, companyId);
+  },
+
+  async deleteToken(clientId: string) {
+    const { error } = await supabase
+      .from('client_portal_tokens')
+      .delete()
+      .eq('client_id', clientId);
+    if (error) throw error;
+  },
+
+  getPortalUrl(token: string) {
+    return `${window.location.origin}/portal/${token}`;
   },
 };

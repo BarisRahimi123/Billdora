@@ -29,7 +29,8 @@ export const Footer = () => {
             <ul className="space-y-4 text-sm text-swiss-charcoal">
               <li><a href="#" className="hover:text-swiss-red-DEFAULT transition-colors">About</a></li>
               <li><a href="#" className="hover:text-swiss-red-DEFAULT transition-colors">Careers</a></li>
-              <li><a href="#" className="hover:text-swiss-red-DEFAULT transition-colors">Legal</a></li>
+              <li><a href="/terms" className="hover:text-swiss-red-DEFAULT transition-colors">Terms</a></li>
+              <li><a href="/privacy" className="hover:text-swiss-red-DEFAULT transition-colors">Privacy</a></li>
               <li><a href="#" className="hover:text-swiss-red-DEFAULT transition-colors">Contact</a></li>
             </ul>
           </div>
@@ -47,8 +48,8 @@ export const Footer = () => {
         <div className="pt-8 border-t border-swiss-gray-border flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-swiss-gray-light">
           <p>&copy; {new Date().getFullYear()} Billdora Inc. All rights reserved.</p>
           <div className="flex gap-8">
-            <a href="#" className="hover:text-swiss-black transition-colors">Privacy Policy</a>
-            <a href="#" className="hover:text-swiss-black transition-colors">Terms of Service</a>
+            <a href="/privacy" className="hover:text-swiss-black transition-colors">Privacy Policy</a>
+            <a href="/terms" className="hover:text-swiss-black transition-colors">Terms of Service</a>
           </div>
         </div>
       </div>

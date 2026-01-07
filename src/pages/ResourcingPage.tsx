@@ -9,7 +9,7 @@ type TabType = 'activity' | 'tasks' | 'time' | 'performance' | 'personal' | 'com
 
 export default function ResourcingPage() {
   const navigate = useNavigate();
-  const { profile, signOut } = useAuth();
+  const { profile, signOut, loading: authLoading } = useAuth();
   const [staff, setStaff] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -61,10 +61,18 @@ export default function ResourcingPage() {
     { id: 'billing', label: 'Client Billing Rate', icon: <DollarSign className="w-4 h-4" /> },
   ];
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin w-8 h-8 border-2 border-neutral-900-500 border-t-transparent rounded-full" />
+        <div className="animate-spin w-8 h-8 border-2 border-neutral-500 border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  if (!profile?.company_id) {
+    return (
+      <div className="p-12 text-center">
+        <p className="text-neutral-500">Unable to load team. Please log in again.</p>
       </div>
     );
   }
@@ -72,7 +80,7 @@ export default function ResourcingPage() {
   return (
     <div className="flex min-h-[calc(100vh-73px)] -m-4 lg:-m-6">
       {/* Team Sidebar - Replaces main nav */}
-      <aside className="w-64 text-white flex flex-col fixed h-[calc(100vh-73px)] z-40" style={{ backgroundColor: '#476E66' }}>
+      <aside className="w-64 text-white flex flex-col fixed left-0 top-[73px] h-[calc(100vh-73px)] z-40" style={{ backgroundColor: '#476E66' }}>
         {/* Back Button Header */}
         <div className="p-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.2)' }}>
           <button 
@@ -186,7 +194,7 @@ export default function ResourcingPage() {
                       onClick={() => setActiveTab(tab.id)}
                       className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors ${
                         activeTab === tab.id
-                          ? 'bg-[#476E66]-50 text-neutral-900-700 border border-neutral-200 border-b-white -mb-px'
+                          ? 'bg-[#476E66]/10 text-neutral-900-700 border border-neutral-200 border-b-white -mb-px'
                           : 'text-neutral-500 hover:text-neutral-700 hover:bg-neutral-50'
                       }`}
                     >
@@ -255,7 +263,7 @@ function PersonalDetailsTab({ staff, onEdit, onDelete, onToggleActive }: { staff
           {staff.avatar_url ? (
             <img src={staff.avatar_url} alt="" className="w-20 h-20 rounded-full object-cover" />
           ) : (
-            <div className="w-20 h-20 rounded-full bg-[#476E66]-100 flex items-center justify-center text-neutral-900-700 text-2xl font-medium">
+            <div className="w-20 h-20 rounded-full bg-[#476E66]/20 flex items-center justify-center text-neutral-900-700 text-2xl font-medium">
               {staff.full_name?.charAt(0) || '?'}
             </div>
           )}
@@ -528,7 +536,7 @@ function UserRightsTab({ staff, companyId, onUpdate }: { staff: UserProfile; com
   const teamList = staffTeamsList.length > 0 ? staffTeamsList : defaultTeams;
 
   if (loading) {
-    return <div className="flex justify-center py-8"><div className="animate-spin w-6 h-6 border-2 border-neutral-900-500 border-t-transparent rounded-full" /></div>;
+    return <div className="flex justify-center py-8"><div className="animate-spin w-6 h-6 border-2 border-neutral-500 border-t-transparent rounded-full" /></div>;
   }
 
   return (
@@ -576,7 +584,7 @@ function UserRightsTab({ staff, companyId, onUpdate }: { staff: UserProfile; com
           )}
         </div>
         <p className="text-sm text-neutral-500 mb-4">
-          Security in Billdora is managed with the set of user <span className="text-neutral-900-500 underline cursor-pointer">groups</span>, listed below. Groups work just like a set of keys, permitting any team member that has them access to various areas within the program.
+          Security in Billdora is managed with the set of user <span className="text-neutral-500 underline cursor-pointer">groups</span>, listed below. Groups work just like a set of keys, permitting any team member that has them access to various areas within the program.
         </p>
         <div className="grid grid-cols-3 gap-x-8 gap-y-3">
           {securityGroups.map((group) => (
@@ -592,7 +600,7 @@ function UserRightsTab({ staff, companyId, onUpdate }: { staff: UserProfile; com
                     setSelectedRoleIds(selectedRoleIds.filter(id => id !== group.id));
                   }
                 }}
-                className="w-4 h-4 rounded border-neutral-300 text-neutral-900-500 disabled:opacity-60"
+                className="w-4 h-4 rounded border-neutral-300 text-neutral-500 disabled:opacity-60"
               />
               <span className="text-sm text-neutral-700">{group.name}</span>
             </label>
@@ -659,7 +667,7 @@ function UserRightsTab({ staff, companyId, onUpdate }: { staff: UserProfile; com
                     setSelectedDepartments(selectedDepartments.filter(id => id !== dept.id));
                   }
                 }}
-                className="w-4 h-4 rounded border-neutral-300 text-neutral-900-500 disabled:opacity-60"
+                className="w-4 h-4 rounded border-neutral-300 text-neutral-500 disabled:opacity-60"
               />
               <span className="text-sm text-neutral-700">{dept.name}</span>
             </label>
@@ -726,7 +734,7 @@ function UserRightsTab({ staff, companyId, onUpdate }: { staff: UserProfile; com
                     setSelectedTeams(selectedTeams.filter(id => id !== team.id));
                   }
                 }}
-                className="w-4 h-4 rounded border-neutral-300 text-neutral-900-500 disabled:opacity-60"
+                className="w-4 h-4 rounded border-neutral-300 text-neutral-500 disabled:opacity-60"
               />
               <span className="text-sm text-neutral-700">{team.name}</span>
             </label>
@@ -818,7 +826,7 @@ function TimeTab({ staff, companyId }: { staff: UserProfile; companyId: string }
   );
 
   if (loading) {
-    return <div className="flex justify-center py-8"><div className="animate-spin w-6 h-6 border-2 border-neutral-900-500 border-t-transparent rounded-full" /></div>;
+    return <div className="flex justify-center py-8"><div className="animate-spin w-6 h-6 border-2 border-neutral-500 border-t-transparent rounded-full" /></div>;
   }
 
   return (
@@ -856,7 +864,7 @@ function TimeTab({ staff, companyId }: { staff: UserProfile; companyId: string }
           <tbody className="divide-y divide-neutral-100">
             {monthlyTotals.slice(0, 12).map((row) => (
               <tr key={row.month} className="hover:bg-neutral-50">
-                <td className="px-4 py-3 text-sm text-neutral-900-600">{formatMonthRange(row.month)}</td>
+                <td className="px-4 py-3 text-sm text-neutral-600">{formatMonthRange(row.month)}</td>
                 <td className="px-4 py-3 text-sm text-right text-neutral-900">{row.inputHours.toFixed(2)}</td>
                 <td className="px-4 py-3 text-sm text-right text-neutral-900">${row.inputCharges.toLocaleString()}</td>
                 <td className="px-4 py-3 text-sm text-right text-neutral-900 border-l border-neutral-100">{row.billableHours.toFixed(2)}</td>
@@ -867,7 +875,7 @@ function TimeTab({ staff, companyId }: { staff: UserProfile; companyId: string }
           <tfoot className="bg-neutral-50 border-t border-neutral-200">
             <tr className="font-medium">
               <td className="px-4 py-3 text-sm text-neutral-700">OVERALL TOTALS</td>
-              <td className="px-4 py-3 text-sm text-right text-neutral-900-600">{overallTotals.inputHours.toFixed(2)}</td>
+              <td className="px-4 py-3 text-sm text-right text-neutral-600">{overallTotals.inputHours.toFixed(2)}</td>
               <td className="px-4 py-3 text-sm text-right text-neutral-900">${overallTotals.inputCharges.toLocaleString()}</td>
               <td className="px-4 py-3 text-sm text-right text-neutral-900 border-l border-neutral-100">{overallTotals.billableHours.toFixed(2)}</td>
               <td className="px-4 py-3 text-sm text-right text-neutral-900">${overallTotals.billableCharges.toLocaleString()}</td>
@@ -913,7 +921,7 @@ function ExpensesTab({ staff, companyId }: { staff: UserProfile; companyId: stri
   }
 
   if (loading) {
-    return <div className="flex justify-center py-8"><div className="animate-spin w-6 h-6 border-2 border-neutral-900-500 border-t-transparent rounded-full" /></div>;
+    return <div className="flex justify-center py-8"><div className="animate-spin w-6 h-6 border-2 border-neutral-500 border-t-transparent rounded-full" /></div>;
   }
 
   return (
@@ -986,7 +994,7 @@ function ActivityTab({ staff, companyId }: { staff: UserProfile; companyId: stri
   const filteredTasks = showCompleted ? tasks : tasks.filter(t => t.status !== 'completed');
 
   if (loading) {
-    return <div className="flex justify-center py-8"><div className="animate-spin w-6 h-6 border-2 border-neutral-900-500 border-t-transparent rounded-full" /></div>;
+    return <div className="flex justify-center py-8"><div className="animate-spin w-6 h-6 border-2 border-neutral-500 border-t-transparent rounded-full" /></div>;
   }
 
   return (
@@ -1000,7 +1008,7 @@ function ActivityTab({ staff, companyId }: { staff: UserProfile; companyId: stri
               type="checkbox"
               checked={showCompleted}
               onChange={(e) => setShowCompleted(e.target.checked)}
-              className="w-4 h-4 rounded border-neutral-300 text-neutral-900-500"
+              className="w-4 h-4 rounded border-neutral-300 text-neutral-500"
             />
             Show completed
           </label>
@@ -1066,7 +1074,7 @@ function TeamsTab({ staff }: { staff: UserProfile }) {
   }
 
   if (loading) {
-    return <div className="flex justify-center py-8"><div className="animate-spin w-6 h-6 border-2 border-neutral-900-500 border-t-transparent rounded-full" /></div>;
+    return <div className="flex justify-center py-8"><div className="animate-spin w-6 h-6 border-2 border-neutral-500 border-t-transparent rounded-full" /></div>;
   }
 
   return (
@@ -1077,11 +1085,11 @@ function TeamsTab({ staff }: { staff: UserProfile }) {
       
       <div className="grid gap-4">
         {projects.map((pm) => (
-          <div key={pm.id} className="border border-neutral-200 rounded-lg p-4 hover:border-neutral-900-300 transition-colors">
+          <div key={pm.id} className="border border-neutral-200 rounded-lg p-4 hover:border-neutral-300 transition-colors">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-[#476E66]-100 rounded-lg flex items-center justify-center">
-                  <Briefcase className="w-5 h-5 text-neutral-900-600" />
+                <div className="w-10 h-10 bg-[#476E66]/20 rounded-lg flex items-center justify-center">
+                  <Briefcase className="w-5 h-5 text-neutral-600" />
                 </div>
                 <div>
                   <h4 className="font-medium text-neutral-900">{pm.project?.name}</h4>
@@ -1090,7 +1098,7 @@ function TeamsTab({ staff }: { staff: UserProfile }) {
               </div>
               <div className="flex items-center gap-3">
                 <span className="px-2.5 py-1 bg-neutral-100 text-neutral-700 rounded text-sm">{pm.role || 'Team Member'}</span>
-                {pm.is_lead && <span className="px-2.5 py-1 bg-[#476E66]-100 text-neutral-900-700 rounded text-sm">Lead</span>}
+                {pm.is_lead && <span className="px-2.5 py-1 bg-[#476E66]/20 text-neutral-900-700 rounded text-sm">Lead</span>}
               </div>
             </div>
           </div>
@@ -1663,7 +1671,7 @@ function StaffModal({ staff, companyId, onClose, onSave }: {
               onClick={() => setActiveSection(section.id as any)}
               className={`px-4 py-3 text-sm font-medium border-b-2 -mb-px transition-colors ${
                 activeSection === section.id
-                  ? 'border-neutral-900-500 text-neutral-900-600'
+                  ? 'border-neutral-500 text-neutral-600'
                   : 'border-transparent text-neutral-500 hover:text-neutral-700'
               }`}
             >
@@ -1890,7 +1898,7 @@ function StaffModal({ staff, companyId, onClose, onSave }: {
                       type="checkbox"
                       checked={isBillable}
                       onChange={(e) => setIsBillable(e.target.checked)}
-                      className="w-4 h-4 rounded border-neutral-300 text-neutral-900-500 focus:ring-primary-500"
+                      className="w-4 h-4 rounded border-neutral-300 text-neutral-500 focus:ring-primary-500"
                     />
                     <span className="text-sm text-neutral-700">Billable</span>
                   </label>
@@ -1899,7 +1907,7 @@ function StaffModal({ staff, companyId, onClose, onSave }: {
                       type="checkbox"
                       checked={isActive}
                       onChange={(e) => setIsActive(e.target.checked)}
-                      className="w-4 h-4 rounded border-neutral-300 text-neutral-900-500 focus:ring-primary-500"
+                      className="w-4 h-4 rounded border-neutral-300 text-neutral-500 focus:ring-primary-500"
                     />
                     <span className="text-sm text-neutral-700">Active</span>
                   </label>
@@ -2011,6 +2019,12 @@ function InviteModal({ companyId, onClose, onSent }: {
     setSending(true);
     setError(null);
 
+    // Timeout after 15 seconds
+    const timeoutId = setTimeout(() => {
+      setSending(false);
+      setError('Request timed out. Please try again.');
+    }, 15000);
+
     try {
       await userManagementApi.createInvitation({
         company_id: companyId,
@@ -2020,7 +2034,7 @@ function InviteModal({ companyId, onClose, onSent }: {
       // Send invitation email via edge function
       const { data: companyData } = await supabase.from('companies').select('name').eq('id', companyId).single();
       
-      await supabase.functions.invoke('send-email', {
+      const emailResult = await supabase.functions.invoke('send-email', {
         body: {
           to: email.toLowerCase(),
           subject: `You've been invited to join ${companyData?.name || 'a company'} on Billdora`,
@@ -2034,14 +2048,23 @@ function InviteModal({ companyId, onClose, onSent }: {
         },
       });
       
+      clearTimeout(timeoutId);
+      
+      if (emailResult.error) {
+        console.error('Email send failed:', emailResult.error);
+        setError('Invitation created but email failed to send. Please notify the user manually.');
+        setSending(false);
+        return;
+      }
+      
       setSuccess(true);
       setTimeout(() => {
         onSent();
       }, 1500);
     } catch (err: any) {
+      clearTimeout(timeoutId);
       console.error('Failed to send invitation:', err);
-      setError(err?.message || 'Failed to send invitation');
-    } finally {
+      setError(err?.message || 'Failed to send invitation. You may need Admin permissions.');
       setSending(false);
     }
   };
@@ -2051,8 +2074,8 @@ function InviteModal({ companyId, onClose, onSent }: {
       <div className="bg-white rounded-2xl w-full max-w-md">
         <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-100">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-[#476E66]-100 rounded-lg flex items-center justify-center">
-              <Send className="w-5 h-5 text-neutral-900-600" />
+            <div className="w-10 h-10 bg-[#476E66]/20 rounded-lg flex items-center justify-center">
+              <Send className="w-5 h-5 text-neutral-600" />
             </div>
             <h2 className="text-lg font-semibold text-neutral-900">Invite Team Member</h2>
           </div>

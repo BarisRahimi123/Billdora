@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { api, Project, TimeEntry, Invoice, Expense } from '../lib/api';
 import { BarChart3, Clock, DollarSign, TrendingUp, Users, Download, ChevronDown, ChevronRight, Building2, FolderOpen } from 'lucide-react';
+import { ReportsSkeleton } from '../components/Skeleton';
 
 type ReportType = 'time_by_project' | 'time_by_user' | 'profitability' | 'unbilled_time' | 'revenue';
 
@@ -209,7 +210,7 @@ function TimeByUserReport({ timeEntries, profiles, formatCurrency }: {
                         <td className="px-6 py-3">
                           <div className="flex items-center gap-2">
                             {isUserExpanded ? <ChevronDown className="w-4 h-4 text-neutral-400" /> : <ChevronRight className="w-4 h-4 text-neutral-400" />}
-                            <Users className="w-4 h-4 text-neutral-900-500" />
+                            <Users className="w-4 h-4 text-neutral-500" />
                             <span className="font-semibold text-neutral-900">{user.userName}</span>
                             <span className="text-xs text-neutral-400">{user.userEmail}</span>
                           </div>
@@ -293,7 +294,7 @@ function TimeByUserReport({ timeEntries, profiles, formatCurrency }: {
 }
 
 export default function ReportsPage() {
-  const { profile, user } = useAuth();
+  const { profile, user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [activeReport, setActiveReport] = useState<ReportType>('time_by_project');
   const [dateRange, setDateRange] = useState<'week' | 'month' | 'quarter' | 'year'>('month');
@@ -330,7 +331,7 @@ export default function ReportsPage() {
 
   useEffect(() => {
     loadData();
-  }, [profile?.company_id, dateRange]);
+  }, [profile?.company_id, user?.id, dateRange]);
 
   async function loadData() {
     if (!profile?.company_id) {
@@ -477,10 +478,14 @@ export default function ReportsPage() {
     }
   };
 
-  if (loading) {
+  if (authLoading || loading) {
+    return <ReportsSkeleton />;
+  }
+
+  if (!profile?.company_id) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin w-8 h-8 border-2 border-neutral-900-500 border-t-transparent rounded-full" />
+      <div className="p-12 text-center">
+        <p className="text-neutral-500">Unable to load reports. Please log in again.</p>
       </div>
     );
   }
@@ -570,7 +575,7 @@ export default function ReportsPage() {
                   <td className="px-6 py-3 text-right font-semibold text-neutral-900">
                     {timeByProjectData.reduce((sum, r) => sum + r.billable, 0).toFixed(1)}h
                   </td>
-                  <td className="px-6 py-3 text-right font-semibold text-neutral-900-600">
+                  <td className="px-6 py-3 text-right font-semibold text-neutral-600">
                     {formatCurrency(timeByProjectData.reduce((sum, r) => sum + r.value, 0))}
                   </td>
                 </tr>

@@ -5,7 +5,7 @@ import { Settings, Building2, Users, FileText, Bell, Link, Shield, Package, Plus
 import { useAuth } from '../contexts/AuthContext';
 import { usePermissions } from '../contexts/PermissionsContext';
 import { useSubscription } from '../contexts/SubscriptionContext';
-import { api, Service, CompanySettings, userManagementApi, Role, UserProfile, CompanyInvitation, settingsApi, Category, ExpenseCode, InvoiceTerm, FieldValue, StatusCode, CostCenter } from '../lib/api';
+import { api, Service, CompanySettings, userManagementApi, Role, UserProfile, CompanyInvitation, settingsApi, Category, ExpenseCode, InvoiceTerm, FieldValue, StatusCode, CostCenter, emailTemplatesApi, EmailTemplate } from '../lib/api';
 import { supabase } from '../lib/supabase';
 
 const CATEGORIES = ['Scanning', 'Modeling', 'Drafting', 'GIS', 'Consulting', 'Other'];
@@ -18,7 +18,7 @@ const PRICING_TYPES = [
 
 export default function SettingsPage() {
   const navigate = useNavigate();
-  const { profile, signOut } = useAuth();
+  const { profile, signOut, loading: authLoading } = useAuth();
   const { canViewFinancials } = usePermissions();
   const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState('profile');
@@ -56,10 +56,7 @@ export default function SettingsPage() {
     { id: 'company', label: 'Company Info', icon: Building2, adminOnly: true },
     { id: 'users', label: 'User Management', icon: Users, adminOnly: true },
     { id: 'services', label: 'Products & Services', icon: Package, adminOnly: true },
-    { id: 'basic-codes', label: 'Basic Codes', icon: Tag, adminOnly: true },
-    { id: 'field-values', label: 'Field Values', icon: List, adminOnly: true },
-    { id: 'status-codes', label: 'Status Codes', icon: Activity, adminOnly: true },
-    { id: 'cost-centers', label: 'Cost Centers', icon: Target, adminOnly: true },
+    { id: 'codes-fields', label: 'Codes & Fields', icon: Tag, adminOnly: true },
     { id: 'staff', label: 'Staff', icon: Users, adminOnly: true },
     { id: 'templates', label: 'Templates', icon: FileText, adminOnly: true },
     { id: 'notifications', label: 'Notifications', icon: Bell, adminOnly: false },
@@ -228,7 +225,7 @@ export default function SettingsPage() {
     return service.base_rate ? `$${service.base_rate}` : '-';
   };
 
-  if (!profile?.company_id) {
+  if (authLoading) {
     return (
       <div className="p-12 text-center">
         <div className="animate-spin w-8 h-8 border-2 border-neutral-600 border-t-transparent rounded-full mx-auto" />
@@ -237,10 +234,74 @@ export default function SettingsPage() {
     );
   }
 
+  if (!profile?.company_id) {
+    return (
+      <div className="p-12 text-center">
+        <p className="text-neutral-500">Unable to load settings. Please log in again.</p>
+      </div>
+    );
+  }
+
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
   return (
     <div className="flex min-h-[calc(100vh-73px)] -m-4 lg:-m-6">
-      {/* Settings Sidebar - Replaces main nav */}
-      <aside className="w-64 text-white flex flex-col fixed h-[calc(100vh-73px)] z-40" style={{ backgroundColor: '#476E66' }}>
+      {/* Mobile Header */}
+      <div className="lg:hidden fixed top-[73px] left-0 right-0 z-50 bg-white border-b border-neutral-200">
+        <div className="flex items-center justify-between px-4 py-3">
+          <button 
+            onClick={() => navigate('/dashboard')}
+            className="flex items-center gap-2 text-neutral-600 hover:text-neutral-900"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            <span className="text-sm font-medium">Back</span>
+          </button>
+          <h1 className="text-lg font-semibold text-neutral-900">{tabs.find(t => t.id === activeTab)?.label || 'Settings'}</h1>
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="p-2 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded-lg"
+          >
+            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Settings className="w-5 h-5" />}
+          </button>
+        </div>
+        
+        {/* Mobile Dropdown Menu */}
+        {mobileMenuOpen && (
+          <div className="absolute top-full left-0 right-0 bg-white border-b border-neutral-200 shadow-lg max-h-[60vh] overflow-y-auto">
+            <nav className="py-2">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => {
+                    setActiveTab(tab.id);
+                    setMobileMenuOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${
+                    activeTab === tab.id 
+                      ? 'bg-[#476E66]/10 text-[#476E66]' 
+                      : 'text-neutral-600 hover:bg-neutral-50'
+                  }`}
+                >
+                  <tab.icon className="w-5 h-5 flex-shrink-0" />
+                  <span className="font-medium text-sm">{tab.label}</span>
+                </button>
+              ))}
+              <div className="border-t border-neutral-100 mt-2 pt-2">
+                <button
+                  onClick={() => signOut()}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-red-600 hover:bg-red-50"
+                >
+                  <LogOut className="w-5 h-5" />
+                  <span className="text-sm font-medium">Sign Out</span>
+                </button>
+              </div>
+            </nav>
+          </div>
+        )}
+      </div>
+
+      {/* Settings Sidebar - Desktop only */}
+      <aside className="hidden lg:flex w-64 text-white flex-col fixed h-[calc(100vh-73px)] z-40" style={{ backgroundColor: '#476E66' }}>
         {/* Back Button Header */}
         <div className="p-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.2)' }}>
           <button 
@@ -290,9 +351,9 @@ export default function SettingsPage() {
       </aside>
 
       {/* Content Area */}
-      <div className="flex-1 ml-64 p-6 overflow-y-auto" style={{ backgroundColor: '#F5F5F3' }}>
-        {/* Page Header */}
-        <div className="mb-6">
+      <div className="flex-1 lg:ml-64 p-4 lg:p-6 pt-20 lg:pt-6 overflow-y-auto" style={{ backgroundColor: '#F5F5F3' }}>
+        {/* Page Header - Desktop only */}
+        <div className="mb-6 hidden lg:block">
           <h1 className="text-2xl font-bold text-neutral-900">{tabs.find(t => t.id === activeTab)?.label || 'Settings'}</h1>
         </div>
 
@@ -610,27 +671,19 @@ export default function SettingsPage() {
             <InvoicingSettingsTab companyId={profile.company_id} />
           )}
 
-          {activeTab === 'basic-codes' && (
-            <BasicCodesTab companyId={profile.company_id} />
-          )}
-
-          {activeTab === 'field-values' && (
-            <FieldValuesTab companyId={profile.company_id} />
-          )}
-
-          {activeTab === 'status-codes' && (
-            <StatusCodesTab companyId={profile.company_id} />
-          )}
-
-          {activeTab === 'cost-centers' && (
-            <CostCentersTab companyId={profile.company_id} />
+          {activeTab === 'codes-fields' && (
+            <CodesAndFieldsTab companyId={profile.company_id} />
           )}
 
           {activeTab === 'integrations' && (
             <IntegrationsTab companyId={profile.company_id} />
           )}
 
-          {activeTab !== 'profile' && activeTab !== 'subscription' && activeTab !== 'company' && activeTab !== 'services' && activeTab !== 'users' && activeTab !== 'invoicing' && activeTab !== 'basic-codes' && activeTab !== 'field-values' && activeTab !== 'status-codes' && activeTab !== 'cost-centers' && activeTab !== 'integrations' && (
+          {activeTab === 'templates' && (
+            <EmailTemplatesTab companyId={profile.company_id} />
+          )}
+
+          {activeTab !== 'profile' && activeTab !== 'subscription' && activeTab !== 'company' && activeTab !== 'services' && activeTab !== 'users' && activeTab !== 'invoicing' && activeTab !== 'codes-fields' && activeTab !== 'integrations' && activeTab !== 'templates' && (
             <div className="bg-white rounded-2xl p-12 border border-neutral-100 text-center">
               <div className="w-16 h-16 bg-neutral-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <Settings className="w-8 h-8 text-neutral-400" />
@@ -1282,6 +1335,7 @@ function InviteUserModal({ companyId, currentUserId, roles, onClose, onInvite }:
   onClose: () => void;
   onInvite: () => void;
 }) {
+  const { showToast } = useToast();
   const [email, setEmail] = useState('');
   const [roleId, setRoleId] = useState('');
   const [saving, setSaving] = useState(false);
@@ -1294,7 +1348,14 @@ function InviteUserModal({ companyId, currentUserId, roles, onClose, onInvite }:
     setSaving(true);
     setError(null);
     
+    // Timeout after 15 seconds
+    const timeoutId = setTimeout(() => {
+      setSaving(false);
+      setError('Request timed out. Please try again.');
+    }, 15000);
+    
     try {
+      // Create invitation record
       await userManagementApi.createInvitation({
         company_id: companyId,
         email,
@@ -1307,7 +1368,7 @@ function InviteUserModal({ companyId, currentUserId, roles, onClose, onInvite }:
       const { data: companyData } = await supabase.from('companies').select('name').eq('id', companyId).single();
       const { data: inviterData } = await supabase.from('profiles').select('full_name').eq('id', currentUserId).single();
       
-      await supabase.functions.invoke('send-email', {
+      const emailResult = await supabase.functions.invoke('send-email', {
         body: {
           to: email,
           subject: `You've been invited to join ${companyData?.name || 'a company'} on Billdora`,
@@ -1321,11 +1382,20 @@ function InviteUserModal({ companyId, currentUserId, roles, onClose, onInvite }:
         },
       });
       
+      clearTimeout(timeoutId);
+      
+      if (emailResult.error) {
+        console.error('Email send failed:', emailResult.error);
+        showToast(`Invitation created but email failed to send. Please notify ${email} manually.`, 'error');
+      } else {
+        showToast(`Invitation sent to ${email}`, 'success');
+      }
+      
       onInvite();
     } catch (err: any) {
+      clearTimeout(timeoutId);
       console.error('Failed to send invitation:', err);
-      setError(err?.message || 'Failed to send invitation');
-    } finally {
+      setError(err?.message || 'Failed to send invitation. You may need Admin permissions.');
       setSaving(false);
     }
   };
@@ -3102,7 +3172,377 @@ function PDFTemplateModal({ template, companyId, onClose, onSave }: {
 }
 
 
-// Basic Codes Tab Component
+// Unified Codes & Fields Tab Component
+function CodesAndFieldsTab({ companyId }: { companyId: string }) {
+  type CategoryType = 'basic' | 'field-values' | 'status' | 'cost-centers';
+  type SubTabType = string;
+
+  const [activeCategory, setActiveCategory] = useState<CategoryType>('basic');
+  const [activeSubTab, setActiveSubTab] = useState<SubTabType>('categories');
+  const [items, setItems] = useState<any[]>([]);
+  const [selectedItem, setSelectedItem] = useState<any | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [includeInactive, setIncludeInactive] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const categories = [
+    { id: 'basic', label: 'Basic Codes', description: 'Categories, expense codes, invoice terms' },
+    { id: 'field-values', label: 'Field Values', description: 'Contact types, departments, roles, locations' },
+    { id: 'status', label: 'Status Codes', description: 'Project, billing, and staff statuses' },
+    { id: 'cost-centers', label: 'Cost Centers', description: 'Groups, functions, locations' },
+  ];
+
+  const subTabsMap: Record<CategoryType, { id: string; label: string }[]> = {
+    'basic': [
+      { id: 'categories', label: 'Categories' },
+      { id: 'expense_codes', label: 'Expense Codes' },
+      { id: 'invoice_terms', label: 'Invoice Terms' },
+    ],
+    'field-values': [
+      { id: 'contact_types', label: 'Contact Types' },
+      { id: 'departments', label: 'Departments' },
+      { id: 'team_roles', label: 'Roles' },
+      { id: 'locations', label: 'Locations' },
+      { id: 'task_types', label: 'Task Types' },
+      { id: 'project_types', label: 'Project Types' },
+    ],
+    'status': [
+      { id: 'project_statuses', label: 'Project' },
+      { id: 'billing_statuses', label: 'Billing' },
+      { id: 'staff_statuses', label: 'Staff' },
+    ],
+    'cost-centers': [
+      { id: 'cost_center_groups', label: 'Groups' },
+      { id: 'cost_center_functions', label: 'Functions' },
+      { id: 'cost_center_locations', label: 'Locations' },
+    ],
+  };
+
+  useEffect(() => {
+    setActiveSubTab(subTabsMap[activeCategory][0].id);
+    setSelectedItem(null);
+  }, [activeCategory]);
+
+  useEffect(() => {
+    loadItems();
+  }, [companyId, activeCategory, activeSubTab, includeInactive]);
+
+  async function loadItems() {
+    if (!companyId) { setLoading(false); return; }
+    setLoading(true);
+    try {
+      let data: any[] = [];
+      if (activeCategory === 'basic') {
+        if (activeSubTab === 'categories') data = await settingsApi.getCategories(companyId, includeInactive);
+        else if (activeSubTab === 'expense_codes') data = await settingsApi.getExpenseCodes(companyId, includeInactive);
+        else if (activeSubTab === 'invoice_terms') data = await settingsApi.getInvoiceTerms(companyId, includeInactive);
+      } else if (activeCategory === 'field-values') {
+        data = await settingsApi.getFieldValues(activeSubTab, companyId, includeInactive);
+      } else if (activeCategory === 'status') {
+        data = await settingsApi.getStatusCodes(activeSubTab, companyId, includeInactive);
+      } else if (activeCategory === 'cost-centers') {
+        data = await settingsApi.getCostCenters(activeSubTab, companyId, includeInactive);
+      }
+      setItems(data);
+      if (data.length > 0 && !selectedItem) setSelectedItem(data[0]);
+    } catch (error) {
+      console.error('Failed to load items:', error);
+    }
+    setLoading(false);
+  }
+
+  async function handleSave() {
+    if (!selectedItem) return;
+    setSaving(true);
+    try {
+      const itemData = { ...selectedItem, company_id: companyId };
+      if (activeCategory === 'basic') {
+        if (selectedItem.id) {
+          if (activeSubTab === 'categories') await settingsApi.updateCategory(selectedItem.id, itemData);
+          else if (activeSubTab === 'expense_codes') await settingsApi.updateExpenseCode(selectedItem.id, itemData);
+          else if (activeSubTab === 'invoice_terms') await settingsApi.updateInvoiceTerm(selectedItem.id, itemData);
+        } else {
+          if (activeSubTab === 'categories') await settingsApi.createCategory(itemData);
+          else if (activeSubTab === 'expense_codes') await settingsApi.createExpenseCode(itemData);
+          else if (activeSubTab === 'invoice_terms') await settingsApi.createInvoiceTerm(itemData);
+        }
+      } else if (activeCategory === 'field-values') {
+        if (selectedItem.id) await settingsApi.updateFieldValue(activeSubTab, selectedItem.id, itemData);
+        else await settingsApi.createFieldValue(activeSubTab, itemData);
+      } else if (activeCategory === 'status') {
+        if (selectedItem.id) await settingsApi.updateStatusCode(activeSubTab, selectedItem.id, itemData);
+        else await settingsApi.createStatusCode(activeSubTab, itemData);
+      } else if (activeCategory === 'cost-centers') {
+        if (selectedItem.id) await settingsApi.updateCostCenter(activeSubTab, selectedItem.id, itemData);
+        else await settingsApi.createCostCenter(activeSubTab, itemData);
+      }
+      loadItems();
+    } catch (error) {
+      console.error('Failed to save:', error);
+    }
+    setSaving(false);
+  }
+
+  async function handleDelete() {
+    if (!selectedItem?.id) return;
+    if (!confirm('Are you sure you want to delete this item?')) return;
+    try {
+      if (activeCategory === 'basic') {
+        if (activeSubTab === 'categories') await settingsApi.deleteCategory(selectedItem.id);
+        else if (activeSubTab === 'expense_codes') await settingsApi.deleteExpenseCode(selectedItem.id);
+        else if (activeSubTab === 'invoice_terms') await settingsApi.deleteInvoiceTerm(selectedItem.id);
+      } else if (activeCategory === 'field-values') {
+        await settingsApi.deleteFieldValue(activeSubTab, selectedItem.id);
+      } else if (activeCategory === 'status') {
+        await settingsApi.deleteStatusCode(activeSubTab, selectedItem.id);
+      } else if (activeCategory === 'cost-centers') {
+        await settingsApi.deleteCostCenter(activeSubTab, selectedItem.id);
+      }
+      setSelectedItem(null);
+      loadItems();
+    } catch (error) {
+      console.error('Failed to delete:', error);
+    }
+  }
+
+  function addNewItem() {
+    if (activeCategory === 'basic') {
+      if (activeSubTab === 'categories') setSelectedItem({ name: '', code: '', description: '', is_inactive: false });
+      else if (activeSubTab === 'expense_codes') setSelectedItem({ name: '', code: '', description: '', is_inactive: false });
+      else if (activeSubTab === 'invoice_terms') setSelectedItem({ name: '', days_out: 30, is_default: false, is_inactive: false });
+    } else if (activeCategory === 'field-values') {
+      setSelectedItem({ value: '', description: '', is_inactive: false });
+    } else if (activeCategory === 'status') {
+      setSelectedItem({ value: '', description: '', is_inactive: false });
+    } else if (activeCategory === 'cost-centers') {
+      setSelectedItem({ name: '', abbreviation: '', description: '', is_inactive: false });
+    }
+  }
+
+  const filteredItems = items.filter(item => {
+    const name = item.name || item.value || '';
+    return name.toLowerCase().includes(searchTerm.toLowerCase());
+  });
+
+  const currentSubTabs = subTabsMap[activeCategory];
+
+  return (
+    <div className="space-y-6">
+      {/* Category Selector */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {categories.map((cat) => (
+          <button
+            key={cat.id}
+            onClick={() => setActiveCategory(cat.id as CategoryType)}
+            className={`p-4 rounded-xl border text-left transition-all ${
+              activeCategory === cat.id
+                ? 'border-[#476E66] bg-[#476E66]/5'
+                : 'border-neutral-200 hover:border-neutral-300 bg-white'
+            }`}
+          >
+            <p className={`font-medium text-sm ${activeCategory === cat.id ? 'text-[#476E66]' : 'text-neutral-900'}`}>
+              {cat.label}
+            </p>
+            <p className="text-xs text-neutral-500 mt-1">{cat.description}</p>
+          </button>
+        ))}
+      </div>
+
+      {/* Sub-tabs */}
+      <div className="flex gap-1 p-1 bg-neutral-100 rounded-xl w-fit flex-wrap">
+        {currentSubTabs.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => { setActiveSubTab(tab.id); setSelectedItem(null); }}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              activeSubTab === tab.id ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-600 hover:text-neutral-900'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Main Content */}
+      <div className="flex flex-col lg:flex-row gap-6">
+        {/* Left Panel - List */}
+        <div className="w-full lg:w-80 bg-white rounded-2xl border border-neutral-100 flex flex-col">
+          <div className="p-4 border-b border-neutral-100 space-y-3">
+            <div className="flex items-center justify-between">
+              <button onClick={addNewItem} className="flex items-center gap-2 px-3 py-1.5 bg-[#476E66] text-white text-sm rounded-lg hover:bg-[#3A5B54]">
+                <Plus className="w-4 h-4" /> Add New
+              </button>
+              <label className="flex items-center gap-2 text-sm text-neutral-600 cursor-pointer">
+                <input type="checkbox" checked={includeInactive} onChange={(e) => setIncludeInactive(e.target.checked)} className="w-4 h-4 rounded border-neutral-300" />
+                Inactive
+              </label>
+            </div>
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Search..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-3 pr-8 py-2 text-sm border border-neutral-200 rounded-lg focus:ring-2 focus:ring-[#476E66] focus:border-transparent outline-none"
+              />
+            </div>
+          </div>
+          <div className="flex-1 overflow-y-auto max-h-[400px] divide-y divide-neutral-100">
+            {loading ? (
+              <div className="p-4 text-center text-neutral-500">Loading...</div>
+            ) : filteredItems.length === 0 ? (
+              <div className="p-4 text-center text-neutral-500">No items found</div>
+            ) : (
+              filteredItems.map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => setSelectedItem(item)}
+                  className={`w-full p-3 text-left hover:bg-neutral-50 ${selectedItem?.id === item.id ? 'bg-neutral-50' : ''}`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className={`font-medium text-sm ${item.is_inactive ? 'text-neutral-400' : 'text-neutral-900'}`}>
+                      {item.name || item.value}
+                    </span>
+                    {item.is_inactive && <span className="text-xs text-neutral-400 bg-neutral-100 px-1.5 py-0.5 rounded">Inactive</span>}
+                  </div>
+                  {item.description && <p className="text-xs text-neutral-500 truncate mt-0.5">{item.description}</p>}
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Right Panel - Details */}
+        <div className="flex-1 bg-white rounded-2xl border border-neutral-100 p-6">
+          {selectedItem ? (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-neutral-900">{selectedItem.id ? 'Edit' : 'New'} Item</h3>
+                {selectedItem.id && (
+                  <button onClick={handleDelete} className="p-2 text-neutral-400 hover:text-red-500 rounded-lg hover:bg-red-50">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+
+              {/* Dynamic Fields based on category */}
+              <div className="space-y-4">
+                {(activeCategory === 'basic' || activeCategory === 'cost-centers') && (
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-1">Name *</label>
+                    <input
+                      type="text"
+                      value={selectedItem.name || ''}
+                      onChange={(e) => setSelectedItem({ ...selectedItem, name: e.target.value })}
+                      className="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-[#476E66] focus:border-transparent outline-none"
+                    />
+                  </div>
+                )}
+                {(activeCategory === 'field-values' || activeCategory === 'status') && (
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-1">Value *</label>
+                    <input
+                      type="text"
+                      value={selectedItem.value || ''}
+                      onChange={(e) => setSelectedItem({ ...selectedItem, value: e.target.value })}
+                      className="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-[#476E66] focus:border-transparent outline-none"
+                    />
+                  </div>
+                )}
+                {activeCategory === 'basic' && activeSubTab !== 'invoice_terms' && (
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-1">Code</label>
+                    <input
+                      type="text"
+                      value={selectedItem.code || ''}
+                      onChange={(e) => setSelectedItem({ ...selectedItem, code: e.target.value })}
+                      className="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-[#476E66] focus:border-transparent outline-none"
+                    />
+                  </div>
+                )}
+                {activeCategory === 'cost-centers' && (
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-1">Abbreviation</label>
+                    <input
+                      type="text"
+                      value={selectedItem.abbreviation || ''}
+                      onChange={(e) => setSelectedItem({ ...selectedItem, abbreviation: e.target.value })}
+                      className="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-[#476E66] focus:border-transparent outline-none"
+                    />
+                  </div>
+                )}
+                {activeCategory === 'basic' && activeSubTab === 'invoice_terms' && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-neutral-700 mb-1">Days Out</label>
+                      <input
+                        type="number"
+                        value={selectedItem.days_out || 0}
+                        onChange={(e) => setSelectedItem({ ...selectedItem, days_out: parseInt(e.target.value) || 0 })}
+                        className="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-[#476E66] focus:border-transparent outline-none"
+                      />
+                    </div>
+                    <label className="flex items-center gap-2 text-sm text-neutral-700">
+                      <input
+                        type="checkbox"
+                        checked={selectedItem.is_default || false}
+                        onChange={(e) => setSelectedItem({ ...selectedItem, is_default: e.target.checked })}
+                        className="w-4 h-4 rounded border-neutral-300"
+                      />
+                      Default Term
+                    </label>
+                  </>
+                )}
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1">Description</label>
+                  <textarea
+                    value={selectedItem.description || ''}
+                    onChange={(e) => setSelectedItem({ ...selectedItem, description: e.target.value })}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-[#476E66] focus:border-transparent outline-none resize-none"
+                  />
+                </div>
+                <label className="flex items-center gap-2 text-sm text-neutral-700">
+                  <input
+                    type="checkbox"
+                    checked={selectedItem.is_inactive || false}
+                    onChange={(e) => setSelectedItem({ ...selectedItem, is_inactive: e.target.checked })}
+                    className="w-4 h-4 rounded border-neutral-300"
+                  />
+                  Inactive
+                </label>
+              </div>
+
+              <div className="flex gap-3 pt-4 border-t border-neutral-100">
+                <button
+                  onClick={() => setSelectedItem(null)}
+                  className="px-4 py-2 text-sm text-neutral-600 hover:bg-neutral-100 rounded-lg"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="px-4 py-2 text-sm bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54] disabled:opacity-50"
+                >
+                  {saving ? 'Saving...' : 'Save'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="h-full flex items-center justify-center text-neutral-500">
+              <p>Select an item to edit or click "Add New" to create one</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+// Basic Codes Tab Component (Legacy - kept for reference)
 function BasicCodesTab({ companyId }: { companyId: string }) {
   const [activeSubTab, setActiveSubTab] = useState<'categories' | 'expense_codes' | 'invoice_terms'>('categories');
   const [items, setItems] = useState<any[]>([]);
@@ -4327,6 +4767,171 @@ function IntegrationsTab({ companyId }: { companyId: string }) {
 }
 
 
+// Email Templates Tab Component
+function EmailTemplatesTab({ companyId }: { companyId: string }) {
+  const { showToast } = useToast();
+  const [templates, setTemplates] = useState<EmailTemplate[]>([]);
+  const [selectedTemplate, setSelectedTemplate] = useState<EmailTemplate | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [editSubject, setEditSubject] = useState('');
+  const [editBody, setEditBody] = useState('');
+
+  const placeholders = [
+    { key: '{{client_name}}', description: 'Client company or contact name' },
+    { key: '{{invoice_number}}', description: 'Invoice number (e.g., INV-001)' },
+    { key: '{{amount_due}}', description: 'Total amount due on invoice' },
+    { key: '{{due_date}}', description: 'Invoice due date' },
+    { key: '{{company_name}}', description: 'Your company name' },
+  ];
+
+  useEffect(() => {
+    loadTemplates();
+  }, [companyId]);
+
+  async function loadTemplates() {
+    setLoading(true);
+    try {
+      const data = await emailTemplatesApi.getTemplates(companyId);
+      setTemplates(data);
+      if (data.length > 0) {
+        selectTemplate(data[0]);
+      }
+    } catch (error) {
+      console.error('Failed to load templates:', error);
+      showToast('Failed to load email templates', 'error');
+    }
+    setLoading(false);
+  }
+
+  function selectTemplate(template: EmailTemplate) {
+    setSelectedTemplate(template);
+    setEditSubject(template.subject || '');
+    setEditBody(template.body || '');
+  }
+
+  async function handleSave() {
+    if (!selectedTemplate) return;
+    setSaving(true);
+    try {
+      await emailTemplatesApi.updateTemplate(selectedTemplate.id, {
+        subject: editSubject,
+        body: editBody,
+      });
+      showToast('Template saved successfully', 'success');
+      loadTemplates();
+    } catch (error) {
+      console.error('Failed to save template:', error);
+      showToast('Failed to save template', 'error');
+    }
+    setSaving(false);
+  }
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-2xl p-12 border border-neutral-100">
+        <div className="flex justify-center">
+          <div className="animate-spin w-8 h-8 border-2 border-neutral-600 border-t-transparent rounded-full" />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-white rounded-2xl border border-neutral-100 p-6">
+        <h2 className="text-xl font-semibold text-neutral-900 mb-2">Email Templates</h2>
+        <p className="text-neutral-500 text-sm mb-6">Customize the emails sent to your clients for payment reminders and other notifications.</p>
+
+        <div className="flex flex-col lg:flex-row gap-6">
+          {/* Template List */}
+          <div className="w-full lg:w-64 flex-shrink-0">
+            <h3 className="text-sm font-medium text-neutral-700 mb-3">Templates</h3>
+            <div className="space-y-2">
+              {templates.length === 0 ? (
+                <p className="text-sm text-neutral-500">No templates found.</p>
+              ) : (
+                templates.map((template) => (
+                  <button
+                    key={template.id}
+                    onClick={() => selectTemplate(template)}
+                    className={`w-full text-left px-4 py-3 rounded-xl border transition-colors ${
+                      selectedTemplate?.id === template.id
+                        ? 'border-[#476E66] bg-[#476E66]/5 text-[#476E66]'
+                        : 'border-neutral-200 hover:border-neutral-300 text-neutral-700'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Mail className="w-5 h-5 flex-shrink-0" />
+                      <span className="font-medium text-sm capitalize">{template.template_type.replace(/_/g, ' ')}</span>
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Edit Form */}
+          <div className="flex-1">
+            {selectedTemplate ? (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1.5">Subject</label>
+                  <input
+                    type="text"
+                    value={editSubject}
+                    onChange={(e) => setEditSubject(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-400 outline-none"
+                    placeholder="Email subject line..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1.5">Body</label>
+                  <textarea
+                    value={editBody}
+                    onChange={(e) => setEditBody(e.target.value)}
+                    rows={10}
+                    className="w-full px-4 py-3 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-400 outline-none resize-none font-mono text-sm"
+                    placeholder="Email body content..."
+                  />
+                </div>
+
+                <button
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="px-6 py-2.5 bg-[#476E66] text-white font-medium rounded-xl hover:bg-[#3A5B54] transition-colors disabled:opacity-50"
+                >
+                  {saving ? 'Saving...' : 'Save Template'}
+                </button>
+              </div>
+            ) : (
+              <div className="text-center py-12 text-neutral-500">
+                Select a template to edit
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Placeholders Reference */}
+      <div className="bg-blue-50 border border-blue-100 rounded-2xl p-6">
+        <h3 className="font-semibold text-blue-900 mb-3">Available Placeholders</h3>
+        <p className="text-sm text-blue-800 mb-4">Use these placeholders in your email subject or body. They will be replaced with actual data when the email is sent.</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {placeholders.map((p) => (
+            <div key={p.key} className="flex items-start gap-3">
+              <code className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-mono">{p.key}</code>
+              <span className="text-sm text-blue-800">{p.description}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 // Subscription Tab Component
 function SubscriptionTab() {
   const { subscription, currentPlan, plans, loading, isPro, isStarter } = useSubscription();
@@ -4594,25 +5199,25 @@ function SubscriptionTab() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <UsageBar 
                 used={usage.projects} 
-                limit={currentPlan?.max_projects ?? 3} 
+                limit={currentPlan?.limits?.projects === -1 ? null : (currentPlan?.limits?.projects ?? 3)} 
                 label="Projects"
                 isLoading={usageLoading}
               />
               <UsageBar 
                 used={usage.teamMembers} 
-                limit={currentPlan?.max_team_members ?? 2} 
+                limit={currentPlan?.limits?.team_members === -1 ? null : (currentPlan?.limits?.team_members ?? 2)} 
                 label="Team Members"
                 isLoading={usageLoading}
               />
               <UsageBar 
                 used={usage.clients} 
-                limit={currentPlan?.max_clients ?? 5} 
+                limit={currentPlan?.limits?.clients === -1 ? null : (currentPlan?.limits?.clients ?? 5)} 
                 label="Clients"
                 isLoading={usageLoading}
               />
               <UsageBar 
                 used={usage.invoices} 
-                limit={currentPlan?.max_invoices_per_month ?? 10} 
+                limit={currentPlan?.limits?.invoices_per_month === -1 ? null : (currentPlan?.limits?.invoices_per_month ?? 10)} 
                 label="Invoices This Month"
                 isLoading={usageLoading}
               />

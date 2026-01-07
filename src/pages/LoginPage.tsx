@@ -16,14 +16,22 @@ export default function LoginPage() {
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
   const fullNameRef = useRef<HTMLInputElement>(null);
+  const phoneRef = useRef<HTMLInputElement>(null);
+  const companyNameRef = useRef<HTMLInputElement>(null);
+  
+  // Track if this is an invite-based signup (email locked)
+  const [invitedEmail, setInvitedEmail] = useState<string | null>(null);
 
   // Check for invitation params in URL
   useEffect(() => {
     const emailParam = searchParams.get('email');
     const signupParam = searchParams.get('signup');
     
-    if (emailParam && emailRef.current) {
-      emailRef.current.value = emailParam;
+    if (emailParam) {
+      setInvitedEmail(emailParam.toLowerCase());
+      if (emailRef.current) {
+        emailRef.current.value = emailParam;
+      }
     }
     if (signupParam === 'true') {
       setIsSignUp(true);
@@ -34,10 +42,28 @@ export default function LoginPage() {
     const email = emailRef.current?.value || '';
     const password = passwordRef.current?.value || '';
     const fullName = fullNameRef.current?.value || '';
+    const phone = phoneRef.current?.value || '';
+    const companyName = companyNameRef.current?.value || '';
     
     if (!email || !password) {
       setError('Please enter email and password');
       return;
+    }
+
+    if (isSignUp) {
+      if (!fullName.trim()) {
+        setError('Please enter your full name');
+        return;
+      }
+      if (!phone.trim()) {
+        setError('Please enter your phone number');
+        return;
+      }
+      // Security: If this is an invite-based signup, email must match exactly
+      if (invitedEmail && email.toLowerCase() !== invitedEmail) {
+        setError(`This invitation was sent to ${invitedEmail}. Please use that email address to accept the invitation.`);
+        return;
+      }
     }
     
     setError('');
@@ -45,13 +71,21 @@ export default function LoginPage() {
 
     try {
       if (isSignUp) {
-        const { error } = await signUp(email, password, fullName);
-        if (error) throw error;
+        const result = await signUp(email, password, fullName, phone, companyName);
+        if (result.error) throw result.error;
+        
+        // Redirect to check-email page if confirmation required
+        if (result.emailConfirmationRequired) {
+          sessionStorage.setItem('pendingVerificationEmail', email);
+          navigate('/check-email');
+          return;
+        }
+        navigate('/dashboard');
       } else {
         const { error } = await signIn(email, password);
         if (error) throw error;
+        navigate('/dashboard');
       }
-      navigate('/dashboard');
     } catch (err: any) {
       setError(err.message || 'An error occurred');
     } finally {
@@ -84,12 +118,12 @@ export default function LoginPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
-            className="flex items-center gap-2 mb-8 sm:mb-16"
+            className="flex items-center gap-2 mb-8 sm:mb-12"
           >
             <div className="w-8 h-8 bg-[#476E66] flex items-center justify-center">
               <span className="text-white font-bold text-lg">P</span>
             </div>
-            <img src="/billdora-logo.png" alt="Billdora" className="h-10" />
+            <span className="text-xl font-bold text-neutral-900">Billdora</span>
           </motion.div>
 
           {/* Welcome Text */}
@@ -101,7 +135,7 @@ export default function LoginPage() {
             <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tighter leading-[1.1] mb-3 sm:mb-4 text-neutral-900">
               {isSignUp ? 'Create Account.' : 'Welcome Back.'}
             </h1>
-            <p className="text-base sm:text-lg text-text-secondary mb-6 sm:mb-10">
+            <p className="text-base sm:text-lg text-text-secondary mb-6 sm:mb-8">
               {isSignUp 
                 ? 'Start managing your projects with precision.' 
                 : 'Streamline your workflow with mathematical precision.'}
@@ -116,34 +150,71 @@ export default function LoginPage() {
             className="space-y-4"
           >
             {isSignUp && (
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-neutral-900 mb-2">Full Name</label>
-                <input
-                  ref={fullNameRef}
-                  type="text"
-                  className="w-full h-14 px-4 border-2 border-border bg-white focus:border-neutral-900 outline-none transition-colors text-neutral-900 placeholder:text-text-secondary/50"
-                  placeholder="John Doe"
-                />
-              </div>
+              <>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-neutral-900 mb-2">
+                    Full Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    ref={fullNameRef}
+                    type="text"
+                    className="w-full h-14 px-4 border-2 border-border bg-white focus:border-neutral-900 outline-none transition-colors text-neutral-900 placeholder:text-text-secondary/50"
+                    placeholder="John Doe"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-neutral-900 mb-2">
+                    Phone Number <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    ref={phoneRef}
+                    type="tel"
+                    className="w-full h-14 px-4 border-2 border-border bg-white focus:border-neutral-900 outline-none transition-colors text-neutral-900 placeholder:text-text-secondary/50"
+                    placeholder="+1 (555) 123-4567"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-neutral-900 mb-2">
+                    Company Name <span className="text-neutral-400 text-[10px] normal-case">(optional)</span>
+                  </label>
+                  <input
+                    ref={companyNameRef}
+                    type="text"
+                    className="w-full h-14 px-4 border-2 border-border bg-white focus:border-neutral-900 outline-none transition-colors text-neutral-900 placeholder:text-text-secondary/50"
+                    placeholder="Acme Inc."
+                  />
+                </div>
+              </>
             )}
 
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-neutral-900 mb-2">Email</label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-neutral-900 mb-2">
+                Email {isSignUp && <span className="text-red-500">*</span>}
+                {invitedEmail && isSignUp && <span className="text-xs font-normal text-neutral-500 ml-2">(Invitation)</span>}
+              </label>
               <input
                 ref={emailRef}
                 type="email"
-                className="w-full h-14 px-4 border-2 border-border bg-white focus:border-neutral-900 outline-none transition-colors text-neutral-900 placeholder:text-text-secondary/50"
+                readOnly={!!(invitedEmail && isSignUp)}
+                className={`w-full h-14 px-4 border-2 border-border bg-white focus:border-neutral-900 outline-none transition-colors text-neutral-900 placeholder:text-text-secondary/50 ${invitedEmail && isSignUp ? 'bg-neutral-100 cursor-not-allowed' : ''}`}
                 placeholder="you@company.com"
               />
+              {invitedEmail && isSignUp && (
+                <p className="text-xs text-neutral-500 mt-1">This email is linked to your invitation and cannot be changed.</p>
+              )}
             </div>
 
             <div className="relative">
-              <label className="block text-xs font-bold uppercase tracking-wider text-neutral-900 mb-2">Password</label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-neutral-900 mb-2">
+                Password {isSignUp && <span className="text-red-500">*</span>}
+              </label>
               <input
                 ref={passwordRef}
                 type={showPassword ? 'text' : 'password'}
                 className="w-full h-14 px-4 pr-12 border-2 border-border bg-white focus:border-neutral-900 outline-none transition-colors text-neutral-900 placeholder:text-text-secondary/50"
-                placeholder="••••••••"
+                placeholder="Enter your password"
                 onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
               />
               <button
@@ -164,6 +235,12 @@ export default function LoginPage() {
               </button>
             </div>
 
+            {isSignUp && (
+              <p className="text-xs text-neutral-500">
+                Password must be at least 6 characters long.
+              </p>
+            )}
+
             {!isSignUp && (
               <div className="text-right">
                 <button className="text-sm font-bold uppercase tracking-wider text-text-secondary hover:text-neutral-900 transition-colors">
@@ -173,7 +250,7 @@ export default function LoginPage() {
             )}
 
             {error && (
-              <div className="p-4 bg-neutral-100 border-2 border-red-500 text-neutral-900 text-sm font-medium">
+              <div className="p-4 bg-red-50 border-2 border-red-200 text-red-700 text-sm font-medium rounded-lg">
                 {error}
               </div>
             )}
@@ -182,11 +259,17 @@ export default function LoginPage() {
               type="button"
               disabled={loading}
               onClick={handleSubmit}
-              className="w-full h-14 bg-[#476E66] hover:bg-black text-white text-sm font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-6"
+              className="w-full h-14 bg-[#476E66] hover:bg-[#3A5B54] text-white text-sm font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-6 rounded-lg"
             >
               {loading ? 'Please wait...' : isSignUp ? 'Create Account' : 'Log In'} 
               {!loading && <ArrowRight size={16} />}
             </button>
+
+            {isSignUp && (
+              <p className="text-xs text-neutral-500 text-center mt-4">
+                By creating an account, you agree to our Terms of Service and Privacy Policy.
+              </p>
+            )}
           </motion.div>
 
           {/* Switch Mode */}
@@ -194,11 +277,11 @@ export default function LoginPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.4, delay: 0.4 }}
-            className="mt-10 text-center text-text-secondary"
+            className="mt-8 text-center text-text-secondary"
           >
             {isSignUp ? 'Already have an account? ' : 'New to Billdora? '}
             <button
-              onClick={() => setIsSignUp(!isSignUp)}
+              onClick={() => { setIsSignUp(!isSignUp); setError(''); }}
               className="font-bold text-neutral-900 hover:underline transition-colors uppercase tracking-wider text-sm"
             >
               {isSignUp ? 'Log In' : 'Create Account'}

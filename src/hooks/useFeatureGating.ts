@@ -37,20 +37,25 @@ export function useFeatureGating(): FeatureGatingResult {
   };
 
   const getLimit = (limitType: FeatureLimitType): number | null => {
-    if (!currentPlan) return null;
+    if (!currentPlan?.limits) return null;
     
-    switch (limitType) {
-      case 'projects':
-        return currentPlan.max_projects;
-      case 'team_members':
-        return currentPlan.max_team_members;
-      case 'clients':
-        return currentPlan.max_clients;
-      case 'invoices':
-        return currentPlan.max_invoices_per_month;
-      default:
-        return null;
-    }
+    const limit = (() => {
+      switch (limitType) {
+        case 'projects':
+          return currentPlan.limits.projects;
+        case 'team_members':
+          return currentPlan.limits.team_members;
+        case 'clients':
+          return currentPlan.limits.clients;
+        case 'invoices':
+          return currentPlan.limits.invoices_per_month;
+        default:
+          return null;
+      }
+    })();
+    
+    // -1 means unlimited
+    return limit === -1 ? null : limit;
   };
 
   const getRemaining = (limitType: FeatureLimitType, currentCount: number): number | null => {

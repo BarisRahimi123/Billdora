@@ -1,6 +1,6 @@
 // Edge function to send emails via SendGrid
 
-const SENDGRID_API_KEY = Deno.env.get('SENDGRID_API_KEY') || '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';
+const SENDGRID_API_KEY = Deno.env.get('SENDGRID_API_KEY');
 
 Deno.serve(async (req) => {
   const corsHeaders = {
@@ -23,25 +23,33 @@ Deno.serve(async (req) => {
       );
     }
 
+    if (!SENDGRID_API_KEY) {
+      console.error('SENDGRID_API_KEY not configured');
+      return new Response(
+        JSON.stringify({ error: 'Email service not configured' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     let htmlContent = '';
     
     if (type === 'invitation') {
       const { inviterName, companyName, roleName, signupUrl } = data || {};
       htmlContent = `
-        <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px;">
+        <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; background: #ffffff;">
           <div style="text-align: center; margin-bottom: 40px;">
-            <div style="display: inline-block; width: 48px; height: 48px; background: #111827; color: white; font-size: 24px; font-weight: bold; line-height: 48px;">P</div>
-            <h1 style="margin: 16px 0 0; font-size: 24px; color: #111827;">PrimeLedger</h1>
+            <div style="display: inline-block; width: 48px; height: 48px; background: #476E66; color: white; font-size: 24px; font-weight: bold; line-height: 48px; border-radius: 12px;">B</div>
+            <h1 style="margin: 16px 0 0; font-size: 24px; color: #111827;">Billdora</h1>
           </div>
           <h2 style="color: #111827; font-size: 20px; margin-bottom: 24px;">You've been invited!</h2>
           <p style="color: #4B5563; font-size: 16px; line-height: 1.6;">
-            ${inviterName || 'A team member'} has invited you to join <strong>${companyName || 'their company'}</strong> on PrimeLedger${roleName ? ` as a <strong>${roleName}</strong>` : ''}.
+            ${inviterName || 'A team member'} has invited you to join <strong>${companyName || 'their company'}</strong> on Billdora${roleName ? ` as a <strong>${roleName}</strong>` : ''}.
           </p>
           <p style="color: #4B5563; font-size: 16px; line-height: 1.6;">
             Click the button below to create your account and get started:
           </p>
           <div style="text-align: center; margin: 32px 0;">
-            <a href="${signupUrl || 'https://primeledger.app/login'}" style="display: inline-block; background: #111827; color: white; text-decoration: none; padding: 14px 32px; font-size: 14px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">
+            <a href="${signupUrl || '#'}" style="display: inline-block; background: #476E66; color: white; text-decoration: none; padding: 14px 32px; font-size: 14px; font-weight: 600; border-radius: 8px;">
               Accept Invitation
             </a>
           </div>
@@ -50,13 +58,38 @@ Deno.serve(async (req) => {
           </p>
         </div>
       `;
+    } else if (type === 'confirmation') {
+      const { userName, confirmationUrl } = data || {};
+      htmlContent = `
+        <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; background: #ffffff;">
+          <div style="text-align: center; margin-bottom: 40px;">
+            <div style="display: inline-block; width: 48px; height: 48px; background: #476E66; color: white; font-size: 24px; font-weight: bold; line-height: 48px; border-radius: 12px;">B</div>
+            <h1 style="margin: 16px 0 0; font-size: 24px; color: #111827;">Billdora</h1>
+          </div>
+          <h2 style="color: #111827; font-size: 20px; margin-bottom: 24px;">Confirm your email</h2>
+          <p style="color: #4B5563; font-size: 16px; line-height: 1.6;">
+            Hi${userName ? ` ${userName}` : ''},
+          </p>
+          <p style="color: #4B5563; font-size: 16px; line-height: 1.6;">
+            Thank you for signing up for Billdora. Please confirm your email address by clicking the button below:
+          </p>
+          <div style="text-align: center; margin: 32px 0;">
+            <a href="${confirmationUrl || '#'}" style="display: inline-block; background: #476E66; color: white; text-decoration: none; padding: 14px 32px; font-size: 14px; font-weight: 600; border-radius: 8px;">
+              Confirm Email
+            </a>
+          </div>
+          <p style="color: #9CA3AF; font-size: 14px; margin-top: 40px;">
+            If you didn't create an account, you can safely ignore this email.
+          </p>
+        </div>
+      `;
     } else if (type === 'invoice' || type === 'quote') {
       const { documentNumber, clientName, companyName, total, pdfUrl } = data || {};
       htmlContent = `
-        <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px;">
+        <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; background: #ffffff;">
           <div style="text-align: center; margin-bottom: 40px;">
-            <div style="display: inline-block; width: 48px; height: 48px; background: #111827; color: white; font-size: 24px; font-weight: bold; line-height: 48px;">P</div>
-            <h1 style="margin: 16px 0 0; font-size: 24px; color: #111827;">PrimeLedger</h1>
+            <div style="display: inline-block; width: 48px; height: 48px; background: #476E66; color: white; font-size: 24px; font-weight: bold; line-height: 48px; border-radius: 12px;">B</div>
+            <h1 style="margin: 16px 0 0; font-size: 24px; color: #111827;">Billdora</h1>
           </div>
           <p style="color: #4B5563; font-size: 16px; line-height: 1.6;">
             Dear ${clientName || 'Valued Customer'},
@@ -67,7 +100,7 @@ Deno.serve(async (req) => {
           ${total ? `<p style="color: #111827; font-size: 20px; font-weight: bold;">Total Amount: $${Number(total).toFixed(2)}</p>` : ''}
           ${pdfUrl ? `
           <div style="text-align: center; margin: 32px 0;">
-            <a href="${pdfUrl}" style="display: inline-block; background: #111827; color: white; text-decoration: none; padding: 14px 32px; font-size: 14px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">
+            <a href="${pdfUrl}" style="display: inline-block; background: #476E66; color: white; text-decoration: none; padding: 14px 32px; font-size: 14px; font-weight: 600; border-radius: 8px;">
               View ${type}
             </a>
           </div>
@@ -82,7 +115,7 @@ Deno.serve(async (req) => {
         </div>
       `;
     } else {
-      htmlContent = `<p>${data?.message || 'You have a new notification from PrimeLedger.'}</p>`;
+      htmlContent = `<p>${data?.message || 'You have a new notification from Billdora.'}</p>`;
     }
 
     // Send via SendGrid
@@ -94,7 +127,7 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         personalizations: [{ to: [{ email: to }] }],
-        from: { email: 'noreply@primeledger.app', name: 'PrimeLedger' },
+        from: { email: 'noreply@billdora.com', name: 'Billdora' },
         subject: subject,
         content: [{ type: 'text/html', value: htmlContent }],
       }),

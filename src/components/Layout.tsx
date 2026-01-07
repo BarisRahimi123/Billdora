@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { usePermissions } from '../contexts/PermissionsContext';
-import { api, Project } from '../lib/api';
+import { api, Project, notificationsApi, Notification as AppNotification } from '../lib/api';
 import { 
   LayoutDashboard, Users, FolderKanban, Clock, FileText, Calendar, BarChart3, Settings, LogOut,
   Search, Bell, ChevronDown, X, Play, Pause, Square, Menu, PieChart, ArrowLeft
@@ -54,6 +54,12 @@ export default function Layout() {
   const [showTimerWidget, setShowTimerWidget] = useState(false);
   const [projects, setProjects] = useState<Project[]>([]);
   const timerInterval = useRef<NodeJS.Timeout | null>(null);
+  
+  // Notifications state
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const notificationsRef = useRef<HTMLDivElement>(null);
 
   // Close sidebar on route change (mobile)
   useEffect(() => {
@@ -63,8 +69,42 @@ export default function Layout() {
   useEffect(() => {
     if (profile?.company_id) {
       api.getProjects(profile.company_id).then(setProjects).catch(console.error);
+      loadNotifications();
     }
   }, [profile?.company_id]);
+
+  async function loadNotifications() {
+    if (!profile?.company_id) return;
+    try {
+      const [notifs, count] = await Promise.all([
+        notificationsApi.getNotifications(profile.company_id, profile?.id, 10),
+        notificationsApi.getUnreadCount(profile.company_id, profile?.id)
+      ]);
+      setNotifications(notifs);
+      setUnreadCount(count);
+    } catch (error) {
+      console.error('Failed to load notifications:', error);
+    }
+  }
+
+  async function handleMarkAsRead(id: string) {
+    try {
+      await notificationsApi.markAsRead(id);
+      loadNotifications();
+    } catch (error) {
+      console.error('Failed to mark as read:', error);
+    }
+  }
+
+  async function handleMarkAllAsRead() {
+    if (!profile?.company_id) return;
+    try {
+      await notificationsApi.markAllAsRead(profile.company_id, profile?.id);
+      loadNotifications();
+    } catch (error) {
+      console.error('Failed to mark all as read:', error);
+    }
+  }
 
   useEffect(() => {
     if (timerRunning) {
@@ -185,7 +225,7 @@ export default function Layout() {
 
   const getResultIcon = (type: string) => {
     switch (type) {
-      case 'project': return <FolderKanban className="w-4 h-4 text-neutral-900-500" />;
+      case 'project': return <FolderKanban className="w-4 h-4 text-neutral-500" />;
       case 'client': return <Users className="w-4 h-4 text-neutral-700" />;
       case 'invoice': return <FileText className="w-4 h-4 text-neutral-700" />;
       default: return null;
@@ -335,7 +375,7 @@ export default function Layout() {
               {!showTimerWidget && (
                 <button
                   onClick={() => setShowTimerWidget(true)}
-                  className="hidden sm:flex items-center gap-2 px-3 py-2 bg-[#476E66]-50 text-neutral-900-600 rounded-xl hover:bg-[#3A5B54]-100 transition-colors"
+                  className="hidden sm:flex items-center gap-2 px-3 py-2 bg-[#476E66]/10 text-neutral-600 rounded-xl hover:bg-[#3A5B54]/20 transition-colors"
                 >
                   <Clock className="w-4 h-4" />
                   <span className="text-sm font-medium hidden md:inline">Timer</span>
@@ -351,9 +391,61 @@ export default function Layout() {
               )}
 
               {/* Notifications */}
-              <button className="relative p-2 hover:bg-neutral-100 rounded-xl transition-colors">
-                <Bell className="w-5 h-5 text-neutral-600" />
-              </button>
+              <div ref={notificationsRef} className="relative">
+                <button 
+                  onClick={() => setNotificationsOpen(!notificationsOpen)}
+                  className="relative p-2 hover:bg-neutral-100 rounded-xl transition-colors"
+                >
+                  <Bell className="w-5 h-5 text-neutral-600" />
+                  {unreadCount > 0 && (
+                    <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
+                </button>
+
+                {notificationsOpen && (
+                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-lg border border-neutral-100 z-50 overflow-hidden">
+                    <div className="p-3 border-b border-neutral-100 flex items-center justify-between">
+                      <h3 className="font-semibold text-neutral-900">Notifications</h3>
+                      {unreadCount > 0 && (
+                        <button 
+                          onClick={handleMarkAllAsRead}
+                          className="text-xs text-[#476E66] hover:underline"
+                        >
+                          Mark all read
+                        </button>
+                      )}
+                    </div>
+                    <div className="max-h-80 overflow-y-auto">
+                      {notifications.length === 0 ? (
+                        <div className="p-6 text-center text-neutral-500 text-sm">
+                          No notifications yet
+                        </div>
+                      ) : (
+                        notifications.map((notif) => (
+                          <div 
+                            key={notif.id}
+                            onClick={() => !notif.is_read && handleMarkAsRead(notif.id)}
+                            className={`p-3 border-b border-neutral-50 hover:bg-neutral-50 cursor-pointer ${!notif.is_read ? 'bg-blue-50/50' : ''}`}
+                          >
+                            <div className="flex items-start gap-3">
+                              <div className={`w-2 h-2 rounded-full mt-2 ${!notif.is_read ? 'bg-[#476E66]' : 'bg-transparent'}`} />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-neutral-900 truncate">{notif.title}</p>
+                                <p className="text-xs text-neutral-500 mt-0.5 line-clamp-2">{notif.message}</p>
+                                <p className="text-xs text-neutral-400 mt-1">
+                                  {notif.created_at ? new Date(notif.created_at).toLocaleDateString() : ''}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
 
               {/* User Menu */}
               <div ref={userMenuRef} className="relative">
@@ -361,7 +453,7 @@ export default function Layout() {
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
                   className="flex items-center gap-2 px-2 lg:px-3 py-2 hover:bg-neutral-100 rounded-xl transition-colors"
                 >
-                  <div className="w-8 h-8 rounded-full bg-[#476E66]-100 flex items-center justify-center text-neutral-900-600 font-medium">
+                  <div className="w-8 h-8 rounded-full bg-[#476E66]/20 flex items-center justify-center text-neutral-600 font-medium">
                     {profile?.full_name?.charAt(0) || 'U'}
                   </div>
                   {profile?.full_name && <span className="text-sm font-medium text-neutral-700 hidden lg:inline">{profile.full_name}</span>}

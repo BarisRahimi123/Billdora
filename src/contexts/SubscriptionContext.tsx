@@ -6,12 +6,14 @@ export interface Plan {
   id: string;
   name: string;
   stripe_price_id: string | null;
-  price_monthly: number;
-  price_yearly: number | null;
-  max_projects: number | null;
-  max_team_members: number | null;
-  max_clients: number | null;
-  max_invoices_per_month: number | null;
+  amount: number;
+  interval: string;
+  limits: {
+    projects: number;
+    team_members: number;
+    clients: number;
+    invoices_per_month: number;
+  };
   features: string[];
   is_active: boolean;
 }
@@ -58,10 +60,10 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   const loadPlans = useCallback(async () => {
     try {
       const { data, error: err } = await supabase
-        .from('primeledger_plans')
+        .from('billdora_plans')
         .select('*')
         .eq('is_active', true)
-        .order('price_monthly', { ascending: true });
+        .order('amount', { ascending: true });
 
       if (err) throw err;
       setPlans(data || []);
@@ -83,8 +85,8 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
 
     try {
       const { data: subData, error: subErr } = await supabase
-        .from('primeledger_subscriptions')
-        .select('*, plan:primeledger_plans(*)')
+        .from('billdora_subscriptions')
+        .select('*, plan:billdora_plans(*)')
         .eq('user_id', user.id)
         .in('status', ['active', 'trialing'])
         .order('created_at', { ascending: false })
@@ -99,7 +101,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       } else {
         // No active subscription - user is on Starter (free) plan
         const allPlans = plans.length > 0 ? plans : await loadPlans();
-        const starterPlan = allPlans.find((p: Plan) => p.name === 'Starter' || p.price_monthly === 0);
+        const starterPlan = allPlans.find((p: Plan) => p.name === 'Starter' || p.amount === 0);
         setSubscription(null);
         setCurrentPlan(starterPlan || null);
       }
@@ -140,28 +142,28 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     limitType: 'projects' | 'team_members' | 'clients' | 'invoices',
     currentCount: number
   ): { allowed: boolean; limit: number | null; remaining: number | null } => {
-    if (!currentPlan) {
+    if (!currentPlan?.limits) {
       return { allowed: false, limit: null, remaining: null };
     }
 
     let limit: number | null = null;
     switch (limitType) {
       case 'projects':
-        limit = currentPlan.max_projects;
+        limit = currentPlan.limits.projects;
         break;
       case 'team_members':
-        limit = currentPlan.max_team_members;
+        limit = currentPlan.limits.team_members;
         break;
       case 'clients':
-        limit = currentPlan.max_clients;
+        limit = currentPlan.limits.clients;
         break;
       case 'invoices':
-        limit = currentPlan.max_invoices_per_month;
+        limit = currentPlan.limits.invoices_per_month;
         break;
     }
 
-    // null limit means unlimited
-    if (limit === null) {
+    // -1 or null limit means unlimited
+    if (limit === null || limit === -1) {
       return { allowed: true, limit: null, remaining: null };
     }
 
@@ -174,7 +176,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   }, [currentPlan]);
 
   const isPro = currentPlan?.name?.toLowerCase().includes('professional') || false;
-  const isStarter = !isPro && (currentPlan?.name === 'Starter' || currentPlan?.price_monthly === 0 || !subscription);
+  const isStarter = !isPro && (currentPlan?.name === 'Starter' || currentPlan?.amount === 0 || !subscription);
 
   return (
     <SubscriptionContext.Provider

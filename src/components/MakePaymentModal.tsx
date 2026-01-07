@@ -238,7 +238,7 @@ export default function MakePaymentModal({ clients, invoices, onClose, onSave }:
                   setProjectSpecific(e.target.checked);
                   if (!e.target.checked) setSelectedProjectId('');
                 }}
-                className="mt-1 w-4 h-4 text-neutral-900-500 rounded border-neutral-300"
+                className="mt-1 w-4 h-4 text-neutral-500 rounded border-neutral-300"
               />
               <div className="flex-1">
                 <label htmlFor="projectSpecific" className="font-medium text-neutral-900 cursor-pointer">
@@ -306,12 +306,12 @@ export default function MakePaymentModal({ clients, invoices, onClose, onSave }:
                                     handlePaymentAmountChange(invoice.id, '');
                                   }
                                 }}
-                                className="w-4 h-4 rounded border-neutral-300 text-neutral-900-500"
+                                className="w-4 h-4 rounded border-neutral-300 text-neutral-500"
                               />
                             </td>
                             <td className="px-4 py-3">
                               <div className="flex items-center gap-2">
-                                <a href="#" className="text-neutral-900-600 hover:underline font-medium">
+                                <a href="#" className="text-neutral-600 hover:underline font-medium">
                                   {invoice.invoice_number}
                                 </a>
                                 {isAutoMatched && (

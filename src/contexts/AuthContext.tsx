@@ -2,17 +2,23 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User } from '@supabase/supabase-js';
 import { supabase, Profile } from '../lib/supabase';
 
+interface SignUpResult {
+  error: Error | null;
+  emailConfirmationRequired?: boolean;
+}
+
 interface AuthContextType {
   user: User | null;
   profile: Profile | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>;
+  signUp: (email: string, password: string, fullName: string, phone: string, companyName?: string) => Promise<SignUpResult>;
   signInWithGoogle: () => Promise<{ error: Error | null }>;
   signInWithApple: () => Promise<{ error: Error | null }>;
   signInWithFacebook: () => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  resendVerificationEmail: (email: string) => Promise<{ error: Error | null }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -23,26 +29,52 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function loadUser() {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        setUser(user);
-        if (user) {
-          const { data } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', user.id)
-            .maybeSingle();
-          setProfile(data);
-        }
-      } finally {
+    let isMounted = true;
+    
+    // Safety timeout - never let loading state hang forever
+    const timeout = setTimeout(() => {
+      if (isMounted) {
+        console.warn('Auth check timed out after 10 seconds');
         setLoading(false);
       }
+    }, 10000);
+    
+    async function loadUser() {
+      try {
+        // Use getSession for faster cached response (doesn't hit network if session exists)
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!isMounted) return;
+        const currentUser = session?.user || null;
+        setUser(currentUser);
+        
+        if (currentUser) {
+          // Load profile BEFORE setting loading to false - pages depend on profile.company_id
+          try {
+            const { data } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', currentUser.id)
+              .maybeSingle();
+            if (isMounted) setProfile(data);
+          } catch (e) {
+            console.error('Profile load error:', e);
+          }
+        }
+      } catch (error) {
+        console.error('Auth load error:', error);
+      } finally {
+        clearTimeout(timeout);
+        if (isMounted) setLoading(false);
+      }
     }
+    
     loadUser();
-
+    
+    // Set up auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
+        if (!isMounted) return;
         setUser(session?.user || null);
         if (session?.user) {
           const { data } = await supabase
@@ -50,19 +82,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             .select('*')
             .eq('id', session.user.id)
             .maybeSingle();
-          setProfile(data);
+          if (isMounted) setProfile(data);
         } else {
           setProfile(null);
         }
       }
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      clearTimeout(timeout);
+      subscription.unsubscribe();
+    };
   }, []);
 
   async function signIn(email: string, password: string) {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    
+    // Check if email is not confirmed
+    if (error?.message?.toLowerCase().includes('email not confirmed')) {
+      return { error: new Error('Please verify your email address before logging in. Check your inbox for the verification link.') };
+    }
+    
     if (!error && data.user) {
+      // Double-check email confirmation
+      if (!data.user.email_confirmed_at) {
+        await supabase.auth.signOut();
+        return { error: new Error('Please verify your email address before logging in. Check your inbox for the verification link.') };
+      }
+      
       setUser(data.user);
       const { data: profileData } = await supabase.from('profiles').select('*').eq('id', data.user.id).maybeSingle();
       setProfile(profileData);
@@ -70,9 +118,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error };
   }
 
-  async function signUp(email: string, password: string, fullName: string) {
-    const { data, error } = await supabase.auth.signUp({ email, password });
-    if (!error && data.user) {
+  async function signUp(email: string, password: string, fullName: string, phone: string, companyName?: string): Promise<SignUpResult> {
+    const { data, error } = await supabase.auth.signUp({ 
+      email, 
+      password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/login`,
+      }
+    });
+    
+    if (error) {
+      return { error };
+    }
+    
+    if (data.user) {
+      // Check if email confirmation is required (user exists but not confirmed)
+      const emailConfirmationRequired = !data.user.email_confirmed_at;
+      
       // Check if there's a pending invitation for this email
       let invitation: any = null;
       try {
@@ -108,13 +170,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.error('Failed to update invitation status:', e);
         }
       } else {
-        // New user signing up - create company and make them admin
+        // New user signing up - create company via RPC (bypasses RLS during signup)
         try {
-          const { data: newCompany, error: companyError } = await supabase.from('companies').insert({
-            name: `${fullName}'s Company`,
-          }).select().single();
-          if (!companyError && newCompany) {
-            companyId = newCompany.id;
+          const actualCompanyName = companyName?.trim() || `${fullName}'s Company`;
+          const { data: newCompanyId, error: companyError } = await supabase.rpc('create_company_for_user', {
+            p_user_id: data.user.id,
+            p_company_name: actualCompanyName,
+            p_full_name: fullName,
+            p_phone: phone
+          });
+          if (!companyError && newCompanyId) {
+            companyId = newCompanyId;
           }
         } catch (e) {
           console.error('Company creation failed:', e);
@@ -127,11 +193,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .select('*').eq('id', data.user.id).maybeSingle();
         
         if (existingProfile) {
-          // Profile exists, update it with company_id and role
+          // Profile exists, update it with company_id, role, phone, and company_name
           const updateData: any = { 
             company_id: companyId, 
             full_name: fullName, 
-            role: userRole 
+            role: userRole,
+            phone: phone,
+            company_name: companyName || null,
           };
           if (roleId) updateData.role_id = roleId;
           
@@ -150,6 +218,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             role: userRole,
             is_active: true,
             is_billable: true,
+            phone: phone,
+            company_name: companyName || null,
           };
           if (roleId) profileData.role_id = roleId;
           
@@ -160,14 +230,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.error('Profile setup failed:', e);
       }
       
-      setUser(data.user);
+      // Sync to HubSpot for lead capture (fire and forget)
+      try {
+        fetch('https://bqxnagmmegdbqrzhheip.supabase.co/functions/v1/hubspot-sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email,
+            full_name: fullName,
+            phone_number: phone,
+            company_name: companyName,
+          }),
+        }).catch(console.error);
+      } catch (e) {
+        console.error('HubSpot sync failed:', e);
+      }
+      
+      // Don't set user if email confirmation is required
+      if (!emailConfirmationRequired) {
+        setUser(data.user);
+      }
+      
+      return { error: null, emailConfirmationRequired };
     }
+    
+    return { error: null };
+  }
+
+  async function resendVerificationEmail(email: string) {
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email,
+      options: {
+        emailRedirectTo: `${window.location.origin}/login`,
+      }
+    });
     return { error };
   }
 
   async function signOut() {
-    await supabase.auth.signOut();
+    // Clear local state first for immediate UI update
+    setUser(null);
     setProfile(null);
+    // Then sign out from Supabase
+    await supabase.auth.signOut();
   }
 
   async function signInWithGoogle() {
@@ -206,7 +312,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signIn, signUp, signInWithGoogle, signInWithApple, signInWithFacebook, signOut, refreshProfile }}>
+    <AuthContext.Provider value={{ user, profile, loading, signIn, signUp, signInWithGoogle, signInWithApple, signInWithFacebook, signOut, refreshProfile, resendVerificationEmail }}>
       {children}
     </AuthContext.Provider>
   );

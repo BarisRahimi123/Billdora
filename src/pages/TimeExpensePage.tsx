@@ -168,7 +168,7 @@ interface SubmittedRow {
 }
 
 export default function TimeExpensePage() {
-  const { user, profile } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
   const { canViewFinancials, canApprove } = usePermissions();
   const [activeTab, setActiveTab] = useState<TimeTab>('timesheet');
   const [projects, setProjects] = useState<Project[]>([]);
@@ -282,7 +282,7 @@ export default function TimeExpensePage() {
 
   useEffect(() => {
     loadData();
-  }, [profile?.company_id, user?.id, weekStart, canApprove]);
+  }, [profile?.company_id, user?.id, weekStart]);
 
   useEffect(() => {
     if (timerRunning) {
@@ -374,7 +374,10 @@ export default function TimeExpensePage() {
   };
 
   async function loadData() {
-    if (!profile?.company_id || !user?.id) return;
+    if (!profile?.company_id || !user?.id) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const weekEnd = new Date(weekStart);
@@ -614,10 +617,18 @@ export default function TimeExpensePage() {
     }
   };
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin w-8 h-8 border-2 border-neutral-900-500 border-t-transparent rounded-full" />
+        <div className="animate-spin w-8 h-8 border-2 border-neutral-600 border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  if (!profile?.company_id) {
+    return (
+      <div className="p-12 text-center">
+        <p className="text-neutral-500">Unable to load time entries. Please log in again.</p>
       </div>
     );
   }
@@ -688,7 +699,7 @@ export default function TimeExpensePage() {
         <div className="bg-white rounded-2xl border border-neutral-100 p-4 mb-6">
           <div className="flex items-center gap-4 flex-wrap">
             <div className="flex items-center gap-2">
-              <div className={`text-3xl font-mono font-bold ${timerRunning ? 'text-neutral-900-600' : 'text-neutral-900'}`}>
+              <div className={`text-3xl font-mono font-bold ${timerRunning ? 'text-neutral-600' : 'text-neutral-900'}`}>
                 {formatTimer(timerSeconds)}
               </div>
             </div>
@@ -746,14 +757,22 @@ export default function TimeExpensePage() {
                 <span className="text-neutral-500 text-sm">Enter your hours below</span>
               </div>
               <div className="flex items-center gap-2">
-                <button type="button" onClick={() => navigateWeek(-1)} className="p-2 hover:bg-neutral-100 rounded-lg cursor-pointer">
-                  <ChevronLeft className="w-5 h-5" />
+                <button 
+                  type="button" 
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigateWeek(-1); }}
+                  className="p-2 hover:bg-neutral-200 bg-neutral-100 rounded-lg cursor-pointer transition-colors"
+                >
+                  <ChevronLeft className="w-5 h-5 text-neutral-700" />
                 </button>
-                <h3 className="text-lg font-semibold text-neutral-900 select-none">
+                <h3 className="text-lg font-semibold text-neutral-900 select-none min-w-[200px] text-center">
                   {formatDate(weekDays[0])} - {formatDate(weekDays[6])}, {weekDays[0].getFullYear()}
                 </h3>
-                <button type="button" onClick={() => navigateWeek(1)} className="p-2 hover:bg-neutral-100 rounded-lg cursor-pointer">
-                  <ChevronRight className="w-5 h-5" />
+                <button 
+                  type="button" 
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigateWeek(1); }}
+                  className="p-2 hover:bg-neutral-200 bg-neutral-100 rounded-lg cursor-pointer transition-colors"
+                >
+                  <ChevronRight className="w-5 h-5 text-neutral-700" />
                 </button>
               </div>
             </div>
@@ -782,8 +801,16 @@ export default function TimeExpensePage() {
                 <tbody className="divide-y divide-neutral-100">
                   {draftRows.length === 0 && savedDraftRows.length === 0 && (
                     <tr>
-                      <td colSpan={10} className="text-center py-8 text-neutral-500">
-                        <p>No draft entries. Add a project row or use the timer to start tracking.</p>
+                      <td colSpan={10} className="text-center py-8">
+                        <div className="space-y-3">
+                          <p className="text-neutral-500">No time entries yet for this week.</p>
+                          <button 
+                            onClick={() => setShowTimeEntryModal(true)}
+                            className="px-4 py-2 bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54] transition-colors font-medium"
+                          >
+                            + Add Project Row to Enter Time
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   )}
@@ -811,31 +838,27 @@ export default function TimeExpensePage() {
                         const isFutureDate = dateKey > todayStr;
                         return (
                           <td key={i} className="px-2 py-3">
-                            {isRejected ? (
-                              <input
-                                type="number"
-                                min="0"
-                                max="24"
-                                step="0.5"
-                                defaultValue={entry?.hours || ''}
-                                disabled={isFutureDate}
-                                className={`w-full h-10 text-center rounded-lg border-2 outline-none ${
-                                  isFutureDate 
-                                    ? 'border-neutral-200 bg-neutral-50 text-neutral-400 cursor-not-allowed' 
-                                    : 'border-red-300 bg-red-50 focus:ring-2 focus:ring-red-400 focus:border-transparent'
-                                }`}
-                                onChange={(e) => {
-                                  const val = parseFloat(e.target.value) || 0;
-                                  if (entry) {
-                                    setRejectedEdits(prev => ({ ...prev, [entry.id]: val }));
-                                  }
-                                }}
-                              />
-                            ) : (
-                              <div className="w-full h-10 flex items-center justify-center text-center rounded-lg border-2 border-green-200 bg-green-50">
-                                {entry ? entry.hours : ''}
-                              </div>
-                            )}
+                            <input
+                              type="number"
+                              min="0"
+                              max="24"
+                              step="0.5"
+                              defaultValue={entry?.hours || ''}
+                              disabled={isFutureDate}
+                              className={`w-full h-10 text-center rounded-lg border-2 outline-none ${
+                                isFutureDate 
+                                  ? 'border-neutral-200 bg-neutral-50 text-neutral-400 cursor-not-allowed' 
+                                  : isRejected 
+                                    ? 'border-red-300 bg-red-50 focus:ring-2 focus:ring-red-400 focus:border-transparent'
+                                    : 'border-green-300 bg-green-50 focus:ring-2 focus:ring-green-400 focus:border-transparent'
+                              }`}
+                              onChange={(e) => {
+                                const val = parseFloat(e.target.value) || 0;
+                                if (entry) {
+                                  setRejectedEdits(prev => ({ ...prev, [entry.id]: val }));
+                                }
+                              }}
+                            />
                           </td>
                         );
                       })}
@@ -864,7 +887,7 @@ export default function TimeExpensePage() {
                       <td className="px-4 py-3">
                         <div className="font-medium text-neutral-900">
                           {row.project?.name || 'Unknown Project'}
-                          {row.task && <span className="text-neutral-900-600"> / {row.task.name}</span>}
+                          {row.task && <span className="text-neutral-600"> / {row.task.name}</span>}
                         </div>
                       </td>
                       {weekDays.map((day, i) => {
@@ -913,9 +936,9 @@ export default function TimeExpensePage() {
                     <td colSpan={10} className="py-3">
                       <button 
                         onClick={() => setShowTimeEntryModal(true)}
-                        className="text-neutral-900-500 hover:text-neutral-700-600 font-medium text-sm"
+                        className="text-[#476E66] hover:text-[#3A5B54] font-medium text-sm flex items-center gap-1"
                       >
-                        + Add a project row to start tracking
+                        <span className="text-lg">+</span> Add another project row
                       </button>
                     </td>
                   </tr>
@@ -933,7 +956,7 @@ export default function TimeExpensePage() {
                           </td>
                         );
                       })}
-                      <td className="px-4 py-3 text-center font-bold text-neutral-900-600 text-lg">
+                      <td className="px-4 py-3 text-center font-bold text-neutral-600 text-lg">
                         {getTotalDraftHours()}h
                       </td>
                       <td></td>
@@ -1074,7 +1097,7 @@ export default function TimeExpensePage() {
                     <p>No expenses recorded</p>
                     <button 
                       onClick={() => setShowExpenseModal(true)}
-                      className="mt-2 text-neutral-900-500 hover:text-neutral-700-600 font-medium"
+                      className="mt-2 text-neutral-500 hover:text-neutral-600 font-medium"
                     >
                       Add your first expense
                     </button>
@@ -1819,7 +1842,7 @@ function ExpenseModal({ expense, projects, companyId, userId, onClose, onSave }:
             </select>
           </div>
           <div className="flex items-center gap-2">
-            <input type="checkbox" id="billable" checked={billable} onChange={(e) => setBillable(e.target.checked)} className="rounded border-neutral-300 text-neutral-900-500 focus:ring-primary-500" />
+            <input type="checkbox" id="billable" checked={billable} onChange={(e) => setBillable(e.target.checked)} className="rounded border-neutral-300 text-neutral-500 focus:ring-primary-500" />
             <label htmlFor="billable" className="text-sm text-neutral-700">Billable to client</label>
           </div>
           <div>

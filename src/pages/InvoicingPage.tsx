@@ -1,20 +1,22 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { api, Invoice, Client, Project } from '../lib/api';
+import { api, Invoice, Client, Project, reminderHistoryApi, ReminderHistory, recurringInvoicesApi, RecurringInvoice } from '../lib/api';
 import { supabase } from '../lib/supabase';
-import { Plus, Search, Filter, Download, MoreHorizontal, DollarSign, FileText, Clock, X, Check, Send, Printer, Copy, Mail, CreditCard, Eye, ChevronLeft, RefreshCw, Camera, Save, Trash2, Edit2, ArrowUpRight, List, LayoutGrid, ChevronDown, ChevronRight } from 'lucide-react';
+import { Plus, Search, Filter, Download, MoreHorizontal, DollarSign, FileText, Clock, X, Check, Send, Printer, Copy, Mail, CreditCard, Eye, ChevronLeft, RefreshCw, Camera, Save, Trash2, Edit2, ArrowUpRight, List, LayoutGrid, ChevronDown, ChevronRight, Bell, Calendar, CheckCircle, AlertCircle, Repeat, History, User } from 'lucide-react';
 import PaymentModal from '../components/PaymentModal';
 import MakePaymentModal from '../components/MakePaymentModal';
 import { useToast } from '../components/Toast';
+import { InvoicesSkeleton } from '../components/Skeleton';
 
 export default function InvoicingPage() {
-  const { profile } = useAuth();
+  const { profile, user, loading: authLoading } = useAuth();
   const { showToast } = useToast();
   const location = useLocation();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [recurringInvoices, setRecurringInvoices] = useState<RecurringInvoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -116,7 +118,7 @@ export default function InvoicingPage() {
 
   useEffect(() => {
     loadData();
-  }, [profile?.company_id]);
+  }, [profile?.company_id, user?.id]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -135,14 +137,16 @@ export default function InvoicingPage() {
     }
     setLoading(true);
     try {
-      const [invoicesData, clientsData, projectsData] = await Promise.all([
+      const [invoicesData, clientsData, projectsData, recurringData] = await Promise.all([
         api.getInvoices(profile.company_id),
         api.getClients(profile.company_id),
         api.getProjects(profile.company_id),
+        recurringInvoicesApi.getAll(profile.company_id),
       ]);
       setInvoices(invoicesData);
       setClients(clientsData);
       setProjects(projectsData);
+      setRecurringInvoices(recurringData);
     } catch (error) {
       console.error('Failed to load data:', error);
     } finally {
@@ -180,7 +184,26 @@ export default function InvoicingPage() {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(amount);
   };
 
-
+  const handleExportCSV = () => {
+    const headers = ['Invoice #', 'Client', 'Project', 'Amount', 'Status', 'Due Date', 'Created'];
+    const rows = filteredInvoices.map(inv => [
+      inv.invoice_number || '',
+      inv.client?.name || '',
+      inv.project?.name || '',
+      inv.total?.toString() || '0',
+      inv.status || '',
+      inv.due_date ? new Date(inv.due_date).toLocaleDateString() : '',
+      inv.created_at ? new Date(inv.created_at).toLocaleDateString() : ''
+    ]);
+    const csv = [headers.join(','), ...rows.map(r => r.map(v => `"${v}"`).join(','))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `invoices-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const updateInvoiceStatus = async (invoiceId: string, status: string, paidAt?: string) => {
     try {
@@ -349,10 +372,15 @@ export default function InvoicingPage() {
     setActiveMenu(null);
   };
 
-  if (loading) {
+  // Wait for auth to complete before checking profile
+  if (authLoading || loading) {
+    return <InvoicesSkeleton />;
+  }
+
+  if (!profile?.company_id) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin w-8 h-8 border-2 border-neutral-900-500 border-t-transparent rounded-full" />
+      <div className="p-12 text-center">
+        <p className="text-neutral-500">Unable to load invoices. Please log in again.</p>
       </div>
     );
   }
@@ -365,6 +393,13 @@ export default function InvoicingPage() {
           <p className="text-neutral-500">Manage invoices and payments</p>
         </div>
         <div className="flex gap-3">
+          <button
+            onClick={handleExportCSV}
+            className="flex items-center gap-2 px-4 py-2.5 border border-neutral-200 bg-white text-neutral-700 rounded-xl hover:bg-neutral-50 transition-colors"
+          >
+            <Download className="w-4 h-4" />
+            Export CSV
+          </button>
           <button
             onClick={() => setShowMakePaymentModal(true)}
             className="flex items-center gap-2 px-4 py-2.5 border border-neutral-200 bg-white text-neutral-700 rounded-xl hover:bg-neutral-50 transition-colors"
@@ -415,6 +450,17 @@ export default function InvoicingPage() {
           </div>
           <p className="text-3xl font-bold text-neutral-900">{formatCurrency(stats.arAging)}</p>
           <p className="text-sm text-neutral-500 mt-1">Overdue balance</p>
+        </div>
+
+        <div className="bg-white rounded-2xl p-6 border border-neutral-100">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center">
+              <Repeat className="w-5 h-5 text-purple-700" />
+            </div>
+            <span className="text-neutral-500 text-sm">Recurring</span>
+          </div>
+          <p className="text-3xl font-bold text-neutral-900">{recurringInvoices.filter(r => r.is_active).length}</p>
+          <p className="text-sm text-neutral-500 mt-1">Active schedules</p>
         </div>
       </div>
 
@@ -518,9 +564,16 @@ export default function InvoicingPage() {
                     <td className="px-6 py-4 text-neutral-600">{invoice.project?.name || '-'}</td>
                     <td className="px-6 py-4 text-right font-medium text-neutral-900">{formatCurrency(invoice.total)}</td>
                     <td className="px-6 py-4">
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(invoice.status)}`}>
-                        {invoice.status || 'draft'}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(invoice.status)}`}>
+                          {invoice.status || 'draft'}
+                        </span>
+                        {recurringInvoices.some(r => r.template_invoice_id === invoice.id && r.is_active) && (
+                          <span className="flex items-center gap-1 px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs">
+                            <Repeat className="w-3 h-3" /> Recurring
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4 text-neutral-600">
                       {invoice.due_date ? new Date(invoice.due_date).toLocaleDateString() : '-'}
@@ -729,6 +782,10 @@ function InvoiceModal({ clients, projects, companyId, onClose, onSave }: { clien
   const [selectedTasks, setSelectedTasks] = useState<Map<string, { billingType: 'milestone' | 'percentage'; percentageToBill: number }>>(new Map());
   const [loadingTasks, setLoadingTasks] = useState(false);
 
+  // Recurring invoice state
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [recurringFrequency, setRecurringFrequency] = useState<'weekly' | 'bi-weekly' | 'monthly' | 'quarterly' | 'yearly'>('monthly');
+
   const CALCULATOR_OPTIONS = [
     { id: 'manual', name: 'Manual Invoice', description: 'Enter a specific dollar amount' },
     { id: 'milestone', name: 'By Milestone', description: 'Bill entire task budget' },
@@ -736,6 +793,19 @@ function InvoiceModal({ clients, projects, companyId, onClose, onSave }: { clien
     { id: 'time_materials', name: 'Time & Materials', description: 'Bill hours and expenses' },
     { id: 'fixed_fee', name: 'Fixed Fee', description: 'Bill based on project tasks' },
   ];
+
+  const calculateNextRunDate = (frequency: string, fromDate: Date): Date => {
+    const next = new Date(fromDate);
+    switch (frequency) {
+      case 'weekly': next.setDate(next.getDate() + 7); break;
+      case 'bi-weekly': next.setDate(next.getDate() + 14); break;
+      case 'monthly': next.setMonth(next.getMonth() + 1); break;
+      case 'quarterly': next.setMonth(next.getMonth() + 3); break;
+      case 'yearly': next.setFullYear(next.getFullYear() + 1); break;
+      default: next.setMonth(next.getMonth() + 1);
+    }
+    return next;
+  };
 
   useEffect(() => {
     loadSettings();
@@ -848,6 +918,8 @@ function InvoiceModal({ clients, projects, companyId, onClose, onSave }: { clien
 
     setSaving(true);
     try {
+      let createdInvoice: Invoice | null = null;
+
       if (calculatorType === 'milestone' || calculatorType === 'percentage') {
         // Create invoice with task billing
         const taskBillings = Array.from(selectedTasks.entries()).map(([taskId, selection]) => {
@@ -877,7 +949,7 @@ function InvoiceModal({ clients, projects, companyId, onClose, onSave }: { clien
           };
         });
 
-        await api.createInvoiceWithTaskBilling({
+        createdInvoice = await api.createInvoiceWithTaskBilling({
           company_id: companyId,
           client_id: clientId,
           project_id: projectId || null,
@@ -892,7 +964,7 @@ function InvoiceModal({ clients, projects, companyId, onClose, onSave }: { clien
         }, taskBillings);
       } else {
         // Standard invoice creation
-        await api.createInvoice({
+        createdInvoice = await api.createInvoice({
           company_id: companyId,
           client_id: clientId,
           project_id: projectId || null,
@@ -906,6 +978,21 @@ function InvoiceModal({ clients, projects, companyId, onClose, onSave }: { clien
           pdf_template_id: pdfTemplateId || null,
         });
       }
+
+      // Create recurring invoice schedule if enabled
+      if (isRecurring && createdInvoice) {
+        const nextRunDate = calculateNextRunDate(recurringFrequency, new Date());
+        await recurringInvoicesApi.create({
+          company_id: companyId,
+          client_id: clientId,
+          project_id: projectId || undefined,
+          template_invoice_id: createdInvoice.id,
+          frequency: recurringFrequency,
+          next_run_date: nextRunDate.toISOString().split('T')[0],
+          is_active: true,
+        });
+      }
+
       onSave();
     } catch (error) {
       console.error('Failed to create invoice:', error);
@@ -935,7 +1022,7 @@ function InvoiceModal({ clients, projects, companyId, onClose, onSave }: { clien
                   key={calc.id}
                   className={`p-3 border rounded-xl cursor-pointer transition-colors ${
                     calculatorType === calc.id 
-                      ? 'border-neutral-900-500 bg-[#476E66]-50' 
+                      ? 'border-neutral-500 bg-[#476E66]/10' 
                       : 'border-neutral-200 hover:border-neutral-300'
                   }`}
                 >
@@ -1043,7 +1130,7 @@ function InvoiceModal({ clients, projects, companyId, onClose, onSave }: { clien
                                 checked={isSelected}
                                 disabled={isFullyBilled}
                                 onChange={() => toggleTaskSelection(task.id, calculatorType as 'milestone' | 'percentage')}
-                                className="w-4 h-4 text-neutral-900-500 rounded border-neutral-300"
+                                className="w-4 h-4 text-neutral-500 rounded border-neutral-300"
                               />
                             </td>
                           </tr>
@@ -1102,6 +1189,41 @@ function InvoiceModal({ clients, projects, companyId, onClose, onSave }: { clien
             </div>
           )}
 
+          {/* Recurring Invoice Option */}
+          <div className="border border-neutral-200 rounded-xl p-4">
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isRecurring}
+                onChange={(e) => setIsRecurring(e.target.checked)}
+                className="w-4 h-4 rounded border-neutral-300 text-[#476E66] focus:ring-[#476E66]"
+              />
+              <div className="flex items-center gap-2">
+                <Repeat className="w-4 h-4 text-neutral-500" />
+                <span className="text-sm font-medium text-neutral-700">Make this a recurring invoice</span>
+              </div>
+            </label>
+            {isRecurring && (
+              <div className="mt-3 pl-7">
+                <label className="block text-sm text-neutral-600 mb-1">Frequency</label>
+                <select
+                  value={recurringFrequency}
+                  onChange={(e) => setRecurringFrequency(e.target.value as typeof recurringFrequency)}
+                  className="w-full px-3 py-2 rounded-lg border border-neutral-200 text-sm focus:ring-2 focus:ring-[#476E66] focus:border-transparent outline-none"
+                >
+                  <option value="weekly">Weekly</option>
+                  <option value="bi-weekly">Bi-weekly</option>
+                  <option value="monthly">Monthly</option>
+                  <option value="quarterly">Quarterly</option>
+                  <option value="yearly">Yearly</option>
+                </select>
+                <p className="text-xs text-neutral-500 mt-1">
+                  A new invoice will be automatically created based on this schedule.
+                </p>
+              </div>
+            )}
+          </div>
+
           <div className="p-4 bg-neutral-50 rounded-xl">
             <div className="flex justify-between py-1 text-sm">
               <span className="text-neutral-600">Subtotal</span>
@@ -1149,6 +1271,239 @@ interface PDFTemplateOption {
 }
 
 // Invoice Detail View Component - Full page view with tabs (matches Project Billing view)
+function PaymentReminderSection({ 
+  invoice, 
+  sentDate, 
+  formatCurrency 
+}: { 
+  invoice: Invoice; 
+  sentDate: string; 
+  formatCurrency: (amount: number) => string;
+}) {
+  const { showToast } = useToast();
+  const [reminderDays, setReminderDays] = useState(45);
+  const [reminderDate, setReminderDate] = useState('');
+  const [showReminderModal, setShowReminderModal] = useState(false);
+  const [schedulingReminder, setSchedulingReminder] = useState(false);
+  const [reminderScheduled, setReminderScheduled] = useState(false);
+
+  // Calculate default reminder date (45 days from sent date or today)
+  useEffect(() => {
+    const baseDate = sentDate ? new Date(sentDate) : new Date();
+    const defaultReminder = new Date(baseDate);
+    defaultReminder.setDate(defaultReminder.getDate() + reminderDays);
+    setReminderDate(defaultReminder.toISOString().split('T')[0]);
+  }, [sentDate, reminderDays]);
+
+  const handleScheduleReminder = async () => {
+    if (!invoice.client?.email) {
+      showToast('Client does not have an email address', 'error');
+      return;
+    }
+    setSchedulingReminder(true);
+    try {
+      // Save reminder to database
+      const { error } = await supabase
+        .from('invoice_reminders')
+        .upsert({
+          invoice_id: invoice.id,
+          reminder_date: reminderDate,
+          reminder_days: reminderDays,
+          status: 'scheduled',
+          created_at: new Date().toISOString()
+        }, { onConflict: 'invoice_id' });
+
+      if (error) throw error;
+      
+      setReminderScheduled(true);
+      setShowReminderModal(false);
+      showToast(`Payment reminder scheduled for ${new Date(reminderDate).toLocaleDateString()}`, 'success');
+    } catch (err: any) {
+      console.error('Failed to schedule reminder:', err);
+      showToast(err?.message || 'Failed to schedule reminder', 'error');
+    }
+    setSchedulingReminder(false);
+  };
+
+  const handleSendReminderNow = async () => {
+    if (!invoice.client?.email) {
+      showToast('Client does not have an email address', 'error');
+      return;
+    }
+    setSchedulingReminder(true);
+    try {
+      const res = await fetch('https://bqxnagmmegdbqrzhheip.supabase.co/functions/v1/send-payment-reminder', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJxeG5hZ21tZWdkYnFyemhoZWlwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI2OTM5NTgsImV4cCI6MjA2ODI2OTk1OH0.LBb7KaCSs7LpsD9NZCOcartkcDIIALBIrpnYcv5Y0yY'
+        },
+        body: JSON.stringify({
+          invoiceId: invoice.id,
+          clientEmail: invoice.client.email,
+          clientName: invoice.client.name,
+          invoiceNumber: invoice.invoice_number,
+          totalAmount: formatCurrency(invoice.total),
+          dueDate: invoice.due_date ? new Date(invoice.due_date).toLocaleDateString() : 'N/A',
+          portalUrl: `${window.location.origin}/invoice-view/${invoice.id}`
+        })
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      showToast('Payment reminder sent successfully', 'success');
+      setShowReminderModal(false);
+    } catch (err: any) {
+      console.error('Failed to send reminder:', err);
+      showToast(err?.message || 'Failed to send reminder', 'error');
+    }
+    setSchedulingReminder(false);
+  };
+
+  // Only show for sent/overdue invoices that are not paid
+  if (invoice.status === 'paid' || invoice.status === 'draft') {
+    return null;
+  }
+
+  return (
+    <>
+      <div className="bg-amber-50 rounded-xl p-4 space-y-3 border border-amber-200">
+        <div className="flex items-center gap-2">
+          <Bell className="w-4 h-4 text-amber-600" />
+          <label className="block text-xs font-medium text-amber-700">Payment Reminder</label>
+        </div>
+        
+        <p className="text-xs text-amber-600">
+          {reminderScheduled 
+            ? `Reminder scheduled for ${new Date(reminderDate).toLocaleDateString()}`
+            : 'Set up automatic reminder if payment not received'
+          }
+        </p>
+
+        <button
+          onClick={() => setShowReminderModal(true)}
+          className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-amber-100 hover:bg-amber-200 text-amber-800 rounded-lg text-sm font-medium transition-colors"
+        >
+          <Bell className="w-4 h-4" />
+          {reminderScheduled ? 'Edit Reminder' : 'Set Reminder'}
+        </button>
+      </div>
+
+      {/* Reminder Modal */}
+      {showReminderModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl mx-4">
+            <div className="p-6 border-b border-neutral-100">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center">
+                    <Bell className="w-5 h-5 text-amber-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold">Payment Reminder</h3>
+                    <p className="text-sm text-neutral-500">Invoice {invoice.invoice_number}</p>
+                  </div>
+                </div>
+                <button onClick={() => setShowReminderModal(false)} className="p-2 hover:bg-neutral-100 rounded-lg">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              <div className="bg-neutral-50 rounded-lg p-4">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm text-neutral-600">Amount Due</span>
+                  <span className="font-semibold text-lg">{formatCurrency(invoice.total)}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-neutral-600">Client</span>
+                  <span className="text-sm font-medium">{invoice.client?.name}</span>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-2">
+                  Reminder after (days from sent date)
+                </label>
+                <div className="flex gap-2">
+                  {[30, 45, 60, 90].map((days) => (
+                    <button
+                      key={days}
+                      onClick={() => setReminderDays(days)}
+                      className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        reminderDays === days
+                          ? 'bg-[#476E66] text-white'
+                          : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
+                      }`}
+                    >
+                      {days} days
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1">
+                  Or choose specific date
+                </label>
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+                  <input
+                    type="date"
+                    value={reminderDate}
+                    onChange={(e) => setReminderDate(e.target.value)}
+                    min={new Date().toISOString().split('T')[0]}
+                    className="w-full pl-10 pr-4 py-2.5 border border-neutral-200 rounded-lg text-sm focus:ring-2 focus:ring-[#476E66]/20 focus:border-[#476E66] outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                <p className="text-sm font-medium text-blue-800 mb-2">Email Preview</p>
+                <div className="text-xs text-blue-700 space-y-1">
+                  <p><strong>Subject:</strong> Payment Reminder - Invoice {invoice.invoice_number}</p>
+                  <p className="mt-2">Dear {invoice.client?.name},</p>
+                  <p className="mt-1">This is a friendly reminder that we haven't received payment for Invoice {invoice.invoice_number} in the amount of {formatCurrency(invoice.total)}.</p>
+                  <p className="mt-1">Please review the attached invoice and process payment at your earliest convenience.</p>
+                  <p className="mt-1 text-blue-600">[Invoice PDF will be attached]</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="p-6 bg-neutral-50 border-t border-neutral-100 flex gap-3">
+              <button
+                onClick={handleSendReminderNow}
+                disabled={schedulingReminder}
+                className="flex-1 px-4 py-2.5 border border-neutral-300 rounded-xl hover:bg-white transition-colors flex items-center justify-center gap-2"
+              >
+                <Send className="w-4 h-4" />
+                Send Now
+              </button>
+              <button
+                onClick={handleScheduleReminder}
+                disabled={schedulingReminder}
+                className="flex-1 px-4 py-2.5 bg-[#476E66] text-white rounded-xl hover:bg-[#3a5b54] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {schedulingReminder ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Bell className="w-4 h-4" />
+                    Schedule Reminder
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 function InvoiceDetailView({ 
   invoice, 
   clients, 
@@ -1169,7 +1524,7 @@ function InvoiceDetailView({
   formatCurrency: (amount?: number) => string;
 }) {
   const { profile } = useAuth();
-  const [activeTab, setActiveTab] = useState<'preview' | 'detail' | 'time' | 'expenses'>('preview');
+  const [activeTab, setActiveTab] = useState<'preview' | 'detail' | 'time' | 'expenses' | 'history'>('preview');
   const [pdfTemplates, setPdfTemplates] = useState<PDFTemplateOption[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState(invoice.pdf_template_id || '');
   const [calculatorType, setCalculatorType] = useState(invoice.calculator_type || 'time_material');
@@ -1225,12 +1580,17 @@ function InvoiceDetailView({
   // Expenses state
   const [expenses, setExpenses] = useState<any[]>([]);
   const [expensesTotal, setExpensesTotal] = useState(0);
+  
+  // Reminder history state
+  const [reminderHistory, setReminderHistory] = useState<ReminderHistory[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
 
   const tabs = [
     { id: 'preview', label: 'Preview' },
     { id: 'detail', label: 'Invoice Detail' },
     { id: 'time', label: `Time (${formatCurrency(timeTotal)})` },
     { id: 'expenses', label: `Expenses (${formatCurrency(expensesTotal)})` },
+    { id: 'history', label: `History (${reminderHistory.length})` },
   ];
 
   useEffect(() => {
@@ -1238,7 +1598,19 @@ function InvoiceDetailView({
     loadProjectTasks();
     loadTimeEntries();
     loadExpenses();
+    loadReminderHistory();
   }, [companyId, invoice.id]);
+
+  async function loadReminderHistory() {
+    setLoadingHistory(true);
+    try {
+      const history = await reminderHistoryApi.getHistory(companyId, invoice.id);
+      setReminderHistory(history);
+    } catch (error) {
+      console.error('Failed to load reminder history:', error);
+    }
+    setLoadingHistory(false);
+  }
 
   async function loadProjectTasks() {
     try {
@@ -1508,7 +1880,7 @@ function InvoiceDetailView({
                 onClick={() => setActiveTab(tab.id as any)}
                 className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
                   activeTab === tab.id
-                    ? 'border-neutral-900-500 text-neutral-900-600'
+                    ? 'border-neutral-500 text-neutral-600'
                     : 'border-transparent text-neutral-500 hover:text-neutral-700'
                 }`}
               >
@@ -1906,7 +2278,7 @@ function InvoiceDetailView({
               <div className="flex items-start justify-between mb-6">
                 <div className="flex items-center gap-4">
                   <div className="text-sm">
-                    <a href="#" className="text-neutral-900-600 hover:underline font-medium">{invoice.client?.name}</a>
+                    <a href="#" className="text-neutral-600 hover:underline font-medium">{invoice.client?.name}</a>
                     <p className="text-neutral-500">Client</p>
                   </div>
                 </div>
@@ -2089,20 +2461,27 @@ function InvoiceDetailView({
                 </div>
               </div>
 
+              {/* Payment Reminder Section */}
+              <PaymentReminderSection 
+                invoice={invoice}
+                sentDate={sentDate}
+                formatCurrency={formatCurrency}
+              />
+
               {/* Payment Options */}
               <div className="bg-neutral-50 rounded-xl p-4 space-y-3">
                 <label className="block text-xs font-medium text-neutral-500">Payment Options</label>
                 <div className="space-y-2">
                   <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input type="checkbox" defaultChecked className="w-4 h-4 rounded border-neutral-300 text-neutral-900-500" />
+                    <input type="checkbox" defaultChecked className="w-4 h-4 rounded border-neutral-300 text-neutral-500" />
                     <span>Bank Transfer</span>
                   </label>
                   <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input type="checkbox" className="w-4 h-4 rounded border-neutral-300 text-neutral-900-500" />
+                    <input type="checkbox" className="w-4 h-4 rounded border-neutral-300 text-neutral-500" />
                     <span>Credit Card</span>
                   </label>
                   <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input type="checkbox" className="w-4 h-4 rounded border-neutral-300 text-neutral-900-500" />
+                    <input type="checkbox" className="w-4 h-4 rounded border-neutral-300 text-neutral-500" />
                     <span>Check</span>
                   </label>
                 </div>
@@ -2233,6 +2612,62 @@ function InvoiceDetailView({
                   </tr>
                 </tfoot>
               </table>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'history' && (
+          <div className="flex-1 p-6 overflow-auto">
+            <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
+              <div className="p-4 border-b border-neutral-200">
+                <h3 className="font-semibold text-neutral-900">Reminder History</h3>
+                <p className="text-sm text-neutral-500 mt-1">Track all payment reminders sent for this invoice</p>
+              </div>
+
+              {loadingHistory ? (
+                <div className="p-12 text-center">
+                  <div className="animate-spin w-6 h-6 border-2 border-neutral-400 border-t-transparent rounded-full mx-auto" />
+                </div>
+              ) : reminderHistory.length === 0 ? (
+                <div className="p-12 text-center text-neutral-500">
+                  <Mail className="w-12 h-12 mx-auto mb-3 text-neutral-300" />
+                  <p>No reminders have been sent for this invoice yet.</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-neutral-100">
+                  {reminderHistory.map((entry) => (
+                    <div key={entry.id} className="p-4 hover:bg-neutral-50">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-start gap-3">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                            entry.status === 'sent' ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'
+                          }`}>
+                            {entry.status === 'sent' ? <CheckCircle className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+                          </div>
+                          <div>
+                            <p className="font-medium text-neutral-900">
+                              Reminder sent to {entry.recipient_email}
+                            </p>
+                            <p className="text-sm text-neutral-500 mt-0.5">
+                              {entry.sent_at ? new Date(entry.sent_at).toLocaleString() : 'Unknown date'}
+                            </p>
+                            {entry.subject && (
+                              <p className="text-sm text-neutral-600 mt-2">
+                                <span className="font-medium">Subject:</span> {entry.subject}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
+                          entry.status === 'sent' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
+                        }`}>
+                          {entry.status === 'sent' ? 'Sent' : 'Failed'}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}

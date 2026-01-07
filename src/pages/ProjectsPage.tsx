@@ -8,8 +8,10 @@ import {
   Plus, Search, Filter, Download, ChevronLeft, ArrowLeft, Copy,
   FolderKanban, Clock, DollarSign, Users, FileText, CheckSquare, X, Trash2, Edit2,
   MoreVertical, ChevronDown, ChevronRight, RefreshCw, Check, ExternalLink, Info, Settings, UserPlus,
-  List, LayoutGrid, Columns3
+  List, LayoutGrid, Columns3, Loader2
 } from 'lucide-react';
+import { FieldError } from '../components/ErrorBoundary';
+import { validateEmail } from '../lib/validation';
 
 type TaskSubTab = 'overview' | 'editor' | 'schedule' | 'allocations' | 'checklist';
 
@@ -46,7 +48,7 @@ function getCategoryInfo(category?: string) {
 export default function ProjectsPage() {
   const { projectId } = useParams();
   const navigate = useNavigate();
-  const { profile, user } = useAuth();
+  const { profile, user, loading: authLoading } = useAuth();
   const { canCreate, canEdit, canDelete, canViewFinancials } = usePermissions();
   const [projects, setProjects] = useState<Project[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
@@ -237,10 +239,18 @@ export default function ProjectsPage() {
     }
   };
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin w-8 h-8 border-2 border-neutral-900-500 border-t-transparent rounded-full" />
+        <div className="animate-spin w-8 h-8 border-2 border-neutral-600 border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  if (!profile?.company_id) {
+    return (
+      <div className="p-12 text-center">
+        <p className="text-neutral-500">Unable to load projects. Please log in again.</p>
       </div>
     );
   }
@@ -721,7 +731,7 @@ export default function ProjectsPage() {
         )}
 
         {/* Project Edit Modal */}
-        {showProjectModal && editingProject && (
+        {showProjectModal && (
           <ProjectModal
             project={editingProject}
             clients={clients}
@@ -849,7 +859,7 @@ export default function ProjectsPage() {
                         setVisibleColumns(newCols);
                         localStorage.setItem('projectsVisibleColumns', JSON.stringify(newCols));
                       }}
-                      className="w-4 h-4 rounded border-neutral-300 text-neutral-900-500"
+                      className="w-4 h-4 rounded border-neutral-300 text-neutral-500"
                     />
                     <span className="text-sm text-neutral-700">{col.label}</span>
                   </label>
@@ -897,7 +907,7 @@ export default function ProjectsPage() {
                         setSelectedProjects(new Set());
                       }
                     }}
-                    className="w-4 h-4 rounded border-neutral-300 text-neutral-900-500"
+                    className="w-4 h-4 rounded border-neutral-300 text-neutral-500"
                   />
                 </th>
                 {visibleColumns.includes('project') && <th className="text-left px-6 py-4 text-xs font-medium text-neutral-500 uppercase tracking-wider">Project</th>}
@@ -917,7 +927,7 @@ export default function ProjectsPage() {
                 return (
                   <tr 
                     key={project.id} 
-                    className={`hover:bg-neutral-50 transition-colors cursor-pointer ${selectedProjects.has(project.id) ? 'bg-[#476E66]-50' : ''}`}
+                    className={`hover:bg-neutral-50 transition-colors cursor-pointer ${selectedProjects.has(project.id) ? 'bg-[#476E66]/10' : ''}`}
                     onClick={() => navigate(`/projects/${project.id}`)}
                   >
                     <td className="px-4 py-4" onClick={(e) => e.stopPropagation()}>
@@ -933,7 +943,7 @@ export default function ProjectsPage() {
                           }
                           setSelectedProjects(newSelected);
                         }}
-                        className="w-4 h-4 rounded border-neutral-300 text-neutral-900-500"
+                        className="w-4 h-4 rounded border-neutral-300 text-neutral-500"
                       />
                     </td>
                     {visibleColumns.includes('project') && (
@@ -961,7 +971,7 @@ export default function ProjectsPage() {
                             member.avatar_url ? (
                               <img key={idx} src={member.avatar_url} alt="" className="w-7 h-7 rounded-full border-2 border-white object-cover" title={member.full_name} />
                             ) : (
-                              <div key={idx} className="w-7 h-7 rounded-full border-2 border-white bg-[#476E66]-100 flex items-center justify-center text-xs font-medium text-neutral-900-700" title={member.full_name}>
+                              <div key={idx} className="w-7 h-7 rounded-full border-2 border-white bg-[#476E66]/20 flex items-center justify-center text-xs font-medium text-neutral-900-700" title={member.full_name}>
                                 {member.full_name?.charAt(0) || '?'}
                               </div>
                             )
@@ -1160,15 +1170,40 @@ function ProjectModal({ project, clients, companyId, onClose, onSave }: {
   const [category, setCategory] = useState(project?.category || 'O');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  const validateForm = (): boolean => {
+    const errors: Record<string, string> = {};
+    
+    if (!name.trim()) {
+      errors.name = 'Project name is required';
+    } else if (name.trim().length < 2) {
+      errors.name = 'Project name must be at least 2 characters';
+    } else if (name.trim().length > 100) {
+      errors.name = 'Project name must be less than 100 characters';
+    }
+    
+    if (budget && (isNaN(parseFloat(budget)) || parseFloat(budget) < 0)) {
+      errors.budget = 'Budget must be a positive number';
+    }
+    
+    if (startDate && endDate && new Date(startDate) > new Date(endDate)) {
+      errors.endDate = 'End date must be after start date';
+    }
+    
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name) return;
+    if (!validateForm()) return;
+    
     setError(null);
     setSaving(true);
     try {
       const data = {
-        name,
+        name: name.trim(),
         client_id: clientId || null,
         description: description || null,
         budget: parseFloat(budget) || null,
@@ -1199,10 +1234,16 @@ function ProjectModal({ project, clients, companyId, onClose, onSave }: {
           <button onClick={onClose} className="p-2 hover:bg-neutral-100 rounded-lg"><X className="w-5 h-5" /></button>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
-          {error && <div className="p-3 bg-neutral-100 border border-red-200 text-red-700 rounded-lg text-sm">{error}</div>}
+          {error && <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">{error}</div>}
           <div>
             <label className="block text-sm font-medium text-neutral-700 mb-1.5">Project Name *</label>
-            <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" required />
+            <input 
+              type="text" 
+              value={name} 
+              onChange={(e) => { setName(e.target.value); setFieldErrors(prev => ({ ...prev, name: '' })); }} 
+              className={`w-full px-4 py-2.5 rounded-xl border focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none ${fieldErrors.name ? 'border-red-300' : 'border-neutral-200'}`} 
+            />
+            <FieldError message={fieldErrors.name} />
           </div>
           <div>
             <label className="block text-sm font-medium text-neutral-700 mb-1.5">Client</label>
@@ -1218,7 +1259,13 @@ function ProjectModal({ project, clients, companyId, onClose, onSave }: {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-neutral-700 mb-1.5">Budget ($)</label>
-              <input type="number" value={budget} onChange={(e) => setBudget(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
+              <input 
+                type="number" 
+                value={budget} 
+                onChange={(e) => { setBudget(e.target.value); setFieldErrors(prev => ({ ...prev, budget: '' })); }} 
+                className={`w-full px-4 py-2.5 rounded-xl border focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none ${fieldErrors.budget ? 'border-red-300' : 'border-neutral-200'}`}
+              />
+              <FieldError message={fieldErrors.budget} />
             </div>
             <div>
               <label className="block text-sm font-medium text-neutral-700 mb-1.5">Status</label>
@@ -1953,7 +2000,7 @@ function TasksTabContent({ tasks, projectId, companyId, onTasksChange, onEditTas
             key={tab.key}
             onClick={() => setSubTab(tab.key)}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-              subTab === tab.key ? 'border-neutral-900-500 text-neutral-900-600' : 'border-transparent text-neutral-500 hover:text-neutral-700'
+              subTab === tab.key ? 'border-neutral-500 text-neutral-600' : 'border-transparent text-neutral-500 hover:text-neutral-700'
             }`}
           >
             {tab.label}
@@ -1985,7 +2032,7 @@ function TasksTabContent({ tasks, projectId, companyId, onTasksChange, onEditTas
           <div className="bg-white border border-neutral-200 rounded-lg overflow-hidden">
             <div className="px-4 py-3 bg-neutral-50 border-b border-neutral-200 flex items-center justify-between">
               <span className="font-medium">Tasks</span>
-              <button onClick={onAddTask} className="text-sm text-neutral-900-600 hover:text-neutral-700-700 font-medium flex items-center gap-1">
+              <button onClick={onAddTask} className="text-sm text-neutral-600 hover:text-neutral-700 font-medium flex items-center gap-1">
                 <Plus className="w-4 h-4" /> Add Task
               </button>
             </div>
@@ -2101,7 +2148,7 @@ function TasksTabContent({ tasks, projectId, companyId, onTasksChange, onEditTas
               </div>
               <div className="p-4">
                 <div className="flex items-center gap-3">
-                  <input type="checkbox" checked={task.status === 'completed'} readOnly className="w-4 h-4 rounded border-neutral-300 text-neutral-900-500" />
+                  <input type="checkbox" checked={task.status === 'completed'} readOnly className="w-4 h-4 rounded border-neutral-300 text-neutral-500" />
                   <span className={task.status === 'completed' ? 'line-through text-neutral-400' : ''}>{task.description || 'No description'}</span>
                 </div>
                 {task.due_date && <p className="text-sm text-neutral-500 mt-2 ml-7">Due: {new Date(task.due_date).toLocaleDateString()}</p>}
@@ -2134,11 +2181,11 @@ function TasksTabContent({ tasks, projectId, companyId, onTasksChange, onEditTas
             <input type="text" placeholder="Search" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9 pr-4 py-2 w-48 text-sm border border-neutral-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
           </div>
           <label className="flex items-center gap-2 text-sm text-neutral-600 cursor-pointer">
-            <input type="checkbox" checked={hideCompleted} onChange={(e) => setHideCompleted(e.target.checked)} className="w-4 h-4 rounded border-neutral-300 text-neutral-900-500 focus:ring-primary-500" />
+            <input type="checkbox" checked={hideCompleted} onChange={(e) => setHideCompleted(e.target.checked)} className="w-4 h-4 rounded border-neutral-300 text-neutral-500 focus:ring-primary-500" />
             Hide Completed Tasks
           </label>
           <label className="flex items-center gap-2 text-sm text-neutral-600 cursor-pointer">
-            <input type="checkbox" checked={includeInactive} onChange={(e) => setIncludeInactive(e.target.checked)} className="w-4 h-4 rounded border-neutral-300 text-neutral-900-500 focus:ring-primary-500" />
+            <input type="checkbox" checked={includeInactive} onChange={(e) => setIncludeInactive(e.target.checked)} className="w-4 h-4 rounded border-neutral-300 text-neutral-500 focus:ring-primary-500" />
             Include Inactive Team Members
           </label>
           <select
@@ -2156,7 +2203,7 @@ function TasksTabContent({ tasks, projectId, companyId, onTasksChange, onEditTas
           <button onClick={() => setAutoSave(!autoSave)} className={`relative w-12 h-6 rounded-full transition-colors ${autoSave ? 'bg-[#476E66]' : 'bg-neutral-300'}`}>
             <span className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${autoSave ? 'left-7' : 'left-1'}`} />
           </button>
-          <span className={`text-xs font-medium ${autoSave ? 'text-neutral-900-600' : 'text-neutral-400'}`}>{autoSave ? 'ON' : 'OFF'}</span>
+          <span className={`text-xs font-medium ${autoSave ? 'text-neutral-600' : 'text-neutral-400'}`}>{autoSave ? 'ON' : 'OFF'}</span>
         </div>
       </div>
 
@@ -2195,7 +2242,7 @@ function TasksTabContent({ tasks, projectId, companyId, onTasksChange, onEditTas
       {filteredTasks.length === 0 && !quickAddName && subTab === 'editor' && (
         <div className="text-center py-8 text-neutral-500">
           <p>No tasks found.</p>
-          <button onClick={onAddTask} className="text-neutral-900-500 hover:text-neutral-700-600 font-medium mt-1">Create your first task</button>
+          <button onClick={onAddTask} className="text-neutral-500 hover:text-neutral-600 font-medium mt-1">Create your first task</button>
         </div>
       )}
       </>)}
@@ -2238,7 +2285,7 @@ function TaskTableRow({ task, editingCell, editValues, onStartEditing, onEditCha
       {canViewFinancials && (
         <td className="px-4 py-2 text-right">
           {isEditing('fees') ? (
-            <input type="number" value={getValue('fees', task.estimated_fees?.toString() || '0')} onChange={(e) => onEditChange(task.id, 'fees', e.target.value)} onBlur={() => onSaveEdit(task.id, 'fees')} onKeyDown={(e) => e.key === 'Enter' && onSaveEdit(task.id, 'fees')} className="w-full px-2 py-1 text-right text-sm border border-neutral-900-300 rounded outline-none" autoFocus />
+            <input type="number" value={getValue('fees', task.estimated_fees?.toString() || '0')} onChange={(e) => onEditChange(task.id, 'fees', e.target.value)} onBlur={() => onSaveEdit(task.id, 'fees')} onKeyDown={(e) => e.key === 'Enter' && onSaveEdit(task.id, 'fees')} className="w-full px-2 py-1 text-right text-sm border border-neutral-300 rounded outline-none" autoFocus />
           ) : (
             <span onClick={() => onStartEditing(task.id, 'fees', task.estimated_fees?.toString() || '0')} className="cursor-pointer hover:bg-neutral-100 px-2 py-1 rounded inline-block">{formatCurrency(task.estimated_fees)}</span>
           )}
@@ -2246,7 +2293,7 @@ function TaskTableRow({ task, editingCell, editValues, onStartEditing, onEditCha
       )}
       <td className="px-4 py-2 text-right">
         {isEditing('hours') ? (
-          <input type="number" value={getValue('hours', task.estimated_hours?.toString() || '0')} onChange={(e) => onEditChange(task.id, 'hours', e.target.value)} onBlur={() => onSaveEdit(task.id, 'hours')} onKeyDown={(e) => e.key === 'Enter' && onSaveEdit(task.id, 'hours')} className="w-full px-2 py-1 text-right text-sm border border-neutral-900-300 rounded outline-none" autoFocus />
+          <input type="number" value={getValue('hours', task.estimated_hours?.toString() || '0')} onChange={(e) => onEditChange(task.id, 'hours', e.target.value)} onBlur={() => onSaveEdit(task.id, 'hours')} onKeyDown={(e) => e.key === 'Enter' && onSaveEdit(task.id, 'hours')} className="w-full px-2 py-1 text-right text-sm border border-neutral-300 rounded outline-none" autoFocus />
         ) : (
           <span onClick={() => onStartEditing(task.id, 'hours', task.estimated_hours?.toString() || '0')} className="cursor-pointer hover:bg-neutral-100 px-2 py-1 rounded inline-block">{task.estimated_hours || '0'}</span>
         )}
@@ -2255,7 +2302,7 @@ function TaskTableRow({ task, editingCell, editValues, onStartEditing, onEditCha
         <select 
           value={task.billing_unit || 'hours'} 
           onChange={(e) => onUnitChange(task.id, e.target.value as 'hours' | 'unit')}
-          className="px-2 py-1 text-sm border border-neutral-200 rounded bg-white hover:border-neutral-900-300 focus:border-neutral-900-500 focus:ring-1 focus:ring-primary-500 outline-none cursor-pointer"
+          className="px-2 py-1 text-sm border border-neutral-200 rounded bg-white hover:border-neutral-300 focus:border-neutral-500 focus:ring-1 focus:ring-primary-500 outline-none cursor-pointer"
         >
           <option value="hours">Hours</option>
           <option value="unit">Unit</option>
@@ -2263,7 +2310,7 @@ function TaskTableRow({ task, editingCell, editValues, onStartEditing, onEditCha
       </td>
       <td className="px-4 py-2">
         {isEditing('due_date') ? (
-          <input type="date" value={getValue('due_date', task.due_date?.split('T')[0] || '')} onChange={(e) => onEditChange(task.id, 'due_date', e.target.value)} onBlur={() => onSaveEdit(task.id, 'due_date')} className="px-2 py-1 text-sm border border-neutral-900-300 rounded outline-none" autoFocus />
+          <input type="date" value={getValue('due_date', task.due_date?.split('T')[0] || '')} onChange={(e) => onEditChange(task.id, 'due_date', e.target.value)} onBlur={() => onSaveEdit(task.id, 'due_date')} className="px-2 py-1 text-sm border border-neutral-300 rounded outline-none" autoFocus />
         ) : (
           <span onClick={() => onStartEditing(task.id, 'due_date', task.due_date?.split('T')[0] || '')} className="cursor-pointer hover:bg-neutral-100 px-2 py-1 rounded inline-block text-neutral-600">{task.due_date ? new Date(task.due_date).toLocaleDateString() : '-'}</span>
         )}
@@ -2279,7 +2326,7 @@ function TaskTableRow({ task, editingCell, editValues, onStartEditing, onEditCha
                     {assignee.avatar_url ? (
                       <img src={assignee.avatar_url} alt="" className="w-6 h-6 rounded-full object-cover" />
                     ) : (
-                      <div className="w-6 h-6 rounded-full bg-[#476E66]-100 flex items-center justify-center text-xs font-medium text-neutral-900-700">
+                      <div className="w-6 h-6 rounded-full bg-[#476E66]/20 flex items-center justify-center text-xs font-medium text-neutral-900-700">
                         {assignee.full_name?.charAt(0) || '?'}
                       </div>
                     )}
@@ -2305,7 +2352,7 @@ function TaskTableRow({ task, editingCell, editValues, onStartEditing, onEditCha
       {canViewFinancials && <td className="px-4 py-2 text-right text-neutral-600">{formatCurrency(estimate)}</td>}
       <td className="px-4 py-2 text-right">
         {isEditing('percent') ? (
-          <input type="number" min="0" max="100" value={getValue('percent', (task.completion_percentage || 0).toString())} onChange={(e) => onEditChange(task.id, 'percent', e.target.value)} onBlur={() => onSaveEdit(task.id, 'percent')} onKeyDown={(e) => e.key === 'Enter' && onSaveEdit(task.id, 'percent')} className="w-16 px-2 py-1 text-right text-sm border border-neutral-900-300 rounded outline-none" autoFocus />
+          <input type="number" min="0" max="100" value={getValue('percent', (task.completion_percentage || 0).toString())} onChange={(e) => onEditChange(task.id, 'percent', e.target.value)} onBlur={() => onSaveEdit(task.id, 'percent')} onKeyDown={(e) => e.key === 'Enter' && onSaveEdit(task.id, 'percent')} className="w-16 px-2 py-1 text-right text-sm border border-neutral-300 rounded outline-none" autoFocus />
         ) : (
           <div className="flex items-center justify-end gap-2">
             <div className="w-12 h-1.5 bg-neutral-200 rounded-full overflow-hidden">
@@ -2710,7 +2757,7 @@ function ProjectInvoiceModal({ project, tasks, timeEntries, expenses, companyId,
                 type="button"
                 onClick={() => { setBillingType('items'); setSelectedTasks(new Set()); }}
                 className={`p-3 border rounded-xl text-left transition-colors ${
-                  billingType === 'items' ? 'border-neutral-900-500 bg-[#476E66]-50' : 'border-neutral-200 hover:border-neutral-300'
+                  billingType === 'items' ? 'border-neutral-500 bg-[#476E66]/10' : 'border-neutral-200 hover:border-neutral-300'
                 }`}
               >
                 <p className="font-medium text-sm text-neutral-900">By Items</p>
@@ -2720,7 +2767,7 @@ function ProjectInvoiceModal({ project, tasks, timeEntries, expenses, companyId,
                 type="button"
                 onClick={() => { setBillingType('milestone'); setSelectedTasks(new Set()); }}
                 className={`p-3 border rounded-xl text-left transition-colors ${
-                  billingType === 'milestone' ? 'border-neutral-900-500 bg-[#476E66]-50' : 'border-neutral-200 hover:border-neutral-300'
+                  billingType === 'milestone' ? 'border-neutral-500 bg-[#476E66]/10' : 'border-neutral-200 hover:border-neutral-300'
                 }`}
               >
                 <p className="font-medium text-sm text-neutral-900">By Milestone</p>
@@ -2730,7 +2777,7 @@ function ProjectInvoiceModal({ project, tasks, timeEntries, expenses, companyId,
                 type="button"
                 onClick={() => { setBillingType('percentage'); setSelectedTasks(new Set()); }}
                 className={`p-3 border rounded-xl text-left transition-colors ${
-                  billingType === 'percentage' ? 'border-neutral-900-500 bg-[#476E66]-50' : 'border-neutral-200 hover:border-neutral-300'
+                  billingType === 'percentage' ? 'border-neutral-500 bg-[#476E66]/10' : 'border-neutral-200 hover:border-neutral-300'
                 }`}
               >
                 <p className="font-medium text-sm text-neutral-900">By Percentage</p>
@@ -2747,7 +2794,7 @@ function ProjectInvoiceModal({ project, tasks, timeEntries, expenses, companyId,
                   type="checkbox"
                   checked={includeAllocatedFees}
                   onChange={(e) => setIncludeAllocatedFees(e.target.checked)}
-                  className="w-5 h-5 rounded border-neutral-300 text-neutral-900-500 focus:ring-primary-500"
+                  className="w-5 h-5 rounded border-neutral-300 text-neutral-500 focus:ring-primary-500"
                 />
                 <div className="flex-1">
                   <p className="font-medium text-neutral-900">Project Budget (Fixed Fee)</p>
@@ -2767,7 +2814,7 @@ function ProjectInvoiceModal({ project, tasks, timeEntries, expenses, companyId,
                     type="checkbox"
                     checked={selectedTasks.size === tasks.length && tasks.length > 0}
                     onChange={selectAllTasks}
-                    className="w-4 h-4 rounded border-neutral-300 text-neutral-900-500 focus:ring-primary-500"
+                    className="w-4 h-4 rounded border-neutral-300 text-neutral-500 focus:ring-primary-500"
                   />
                   <span className="font-medium text-neutral-900">Tasks ({tasks.length})</span>
                 </div>
@@ -2792,7 +2839,7 @@ function ProjectInvoiceModal({ project, tasks, timeEntries, expenses, companyId,
                         checked={isSelected}
                         disabled={isFullyBilled}
                         onChange={() => toggleTask(task.id)}
-                        className="w-4 h-4 rounded border-neutral-300 text-neutral-900-500 focus:ring-primary-500"
+                        className="w-4 h-4 rounded border-neutral-300 text-neutral-500 focus:ring-primary-500"
                       />
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-neutral-900 truncate">{task.name}</p>
@@ -2891,14 +2938,14 @@ function ProjectInvoiceModal({ project, tasks, timeEntries, expenses, companyId,
                     type="checkbox"
                     checked={selectedTimeEntries.size === unbilledTimeEntries.length && unbilledTimeEntries.length > 0}
                     onChange={selectAllTimeEntries}
-                    className="w-4 h-4 rounded border-neutral-300 text-neutral-900-500 focus:ring-primary-500"
+                    className="w-4 h-4 rounded border-neutral-300 text-neutral-500 focus:ring-primary-500"
                   />
                   <span className="font-medium text-neutral-900">Time Entries ({unbilledTimeEntries.length})</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={(e) => { e.stopPropagation(); navigate('/settings'); }}
-                    className="flex items-center gap-1 text-xs text-neutral-900-500 hover:text-neutral-700-600 hover:underline"
+                    className="flex items-center gap-1 text-xs text-neutral-500 hover:text-neutral-600 hover:underline"
                     title="Manage your default hourly rate in Settings"
                   >
                     <Info className="w-3 h-3" />
@@ -2919,7 +2966,7 @@ function ProjectInvoiceModal({ project, tasks, timeEntries, expenses, companyId,
                         type="checkbox"
                         checked={selectedTimeEntries.has(entry.id)}
                         onChange={() => toggleTimeEntry(entry.id)}
-                        className="w-4 h-4 rounded border-neutral-300 text-neutral-900-500 focus:ring-primary-500"
+                        className="w-4 h-4 rounded border-neutral-300 text-neutral-500 focus:ring-primary-500"
                       />
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-neutral-900 truncate">{entry.description || 'Time entry'}</p>
@@ -2945,7 +2992,7 @@ function ProjectInvoiceModal({ project, tasks, timeEntries, expenses, companyId,
                     type="checkbox"
                     checked={selectedExpenses.size === unbilledExpenses.length && unbilledExpenses.length > 0}
                     onChange={selectAllExpenses}
-                    className="w-4 h-4 rounded border-neutral-300 text-neutral-900-500 focus:ring-primary-500"
+                    className="w-4 h-4 rounded border-neutral-300 text-neutral-500 focus:ring-primary-500"
                   />
                   <span className="font-medium text-neutral-900">Expenses ({unbilledExpenses.length})</span>
                 </div>
@@ -2958,7 +3005,7 @@ function ProjectInvoiceModal({ project, tasks, timeEntries, expenses, companyId,
                       type="checkbox"
                       checked={selectedExpenses.has(expense.id)}
                       onChange={() => toggleExpense(expense.id)}
-                      className="w-4 h-4 rounded border-neutral-300 text-neutral-900-500 focus:ring-primary-500"
+                      className="w-4 h-4 rounded border-neutral-300 text-neutral-500 focus:ring-primary-500"
                     />
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-neutral-900 truncate">{expense.description}</p>
@@ -3088,17 +3135,23 @@ function AddTeamMemberModal({ projectId, companyId, existingMemberIds, companyPr
   const [role, setRole] = useState('Team Member');
   const [isLead, setIsLead] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const availableProfiles = companyProfiles.filter(p => !existingMemberIds.includes(p.id));
 
   const handleSubmit = async () => {
-    if (!selectedUserId) return;
+    if (!selectedUserId) {
+      setError('Please select a team member');
+      return;
+    }
     setSaving(true);
+    setError(null);
     try {
       await api.addProjectTeamMember(projectId, selectedUserId, companyId, role, isLead);
       onSave();
-    } catch (error) {
-      console.error('Failed to add team member:', error);
+    } catch (err: any) {
+      console.error('Failed to add team member:', err);
+      setError(err?.message || 'Failed to add team member. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -3114,11 +3167,14 @@ function AddTeamMemberModal({ projectId, companyId, existingMemberIds, companyPr
           </button>
         </div>
         <div className="p-4 space-y-4">
+          {error && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{error}</div>
+          )}
           <div>
             <label className="block text-sm font-medium text-neutral-700 mb-1">Select Team Member</label>
             <select
               value={selectedUserId}
-              onChange={(e) => setSelectedUserId(e.target.value)}
+              onChange={(e) => { setSelectedUserId(e.target.value); setError(null); }}
               className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-neutral-900 focus:border-transparent"
             >
               <option value="">Choose a team member...</option>
@@ -3783,7 +3839,7 @@ function InlineBillingInvoiceView({
           <div className="flex-1 space-y-4">
             <div className="flex items-start justify-between">
               <div className="text-sm">
-                <p className="font-medium text-neutral-900-600">{invoice.client?.name || project?.client?.name}</p>
+                <p className="font-medium text-neutral-600">{invoice.client?.name || project?.client?.name}</p>
               </div>
               <div className="text-right">
                 <p className="text-3xl font-bold text-neutral-900">{formatCurrency(total)}</p>
@@ -3949,15 +4005,15 @@ function InlineBillingInvoiceView({
               <label className="block text-xs font-medium text-neutral-500">Payment Options</label>
               <div className="space-y-2">
                 <label className="flex items-center gap-2 text-sm cursor-pointer">
-                  <input type="checkbox" defaultChecked className="w-4 h-4 rounded border-neutral-300 text-neutral-900-500" />
+                  <input type="checkbox" defaultChecked className="w-4 h-4 rounded border-neutral-300 text-neutral-500" />
                   <span>Bank Transfer</span>
                 </label>
                 <label className="flex items-center gap-2 text-sm cursor-pointer">
-                  <input type="checkbox" className="w-4 h-4 rounded border-neutral-300 text-neutral-900-500" />
+                  <input type="checkbox" className="w-4 h-4 rounded border-neutral-300 text-neutral-500" />
                   <span>Credit Card</span>
                 </label>
                 <label className="flex items-center gap-2 text-sm cursor-pointer">
-                  <input type="checkbox" className="w-4 h-4 rounded border-neutral-300 text-neutral-900-500" />
+                  <input type="checkbox" className="w-4 h-4 rounded border-neutral-300 text-neutral-500" />
                   <span>Check</span>
                 </label>
               </div>
@@ -4211,7 +4267,7 @@ function ProjectDetailsTab({
       </div>
 
       {/* Status & Category - Primary Fields */}
-      <div className="grid grid-cols-2 gap-6 p-4 bg-[#476E66]-50 rounded-xl border border-neutral-900-100">
+      <div className="grid grid-cols-2 gap-6 p-4 bg-[#476E66]/10 rounded-xl border border-neutral-900-100">
         <div>
           <label className="block text-sm font-medium text-neutral-700 mb-1">Project Status</label>
           <select

@@ -7,12 +7,14 @@ interface Plan {
   id: string;
   name: string;
   stripe_price_id: string | null;
-  price_monthly: number;
-  price_yearly: number | null;
-  max_projects: number | null;
-  max_team_members: number | null;
-  max_clients: number | null;
-  max_invoices_per_month: number | null;
+  amount: number;
+  interval: string;
+  limits: {
+    projects: number;
+    team_members: number;
+    clients: number;
+    invoices_per_month: number;
+  };
   features: string[];
   is_active: boolean;
 }
@@ -70,10 +72,10 @@ export const Pricing = () => {
   async function loadPlans() {
     try {
       const { data, error: err } = await supabase
-        .from('primeledger_plans')
+        .from('billdora_plans')
         .select('*')
         .eq('is_active', true)
-        .order('price_monthly', { ascending: true });
+        .order('amount', { ascending: true });
 
       if (err) throw err;
       setPlans(data || []);
@@ -86,7 +88,7 @@ export const Pricing = () => {
   }
 
   async function handleCheckout(plan: Plan) {
-    if (plan.price_monthly === 0) {
+    if (plan.amount === 0) {
       // Free plan - redirect to signup
       window.location.href = '/login?signup=true';
       return;
@@ -94,7 +96,7 @@ export const Pricing = () => {
 
     if (!plan.stripe_price_id) {
       // Enterprise or custom plan - contact sales
-      window.location.href = 'mailto:sales@primeledger.com?subject=Enterprise%20Plan%20Inquiry';
+      window.location.href = 'mailto:sales@billdora.com?subject=Enterprise%20Plan%20Inquiry';
       return;
     }
 
@@ -121,6 +123,7 @@ export const Pricing = () => {
         },
         body: JSON.stringify({
           price_id: plan.stripe_price_id,
+          user_id: session.user.id,
           success_url: `${window.location.origin}/dashboard?subscription=success`,
           cancel_url: `${window.location.origin}/dashboard?subscription=canceled`,
         }),
@@ -132,8 +135,8 @@ export const Pricing = () => {
         throw new Error(result.error.message || result.error);
       }
 
-      if (result.data?.url) {
-        window.location.href = result.data.url;
+      if (result.url) {
+        window.location.href = result.url;
       } else {
         throw new Error('No checkout URL returned');
       }
@@ -152,29 +155,49 @@ export const Pricing = () => {
       ? plan.features 
       : defaultFeatures[planKey] || defaultFeatures.starter;
 
+    const isProfessional = plan.name.toLowerCase().includes('professional');
+    const isEnterprise = plan.name.toLowerCase().includes('enterprise');
+    const isStarter = plan.name.toLowerCase() === 'starter';
+    
+    // Handle pricing based on billing cycle for Professional
+    let displayPrice: string;
+    let period = '/ month';
+    let yearlyTotal: number | null = null;
+    
+    if (isStarter || plan.amount === 0) {
+      displayPrice = 'Free';
+      period = '';
+    } else if (isEnterprise) {
+      displayPrice = 'Custom';
+      period = '';
+    } else if (isProfessional) {
+      // $30/month or $24/month (20% off) for yearly
+      displayPrice = billingCycle === 'monthly' ? '$30' : '$24';
+      yearlyTotal = 288;
+    } else {
+      displayPrice = `$${plan.amount / 100}`;
+    }
+
     return {
       id: plan.id,
-      name: plan.name,
-      price: plan.price_monthly === 0 
-        ? 'Free' 
-        : billingCycle === 'yearly' && plan.price_yearly
-          ? `$${Math.round(plan.price_yearly / 12)}`
-          : `$${plan.price_monthly}`,
-      period: plan.price_monthly === 0 ? '' : '/ month',
-      yearlyPrice: plan.price_yearly,
-      description: plan.name === 'Starter' 
+      name: plan.name.replace(' Monthly', '').replace(' Yearly', ''),
+      price: displayPrice,
+      period,
+      yearlyPrice: yearlyTotal,
+      interval: plan.interval,
+      description: isStarter
         ? 'Perfect for freelancers and small teams getting started.'
-        : plan.name.includes('Professional')
+        : isProfessional
           ? 'Ideal for growing businesses with expanding teams.'
           : 'For large organizations with specific requirements.',
       icon: getIconForPlan(plan.name),
       features,
-      cta: plan.price_monthly === 0 
+      cta: isStarter
         ? 'Get Started Free' 
-        : plan.stripe_price_id 
-          ? 'Subscribe Now'
-          : 'Contact Sales',
-      highlighted: plan.name.toLowerCase().includes('professional'),
+        : isEnterprise
+          ? 'Contact Sales'
+          : 'Subscribe Now',
+      highlighted: isProfessional,
       plan,
     };
   }) : [
@@ -194,9 +217,9 @@ export const Pricing = () => {
     {
       id: 'professional',
       name: 'Professional',
-      price: '$22',
+      price: billingCycle === 'monthly' ? '$30' : '$24',
       period: '/ month',
-      yearlyPrice: 211.20,
+      yearlyPrice: 288,
       description: 'Ideal for growing businesses with expanding teams.',
       icon: Users,
       features: defaultFeatures.professional,
@@ -342,7 +365,7 @@ export const Pricing = () => {
                     )}
                     {billingCycle === 'yearly' && tier.yearlyPrice && (
                       <p className="text-sm text-neutral-500 mt-1">
-                        ${tier.yearlyPrice}/year billed annually
+                        ${tier.yearlyPrice}/year billed annually (save 20%)
                       </p>
                     )}
                   </div>
@@ -362,7 +385,7 @@ export const Pricing = () => {
                   </ul>
 
                   <button
-                    onClick={() => tier.plan ? handleCheckout(tier.plan) : (tier.name === 'Enterprise' ? window.location.href = 'mailto:sales@primeledger.com' : window.location.href = '/login?signup=true')}
+                    onClick={() => tier.plan ? handleCheckout(tier.plan) : (tier.name === 'Enterprise' ? window.location.href = 'mailto:sales@billdora.com' : window.location.href = '/login?signup=true')}
                     disabled={checkoutLoading === tier.id}
                     className={`w-full py-3 px-6 rounded-lg font-semibold transition-all hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2 ${
                       tier.highlighted ? 'text-white' : ''
