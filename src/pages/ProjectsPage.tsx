@@ -411,7 +411,7 @@ export default function ProjectsPage() {
 
           {activeTab === 'client' && (
             <ClientTabContent
-              client={selectedProject.client || clients.find(c => c.id === selectedProject.client_id)}
+              client={clients.find(c => c.id === selectedProject.client_id) || selectedProject.client}
               onClientUpdate={async (updatedClient) => {
                 await api.updateClient(updatedClient.id, updatedClient);
                 loadData();
@@ -2139,7 +2139,7 @@ function TasksTabContent({ tasks, projectId, companyId, onTasksChange, onEditTas
           </label>
           <label className="flex items-center gap-2 text-sm text-neutral-600 cursor-pointer">
             <input type="checkbox" checked={includeInactive} onChange={(e) => setIncludeInactive(e.target.checked)} className="w-4 h-4 rounded border-neutral-300 text-neutral-900-500 focus:ring-primary-500" />
-            Include Inactive Staffers
+            Include Inactive Team Members
           </label>
           <select
             value={assigneeFilter}

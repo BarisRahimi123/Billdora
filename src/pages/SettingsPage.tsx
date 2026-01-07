@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useToast } from '../components/Toast';
-import { Settings, Building2, Users, FileText, Bell, Link, Shield, Package, Plus, Edit2, Trash2, X, Upload, Camera, Mail, UserCheck, UserX, MoreVertical, Check, User, Receipt, MapPin, Calculator, FileType, Send, Tag, List, Activity, Target, GripVertical } from 'lucide-react';
+import { Settings, Building2, Users, FileText, Bell, Link, Shield, Package, Plus, Edit2, Trash2, X, Upload, Camera, Mail, UserCheck, UserX, MoreVertical, Check, User, Receipt, MapPin, Calculator, FileType, Send, Tag, List, Activity, Target, GripVertical, ArrowLeft, LogOut, CreditCard, Loader2, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { usePermissions } from '../contexts/PermissionsContext';
+import { useSubscription } from '../contexts/SubscriptionContext';
 import { api, Service, CompanySettings, userManagementApi, Role, UserProfile, CompanyInvitation, settingsApi, Category, ExpenseCode, InvoiceTerm, FieldValue, StatusCode, CostCenter } from '../lib/api';
 import { supabase } from '../lib/supabase';
 
@@ -15,7 +17,8 @@ const PRICING_TYPES = [
 ];
 
 export default function SettingsPage() {
-  const { profile } = useAuth();
+  const navigate = useNavigate();
+  const { profile, signOut } = useAuth();
   const { canViewFinancials } = usePermissions();
   const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState('profile');
@@ -49,6 +52,7 @@ export default function SettingsPage() {
   
   const allTabs = [
     { id: 'profile', label: 'My Profile', icon: User, adminOnly: false },
+    { id: 'subscription', label: 'Subscription', icon: CreditCard, adminOnly: false },
     { id: 'company', label: 'Company Info', icon: Building2, adminOnly: true },
     { id: 'users', label: 'User Management', icon: Users, adminOnly: true },
     { id: 'services', label: 'Products & Services', icon: Package, adminOnly: true },
@@ -234,37 +238,72 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-neutral-900">Settings</h1>
-        <p className="text-neutral-500 mt-1">Manage your company preferences</p>
-      </div>
+    <div className="flex min-h-[calc(100vh-73px)] -m-4 lg:-m-6">
+      {/* Settings Sidebar - Replaces main nav */}
+      <aside className="w-64 text-white flex flex-col fixed h-[calc(100vh-73px)] z-40" style={{ backgroundColor: '#476E66' }}>
+        {/* Back Button Header */}
+        <div className="p-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.2)' }}>
+          <button 
+            onClick={() => navigate('/dashboard')}
+            className="flex items-center gap-3 w-full px-3 py-2.5 text-white/90 hover:text-white hover:bg-white/10 rounded-xl transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            <span className="font-medium text-sm">Back to Dashboard</span>
+          </button>
+        </div>
 
-      <div className="flex flex-col lg:flex-row gap-6">
-        {/* Sidebar */}
-        <div className="w-full lg:w-64 flex-shrink-0">
-          <nav className="bg-white rounded-2xl border border-neutral-100 p-2 flex flex-row lg:flex-col gap-1 overflow-x-auto">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-colors ${
-                  activeTab === tab.id 
-                    ? 'bg-[#476E66] text-white' 
-                    : 'text-neutral-600 hover:bg-neutral-50'
-                }`}
-              >
-                <tab.icon className="w-5 h-5" />
-                <span className="font-medium text-sm">{tab.label}</span>
-              </button>
-            ))}
-          </nav>
+        {/* Settings Title */}
+        <div className="px-6 py-4">
+          <h2 className="text-lg font-semibold text-white">Settings</h2>
+          <p className="text-white/60 text-xs mt-0.5">Manage preferences</p>
+        </div>
+
+        {/* Settings Nav */}
+        <nav className="flex-1 py-2 overflow-y-auto">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`w-full flex items-center gap-3 px-4 py-3 mx-2 rounded-xl text-left transition-colors ${
+                activeTab === tab.id 
+                  ? 'bg-white/20 text-white' 
+                  : 'text-white/70 hover:text-white hover:bg-white/10'
+              }`}
+              style={{ width: 'calc(100% - 16px)' }}
+            >
+              <tab.icon className="w-5 h-5 flex-shrink-0" />
+              <span className="font-medium text-sm">{tab.label}</span>
+            </button>
+          ))}
+        </nav>
+
+        {/* Sign Out */}
+        <div className="p-4" style={{ borderTop: '1px solid rgba(255,255,255,0.2)' }}>
+          <button
+            onClick={() => signOut()}
+            className="flex items-center gap-3 w-full px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 rounded-xl transition-colors"
+          >
+            <LogOut className="w-5 h-5" />
+            <span className="text-sm font-medium">Sign Out</span>
+          </button>
+        </div>
+      </aside>
+
+      {/* Content Area */}
+      <div className="flex-1 ml-64 p-6 overflow-y-auto" style={{ backgroundColor: '#F5F5F3' }}>
+        {/* Page Header */}
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-neutral-900">{tabs.find(t => t.id === activeTab)?.label || 'Settings'}</h1>
         </div>
 
         {/* Content */}
-        <div className="flex-1">
+        <div className="w-full">
           {activeTab === 'profile' && (
             <ProfileTab />
+          )}
+
+          {activeTab === 'subscription' && (
+            <SubscriptionTab />
           )}
 
           {activeTab === 'company' && (
@@ -587,7 +626,11 @@ export default function SettingsPage() {
             <CostCentersTab companyId={profile.company_id} />
           )}
 
-          {activeTab !== 'profile' && activeTab !== 'company' && activeTab !== 'services' && activeTab !== 'users' && activeTab !== 'invoicing' && activeTab !== 'basic-codes' && activeTab !== 'field-values' && activeTab !== 'status-codes' && activeTab !== 'cost-centers' && (
+          {activeTab === 'integrations' && (
+            <IntegrationsTab companyId={profile.company_id} />
+          )}
+
+          {activeTab !== 'profile' && activeTab !== 'subscription' && activeTab !== 'company' && activeTab !== 'services' && activeTab !== 'users' && activeTab !== 'invoicing' && activeTab !== 'basic-codes' && activeTab !== 'field-values' && activeTab !== 'status-codes' && activeTab !== 'cost-centers' && activeTab !== 'integrations' && (
             <div className="bg-white rounded-2xl p-12 border border-neutral-100 text-center">
               <div className="w-16 h-16 bg-neutral-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <Settings className="w-8 h-8 text-neutral-400" />
@@ -1267,7 +1310,7 @@ function InviteUserModal({ companyId, currentUserId, roles, onClose, onInvite }:
       await supabase.functions.invoke('send-email', {
         body: {
           to: email,
-          subject: `You've been invited to join ${companyData?.name || 'a company'} on PrimeLedger`,
+          subject: `You've been invited to join ${companyData?.name || 'a company'} on Billdora`,
           type: 'invitation',
           data: {
             inviterName: inviterData?.full_name || 'A team member',
@@ -1832,7 +1875,7 @@ function ProfileTab() {
     <div className="bg-white rounded-2xl p-8 border border-neutral-100">
       <h2 className="text-xl font-semibold text-neutral-900 mb-6">My Profile</h2>
       
-      <form onSubmit={handleSave} className="space-y-6 max-w-lg">
+      <form onSubmit={handleSave} className="space-y-6 max-w-2xl">
         {error && (
           <div className="p-4 bg-neutral-100 border border-red-200 text-red-700 rounded-xl text-sm">
             {error}
@@ -4086,6 +4129,713 @@ function CostCentersTab({ companyId }: { companyId: string }) {
             </div>
           )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+
+// Integrations Tab Component - Stripe Connect
+function IntegrationsTab({ companyId }: { companyId: string }) {
+  const { showToast } = useToast();
+  const [loading, setLoading] = useState(true);
+  const [connecting, setConnecting] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
+  const [stripeAccountId, setStripeAccountId] = useState<string | null>(null);
+
+  const SUPABASE_URL = 'https://bqxnagmmegdbqrzhheip.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJxeG5hZ21tZWdkYnFyemhoZWlwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI2OTM5NTgsImV4cCI6MjA2ODI2OTk1OH0.LBb7KaCSs7LpsD9NZCOcartkcDIIALBIrpnYcv5Y0yY';
+
+  useEffect(() => {
+    loadStripeStatus();
+    // Check for Stripe Connect callback
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('stripe_connected') === 'true') {
+      showToast('Stripe account connected successfully!', 'success');
+      window.history.replaceState({}, '', `${window.location.pathname}?tab=integrations`);
+    } else if (params.get('stripe_refresh') === 'true') {
+      showToast('Please complete Stripe onboarding to enable payments.', 'info');
+      window.history.replaceState({}, '', `${window.location.pathname}?tab=integrations`);
+    }
+  }, [companyId]);
+
+  async function loadStripeStatus() {
+    setLoading(true);
+    try {
+      const settings = await api.getCompanySettings(companyId);
+      setStripeAccountId(settings?.stripe_account_id || null);
+    } catch (error) {
+      console.error('Failed to load Stripe status:', error);
+    }
+    setLoading(false);
+  }
+
+
+
+  async function handleConnectStripe() {
+    setConnecting(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/stripe-connect-oauth`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json', 
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${session?.access_token || SUPABASE_ANON_KEY}`
+        },
+        body: JSON.stringify({ action: 'get_oauth_link', company_id: companyId })
+      });
+      const result = await response.json();
+      if (result.error) {
+        throw new Error(result.error.message);
+      }
+      // Redirect to Stripe OAuth
+      window.location.href = result.data.url;
+    } catch (error: any) {
+      console.error('Connect Stripe error:', error);
+      showToast(error.message || 'Failed to initiate Stripe connection', 'error');
+      setConnecting(false);
+    }
+  }
+
+  async function handleDisconnectStripe() {
+    if (!confirm('Are you sure you want to disconnect your Stripe account? Clients will no longer be able to pay invoices online.')) {
+      return;
+    }
+    setDisconnecting(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/stripe-connect-oauth`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json', 
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${session?.access_token || SUPABASE_ANON_KEY}`
+        },
+        body: JSON.stringify({ action: 'disconnect', company_id: companyId })
+      });
+      const result = await response.json();
+      if (result.error) {
+        throw new Error(result.error.message);
+      }
+      setStripeAccountId(null);
+      showToast('Stripe account disconnected', 'success');
+    } catch (error: any) {
+      console.error('Disconnect Stripe error:', error);
+      showToast(error.message || 'Failed to disconnect Stripe account', 'error');
+    }
+    setDisconnecting(false);
+  }
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-2xl p-12 border border-neutral-100">
+        <div className="flex justify-center">
+          <div className="animate-spin w-8 h-8 border-2 border-neutral-600 border-t-transparent rounded-full" />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-white rounded-2xl border border-neutral-100 p-6">
+        <h2 className="text-xl font-semibold text-neutral-900 mb-6">Payment Integrations</h2>
+        
+        {/* Stripe Connect Card */}
+        <div className="border border-neutral-200 rounded-xl p-6">
+          <div className="flex items-start gap-4">
+            {/* Stripe Logo */}
+            <div className="w-12 h-12 bg-[#635BFF] rounded-xl flex items-center justify-center flex-shrink-0">
+              <svg viewBox="0 0 24 24" className="w-7 h-7 text-white" fill="currentColor">
+                <path d="M13.976 9.15c-2.172-.806-3.356-1.426-3.356-2.409 0-.831.683-1.305 1.901-1.305 2.227 0 4.515.858 6.09 1.631l.89-5.494C18.252.975 15.697 0 12.165 0 9.667 0 7.589.654 6.104 1.872 4.56 3.147 3.757 4.992 3.757 7.218c0 4.039 2.467 5.76 6.476 7.219 2.585.92 3.445 1.574 3.445 2.583 0 .98-.84 1.545-2.354 1.545-1.875 0-4.965-.921-6.99-2.109l-.9 5.555C5.175 22.99 8.385 24 11.714 24c2.641 0 4.843-.624 6.328-1.813 1.664-1.305 2.525-3.236 2.525-5.732 0-4.128-2.524-5.851-6.591-7.305z"/>
+              </svg>
+            </div>
+            
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-2">
+                <h3 className="text-lg font-semibold text-neutral-900">Stripe</h3>
+                {stripeAccountId ? (
+                  <span className="px-2.5 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-medium">
+                    Connected
+                  </span>
+                ) : (
+                  <span className="px-2.5 py-1 bg-neutral-100 text-neutral-600 rounded-full text-xs font-medium">
+                    Not Connected
+                  </span>
+                )}
+              </div>
+              <p className="text-neutral-600 text-sm mb-4">
+                Connect your Stripe account to accept online payments for invoices. 
+                Clients will be able to pay with credit/debit cards directly from their invoice.
+              </p>
+              
+              {stripeAccountId ? (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-sm text-neutral-600">
+                    <Check className="w-4 h-4 text-emerald-600" />
+                    <span>Account ID: {stripeAccountId.substring(0, 12)}...</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-neutral-600">
+                    <Check className="w-4 h-4 text-emerald-600" />
+                    <span>Online invoice payments enabled</span>
+                  </div>
+                  <button
+                    onClick={handleDisconnectStripe}
+                    disabled={disconnecting}
+                    className="mt-2 px-4 py-2 text-sm font-medium text-neutral-700 border border-neutral-300 rounded-lg hover:bg-neutral-50 transition-colors disabled:opacity-50"
+                  >
+                    {disconnecting ? 'Disconnecting...' : 'Disconnect Stripe'}
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={handleConnectStripe}
+                  disabled={connecting}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-[#635BFF] text-white font-medium rounded-lg hover:bg-[#5851DB] transition-colors disabled:opacity-50"
+                >
+                  {connecting ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Connecting...
+                    </>
+                  ) : (
+                    <>
+                      <Link className="w-4 h-4" />
+                      Connect with Stripe
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Info Box */}
+        <div className="mt-6 p-4 bg-blue-50 border border-blue-100 rounded-xl">
+          <h4 className="font-medium text-blue-900 mb-1">How it works</h4>
+          <ul className="text-sm text-blue-800 space-y-1">
+            <li>1. Connect your existing Stripe account or create a new one</li>
+            <li>2. When you send invoices, clients see a "Pay Now" button</li>
+            <li>3. Payments go directly to your connected Stripe account</li>
+            <li>4. Invoice status updates automatically when paid</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+// Subscription Tab Component
+function SubscriptionTab() {
+  const { subscription, currentPlan, plans, loading, isPro, isStarter } = useSubscription();
+  const { showToast } = useToast();
+  const { profile } = useAuth();
+  const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
+  const [usage, setUsage] = useState({ projects: 0, teamMembers: 0, clients: 0, invoices: 0 });
+  const [usageLoading, setUsageLoading] = useState(true);
+
+  // Fetch real usage data
+  useEffect(() => {
+    async function fetchUsage() {
+      if (!profile?.company_id) return;
+      
+      try {
+        // Get current month date range for invoices count
+        const now = new Date();
+        const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+        const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString();
+
+        // Fetch counts in parallel
+        const [projectsRes, clientsRes, teamRes, invoicesRes] = await Promise.all([
+          supabase.from('projects').select('id', { count: 'exact', head: true }).eq('company_id', profile.company_id).neq('status', 'archived'),
+          supabase.from('clients').select('id', { count: 'exact', head: true }).eq('company_id', profile.company_id).neq('is_archived', true),
+          supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('company_id', profile.company_id).eq('is_active', true),
+          supabase.from('invoices').select('id', { count: 'exact', head: true }).eq('company_id', profile.company_id).gte('created_at', firstDayOfMonth).lte('created_at', lastDayOfMonth),
+        ]);
+
+        setUsage({
+          projects: projectsRes.count || 0,
+          clients: clientsRes.count || 0,
+          teamMembers: teamRes.count || 0,
+          invoices: invoicesRes.count || 0,
+        });
+      } catch (err) {
+        console.error('Failed to fetch usage:', err);
+      } finally {
+        setUsageLoading(false);
+      }
+    }
+    
+    fetchUsage();
+  }, [profile?.company_id]);
+
+  const SUPABASE_URL = 'https://bqxnagmmegdbqrzhheip.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJxeG5hZ21tZWdkYnFyemhoZWlwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI2OTM5NTgsImV4cCI6MjA2ODI2OTk1OH0.LBb7KaCSs7LpsD9NZCOcartkcDIIALBIrpnYcv5Y0yY';
+
+  const PRICE_IDS = {
+    monthly: 'price_1SmkmUGi0VDXirSGgQBI28x7',
+    yearly: 'price_1SmkmwGi0VDXirSG193ADu99',
+  };
+
+  const formatDate = (dateStr: string | null) => {
+    if (!dateStr) return 'N/A';
+    return new Date(dateStr).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  };
+
+  async function handleUpgrade() {
+    const priceId = billingCycle === 'yearly' ? PRICE_IDS.yearly : PRICE_IDS.monthly;
+    
+    setCheckoutLoading(billingCycle);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session?.access_token) {
+        showToast('Please log in to upgrade', 'error');
+        return;
+      }
+
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/stripe-subscription-checkout`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          price_id: priceId,
+          user_id: profile?.id,
+          success_url: `${window.location.origin}/dashboard?subscription=success`,
+          cancel_url: `${window.location.origin}/settings?subscription=canceled`,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.error) {
+        throw new Error(result.error.message || result.error);
+      }
+
+      if (result.url) {
+        window.location.href = result.url;
+      } else if (result.data?.url) {
+        window.location.href = result.data.url;
+      } else {
+        throw new Error('No checkout URL returned');
+      }
+    } catch (err: any) {
+      console.error('Upgrade error:', err);
+      showToast(err.message || 'Failed to start upgrade', 'error');
+    } finally {
+      setCheckoutLoading(null);
+    }
+  }
+
+  // Progress bar component
+  const UsageBar = ({ used, limit, label, isLoading }: { used: number; limit: number | null; label: string; isLoading?: boolean }) => {
+    if (isLoading) {
+      return (
+        <div className="space-y-2">
+          <div className="flex justify-between text-sm">
+            <span className="text-neutral-600">{label}</span>
+            <span className="w-12 h-4 bg-neutral-200 animate-pulse rounded" />
+          </div>
+          <div className="h-2 bg-neutral-100 rounded-full overflow-hidden">
+            <div className="h-full bg-neutral-200 animate-pulse rounded-full w-1/3" />
+          </div>
+        </div>
+      );
+    }
+    if (limit === null) {
+      return (
+        <div className="space-y-2">
+          <div className="flex justify-between text-sm">
+            <span className="text-neutral-600">{label}</span>
+            <span className="font-medium text-neutral-900">{used} used</span>
+          </div>
+          <div className="h-2 bg-neutral-100 rounded-full overflow-hidden">
+            <div className="h-full bg-[#476E66] rounded-full" style={{ width: '15%' }} />
+          </div>
+          <p className="text-xs text-emerald-600 font-medium">Unlimited</p>
+        </div>
+      );
+    }
+    const percentage = Math.min((used / limit) * 100, 100);
+    const isNearLimit = percentage >= 80;
+    const isAtLimit = percentage >= 100;
+    
+    return (
+      <div className="space-y-2">
+        <div className="flex justify-between text-sm">
+          <span className="text-neutral-600">{label}</span>
+          <span className={`font-medium ${isAtLimit ? 'text-red-600' : isNearLimit ? 'text-amber-600' : 'text-neutral-900'}`}>
+            {used} / {limit}
+          </span>
+        </div>
+        <div className="h-2 bg-neutral-100 rounded-full overflow-hidden">
+          <div 
+            className={`h-full rounded-full transition-all ${isAtLimit ? 'bg-red-500' : isNearLimit ? 'bg-amber-500' : 'bg-[#476E66]'}`}
+            style={{ width: `${percentage}%` }}
+          />
+        </div>
+        {isNearLimit && !isAtLimit && (
+          <p className="text-xs text-amber-600">Approaching limit</p>
+        )}
+        {isAtLimit && (
+          <p className="text-xs text-red-600">Limit reached - upgrade to continue</p>
+        )}
+      </div>
+    );
+  };
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-2xl p-12 border border-neutral-100 shadow-sm">
+        <div className="flex justify-center">
+          <Loader2 className="w-8 h-8 animate-spin text-neutral-400" />
+        </div>
+      </div>
+    );
+  }
+
+  const features = [
+    { name: 'Projects', starter: '3', pro: 'Unlimited' },
+    { name: 'Team Members', starter: '2', pro: '50' },
+    { name: 'Clients', starter: '5', pro: 'Unlimited' },
+    { name: 'Invoices per Month', starter: '10', pro: 'Unlimited' },
+    { name: 'Time Tracking', starter: true, pro: true },
+    { name: 'Expense Tracking', starter: true, pro: true },
+    { name: 'Invoice Generation', starter: true, pro: true },
+    { name: 'Custom Branding', starter: false, pro: true },
+    { name: 'Advanced Reports', starter: false, pro: true },
+    { name: 'Priority Support', starter: false, pro: true },
+    { name: 'API Access', starter: false, pro: true },
+  ];
+
+  return (
+    <div className="space-y-6">
+      {/* Current Plan Card - Enhanced with gradient border */}
+      <div className="relative rounded-2xl p-[2px] bg-gradient-to-br from-[#476E66] via-[#5a8a80] to-[#3A5B54]">
+        <div className="bg-white rounded-[14px] p-6">
+          <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6">
+            <div className="flex items-start gap-5">
+              <div 
+                className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg"
+                style={{ background: isPro ? 'linear-gradient(135deg, #476E66 0%, #3A5B54 100%)' : 'linear-gradient(135deg, #E8E8E6 0%, #D4D4D2 100%)' }}
+              >
+                <CreditCard className="w-8 h-8" style={{ color: isPro ? '#fff' : '#474747' }} />
+              </div>
+              
+              <div>
+                <div className="flex items-center gap-3 mb-1">
+                  <h3 className="text-2xl font-bold text-neutral-900">
+                    {currentPlan?.name || 'Starter'}
+                  </h3>
+                  {isPro ? (
+                    <span className="px-3 py-1 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-full text-xs font-semibold shadow-sm">
+                      PRO
+                    </span>
+                  ) : (
+                    <span className="px-3 py-1 bg-neutral-100 text-neutral-600 rounded-full text-xs font-medium">
+                      Free Plan
+                    </span>
+                  )}
+                </div>
+                <p className="text-neutral-500 text-sm">
+                  {isPro ? 'Full access to all features' : 'Basic features for getting started'}
+                </p>
+                
+                {subscription && (
+                  <div className="mt-3 flex items-center gap-4 text-sm">
+                    <span className="flex items-center gap-1.5">
+                      <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                      <span className="text-neutral-600">Active</span>
+                    </span>
+                    {subscription.current_period_end && (
+                      <span className="text-neutral-500">
+                        {subscription.cancel_at_period_end ? 'Ends' : 'Renews'}: {formatDate(subscription.current_period_end)}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {isStarter && (
+              <button
+                onClick={handleUpgrade}
+                disabled={!!checkoutLoading}
+                className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#476E66] to-[#3A5B54] text-white font-semibold rounded-xl hover:shadow-lg hover:scale-[1.02] transition-all disabled:opacity-50 disabled:hover:scale-100"
+              >
+                {checkoutLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <CreditCard className="w-4 h-4" />
+                    Upgrade to Professional
+                  </>
+                )}
+              </button>
+            )}
+          </div>
+
+          {/* Usage Progress Bars */}
+          <div className="mt-8 pt-6 border-t border-neutral-100">
+            <h4 className="text-sm font-semibold text-neutral-700 mb-4">Current Usage</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <UsageBar 
+                used={usage.projects} 
+                limit={currentPlan?.max_projects ?? 3} 
+                label="Projects"
+                isLoading={usageLoading}
+              />
+              <UsageBar 
+                used={usage.teamMembers} 
+                limit={currentPlan?.max_team_members ?? 2} 
+                label="Team Members"
+                isLoading={usageLoading}
+              />
+              <UsageBar 
+                used={usage.clients} 
+                limit={currentPlan?.max_clients ?? 5} 
+                label="Clients"
+                isLoading={usageLoading}
+              />
+              <UsageBar 
+                used={usage.invoices} 
+                limit={currentPlan?.max_invoices_per_month ?? 10} 
+                label="Invoices This Month"
+                isLoading={usageLoading}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Upgrade Card - Only for Starter users */}
+      {isStarter && (
+        <div className="bg-gradient-to-br from-[#476E66] via-[#4a7a71] to-[#3A5B54] rounded-2xl p-8 text-white shadow-xl">
+          <div className="flex flex-col lg:flex-row gap-8">
+            {/* Left side - Features */}
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-2">
+                <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="currentColor"/>
+                </svg>
+                <span className="text-white/80 text-sm font-medium uppercase tracking-wider">Recommended</span>
+              </div>
+              <h3 className="text-3xl font-bold mb-3">Upgrade to Professional</h3>
+              <p className="text-white/80 mb-6 text-lg">
+                Unlock your full potential with unlimited projects, advanced analytics, and priority support.
+              </p>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {[
+                  'Unlimited projects & clients',
+                  'Up to 50 team members',
+                  'Advanced reporting',
+                  'Custom branding',
+                  'Priority support',
+                  'API access',
+                ].map((feature) => (
+                  <div key={feature} className="flex items-center gap-2">
+                    <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center">
+                      <Check className="w-3 h-3" />
+                    </div>
+                    <span className="text-sm">{feature}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Right side - Pricing */}
+            <div className="lg:w-80">
+              <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
+                {/* Billing Toggle */}
+                <div className="flex items-center justify-center gap-3 mb-6">
+                  <span className={`text-sm font-medium ${billingCycle === 'monthly' ? 'text-white' : 'text-white/60'}`}>
+                    Monthly
+                  </span>
+                  <button
+                    onClick={() => setBillingCycle(billingCycle === 'monthly' ? 'yearly' : 'monthly')}
+                    className="relative w-14 h-7 rounded-full bg-white/20 transition-colors"
+                  >
+                    <span
+                      className="absolute top-1 w-5 h-5 bg-white rounded-full shadow transition-transform"
+                      style={{ left: billingCycle === 'yearly' ? '32px' : '4px' }}
+                    />
+                  </button>
+                  <span className={`text-sm font-medium ${billingCycle === 'yearly' ? 'text-white' : 'text-white/60'}`}>
+                    Yearly
+                  </span>
+                </div>
+
+                {billingCycle === 'yearly' && (
+                  <div className="text-center mb-4">
+                    <span className="px-3 py-1 bg-emerald-500 text-white text-xs font-semibold rounded-full">
+                      Save 20% with yearly billing
+                    </span>
+                  </div>
+                )}
+
+                <div className="text-center mb-6">
+                  {billingCycle === 'monthly' ? (
+                    <>
+                      <span className="text-5xl font-bold">$22</span>
+                      <span className="text-white/80 text-lg">/month</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-5xl font-bold">$17.60</span>
+                      <span className="text-white/80 text-lg">/month</span>
+                      <p className="text-white/60 text-sm mt-1">$211.20 billed annually</p>
+                    </>
+                  )}
+                </div>
+
+                <button
+                  onClick={handleUpgrade}
+                  disabled={!!checkoutLoading}
+                  className="w-full py-4 bg-white text-[#476E66] font-bold rounded-xl hover:bg-white/95 transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl"
+                >
+                  {checkoutLoading ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      Get Professional Now
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                      </svg>
+                    </>
+                  )}
+                </button>
+
+                <p className="text-center text-white/60 text-xs mt-4">
+                  Cancel anytime. No questions asked.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cancellation Warning */}
+      {subscription?.cancel_at_period_end && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6">
+          <div className="flex items-start gap-4">
+            <AlertTriangle className="w-6 h-6 text-amber-600 flex-shrink-0" />
+            <div>
+              <h3 className="font-semibold text-amber-900 mb-1">Subscription Ending</h3>
+              <p className="text-amber-800 text-sm">
+                Your subscription is set to cancel on {formatDate(subscription.current_period_end)}.
+                You will lose access to Professional features after this date.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Plan Comparison - Visual redesign */}
+      <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm overflow-hidden">
+        <div className="p-6 border-b border-neutral-100">
+          <h3 className="text-xl font-bold text-neutral-900">Compare Plans</h3>
+          <p className="text-neutral-500 text-sm mt-1">See what's included in each plan</p>
+        </div>
+        
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="bg-neutral-50">
+                <th className="text-left py-4 px-6 text-sm font-semibold text-neutral-700 w-1/2">Features</th>
+                <th className="text-center py-4 px-6 w-1/4">
+                  <div className="inline-flex flex-col items-center">
+                    <span className="text-sm font-semibold text-neutral-900">Starter</span>
+                    <span className="text-xs text-neutral-500">Free forever</span>
+                  </div>
+                </th>
+                <th className="text-center py-4 px-6 w-1/4">
+                  <div className="inline-flex flex-col items-center">
+                    <span className="text-sm font-semibold text-neutral-900 flex items-center gap-1.5">
+                      Professional
+                      <span className="px-1.5 py-0.5 bg-[#476E66] text-white text-[10px] font-bold rounded">PRO</span>
+                    </span>
+                    <span className="text-xs text-neutral-500">$22/month</span>
+                  </div>
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-neutral-100">
+              {features.map((feature, idx) => (
+                <tr key={feature.name} className={idx % 2 === 0 ? 'bg-white' : 'bg-neutral-50/50'}>
+                  <td className="py-4 px-6 text-sm text-neutral-700 font-medium">{feature.name}</td>
+                  <td className="text-center py-4 px-6">
+                    {typeof feature.starter === 'boolean' ? (
+                      feature.starter ? (
+                        <div className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100">
+                          <Check className="w-4 h-4 text-emerald-600" />
+                        </div>
+                      ) : (
+                        <div className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-neutral-100">
+                          <X className="w-4 h-4 text-neutral-400" />
+                        </div>
+                      )
+                    ) : (
+                      <span className="text-sm font-medium text-neutral-900">{feature.starter}</span>
+                    )}
+                  </td>
+                  <td className="text-center py-4 px-6">
+                    {typeof feature.pro === 'boolean' ? (
+                      feature.pro ? (
+                        <div className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100">
+                          <Check className="w-4 h-4 text-emerald-600" />
+                        </div>
+                      ) : (
+                        <div className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-neutral-100">
+                          <X className="w-4 h-4 text-neutral-400" />
+                        </div>
+                      )
+                    ) : (
+                      <span className="text-sm font-semibold text-[#476E66]">{feature.pro}</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {isStarter && (
+          <div className="p-6 bg-gradient-to-r from-[#476E66]/5 to-[#476E66]/10 border-t border-neutral-100">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+              <p className="text-neutral-700 font-medium">Ready to unlock all features?</p>
+              <button
+                onClick={handleUpgrade}
+                disabled={!!checkoutLoading}
+                className="px-6 py-2.5 bg-[#476E66] text-white font-semibold rounded-xl hover:bg-[#3A5B54] transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                {checkoutLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <>
+                    Upgrade Now - ${billingCycle === 'yearly' ? '17.60' : '22'}/mo
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

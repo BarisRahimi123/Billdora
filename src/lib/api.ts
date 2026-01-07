@@ -234,6 +234,7 @@ export interface CompanySettings {
   logo_url?: string;
   default_tax_rate?: number;
   default_terms?: string;
+  stripe_account_id?: string;
   created_at?: string;
 }
 
@@ -776,7 +777,7 @@ export const api = {
   async getInvoices(companyId: string) {
     const { data, error } = await supabase
       .from('invoices')
-      .select('*, client:clients(id, name, display_name), project:projects(id, name)')
+      .select('*, client:clients(id, name, display_name, email), project:projects(id, name)')
       .eq('company_id', companyId)
       .order('created_at', { ascending: false });
     if (error) throw error;
@@ -887,6 +888,17 @@ export const api = {
     // Then delete the invoices
     const { error } = await supabase.from('invoices').delete().in('id', ids);
     if (error) throw error;
+  },
+
+  // Proposal Responses
+  async getProposalResponses(companyId: string) {
+    const { data, error } = await supabase
+      .from('proposal_responses')
+      .select('*')
+      .eq('company_id', companyId)
+      .order('responded_at', { ascending: false });
+    if (error) throw error;
+    return data || [];
   },
 
   // Quotes

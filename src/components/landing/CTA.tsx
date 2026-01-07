@@ -105,7 +105,7 @@ export const CTA = () => {
                 Ready to Professionalize Your Operations?
               </h2>
               <p className="text-xl text-swiss-charcoal mb-8">
-                Join thousands of firms that have transformed their workflow with PrimeLedger.
+                Join thousands of firms that have transformed their workflow with Billdora.
               </p>
 
               {/* Benefits List */}

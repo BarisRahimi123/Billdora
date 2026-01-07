@@ -30,7 +30,7 @@ export const SocialProof = () => {
           className="bg-white p-12 md:p-16 border border-swiss-gray-border max-w-4xl mx-auto text-center"
         >
           <blockquote className="text-3xl md:text-4xl font-medium leading-tight text-swiss-black mb-8">
-            "PrimeLedger transformed our billing cycle from a two-week headache into a two-hour process. It is the backbone of our operations."
+            "Billdora transformed our billing cycle from a two-week headache into a two-hour process. It is the backbone of our operations."
           </blockquote>
           <cite className="not-italic">
             <div className="text-xl font-bold text-swiss-black">Harvey Specter</div>

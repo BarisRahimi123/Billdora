@@ -47,7 +47,11 @@ export default function QuoteDocumentPage() {
   const [projectName, setProjectName] = useState('');
   const [description, setDescription] = useState('');
   const [selectedClientId, setSelectedClientId] = useState('');
-  const [validUntil, setValidUntil] = useState('');
+  const [validUntil, setValidUntil] = useState(() => {
+    const date = new Date();
+    date.setDate(date.getDate() + 30);
+    return date.toISOString().split('T')[0];
+  });
   const [volumeNumber, setVolumeNumber] = useState('Proposal');
   const [coverBgUrl, setCoverBgUrl] = useState('https://images.unsplash.com/photo-1497366216548-37526070297c?w=1200&q=80');
   
@@ -173,7 +177,8 @@ export default function QuoteDocumentPage() {
 </body>
 </html>`;
   };
-  const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+  const SUPABASE_URL = 'https://bqxnagmmegdbqrzhheip.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJxeG5hZ21tZWdkYnFyemhoZWlwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI2OTM5NTgsImV4cCI6MjA2ODI2OTk1OH0.LBb7KaCSs7LpsD9NZCOcartkcDIIALBIrpnYcv5Y0yY';
 
   useEffect(() => {
     loadData();
@@ -516,7 +521,10 @@ export default function QuoteDocumentPage() {
       const portalUrl = window.location.origin;
       const res = await fetch(`${SUPABASE_URL}/functions/v1/send-proposal`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+        },
         body: JSON.stringify({
           quoteId: quote.id,
           companyId: profile?.company_id,
@@ -526,7 +534,8 @@ export default function QuoteDocumentPage() {
           companyName: companyInfo.name,
           senderName: profile?.full_name || companyInfo.name,
           validUntil,
-          portalUrl
+          portalUrl,
+          letterContent: letterContent || `Thank you for the potential opportunity to work together on the ${documentTitle || projectName || 'project'}. I have attached the proposal for your consideration which includes a thorough Scope of Work, deliverable schedule, and Fee.\n\nPlease review and let me know if you have any questions or comments. If you are ready for us to start working on the project, please sign the proposal sheet.`
         })
       });
       

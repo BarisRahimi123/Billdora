@@ -1168,6 +1168,7 @@ function InvoiceDetailView({
   getStatusColor: (status?: string) => string;
   formatCurrency: (amount?: number) => string;
 }) {
+  const { profile } = useAuth();
   const [activeTab, setActiveTab] = useState<'preview' | 'detail' | 'time' | 'expenses'>('preview');
   const [pdfTemplates, setPdfTemplates] = useState<PDFTemplateOption[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState(invoice.pdf_template_id || '');
@@ -1184,6 +1185,19 @@ function InvoiceDetailView({
   const [sentDate, setSentDate] = useState((invoice as any).sent_at ? new Date((invoice as any).sent_at).toISOString().split('T')[0] : '');
   const [dueDate, setDueDate] = useState(invoice.due_date ? invoice.due_date.split('T')[0] : '');
   const [notes, setNotes] = useState('');
+  
+  // Send invoice modal state
+  const [showSendModal, setShowSendModal] = useState(false);
+  const [sendingInvoice, setSendingInvoice] = useState(false);
+  const [emailContent, setEmailContent] = useState('');
+  
+  // Initialize email content when modal opens
+  useEffect(() => {
+    if (showSendModal && invoice.client?.name) {
+      const defaultContent = `Please find attached Invoice ${invoiceNumber} for ${invoice.project?.name || 'services rendered'}.\n\nThe total amount due is ${formatCurrency(invoice.total)}${dueDate ? ` and payment is due by ${new Date(dueDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}` : ''}.\n\nThank you for your business. Please don't hesitate to reach out if you have any questions.`;
+      setEmailContent(defaultContent);
+    }
+  }, [showSendModal, invoice, invoiceNumber, dueDate]);
   
   // Calculate due date from sent date and terms
   useEffect(() => {
@@ -1666,6 +1680,12 @@ function InvoiceDetailView({
               <button className="px-4 py-2 text-sm text-neutral-900 hover:bg-neutral-100 rounded-lg font-medium">Edit</button>
               <button className="px-4 py-2 bg-white border border-neutral-300 rounded-lg text-sm font-medium hover:bg-neutral-50">Refresh</button>
               <button className="px-4 py-2 bg-white border border-neutral-300 rounded-lg text-sm font-medium hover:bg-neutral-50">Snapshot</button>
+              <button 
+                onClick={() => setShowSendModal(true)}
+                className="px-4 py-2 bg-[#476E66] text-white rounded-lg text-sm font-medium hover:bg-[#3a5b54] flex items-center gap-2"
+              >
+                <Send className="w-4 h-4" /> Send Invoice
+              </button>
             </div>
 
             {/* Full-width Invoice Preview Card */}
@@ -2236,6 +2256,113 @@ function InvoiceDetailView({
           </button>
         </div>
       </div>
+
+      {/* Send Invoice Modal */}
+      {showSendModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl">
+            <div className="p-6 border-b border-neutral-100">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-semibold">Send Invoice</h3>
+                <button onClick={() => setShowSendModal(false)} className="p-2 hover:bg-neutral-100 rounded-lg">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1">Recipient</label>
+                <div className="px-4 py-3 bg-neutral-50 rounded-lg">
+                  <p className="font-medium">{invoice.client?.name}</p>
+                  <p className="text-sm text-neutral-500">{invoice.client?.email || 'No email on file'}</p>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1">Invoice Details</label>
+                <div className="px-4 py-3 bg-neutral-50 rounded-lg flex justify-between items-center">
+                  <span className="text-neutral-600">Invoice {invoiceNumber}</span>
+                  <span className="font-semibold text-lg">{formatCurrency(invoice.total)}</span>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1">Email Message</label>
+                <textarea
+                  value={emailContent}
+                  onChange={(e) => setEmailContent(e.target.value)}
+                  rows={6}
+                  className="w-full px-4 py-3 border border-neutral-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-[#476E66]/20 focus:border-[#476E66]"
+                  placeholder="Enter your email message..."
+                />
+                <p className="text-xs text-neutral-500 mt-1">You can customize this message before sending.</p>
+              </div>
+            </div>
+            <div className="p-6 bg-neutral-50 border-t border-neutral-100 flex gap-3">
+              <button
+                onClick={() => setShowSendModal(false)}
+                className="flex-1 px-4 py-2.5 border border-neutral-300 rounded-xl hover:bg-white transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  if (!invoice.client?.email) {
+                    alert('Client does not have an email address on file.');
+                    return;
+                  }
+                  setSendingInvoice(true);
+                  try {
+                    const res = await fetch('https://bqxnagmmegdbqrzhheip.supabase.co/functions/v1/send-invoice', {
+                      method: 'POST',
+                      headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJxeG5hZ21tZWdkYnFyemhoZWlwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI2OTM5NTgsImV4cCI6MjA2ODI2OTk1OH0.LBb7KaCSs7LpsD9NZCOcartkcDIIALBIrpnYcv5Y0yY'
+                      },
+                      body: JSON.stringify({
+                        invoiceId: invoice.id,
+                        clientEmail: invoice.client.email,
+                        clientName: invoice.client.name,
+                        invoiceNumber: invoiceNumber,
+                        projectName: invoice.project?.name || '',
+                        companyName: profile?.full_name || 'Billdora',
+                        senderName: profile?.full_name || 'Billdora',
+                        totalAmount: formatCurrency(invoice.total),
+                        dueDate: dueDate ? new Date(dueDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '',
+                        emailContent,
+                        portalUrl: `${window.location.origin}/invoice-view/${invoice.id}`
+                      })
+                    });
+                    const data = await res.json();
+                    if (data.error) throw new Error(data.error);
+                    setShowSendModal(false);
+                    setStatus('sent');
+                    setSentDate(new Date().toISOString().split('T')[0]);
+                    onUpdate();
+                    alert('Invoice sent successfully!');
+                  } catch (error: any) {
+                    console.error('Failed to send invoice:', error);
+                    alert(error?.message || 'Failed to send invoice');
+                  }
+                  setSendingInvoice(false);
+                }}
+                disabled={sendingInvoice || !invoice.client?.email}
+                className="flex-1 px-4 py-2.5 bg-[#476E66] text-white rounded-xl hover:bg-[#3a5b54] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {sendingInvoice ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4" />
+                    Send Invoice
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

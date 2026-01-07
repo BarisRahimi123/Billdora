@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
-import { Users, Plus, Search, Mail, Phone, Edit2, X, UserCheck, UserX, Clock, DollarSign, Activity, UsersRound, Shield, User, ChevronRight, Calendar, Briefcase, CheckCircle2, MoreVertical, Trash2, UserPlus, Send } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Users, Plus, Search, Mail, Phone, Edit2, X, UserCheck, UserX, Clock, DollarSign, Activity, UsersRound, Shield, User, ChevronRight, Calendar, Briefcase, CheckCircle2, MoreVertical, Trash2, UserPlus, Send, ArrowLeft, LogOut, ListTodo, TrendingUp, Wallet } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { api, userManagementApi, UserProfile, Role, TimeEntry, Expense, Task } from '../lib/api';
 import { supabase } from '../lib/supabase';
 
-type TabType = 'basic' | 'rights' | 'contact' | 'time' | 'expenses' | 'activity' | 'teams';
+type TabType = 'activity' | 'tasks' | 'time' | 'performance' | 'personal' | 'compensation' | 'billing';
 
 export default function ResourcingPage() {
-  const { profile } = useAuth();
+  const navigate = useNavigate();
+  const { profile, signOut } = useAuth();
   const [staff, setStaff] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -15,7 +17,7 @@ export default function ResourcingPage() {
   const [editingStaff, setEditingStaff] = useState<UserProfile | null>(null);
   const [showInactive, setShowInactive] = useState(false);
   const [selectedStaff, setSelectedStaff] = useState<UserProfile | null>(null);
-  const [activeTab, setActiveTab] = useState<TabType>('basic');
+  const [activeTab, setActiveTab] = useState<TabType>('activity');
   const [showInviteModal, setShowInviteModal] = useState(false);
 
   useEffect(() => {
@@ -50,13 +52,13 @@ export default function ResourcingPage() {
   });
 
   const tabs: { id: TabType; label: string; icon: React.ReactNode }[] = [
-    { id: 'basic', label: 'Basic Info', icon: <User className="w-4 h-4" /> },
-    { id: 'rights', label: 'User Rights', icon: <Shield className="w-4 h-4" /> },
-    { id: 'contact', label: 'Contact Info', icon: <Phone className="w-4 h-4" /> },
-    { id: 'time', label: 'Time', icon: <Clock className="w-4 h-4" /> },
-    { id: 'expenses', label: 'Expenses', icon: <DollarSign className="w-4 h-4" /> },
-    { id: 'activity', label: 'Activity', icon: <Activity className="w-4 h-4" /> },
-    { id: 'teams', label: 'Teams', icon: <UsersRound className="w-4 h-4" /> },
+    { id: 'activity', label: 'Activity Feed', icon: <Activity className="w-4 h-4" /> },
+    { id: 'tasks', label: 'Current Tasks', icon: <ListTodo className="w-4 h-4" /> },
+    { id: 'time', label: 'Time Tracking', icon: <Clock className="w-4 h-4" /> },
+    { id: 'performance', label: 'Performance', icon: <TrendingUp className="w-4 h-4" /> },
+    { id: 'personal', label: 'Personal Details', icon: <User className="w-4 h-4" /> },
+    { id: 'compensation', label: 'Compensation & Costs', icon: <Wallet className="w-4 h-4" /> },
+    { id: 'billing', label: 'Client Billing Rate', icon: <DollarSign className="w-4 h-4" /> },
   ];
 
   if (loading) {
@@ -68,97 +70,111 @@ export default function ResourcingPage() {
   }
 
   return (
-    <div className="h-[calc(100vh-120px)] flex flex-col">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h1 className="text-2xl font-bold text-neutral-900">Staff</h1>
-          <p className="text-neutral-500 text-sm">Manage your team members</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowInviteModal(true)}
-            className="flex items-center gap-2 px-4 py-2.5 border border-neutral-900-500 text-neutral-900-600 rounded-lg hover:bg-[#3A5B54]-50 transition-colors"
+    <div className="flex min-h-[calc(100vh-73px)] -m-4 lg:-m-6">
+      {/* Team Sidebar - Replaces main nav */}
+      <aside className="w-64 text-white flex flex-col fixed h-[calc(100vh-73px)] z-40" style={{ backgroundColor: '#476E66' }}>
+        {/* Back Button Header */}
+        <div className="p-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.2)' }}>
+          <button 
+            onClick={() => navigate('/dashboard')}
+            className="flex items-center gap-3 w-full px-3 py-2.5 text-white/90 hover:text-white hover:bg-white/10 rounded-xl transition-colors"
           >
-            <Send className="w-4 h-4" />
-            Invite
-          </button>
-          <button
-            onClick={() => { setEditingStaff(null); setShowModal(true); }}
-            className="flex items-center gap-2 px-4 py-2.5 bg-[#476E66] text-white rounded-lg hover:bg-black transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            Add Staff
+            <ArrowLeft className="w-5 h-5" />
+            <span className="font-medium text-sm">Back to Dashboard</span>
           </button>
         </div>
-      </div>
 
-      {/* Main Content - Two Column Layout */}
-      <div className="flex-1 flex gap-4 min-h-0">
-        {/* Left Panel - Staff List */}
-        <div className="w-64 flex-shrink-0 bg-white rounded-xl border border-neutral-200 flex flex-col">
-          <div className="p-3 border-b border-neutral-100">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-neutral-700">Staff Member</span>
-              <button className="p-1 hover:bg-neutral-100 rounded">
-                <Search className="w-4 h-4 text-neutral-400" />
-              </button>
-            </div>
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Search..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-3 pr-3 py-1.5 text-sm rounded-lg border border-neutral-200 focus:ring-1 focus:ring-primary-500 focus:border-neutral-900-500 outline-none"
-              />
-            </div>
-            <label className="flex items-center gap-2 mt-2 text-xs text-neutral-500 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={showInactive}
-                onChange={(e) => setShowInactive(e.target.checked)}
-                className="w-3 h-3 rounded border-neutral-300 text-neutral-900-500"
-              />
-              Show Inactive
-            </label>
+        {/* Title & Actions */}
+        <div className="px-4 py-4">
+          <h2 className="text-lg font-semibold text-white">Team</h2>
+          <p className="text-white/60 text-xs mt-0.5">Manage staff members</p>
+          <div className="flex gap-2 mt-3">
+            <button
+              onClick={() => setShowInviteModal(true)}
+              className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
+            >
+              <Send className="w-3 h-3" />
+              Invite
+            </button>
+            <button
+              onClick={() => { setEditingStaff(null); setShowModal(true); }}
+              className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs bg-white/20 hover:bg-white/30 rounded-lg transition-colors"
+            >
+              <Plus className="w-3 h-3" />
+              Add
+            </button>
           </div>
-          
-          <div className="flex-1 overflow-y-auto">
-            {filteredStaff.map((member) => (
-              <button
-                key={member.id}
-                onClick={() => { setSelectedStaff(member); setActiveTab('basic'); }}
-                className={`w-full px-3 py-2.5 text-left flex items-center gap-2 hover:bg-neutral-50 border-b border-neutral-50 transition-colors ${
-                  selectedStaff?.id === member.id ? 'bg-[#476E66]-50 border-l-2 border-l-primary-500' : ''
-                }`}
-              >
-                {member.avatar_url ? (
-                  <img src={member.avatar_url} alt="" className="w-8 h-8 rounded-full object-cover" />
-                ) : (
-                  <div className="w-8 h-8 rounded-full bg-[#476E66]-100 flex items-center justify-center text-neutral-900-700 text-sm font-medium">
-                    {member.full_name?.charAt(0) || '?'}
-                  </div>
-                )}
-                <div className="flex-1 min-w-0">
-                  <p className={`text-sm font-medium truncate ${selectedStaff?.id === member.id ? 'text-neutral-900-700' : 'text-neutral-900'}`}>
-                    {member.full_name || 'No Name'}
-                  </p>
-                  <p className="text-xs text-neutral-400 truncate">{member.role || 'Staff'}</p>
+        </div>
+
+        {/* Search */}
+        <div className="px-4 pb-2">
+          <input
+            type="text"
+            placeholder="Search staff..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full px-3 py-2 text-sm rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/50 focus:outline-none focus:ring-1 focus:ring-white/30"
+          />
+          <label className="flex items-center gap-2 mt-2 text-xs text-white/60 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={showInactive}
+              onChange={(e) => setShowInactive(e.target.checked)}
+              className="w-3 h-3 rounded"
+            />
+            Show Inactive
+          </label>
+        </div>
+
+        {/* Staff List */}
+        <div className="flex-1 overflow-y-auto py-2">
+          {filteredStaff.map((member) => (
+            <button
+              key={member.id}
+              onClick={() => { setSelectedStaff(member); setActiveTab('activity'); }}
+              className={`w-full px-4 py-2.5 text-left flex items-center gap-3 transition-colors ${
+                selectedStaff?.id === member.id 
+                  ? 'bg-white/20 text-white' 
+                  : 'text-white/70 hover:text-white hover:bg-white/10'
+              }`}
+            >
+              {member.avatar_url ? (
+                <img src={member.avatar_url} alt="" className="w-8 h-8 rounded-full object-cover" />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white text-sm font-medium">
+                  {member.full_name?.charAt(0) || '?'}
                 </div>
-                {member.is_active === false && (
-                  <span className="px-1.5 py-0.5 bg-neutral-100 text-neutral-500 text-xs rounded">Inactive</span>
-                )}
-              </button>
-            ))}
-            {filteredStaff.length === 0 && (
-              <div className="text-center py-8 text-neutral-400 text-sm">No staff found</div>
-            )}
-          </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{member.full_name || 'No Name'}</p>
+                <p className="text-xs text-white/50 truncate">{member.role || 'Staff'}</p>
+              </div>
+              {member.is_active === false && (
+                <span className="px-1.5 py-0.5 bg-white/10 text-white/60 text-xs rounded">Inactive</span>
+              )}
+            </button>
+          ))}
+          {filteredStaff.length === 0 && (
+            <div className="text-center py-8 text-white/40 text-sm">No staff found</div>
+          )}
         </div>
 
+        {/* Sign Out */}
+        <div className="p-4" style={{ borderTop: '1px solid rgba(255,255,255,0.2)' }}>
+          <button
+            onClick={() => signOut()}
+            className="flex items-center gap-3 w-full px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 rounded-xl transition-colors"
+          >
+            <LogOut className="w-5 h-5" />
+            <span className="text-sm font-medium">Sign Out</span>
+          </button>
+        </div>
+      </aside>
+
+      {/* Content Area */}
+      <div className="flex-1 ml-64 p-6 overflow-y-auto" style={{ backgroundColor: '#F5F5F3' }}>
         {/* Right Panel - Tabbed Content */}
-        <div className="flex-1 bg-white rounded-xl border border-neutral-200 flex flex-col min-w-0">
+        <div className="bg-white rounded-xl border border-neutral-200 flex flex-col min-h-[calc(100vh-120px)]">
           {selectedStaff ? (
             <>
               {/* Tab Bar */}
@@ -187,13 +203,13 @@ export default function ResourcingPage() {
                   <h2 className="text-lg font-semibold text-neutral-900">{selectedStaff.full_name}</h2>
                 </div>
                 
-                {activeTab === 'basic' && <BasicInfoTab staff={selectedStaff} onEdit={() => { setEditingStaff(selectedStaff); setShowModal(true); }} onDelete={async () => { await userManagementApi.updateUserProfile(selectedStaff.id, { is_active: false }); loadStaff(); }} onToggleActive={async () => { await userManagementApi.updateUserProfile(selectedStaff.id, { is_active: !selectedStaff.is_active }); loadStaff(); }} />}
-                {activeTab === 'rights' && <UserRightsTab staff={selectedStaff} companyId={profile?.company_id || ''} onUpdate={loadStaff} />}
-                {activeTab === 'contact' && <ContactInfoTab staff={selectedStaff} />}
-                {activeTab === 'time' && <TimeTab staff={selectedStaff} companyId={profile?.company_id || ''} />}
-                {activeTab === 'expenses' && <ExpensesTab staff={selectedStaff} companyId={profile?.company_id || ''} />}
                 {activeTab === 'activity' && <ActivityTab staff={selectedStaff} companyId={profile?.company_id || ''} />}
-                {activeTab === 'teams' && <TeamsTab staff={selectedStaff} />}
+                {activeTab === 'tasks' && <CurrentTasksTab staff={selectedStaff} companyId={profile?.company_id || ''} />}
+                {activeTab === 'time' && <TimeTab staff={selectedStaff} companyId={profile?.company_id || ''} />}
+                {activeTab === 'performance' && <PerformanceTab staff={selectedStaff} companyId={profile?.company_id || ''} />}
+                {activeTab === 'personal' && <PersonalDetailsTab staff={selectedStaff} onEdit={() => { setEditingStaff(selectedStaff); setShowModal(true); }} onDelete={async () => { await userManagementApi.updateUserProfile(selectedStaff.id, { is_active: false }); loadStaff(); }} onToggleActive={async () => { await userManagementApi.updateUserProfile(selectedStaff.id, { is_active: !selectedStaff.is_active }); loadStaff(); }} />}
+                {activeTab === 'compensation' && <CompensationTab staff={selectedStaff} onUpdate={loadStaff} />}
+                {activeTab === 'billing' && <BillingRateTab staff={selectedStaff} onUpdate={loadStaff} />}
               </div>
             </>
           ) : (
@@ -230,7 +246,7 @@ export default function ResourcingPage() {
 }
 
 // Basic Info Tab
-function BasicInfoTab({ staff, onEdit, onDelete, onToggleActive }: { staff: UserProfile; onEdit: () => void; onDelete: () => void; onToggleActive: () => void }) {
+function PersonalDetailsTab({ staff, onEdit, onDelete, onToggleActive }: { staff: UserProfile; onEdit: () => void; onDelete: () => void; onToggleActive: () => void }) {
   const [showMenu, setShowMenu] = useState(false);
   return (
     <div className="space-y-6">
@@ -560,7 +576,7 @@ function UserRightsTab({ staff, companyId, onUpdate }: { staff: UserProfile; com
           )}
         </div>
         <p className="text-sm text-neutral-500 mb-4">
-          Security in PrimeLedger is managed with the set of staffer <span className="text-neutral-900-500 underline cursor-pointer">groups</span>, listed below. Groups work just like a set of keys, permitting any staffer that has them access to various areas within the program.
+          Security in Billdora is managed with the set of user <span className="text-neutral-900-500 underline cursor-pointer">groups</span>, listed below. Groups work just like a set of keys, permitting any team member that has them access to various areas within the program.
         </p>
         <div className="grid grid-cols-3 gap-x-8 gap-y-3">
           {securityGroups.map((group) => (
@@ -627,7 +643,7 @@ function UserRightsTab({ staff, companyId, onUpdate }: { staff: UserProfile; com
           )}
         </div>
         <p className="text-sm text-neutral-500 mb-4">
-          Below is a list of the departments {staff.full_name} manages (giving this manager authority to view/edit or approve time/expenses logged by staffers in those departments).
+          Below is a list of the departments {staff.full_name} manages (giving this manager authority to view/edit or approve time/expenses logged by team members in those departments).
         </p>
         <div className="grid grid-cols-3 gap-x-8 gap-y-3">
           {departmentList.map((dept) => (
@@ -694,7 +710,7 @@ function UserRightsTab({ staff, companyId, onUpdate }: { staff: UserProfile; com
           )}
         </div>
         <p className="text-sm text-neutral-500 mb-4">
-          Below is a list of available staff teams. These can be used to assign a group of staffers to a project. Check off the teams you would like this staffer to be a part of.
+          Below is a list of available staff teams. These can be used to assign a group of team members to a project. Check off the teams you would like this team member to be a part of.
         </p>
         <div className="grid grid-cols-3 gap-x-8 gap-y-3">
           {teamList.map((team) => (
@@ -1091,6 +1107,397 @@ function TeamsTab({ staff }: { staff: UserProfile }) {
   );
 }
 
+// Current Tasks Tab
+function CurrentTasksTab({ staff, companyId }: { staff: UserProfile; companyId: string }) {
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadTasks();
+  }, [staff.id]);
+
+  async function loadTasks() {
+    try {
+      const { data } = await supabase
+        .from('tasks')
+        .select('*, project:projects(name)')
+        .eq('company_id', companyId)
+        .eq('assigned_to', staff.id)
+        .in('status', ['todo', 'in_progress'])
+        .order('due_date', { ascending: true });
+      setTasks(data || []);
+    } catch (error) {
+      console.error('Failed to load tasks:', error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (loading) {
+    return <div className="flex justify-center py-8"><div className="animate-spin w-6 h-6 border-2 border-neutral-500 border-t-transparent rounded-full" /></div>;
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-neutral-500">Active tasks assigned to {staff.full_name}</p>
+        <span className="px-2.5 py-1 bg-neutral-100 text-neutral-700 rounded text-sm font-medium">{tasks.length} tasks</span>
+      </div>
+      
+      <div className="space-y-3">
+        {tasks.map((task) => (
+          <div key={task.id} className="border border-neutral-200 rounded-lg p-4 hover:border-neutral-300 transition-colors">
+            <div className="flex items-start justify-between">
+              <div>
+                <h4 className="font-medium text-neutral-900">{task.name}</h4>
+                <p className="text-sm text-neutral-500">{(task as any).project?.name || 'No Project'}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className={`px-2 py-1 rounded text-xs font-medium ${
+                  task.status === 'in_progress' ? 'bg-blue-100 text-blue-700' : 'bg-neutral-100 text-neutral-600'
+                }`}>
+                  {task.status === 'in_progress' ? 'In Progress' : 'To Do'}
+                </span>
+                {task.due_date && (
+                  <span className="text-xs text-neutral-500">Due: {new Date(task.due_date).toLocaleDateString()}</span>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {tasks.length === 0 && (
+        <div className="text-center py-12 text-neutral-400">
+          <ListTodo className="w-10 h-10 mx-auto mb-2 opacity-50" />
+          <p>No active tasks assigned</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Performance Tab
+function PerformanceTab({ staff, companyId }: { staff: UserProfile; companyId: string }) {
+  const [stats, setStats] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadStats();
+  }, [staff.id]);
+
+  async function loadStats() {
+    try {
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      
+      const { data: timeEntries } = await supabase
+        .from('time_entries')
+        .select('hours, billable')
+        .eq('company_id', companyId)
+        .eq('user_id', staff.id)
+        .gte('date', startOfMonth);
+
+      const totalHours = timeEntries?.reduce((sum, t) => sum + (t.hours || 0), 0) || 0;
+      const billableHours = timeEntries?.filter(t => t.billable).reduce((sum, t) => sum + (t.hours || 0), 0) || 0;
+      const utilization = totalHours > 0 ? Math.round((billableHours / totalHours) * 100) : 0;
+
+      setStats({ totalHours, billableHours, utilization });
+    } catch (error) {
+      console.error('Failed to load stats:', error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (loading) {
+    return <div className="flex justify-center py-8"><div className="animate-spin w-6 h-6 border-2 border-neutral-500 border-t-transparent rounded-full" /></div>;
+  }
+
+  return (
+    <div className="space-y-6">
+      <p className="text-sm text-neutral-500">Performance metrics for {staff.full_name} (This Month)</p>
+      
+      <div className="space-y-4">
+        <div className="flex justify-between items-center py-3 border-b border-neutral-100">
+          <span className="text-neutral-600">Total Hours</span>
+          <span className="text-xl font-semibold text-neutral-900">{stats?.totalHours?.toFixed(1) || '0'}h</span>
+        </div>
+        <div className="flex justify-between items-center py-3 border-b border-neutral-100">
+          <span className="text-neutral-600">Billable Hours</span>
+          <span className="text-xl font-semibold text-neutral-900">{stats?.billableHours?.toFixed(1) || '0'}h</span>
+        </div>
+        <div className="flex justify-between items-center py-3 border-b border-neutral-100">
+          <span className="text-neutral-600">Utilization Rate</span>
+          <span className="text-xl font-semibold text-neutral-900">{stats?.utilization || 0}%</span>
+        </div>
+        <div className="flex justify-between items-center py-3 border-b border-neutral-100">
+          <span className="text-neutral-600">Target Utilization</span>
+          <span className="text-xl font-semibold text-neutral-900">75%</span>
+        </div>
+        <div className="flex justify-between items-center py-3">
+          <span className="text-neutral-600">Status</span>
+          <span className="text-neutral-900">{stats?.utilization >= 75 ? 'Meeting target' : `${75 - (stats?.utilization || 0)}% below target`}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Compensation & Costs Tab
+function CompensationTab({ staff, onUpdate }: { staff: UserProfile; onUpdate: () => void }) {
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [formData, setFormData] = useState({
+    hourly_pay_rate: (staff as any).hourly_pay_rate || '',
+    salary_type: (staff as any).salary_type || 'hourly',
+    annual_salary: (staff as any).annual_salary || '',
+    health_insurance_cost: (staff as any).health_insurance_cost || '',
+    retirement_contribution: (staff as any).retirement_contribution || '',
+    other_benefits_cost: (staff as any).other_benefits_cost || '',
+    additional_expenses: (staff as any).additional_expenses || '',
+  });
+
+  const calculateMonthlyCost = () => {
+    let monthlySalary = 0;
+    if (formData.salary_type === 'hourly' && formData.hourly_pay_rate) {
+      monthlySalary = parseFloat(formData.hourly_pay_rate) * 160; // ~40hr/week
+    } else if (formData.annual_salary) {
+      monthlySalary = parseFloat(formData.annual_salary) / 12;
+    }
+    
+    const benefits = (parseFloat(formData.health_insurance_cost) || 0) +
+                     (parseFloat(formData.retirement_contribution) || 0) +
+                     (parseFloat(formData.other_benefits_cost) || 0) +
+                     (parseFloat(formData.additional_expenses) || 0);
+    
+    return monthlySalary + benefits;
+  };
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      await supabase
+        .from('profiles')
+        .update({
+          hourly_pay_rate: formData.hourly_pay_rate || null,
+          salary_type: formData.salary_type,
+          annual_salary: formData.annual_salary || null,
+          health_insurance_cost: formData.health_insurance_cost || null,
+          retirement_contribution: formData.retirement_contribution || null,
+          other_benefits_cost: formData.other_benefits_cost || null,
+          additional_expenses: formData.additional_expenses || null,
+        })
+        .eq('id', staff.id);
+      
+      setEditing(false);
+      onUpdate();
+    } catch (error) {
+      console.error('Failed to save compensation:', error);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-neutral-500">Compensation and cost tracking for {staff.full_name}</p>
+        {!editing ? (
+          <button onClick={() => setEditing(true)} className="px-3 py-1.5 text-sm bg-neutral-100 hover:bg-neutral-200 rounded-lg transition-colors">
+            Edit
+          </button>
+        ) : (
+          <div className="flex gap-2">
+            <button onClick={() => setEditing(false)} className="px-3 py-1.5 text-sm border border-neutral-200 rounded-lg hover:bg-neutral-50">Cancel</button>
+            <button onClick={handleSave} disabled={saving} className="px-3 py-1.5 text-sm bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54] disabled:opacity-50">
+              {saving ? 'Saving...' : 'Save'}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Summary */}
+      <div className="border-b border-neutral-200 pb-4">
+        <p className="text-sm text-neutral-500">Total Monthly Cost to Company</p>
+        <p className="text-2xl font-bold text-neutral-900 mt-1">${calculateMonthlyCost().toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+      </div>
+
+      <div className="grid grid-cols-2 gap-6">
+        {/* Salary Section */}
+        <div className="border border-neutral-200 rounded-xl p-5">
+          <h3 className="font-medium text-neutral-900 mb-4">Salary / Pay Rate</h3>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm text-neutral-600 mb-1">Pay Type</label>
+              {editing ? (
+                <select 
+                  value={formData.salary_type} 
+                  onChange={(e) => setFormData({...formData, salary_type: e.target.value})}
+                  className="w-full px-3 py-2 border border-neutral-200 rounded-lg"
+                >
+                  <option value="hourly">Hourly</option>
+                  <option value="salary">Salary</option>
+                  <option value="contract">Contract</option>
+                </select>
+              ) : (
+                <p className="text-neutral-900 capitalize">{formData.salary_type}</p>
+              )}
+            </div>
+            {formData.salary_type === 'hourly' ? (
+              <div>
+                <label className="block text-sm text-neutral-600 mb-1">Hourly Pay Rate</label>
+                {editing ? (
+                  <input type="number" value={formData.hourly_pay_rate} onChange={(e) => setFormData({...formData, hourly_pay_rate: e.target.value})} className="w-full px-3 py-2 border border-neutral-200 rounded-lg" placeholder="0.00" />
+                ) : (
+                  <p className="text-neutral-900">{formData.hourly_pay_rate ? `$${formData.hourly_pay_rate}/hr` : '-'}</p>
+                )}
+              </div>
+            ) : (
+              <div>
+                <label className="block text-sm text-neutral-600 mb-1">Annual Salary</label>
+                {editing ? (
+                  <input type="number" value={formData.annual_salary} onChange={(e) => setFormData({...formData, annual_salary: e.target.value})} className="w-full px-3 py-2 border border-neutral-200 rounded-lg" placeholder="0.00" />
+                ) : (
+                  <p className="text-neutral-900">{formData.annual_salary ? `$${parseFloat(formData.annual_salary).toLocaleString()}/yr` : '-'}</p>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Benefits Section */}
+        <div className="border border-neutral-200 rounded-xl p-5">
+          <h3 className="font-medium text-neutral-900 mb-4">Benefits & Expenses (Monthly)</h3>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm text-neutral-600 mb-1">Health Insurance</label>
+              {editing ? (
+                <input type="number" value={formData.health_insurance_cost} onChange={(e) => setFormData({...formData, health_insurance_cost: e.target.value})} className="w-full px-3 py-2 border border-neutral-200 rounded-lg" placeholder="0.00" />
+              ) : (
+                <p className="text-neutral-900">{formData.health_insurance_cost ? `$${formData.health_insurance_cost}` : '-'}</p>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm text-neutral-600 mb-1">401k / Retirement</label>
+              {editing ? (
+                <input type="number" value={formData.retirement_contribution} onChange={(e) => setFormData({...formData, retirement_contribution: e.target.value})} className="w-full px-3 py-2 border border-neutral-200 rounded-lg" placeholder="0.00" />
+              ) : (
+                <p className="text-neutral-900">{formData.retirement_contribution ? `$${formData.retirement_contribution}` : '-'}</p>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm text-neutral-600 mb-1">Other Benefits (PTO, Equipment)</label>
+              {editing ? (
+                <input type="number" value={formData.other_benefits_cost} onChange={(e) => setFormData({...formData, other_benefits_cost: e.target.value})} className="w-full px-3 py-2 border border-neutral-200 rounded-lg" placeholder="0.00" />
+              ) : (
+                <p className="text-neutral-900">{formData.other_benefits_cost ? `$${formData.other_benefits_cost}` : '-'}</p>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm text-neutral-600 mb-1">Additional Expenses</label>
+              {editing ? (
+                <input type="number" value={formData.additional_expenses} onChange={(e) => setFormData({...formData, additional_expenses: e.target.value})} className="w-full px-3 py-2 border border-neutral-200 rounded-lg" placeholder="0.00" />
+              ) : (
+                <p className="text-neutral-900">{formData.additional_expenses ? `$${formData.additional_expenses}` : '-'}</p>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Client Billing Rate Tab
+function BillingRateTab({ staff, onUpdate }: { staff: UserProfile; onUpdate: () => void }) {
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [hourlyRate, setHourlyRate] = useState(staff.hourly_rate?.toString() || '');
+  const [isBillable, setIsBillable] = useState(staff.is_billable !== false);
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      await supabase
+        .from('profiles')
+        .update({
+          hourly_rate: hourlyRate || null,
+          is_billable: isBillable,
+        })
+        .eq('id', staff.id);
+      
+      setEditing(false);
+      onUpdate();
+    } catch (error) {
+      console.error('Failed to save billing rate:', error);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-neutral-500">Client billing rate for {staff.full_name}'s time</p>
+        {!editing ? (
+          <button onClick={() => setEditing(true)} className="px-3 py-1.5 text-sm bg-neutral-100 hover:bg-neutral-200 rounded-lg transition-colors">
+            Edit
+          </button>
+        ) : (
+          <div className="flex gap-2">
+            <button onClick={() => setEditing(false)} className="px-3 py-1.5 text-sm border border-neutral-200 rounded-lg hover:bg-neutral-50">Cancel</button>
+            <button onClick={handleSave} disabled={saving} className="px-3 py-1.5 text-sm bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54] disabled:opacity-50">
+              {saving ? 'Saving...' : 'Save'}
+            </button>
+          </div>
+        )}
+      </div>
+
+      <div className="border border-neutral-200 rounded-xl p-6">
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-medium text-neutral-900">Billable Status</h3>
+              <p className="text-sm text-neutral-500">Whether this staff member's time can be billed to clients</p>
+            </div>
+            {editing ? (
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" checked={isBillable} onChange={(e) => setIsBillable(e.target.checked)} className="sr-only peer" />
+                <div className="w-11 h-6 bg-neutral-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:bg-[#476E66] after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
+              </label>
+            ) : (
+              <span className={`px-3 py-1 rounded-full text-sm font-medium ${isBillable ? 'bg-emerald-100 text-emerald-700' : 'bg-neutral-100 text-neutral-600'}`}>
+                {isBillable ? 'Billable' : 'Non-Billable'}
+              </span>
+            )}
+          </div>
+
+          <div>
+            <label className="block font-medium text-neutral-900 mb-1">Hourly Rate (Client Billing)</label>
+            <p className="text-sm text-neutral-500 mb-3">The rate charged to clients when this staff member logs billable time</p>
+            {editing ? (
+              <div className="relative w-48">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400">$</span>
+                <input 
+                  type="number" 
+                  value={hourlyRate} 
+                  onChange={(e) => setHourlyRate(e.target.value)} 
+                  className="w-full pl-7 pr-12 py-2 border border-neutral-200 rounded-lg" 
+                  placeholder="0.00" 
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400">/hr</span>
+              </div>
+            ) : (
+              <p className="text-2xl font-bold text-neutral-900">{hourlyRate ? `$${hourlyRate}/hr` : 'Not set'}</p>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Staff Modal
 function StaffModal({ staff, companyId, onClose, onSave }: {
   staff: UserProfile | null;
@@ -1209,7 +1616,7 @@ function StaffModal({ staff, companyId, onClose, onSave }: {
         await supabase.functions.invoke('send-email', {
           body: {
             to: email.toLowerCase(),
-            subject: `You've been added to ${companyData?.name || 'a company'} on PrimeLedger`,
+            subject: `You've been added to ${companyData?.name || 'a company'} on Billdora`,
             type: 'invitation',
             data: {
               inviterName: 'Your administrator',
@@ -1616,7 +2023,7 @@ function InviteModal({ companyId, onClose, onSent }: {
       await supabase.functions.invoke('send-email', {
         body: {
           to: email.toLowerCase(),
-          subject: `You've been invited to join ${companyData?.name || 'a company'} on PrimeLedger`,
+          subject: `You've been invited to join ${companyData?.name || 'a company'} on Billdora`,
           type: 'invitation',
           data: {
             inviterName: 'A team member',

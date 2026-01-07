@@ -10,7 +10,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { quoteId, companyId, clientEmail, clientName, projectName, companyName, senderName, validUntil, portalUrl, letterContent } = await req.json();
+    const { invoiceId, clientEmail, clientName, invoiceNumber, projectName, companyName, senderName, totalAmount, dueDate, emailContent, portalUrl } = await req.json();
 
     const SENDGRID_API_KEY = Deno.env.get('SENDGRID_API_KEY');
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
@@ -20,45 +20,37 @@ Deno.serve(async (req) => {
       throw new Error('SendGrid API key not configured');
     }
 
-    // Generate secure token and access code
-    const token = crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '');
-    const accessCode = String(Math.floor(1000 + Math.random() * 9000)); // 4-digit code
+    // Generate a public view token
+    const publicViewToken = crypto.randomUUID();
 
-    // Calculate expiry (30 days from now or validUntil date)
-    const expiresAt = validUntil ? new Date(validUntil) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-
-    // Store token in database
-    const dbResponse = await fetch(`${SUPABASE_URL}/rest/v1/proposal_tokens`, {
-      method: 'POST',
+    // Update invoice status to 'sent', set sent_at date, and save the token
+    const updateResponse = await fetch(`${SUPABASE_URL}/rest/v1/invoices?id=eq.${invoiceId}`, {
+      method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
         'apikey': SUPABASE_SERVICE_ROLE_KEY!,
         'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-        'Prefer': 'return=representation'
+        'Prefer': 'return=minimal'
       },
       body: JSON.stringify({
-        quote_id: quoteId,
-        company_id: companyId,
-        access_code: accessCode,
-        token: token,
-        client_email: clientEmail,
-        expires_at: expiresAt.toISOString(),
-        sent_at: new Date().toISOString()
+        status: 'sent',
+        sent_at: new Date().toISOString(),
+        sent_date: new Date().toISOString().split('T')[0],
+        public_view_token: publicViewToken
       })
     });
 
-    if (!dbResponse.ok) {
-      const err = await dbResponse.text();
-      throw new Error(`Failed to store token: ${err}`);
+    if (!updateResponse.ok) {
+      const err = await updateResponse.text();
+      console.error('Failed to update invoice status:', err);
     }
 
-    // Build proposal link
-    const proposalLink = `${portalUrl}/proposal/${token}`;
+    // Build the view invoice URL
+    const viewInvoiceUrl = portalUrl || `https://billdora.com/invoice/${publicViewToken}`;
 
-    // Send email via SendGrid
-    // Format letter content - convert newlines to <br> tags for HTML
-    const formattedLetterContent = letterContent ? letterContent.replace(/\n/g, '<br>') : '';
-    
+    // Format email content - convert newlines to <br> tags for HTML
+    const formattedContent = emailContent ? emailContent.replace(/\n/g, '<br>') : '';
+
     const emailHtml = `
 <!DOCTYPE html>
 <html>
@@ -86,35 +78,55 @@ Deno.serve(async (req) => {
               </p>
               
               <p style="margin: 0 0 24px; color: #52525b; font-size: 16px; line-height: 1.6;">
-                ${formattedLetterContent}
+                ${formattedContent}
               </p>
               
-              <!-- Access Code Box -->
+              <!-- Invoice Summary Box -->
               <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #fafafa; border-radius: 8px; margin-bottom: 24px;">
                 <tr>
-                  <td style="padding: 24px; text-align: center;">
-                    <p style="margin: 0 0 8px; color: #71717a; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">Your Access Code</p>
-                    <p style="margin: 0; color: #18181b; font-size: 36px; font-weight: 700; letter-spacing: 8px;">${accessCode}</p>
+                  <td style="padding: 24px;">
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="padding: 8px 0;">
+                          <span style="color: #71717a; font-size: 14px;">Invoice Number:</span>
+                          <span style="color: #18181b; font-size: 14px; font-weight: 600; float: right;">${invoiceNumber}</span>
+                        </td>
+                      </tr>
+                      ${projectName ? `<tr>
+                        <td style="padding: 8px 0; border-top: 1px solid #e4e4e7;">
+                          <span style="color: #71717a; font-size: 14px;">Project:</span>
+                          <span style="color: #18181b; font-size: 14px; float: right;">${projectName}</span>
+                        </td>
+                      </tr>` : ''}
+                      <tr>
+                        <td style="padding: 8px 0; border-top: 1px solid #e4e4e7;">
+                          <span style="color: #71717a; font-size: 14px;">Amount Due:</span>
+                          <span style="color: #18181b; font-size: 18px; font-weight: 700; float: right;">${totalAmount}</span>
+                        </td>
+                      </tr>
+                      ${dueDate ? `<tr>
+                        <td style="padding: 8px 0; border-top: 1px solid #e4e4e7;">
+                          <span style="color: #71717a; font-size: 14px;">Due Date:</span>
+                          <span style="color: #18181b; font-size: 14px; font-weight: 600; float: right;">${dueDate}</span>
+                        </td>
+                      </tr>` : ''}
+                    </table>
                   </td>
                 </tr>
               </table>
               
-              <!-- CTA Button -->
+              <!-- View Invoice Button -->
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
-                  <td align="center" style="padding: 8px 0 24px;">
-                    <a href="${proposalLink}" style="display: inline-block; background-color: #476E66; color: #ffffff; text-decoration: none; padding: 16px 48px; border-radius: 8px; font-size: 16px; font-weight: 600;">
-                      View Proposal
-                    </a>
+                  <td align="center" style="padding: 20px 0;">
+                    <a href="${viewInvoiceUrl}" style="display: inline-block; background-color: #476E66; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 16px;">View Invoice & Download PDF</a>
                   </td>
                 </tr>
               </table>
               
-              <p style="margin: 0 0 16px; color: #52525b; font-size: 14px; line-height: 1.6;">
-                You'll need to enter the access code above to view your proposal. This ensures your proposal remains secure and private.
+              <p style="margin: 0; color: #52525b; font-size: 14px; line-height: 1.6;">
+                Please let us know if you have any questions regarding this invoice.
               </p>
-              
-              ${validUntil ? `<p style="margin: 0; color: #71717a; font-size: 14px;">This proposal is valid until <strong>${new Date(validUntil).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</strong>.</p>` : ''}
             </td>
           </tr>
           
@@ -142,9 +154,9 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         personalizations: [{ to: [{ email: clientEmail, name: clientName }] }],
         from: { email: 'info@billdora.com', name: companyName },
-        subject: `Proposal for ${projectName} - ${companyName}`,
+        subject: `Invoice ${invoiceNumber} from ${companyName}`,
         content: [
-          { type: 'text/plain', value: `Hello ${clientName},\n\nYour proposal for ${projectName} is ready.\n\nAccess Code: ${accessCode}\nView Proposal: ${proposalLink}\n\nBest regards,\n${senderName}\n${companyName}` },
+          { type: 'text/plain', value: `Hello ${clientName},\n\n${emailContent}\n\nInvoice: ${invoiceNumber}\nAmount Due: ${totalAmount}\n${dueDate ? `Due Date: ${dueDate}` : ''}\n\nView your invoice: ${viewInvoiceUrl}\n\nBest regards,\n${senderName}\n${companyName}` },
           { type: 'text/html', value: emailHtml }
         ]
       })
@@ -158,9 +170,8 @@ Deno.serve(async (req) => {
 
     return new Response(JSON.stringify({ 
       success: true, 
-      message: 'Proposal sent successfully',
-      accessCode,
-      token 
+      message: 'Invoice sent successfully',
+      viewUrl: viewInvoiceUrl
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });

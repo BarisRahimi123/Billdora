@@ -11,6 +11,8 @@ interface Quote {
   valid_until: string;
   scope_of_work: string;
   created_at: string;
+  cover_background_url: string;
+  cover_volume_number: string;
 }
 
 interface LineItem {
@@ -21,6 +23,10 @@ interface LineItem {
   unit: string;
   taxed: boolean;
   estimated_days: number;
+  start_offset: number;
+  depends_on: string;
+  start_type: string;
+  overlap_days: number;
 }
 
 interface Client {
@@ -29,6 +35,7 @@ interface Client {
 }
 
 interface Company {
+  company_id: string;
   company_name: string;
   logo_url: string;
   address: string;
@@ -39,7 +46,8 @@ interface Company {
   website: string;
 }
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_URL = 'https://bqxnagmmegdbqrzhheip.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJxeG5hZ21tZWdkYnFyemhoZWlwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI2OTM5NTgsImV4cCI6MjA2ODI2OTk1OH0.LBb7KaCSs7LpsD9NZCOcartkcDIIALBIrpnYcv5Y0yY';
 
 export default function ProposalPortalPage() {
   const { token } = useParams();
@@ -70,7 +78,9 @@ export default function ProposalPortalPage() {
 
   async function verifyToken() {
     try {
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/proposal-response?token=${token}`);
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/proposal-response?token=${token}`, {
+        headers: { 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+      });
       const data = await res.json();
       
       if (data.error) {
@@ -94,7 +104,9 @@ export default function ProposalPortalPage() {
     if (code.length !== 4) return;
 
     try {
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/proposal-response?token=${token}&code=${code}`);
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/proposal-response?token=${token}&code=${code}`, {
+        headers: { 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+      });
       const data = await res.json();
       
       if (data.error) {
@@ -224,11 +236,14 @@ export default function ProposalPortalPage() {
 
       const res = await fetch(`${SUPABASE_URL}/functions/v1/proposal-response`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+        },
         body: JSON.stringify({
           tokenId,
           quoteId: quote?.id,
-          companyId: company?.company_name,
+          companyId: company?.company_id,
           status: statusMap[responseType],
           responseType,
           signatureData,
@@ -283,7 +298,7 @@ export default function ProposalPortalPage() {
       <div className="min-h-screen bg-neutral-100 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full">
           <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-neutral-900 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="w-16 h-16 bg-[#476E66] rounded-full flex items-center justify-center mx-auto mb-4">
               <Lock className="w-8 h-8 text-white" />
             </div>
             <h1 className="text-2xl font-semibold text-neutral-900 mb-2">Enter Access Code</h1>
@@ -309,6 +324,14 @@ export default function ProposalPortalPage() {
           {error && (
             <p className="text-red-600 text-sm text-center mb-4">{error}</p>
           )}
+
+          <button
+            onClick={verifyCode}
+            disabled={accessCode.join('').length !== 4}
+            className="w-full py-3 bg-[#476E66] text-white rounded-xl font-medium hover:bg-[#3A5B54] disabled:opacity-50 disabled:cursor-not-allowed mb-4"
+          >
+            Verify Code
+          </button>
 
           <p className="text-neutral-500 text-sm text-center">
             Check your email for the access code sent with your proposal link.
@@ -355,7 +378,7 @@ export default function ProposalPortalPage() {
             {company?.logo_url ? (
               <img src={company.logo_url} alt="" className="w-10 h-10 object-contain rounded-lg" />
             ) : (
-              <div className="w-10 h-10 bg-neutral-900 rounded-lg flex items-center justify-center text-white font-bold">
+              <div className="w-10 h-10 bg-[#476E66] rounded-lg flex items-center justify-center text-white font-bold">
                 {company?.company_name?.charAt(0) || 'P'}
               </div>
             )}
@@ -366,7 +389,7 @@ export default function ProposalPortalPage() {
           </div>
           <button
             onClick={() => setStep('respond')}
-            className="px-6 py-2.5 bg-neutral-900 text-white rounded-lg font-medium hover:bg-neutral-800 transition-colors"
+            className="px-6 py-2.5 bg-[#476E66] text-white rounded-lg font-medium hover:bg-[#3A5B54] transition-colors"
           >
             Respond to Proposal
           </button>
@@ -375,6 +398,28 @@ export default function ProposalPortalPage() {
 
       {/* Content */}
       <main className="max-w-5xl mx-auto px-4 py-8">
+        {/* Cover Page */}
+        {quote?.cover_background_url && (
+          <div className="bg-white rounded-xl shadow-sm overflow-hidden mb-6">
+            <div 
+              className="relative h-80 bg-cover bg-center"
+              style={{ backgroundImage: `url(${quote.cover_background_url})` }}
+            >
+              <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center text-white text-center p-8">
+                {company?.logo_url && (
+                  <img src={company.logo_url} alt="" className="w-24 h-24 object-contain mb-6 bg-white/10 rounded-xl p-2" />
+                )}
+                <p className="text-sm uppercase tracking-widest mb-2 opacity-80">{quote.cover_volume_number || 'Proposal'}</p>
+                <h1 className="text-3xl font-bold mb-2">{quote.title}</h1>
+                <p className="text-lg opacity-90">Prepared for {client?.name}</p>
+                <p className="text-sm mt-4 opacity-70">
+                  {new Date(quote.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Project Info */}
         <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
           <h2 className="text-2xl font-semibold text-neutral-900 mb-2">{quote?.title}</h2>
@@ -446,11 +491,92 @@ export default function ProposalPortalPage() {
           </table>
         </div>
 
+        {/* Timeline */}
+        {lineItems.some(item => item.estimated_days > 0) && (
+          <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+            <h3 className="font-semibold text-neutral-900 mb-4 flex items-center gap-2">
+              <Clock className="w-5 h-5" />
+              Project Timeline
+            </h3>
+            <div className="space-y-3">
+              {(() => {
+                // Calculate timeline positions
+                const itemsWithDays = lineItems.filter(item => item.estimated_days > 0);
+                let currentDay = 1;
+                const schedule: { item: typeof lineItems[0]; startDay: number; endDay: number }[] = [];
+                
+                itemsWithDays.forEach((item, idx) => {
+                  let startDay = currentDay;
+                  if (item.start_type === 'parallel' || idx === 0) {
+                    startDay = 1;
+                  } else if (item.start_type === 'sequential' && schedule.length > 0) {
+                    const depIdx = item.depends_on ? itemsWithDays.findIndex(i => i.id === item.depends_on) : schedule.length - 1;
+                    if (depIdx >= 0 && schedule[depIdx]) {
+                      startDay = schedule[depIdx].endDay + 1;
+                    }
+                  } else if (item.start_type === 'overlap' && schedule.length > 0) {
+                    const depIdx = item.depends_on ? itemsWithDays.findIndex(i => i.id === item.depends_on) : schedule.length - 1;
+                    if (depIdx >= 0 && schedule[depIdx]) {
+                      startDay = schedule[depIdx].startDay + (item.overlap_days || 0);
+                    }
+                  }
+                  const endDay = startDay + item.estimated_days - 1;
+                  schedule.push({ item, startDay, endDay });
+                  currentDay = Math.max(currentDay, endDay + 1);
+                });
+
+                const totalDays = Math.max(...schedule.map(s => s.endDay), 1);
+                const colors = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4'];
+
+                return schedule.map((s, idx) => {
+                  const leftPercent = ((s.startDay - 1) / totalDays) * 100;
+                  const widthPercent = (s.item.estimated_days / totalDays) * 100;
+                  return (
+                    <div key={s.item.id} className="flex items-center gap-4">
+                      <div className="w-40 flex-shrink-0 text-sm text-neutral-700 truncate">{s.item.description}</div>
+                      <div className="flex-1 h-8 bg-neutral-100 rounded relative">
+                        <div
+                          className="absolute h-full rounded flex items-center px-2 text-white text-xs font-medium"
+                          style={{
+                            left: `${leftPercent}%`,
+                            width: `${Math.max(widthPercent, 8)}%`,
+                            backgroundColor: colors[idx % colors.length]
+                          }}
+                        >
+                          {s.item.estimated_days}d
+                        </div>
+                      </div>
+                      <div className="w-24 text-xs text-neutral-500 text-right">
+                        Day {s.startDay}-{s.endDay}
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+            <div className="mt-4 pt-4 border-t text-sm text-neutral-500">
+              Total estimated duration: {Math.max(...lineItems.filter(i => i.estimated_days > 0).map((item, idx, arr) => {
+                let start = 1;
+                return start + item.estimated_days - 1;
+              }), ...(() => {
+                let maxEnd = 0;
+                let currentDay = 1;
+                lineItems.filter(i => i.estimated_days > 0).forEach(item => {
+                  const end = currentDay + item.estimated_days - 1;
+                  maxEnd = Math.max(maxEnd, end);
+                  if (item.start_type !== 'parallel') currentDay = end + 1;
+                });
+                return [maxEnd];
+              })())} days
+            </div>
+          </div>
+        )}
+
         {/* Action Button */}
         <div className="text-center">
           <button
             onClick={() => setStep('respond')}
-            className="px-8 py-4 bg-neutral-900 text-white rounded-xl font-semibold text-lg hover:bg-neutral-800 transition-colors"
+            className="px-8 py-4 bg-[#476E66] text-white rounded-xl font-semibold text-lg hover:bg-[#3A5B54] transition-colors"
           >
             Respond to This Proposal
           </button>
@@ -618,7 +744,7 @@ export default function ProposalPortalPage() {
                     <button
                       onClick={submitResponse}
                       disabled={submitting}
-                      className="flex-1 px-4 py-2.5 bg-neutral-900 text-white rounded-lg font-medium hover:bg-neutral-800 disabled:opacity-50"
+                      className="flex-1 px-4 py-2.5 bg-[#476E66] text-white rounded-lg font-medium hover:bg-[#3A5B54] disabled:opacity-50"
                     >
                       {submitting ? 'Submitting...' : 'Submit Response'}
                     </button>

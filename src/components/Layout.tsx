@@ -5,16 +5,16 @@ import { usePermissions } from '../contexts/PermissionsContext';
 import { api, Project } from '../lib/api';
 import { 
   LayoutDashboard, Users, FolderKanban, Clock, FileText, Calendar, BarChart3, Settings, LogOut,
-  Search, Bell, ChevronDown, X, Play, Pause, Square, Menu, PieChart
+  Search, Bell, ChevronDown, X, Play, Pause, Square, Menu, PieChart, ArrowLeft
 } from 'lucide-react';
 
 const navItems = [
   { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { path: '/sales', icon: Users, label: 'Sales' },
   { path: '/projects', icon: FolderKanban, label: 'Projects' },
-  { path: '/time-expense', icon: Clock, label: 'Time & Expense' },
+  { path: '/time-expense', icon: Clock, label: 'Timesheets' },
   { path: '/invoicing', icon: FileText, label: 'Invoicing' },
-  { path: '/resourcing', icon: Calendar, label: 'Resourcing' },
+  { path: '/resourcing', icon: Calendar, label: 'Team' },
   { path: '/reports', icon: PieChart, label: 'Reports' },
   { path: '/analytics', icon: BarChart3, label: 'Analytics' },
   { path: '/settings', icon: Settings, label: 'Settings' },
@@ -35,6 +35,9 @@ export default function Layout() {
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
+  const isSettingsPage = location.pathname === '/settings';
+  const isResourcingPage = location.pathname === '/resourcing';
+  const hideSidebar = isSettingsPage || isResourcingPage;
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -199,67 +202,69 @@ export default function Layout() {
         />
       )}
 
-      {/* Sidebar */}
-      <aside className={`
-        ${sidebarExpanded ? 'lg:w-64' : 'lg:w-20'} 
-        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} 
-        lg:translate-x-0
-        w-64 text-white transition-all duration-300 flex flex-col fixed h-full z-50
-      ` } style={{ backgroundColor: '#476E66' }}>
-        <div className="p-4 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(255,255,255,0.2)' }}>
-          {(sidebarExpanded || sidebarOpen) && <h1 className="text-xl font-bold">PrimeLedger</h1>}
-          <button 
-            onClick={() => {
-              if (window.innerWidth >= 1024) {
-                setSidebarExpanded(!sidebarExpanded);
-              } else {
-                setSidebarOpen(false);
-              }
-            }} 
-            className="p-2 hover:bg-white/20 rounded-lg"
-          >
-            <Menu className="w-5 h-5" />
-          </button>
-        </div>
-
-        <nav className="flex-1 py-4 overflow-y-auto">
-          {navItems.filter(item => {
-            if (!canViewFinancials && (item.path === '/invoicing' || item.path === '/sales')) {
-              return false;
-            }
-            if (!isAdmin && (item.path === '/reports' || item.path === '/analytics' || item.path === '/settings' || item.path === '/resourcing')) {
-              return false;
-            }
-            return true;
-          }).map((item) => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-4 py-3 mx-2 rounded-xl transition-colors ${
-                  isActive ? 'bg-white/20 text-white' : 'text-white/70 hover:text-white hover:bg-white/10'
-                }`
-              }
+      {/* Sidebar - Hidden on Settings page */}
+      {!hideSidebar && (
+        <aside className={`
+          ${sidebarExpanded ? 'lg:w-64' : 'lg:w-20'} 
+          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} 
+          lg:translate-x-0
+          w-64 text-white transition-all duration-300 flex flex-col fixed h-full z-50
+        ` } style={{ backgroundColor: '#476E66' }}>
+          <div className="p-4 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(255,255,255,0.2)' }}>
+            {(sidebarExpanded || sidebarOpen) && <img src="/billdora-logo.png" alt="Billdora" className="h-8" />}
+            <button 
+              onClick={() => {
+                if (window.innerWidth >= 1024) {
+                  setSidebarExpanded(!sidebarExpanded);
+                } else {
+                  setSidebarOpen(false);
+                }
+              }} 
+              className="p-2 hover:bg-white/20 rounded-lg"
             >
-              <item.icon className="w-5 h-5 flex-shrink-0" />
-              {(sidebarExpanded || sidebarOpen) && <span className="text-sm font-medium">{item.label}</span>}
-            </NavLink>
-          ))}
-        </nav>
+              <Menu className="w-5 h-5" />
+            </button>
+          </div>
 
-        <div className="p-4" style={{ borderTop: '1px solid rgba(255,255,255,0.2)' }}>
-          <button
-            onClick={() => signOut()}
-            className="flex items-center gap-3 w-full px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 rounded-xl transition-colors"
-          >
-            <LogOut className="w-5 h-5" />
-            {(sidebarExpanded || sidebarOpen) && <span className="text-sm font-medium">Sign Out</span>}
-          </button>
-        </div>
-      </aside>
+          <nav className="flex-1 py-4 overflow-y-auto">
+            {navItems.filter(item => {
+              if (!canViewFinancials && (item.path === '/invoicing' || item.path === '/sales')) {
+                return false;
+              }
+              if (!isAdmin && (item.path === '/reports' || item.path === '/analytics' || item.path === '/settings' || item.path === '/resourcing')) {
+                return false;
+              }
+              return true;
+            }).map((item) => (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                className={({ isActive }) =>
+                  `flex items-center gap-3 px-4 py-3 mx-2 rounded-xl transition-colors ${
+                    isActive ? 'bg-white/20 text-white' : 'text-white/70 hover:text-white hover:bg-white/10'
+                  }`
+                }
+              >
+                <item.icon className="w-5 h-5 flex-shrink-0" />
+                {(sidebarExpanded || sidebarOpen) && <span className="text-sm font-medium">{item.label}</span>}
+              </NavLink>
+            ))}
+          </nav>
+
+          <div className="p-4" style={{ borderTop: '1px solid rgba(255,255,255,0.2)' }}>
+            <button
+              onClick={() => signOut()}
+              className="flex items-center gap-3 w-full px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 rounded-xl transition-colors"
+            >
+              <LogOut className="w-5 h-5" />
+              {(sidebarExpanded || sidebarOpen) && <span className="text-sm font-medium">Sign Out</span>}
+            </button>
+          </div>
+        </aside>
+      )}
 
       {/* Main Content */}
-      <div className={`flex-1 ${sidebarExpanded ? 'lg:ml-64' : 'lg:ml-20'} transition-all duration-300`}>
+      <div className={`flex-1 ${hideSidebar ? '' : (sidebarExpanded ? 'lg:ml-64' : 'lg:ml-20')} transition-all duration-300`}>
         {/* Header */}
         <header className="bg-white border-b border-neutral-100 sticky top-0 z-20">
           <div className="flex items-center justify-between px-4 lg:px-6 py-4">

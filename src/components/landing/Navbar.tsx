@@ -31,10 +31,7 @@ export const Navbar = () => {
       <div className="container mx-auto h-full px-6 flex items-center justify-between max-w-[1200px]">
         {/* Logo */}
         <a href="#" className="flex items-center gap-2 z-50">
-          <div className="w-8 h-8 flex items-center justify-center" style={{ backgroundColor: '#476E66' }}>
-            <span className="text-white font-bold text-lg">P</span>
-          </div>
-          <span className="font-bold text-xl tracking-tight" style={{ color: '#474747' }}>PrimeLedger</span>
+          <img src="/billdora-logo.png" alt="Billdora" className="h-10" />
         </a>
 
         {/* Desktop Links */}

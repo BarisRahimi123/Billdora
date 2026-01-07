@@ -7,10 +7,7 @@ export const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
           <div className="col-span-1 md:col-span-1">
             <a href="#" className="flex items-center gap-2 mb-6">
-              <div className="w-6 h-6 bg-swiss-black flex items-center justify-center">
-                <span className="text-white font-bold text-sm">P</span>
-              </div>
-              <span className="font-bold text-lg tracking-tight text-swiss-black">PrimeLedger</span>
+              <img src="/billdora-logo.png" alt="Billdora" className="h-8" />
             </a>
             <p className="text-swiss-gray-medium text-sm leading-relaxed">
               The operating system for modern professional service firms.
@@ -48,7 +45,7 @@ export const Footer = () => {
         </div>
         
         <div className="pt-8 border-t border-swiss-gray-border flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-swiss-gray-light">
-          <p>&copy; {new Date().getFullYear()} PrimeLedger Inc. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} Billdora Inc. All rights reserved.</p>
           <div className="flex gap-8">
             <a href="#" className="hover:text-swiss-black transition-colors">Privacy Policy</a>
             <a href="#" className="hover:text-swiss-black transition-colors">Terms of Service</a>

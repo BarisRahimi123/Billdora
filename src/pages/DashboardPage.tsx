@@ -1,9 +1,10 @@
 import { useEffect, useState, useRef } from 'react';
-import { Clock, CheckSquare, DollarSign, TrendingUp, Plus, FileText, FolderPlus, Timer, ChevronDown, X } from 'lucide-react';
+import { Clock, CheckSquare, DollarSign, TrendingUp, Plus, FileText, FolderPlus, Timer, ChevronDown, X, CheckCircle, XCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { usePermissions } from '../contexts/PermissionsContext';
+import { useSubscription } from '../contexts/SubscriptionContext';
 import { api, Project, Client, TimeEntry } from '../lib/api';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 interface DashboardStats {
   hoursToday: number;
@@ -31,7 +32,9 @@ interface ActivityItem {
 export default function DashboardPage() {
   const { user, profile } = useAuth();
   const { canViewFinancials } = usePermissions();
+  const { refreshSubscription } = useSubscription();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
@@ -41,6 +44,29 @@ export default function DashboardPage() {
   const [timeEntry, setTimeEntry] = useState({ project_id: '', hours: '', description: '', date: new Date().toISOString().split('T')[0] });
   const [saving, setSaving] = useState(false);
   const quickAddRef = useRef<HTMLDivElement>(null);
+  const [subscriptionNotice, setSubscriptionNotice] = useState<{ type: 'success' | 'canceled'; message: string } | null>(null);
+
+  // Handle subscription success/cancel URL params
+  useEffect(() => {
+    const subscriptionStatus = searchParams.get('subscription');
+    if (subscriptionStatus === 'success') {
+      setSubscriptionNotice({
+        type: 'success',
+        message: 'Your subscription has been activated successfully! Thank you for upgrading.'
+      });
+      refreshSubscription();
+      // Clear the URL param
+      searchParams.delete('subscription');
+      setSearchParams(searchParams, { replace: true });
+    } else if (subscriptionStatus === 'canceled') {
+      setSubscriptionNotice({
+        type: 'canceled',
+        message: 'Subscription checkout was canceled. You can try again anytime from the Settings page.'
+      });
+      searchParams.delete('subscription');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams, refreshSubscription]);
 
   useEffect(() => {
     async function loadData() {
@@ -149,6 +175,28 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      {/* Subscription Notice Banner */}
+      {subscriptionNotice && (
+        <div className={`flex items-center gap-3 p-4 rounded-xl border ${
+          subscriptionNotice.type === 'success' 
+            ? 'bg-emerald-50 border-emerald-200 text-emerald-800' 
+            : 'bg-amber-50 border-amber-200 text-amber-800'
+        }`}>
+          {subscriptionNotice.type === 'success' ? (
+            <CheckCircle className="w-5 h-5 flex-shrink-0" />
+          ) : (
+            <XCircle className="w-5 h-5 flex-shrink-0" />
+          )}
+          <p className="flex-1 text-sm font-medium">{subscriptionNotice.message}</p>
+          <button 
+            onClick={() => setSubscriptionNotice(null)}
+            className="p-1 hover:bg-black/5 rounded"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-neutral-900">Dashboard</h1>

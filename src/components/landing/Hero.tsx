@@ -23,40 +23,59 @@ export default function Hero() {
   return (
     <section className="pt-24 md:pt-32 pb-12 md:pb-20 px-4" style={{ backgroundColor: '#F5F5F3' }}>
       <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-10 md:mb-16">
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 md:mb-6 leading-tight"
-            style={{ color: '#474747' }}
-          >
-            Streamline Your
-            <br />
-            Business Workflow
-          </motion.h1>
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="text-base md:text-xl mb-6 md:mb-8 max-w-2xl mx-auto px-2"
-            style={{ color: '#6B6B6B' }}
-          >
-            From proposal to payment — manage your entire business cycle in one elegant platform.
-          </motion.p>
+        <div className="flex items-center justify-center gap-4 md:gap-8 mb-10 md:mb-16">
+          {/* Mascot on the left */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.4 }}
+            initial={{ opacity: 0, x: -30 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.6 }}
+            className="hidden md:block flex-shrink-0"
           >
-            <Link
-              to="/register"
-              className="inline-block px-6 md:px-8 py-3 md:py-4 text-white font-semibold rounded-lg transition-all hover:opacity-90 hover:scale-105"
-              style={{ backgroundColor: '#476E66' }}
-            >
-              Start Free Trial
-            </Link>
+            <motion.img 
+              src="/billdora-mascot.png" 
+              alt="Billdora Mascot" 
+              className="w-32 lg:w-40 h-auto"
+              animate={{ y: [0, -8, 0] }}
+              transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+            />
           </motion.div>
+          
+          {/* Title content */}
+          <div className="text-center">
+            <motion.h1
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 md:mb-6 leading-tight"
+              style={{ color: '#474747' }}
+            >
+              Streamline Your
+              <br />
+              Business Workflow
+            </motion.h1>
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              className="text-base md:text-xl mb-6 md:mb-8 max-w-2xl mx-auto px-2"
+              style={{ color: '#6B6B6B' }}
+            >
+              From proposal to payment — manage your entire business cycle in one elegant platform.
+            </motion.p>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+            >
+              <Link
+                to="/register"
+                className="inline-block px-6 md:px-8 py-3 md:py-4 text-white font-semibold rounded-lg transition-all hover:opacity-90 hover:scale-105"
+                style={{ backgroundColor: '#476E66' }}
+              >
+                Start Free Trial
+              </Link>
+            </motion.div>
+          </div>
         </div>
 
         {/* Workflow visualization */}

@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { api, Client, Quote } from '../lib/api';
 import { useToast } from '../components/Toast';
 
-type Tab = 'clients' | 'quotes';
+type Tab = 'clients' | 'quotes' | 'responses';
 
 // Generate quote number in format: YYMMDD-XXX (e.g., 250102-001)
 function generateQuoteNumber(): string {
@@ -20,9 +20,11 @@ function generateQuoteNumber(): string {
 export default function SalesPage() {
   const navigate = useNavigate();
   const { profile } = useAuth();
-  const [activeTab, setActiveTab] = useState<Tab>('clients');
+  const [activeTab, setActiveTab] = useState<Tab>('quotes');
   const [clients, setClients] = useState<Client[]>([]);
   const [quotes, setQuotes] = useState<Quote[]>([]);
+  const [responses, setResponses] = useState<any[]>([]);
+  const [selectedSignature, setSelectedSignature] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showClientModal, setShowClientModal] = useState(false);
@@ -30,7 +32,7 @@ export default function SalesPage() {
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [editingQuote, setEditingQuote] = useState<Quote | null>(null);
   const [activeQuoteMenu, setActiveQuoteMenu] = useState<string | null>(null);
-  const [quoteViewMode, setQuoteViewMode] = useState<'list' | 'client'>('list');
+  const [quoteViewMode, setQuoteViewMode] = useState<'list' | 'client'>('client');
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [isAddingNewClient, setIsAddingNewClient] = useState(false);
   const [expandedClients, setExpandedClients] = useState<Set<string>>(() => {
@@ -65,8 +67,40 @@ export default function SalesPage() {
     try {
       const quotesData = await api.getQuotes(profile.company_id);
       setQuotes(quotesData);
+      
+      // Auto-convert accepted quotes to projects OR update existing project budget
+      for (const quote of quotesData) {
+        if ((quote.status === 'accepted' || quote.status === 'approved')) {
+          if (!quote.project_id) {
+            // No project yet - convert
+            try {
+              await api.convertQuoteToProject(quote.id, profile.company_id);
+              console.log(`Auto-converted quote ${quote.quote_number} to project`);
+            } catch (err) {
+              console.error(`Failed to auto-convert quote ${quote.id}:`, err);
+            }
+          } else {
+            // Project exists - update budget to match current quote total
+            try {
+              await api.updateProject(quote.project_id, { budget: quote.total_amount });
+              console.log(`Updated project budget for quote ${quote.quote_number}`);
+            } catch (err) {
+              console.error(`Failed to update project budget for quote ${quote.id}:`, err);
+            }
+          }
+        }
+      }
+      // Reload quotes after auto-conversion
+      const updatedQuotes = await api.getQuotes(profile.company_id);
+      setQuotes(updatedQuotes);
     } catch (error) {
       console.error('Failed to load quotes:', error);
+    }
+    try {
+      const responsesData = await api.getProposalResponses(profile.company_id);
+      setResponses(responsesData);
+    } catch (error) {
+      console.error('Failed to load responses:', error);
     }
     setLoading(false);
   }
@@ -255,6 +289,14 @@ export default function SalesPage() {
         >
           Quotes ({quotes.length})
         </button>
+        <button
+          onClick={() => setActiveTab('responses')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            activeTab === 'responses' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-600 hover:text-neutral-900'
+          }`}
+        >
+          Responses ({responses.length})
+        </button>
       </div>
 
       {/* Search and filters */}
@@ -402,14 +444,25 @@ export default function SalesPage() {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2 relative">
-                        <button 
-                          onClick={() => navigate(`/quotes/${quote.id}/document`)}
-                          className="flex items-center gap-1 px-3 py-1.5 text-sm bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54] transition-colors"
-                          title="Edit Quote Document"
-                        >
-                          <Eye className="w-4 h-4" />
-                          Edit
-                        </button>
+                        {quote.status !== 'accepted' && quote.status !== 'approved' ? (
+                          <button 
+                            onClick={() => navigate(`/quotes/${quote.id}/document`)}
+                            className="flex items-center gap-1 px-3 py-1.5 text-sm bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54] transition-colors"
+                            title="Edit Quote Document"
+                          >
+                            <Eye className="w-4 h-4" />
+                            Edit
+                          </button>
+                        ) : (
+                          <button 
+                            onClick={() => navigate(`/quotes/${quote.id}/document`)}
+                            className="flex items-center gap-1 px-3 py-1.5 text-sm bg-neutral-100 text-neutral-600 rounded-lg hover:bg-neutral-200 transition-colors"
+                            title="View Quote Document"
+                          >
+                            <Eye className="w-4 h-4" />
+                            View
+                          </button>
+                        )}
                         {!quote.project_id && (quote.status === 'sent' || quote.status === 'approved' || quote.status === 'accepted' || quote.status === 'draft') && (
                           <button 
                             onClick={() => handleConvertToProject(quote)}
@@ -582,6 +635,111 @@ export default function SalesPage() {
             )}
           </div>
         )
+      )}
+
+      {/* Responses Tab */}
+      {activeTab === 'responses' && (
+        <div className="bg-white rounded-2xl border border-neutral-100 overflow-hidden">
+          <table className="w-full">
+            <thead className="bg-neutral-50 border-b border-neutral-100">
+              <tr>
+                <th className="text-left px-6 py-4 text-xs font-medium text-neutral-500 uppercase tracking-wider">Quote</th>
+                <th className="text-left px-6 py-4 text-xs font-medium text-neutral-500 uppercase tracking-wider">Response</th>
+                <th className="text-left px-6 py-4 text-xs font-medium text-neutral-500 uppercase tracking-wider">Signer</th>
+                <th className="text-left px-6 py-4 text-xs font-medium text-neutral-500 uppercase tracking-wider">Signature</th>
+                <th className="text-left px-6 py-4 text-xs font-medium text-neutral-500 uppercase tracking-wider">Comment</th>
+                <th className="text-left px-6 py-4 text-xs font-medium text-neutral-500 uppercase tracking-wider">Action</th>
+                <th className="text-left px-6 py-4 text-xs font-medium text-neutral-500 uppercase tracking-wider">Date</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-neutral-100">
+              {responses.map((r) => (
+                <tr key={r.id} className="hover:bg-neutral-50 transition-colors">
+                  <td className="px-6 py-4">
+                    {(() => {
+                      const quote = quotes.find(q => q.id === r.quote_id);
+                      return (
+                        <>
+                          <div className="font-medium text-neutral-900">{quote?.title || '-'}</div>
+                          <div className="text-sm text-neutral-500">{quote?.quote_number || ''}</div>
+                        </>
+                      );
+                    })()}
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
+                      r.response_type === 'accept' ? 'bg-emerald-100 text-emerald-700' :
+                      r.response_type === 'decline' ? 'bg-red-100 text-red-700' :
+                      'bg-amber-100 text-amber-700'
+                    }`}>
+                      {r.response_type === 'accept' ? 'Accepted' : r.response_type === 'decline' ? 'Declined' : r.response_type || 'pending'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="text-neutral-900 font-medium">{r.signer_name || '-'}</div>
+                    {r.signer_title && <div className="text-sm text-neutral-500">{r.signer_title}</div>}
+                  </td>
+                  <td className="px-6 py-4">
+                    {r.signature_data ? (
+                      <button
+                        onClick={() => setSelectedSignature(r)}
+                        className="text-sm text-[#476E66] hover:underline flex items-center gap-1"
+                      >
+                        <Eye className="w-4 h-4" /> View
+                      </button>
+                    ) : '-'}
+                  </td>
+                  <td className="px-6 py-4 text-neutral-600 max-w-xs truncate">{r.comments || '-'}</td>
+                  <td className="px-6 py-4">
+                    {r.response_type === 'changes' ? (
+                      <button
+                        onClick={() => navigate(`/quotes/${r.quote_id}/document`)}
+                        className="px-3 py-1.5 bg-[#476E66] text-white text-sm rounded-lg hover:bg-[#3a5b54] transition-colors flex items-center gap-1"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" /> Edit & Resend
+                      </button>
+                    ) : '-'}
+                  </td>
+                  <td className="px-6 py-4 text-neutral-600">{r.responded_at ? new Date(r.responded_at).toLocaleDateString() : '-'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {responses.length === 0 && (
+            <div className="text-center py-12 text-neutral-500">No responses yet</div>
+          )}
+        </div>
+      )}
+
+      {/* Signature Modal */}
+      {selectedSignature && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setSelectedSignature(null)}>
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full mx-4" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Signature</h3>
+              <button onClick={() => setSelectedSignature(null)} className="p-2 hover:bg-neutral-100 rounded-lg">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <p className="text-sm text-neutral-500">Signed by</p>
+                <p className="font-medium">{selectedSignature.signer_name}</p>
+                {selectedSignature.signer_title && <p className="text-sm text-neutral-600">{selectedSignature.signer_title}</p>}
+              </div>
+              <div>
+                <p className="text-sm text-neutral-500 mb-2">Signature</p>
+                <div className="border border-neutral-200 rounded-lg p-4 bg-neutral-50">
+                  <img src={selectedSignature.signature_data} alt="Signature" className="max-w-full h-auto" />
+                </div>
+              </div>
+              <div>
+                <p className="text-sm text-neutral-500">Date</p>
+                <p className="font-medium">{selectedSignature.responded_at ? new Date(selectedSignature.responded_at).toLocaleString() : '-'}</p>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Quote Modal */}

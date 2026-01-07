@@ -89,7 +89,7 @@ export default function LoginPage() {
             <div className="w-8 h-8 bg-[#476E66] flex items-center justify-center">
               <span className="text-white font-bold text-lg">P</span>
             </div>
-            <span className="font-bold text-xl tracking-tight text-neutral-900">PrimeLedger</span>
+            <img src="/billdora-logo.png" alt="Billdora" className="h-10" />
           </motion.div>
 
           {/* Welcome Text */}
@@ -196,7 +196,7 @@ export default function LoginPage() {
             transition={{ duration: 0.4, delay: 0.4 }}
             className="mt-10 text-center text-text-secondary"
           >
-            {isSignUp ? 'Already have an account? ' : 'New to PrimeLedger? '}
+            {isSignUp ? 'Already have an account? ' : 'New to Billdora? '}
             <button
               onClick={() => setIsSignUp(!isSignUp)}
               className="font-bold text-neutral-900 hover:underline transition-colors uppercase tracking-wider text-sm"

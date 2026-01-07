@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { PermissionsProvider } from './contexts/PermissionsContext';
+import { SubscriptionProvider } from './contexts/SubscriptionContext';
 import { ToastProvider } from './components/Toast';
 import Layout from './components/Layout';
 import LoginPage from './pages/LoginPage';
@@ -15,6 +16,7 @@ import ReportsPage from './pages/ReportsPage';
 import SettingsPage from './pages/SettingsPage';
 import QuoteDocumentPage from './pages/QuoteDocumentPage';
 import ProposalPortalPage from './pages/ProposalPortalPage';
+import InvoiceViewPage from './pages/InvoiceViewPage';
 
 import LandingPage from './pages/LandingPage';
 
@@ -53,6 +55,7 @@ function AppRoutes() {
       <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <LoginPage />} />
       <Route path="/quotes/:quoteId/document" element={<ProtectedRoute><QuoteDocumentPage /></ProtectedRoute>} />
       <Route path="/proposal/:token" element={<ProposalPortalPage />} />
+      <Route path="/invoice-view/:invoiceId" element={<InvoiceViewPage />} />
       
       <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
         <Route path="/dashboard" element={<DashboardPage />} />
@@ -76,9 +79,11 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <PermissionsProvider>
-          <ToastProvider>
-            <AppRoutes />
-          </ToastProvider>
+          <SubscriptionProvider>
+            <ToastProvider>
+              <AppRoutes />
+            </ToastProvider>
+          </SubscriptionProvider>
         </PermissionsProvider>
       </AuthProvider>
     </BrowserRouter>
