@@ -359,6 +359,15 @@ export default function ProposalPortalPage() {
               ? 'Thank you for accepting this proposal. The team has been notified and will be in touch shortly.'
               : 'Your feedback has been sent. The team will review and get back to you soon.'}
           </p>
+          {isAccepted && quote && (
+            <button
+              onClick={() => setStep('view')}
+              className="w-full py-3 bg-[#476E66] text-white rounded-xl font-medium hover:bg-[#3A5B54] flex items-center justify-center gap-2 mb-4"
+            >
+              <FileText className="w-5 h-5" />
+              View Signed Proposal
+            </button>
+          )}
           {company && (
             <p className="text-sm text-neutral-500">
               Questions? Contact {company.company_name} at {company.phone}
