@@ -83,6 +83,46 @@ Deno.serve(async (req) => {
           </p>
         </div>
       `;
+    } else if (type === 'signed_proposal') {
+      const { proposalNumber, proposalTitle, clientName, companyName, signerName, signedDate, viewUrl } = data || {};
+      htmlContent = `
+        <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; background: #ffffff;">
+          <div style="text-align: center; margin-bottom: 40px;">
+            <div style="display: inline-block; width: 48px; height: 48px; background: #476E66; color: white; font-size: 24px; font-weight: bold; line-height: 48px; border-radius: 12px;">B</div>
+            <h1 style="margin: 16px 0 0; font-size: 24px; color: #111827;">Billdora</h1>
+          </div>
+          <div style="text-align: center; margin-bottom: 24px;">
+            <div style="display: inline-block; background: #D1FAE5; color: #065F46; padding: 8px 20px; border-radius: 20px; font-weight: 600;">
+              ✓ Proposal Accepted
+            </div>
+          </div>
+          <p style="color: #4B5563; font-size: 16px; line-height: 1.6;">
+            Dear ${clientName || 'Valued Customer'},
+          </p>
+          <p style="color: #4B5563; font-size: 16px; line-height: 1.6;">
+            Thank you for accepting proposal <strong>#${proposalNumber || ''}</strong>${proposalTitle ? ` - ${proposalTitle}` : ''} from ${companyName || 'our company'}.
+          </p>
+          <div style="background: #F9FAFB; border-radius: 12px; padding: 20px; margin: 24px 0;">
+            <p style="margin: 0 0 8px; color: #6B7280; font-size: 14px;">Signed by</p>
+            <p style="margin: 0; color: #111827; font-size: 16px; font-weight: 600;">${signerName || clientName || 'Client'}</p>
+            <p style="margin: 8px 0 0; color: #6B7280; font-size: 14px;">${signedDate || new Date().toLocaleDateString()}</p>
+          </div>
+          ${viewUrl ? `
+          <div style="text-align: center; margin: 32px 0;">
+            <a href="${viewUrl}" style="display: inline-block; background: #476E66; color: white; text-decoration: none; padding: 14px 32px; font-size: 14px; font-weight: 600; border-radius: 8px;">
+              View Signed Proposal
+            </a>
+          </div>
+          ` : ''}
+          <p style="color: #4B5563; font-size: 16px; line-height: 1.6;">
+            Our team will be in touch shortly to discuss next steps.
+          </p>
+          <p style="color: #4B5563; font-size: 16px; line-height: 1.6;">
+            Best regards,<br/>
+            ${companyName || 'The Team'}
+          </p>
+        </div>
+      `;
     } else if (type === 'invoice' || type === 'quote') {
       const { documentNumber, clientName, companyName, total, pdfUrl } = data || {};
       htmlContent = `

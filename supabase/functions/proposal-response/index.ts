@@ -195,7 +195,7 @@ Deno.serve(async (req) => {
         throw new Error('Failed to save response');
       }
 
-      // Update quote status if accepted
+      // Update quote status if accepted and send confirmation email
       if (status === 'accepted') {
         await fetch(`${SUPABASE_URL}/rest/v1/quotes?id=eq.${quoteId}`, {
           method: 'PATCH',
@@ -206,6 +206,61 @@ Deno.serve(async (req) => {
           },
           body: JSON.stringify({ status: 'approved' })
         });
+
+        // Fetch quote and client details for email
+        const quoteRes = await fetch(`${SUPABASE_URL}/rest/v1/quotes?id=eq.${quoteId}&select=*`, {
+          headers: { 'apikey': SUPABASE_SERVICE_ROLE_KEY!, 'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` }
+        });
+        const quotes = await quoteRes.json();
+        const quote = quotes[0];
+
+        const clientRes = await fetch(`${SUPABASE_URL}/rest/v1/clients?id=eq.${quote?.client_id}&select=*`, {
+          headers: { 'apikey': SUPABASE_SERVICE_ROLE_KEY!, 'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` }
+        });
+        const clients = await clientRes.json();
+        const client = clients[0];
+
+        const companyRes = await fetch(`${SUPABASE_URL}/rest/v1/company_settings?company_id=eq.${companyId}&select=*`, {
+          headers: { 'apikey': SUPABASE_SERVICE_ROLE_KEY!, 'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` }
+        });
+        const companies = await companyRes.json();
+        const company = companies[0];
+
+        // Get the proposal token for view URL
+        const tokenRes = await fetch(`${SUPABASE_URL}/rest/v1/proposal_tokens?id=eq.${tokenId}&select=token`, {
+          headers: { 'apikey': SUPABASE_SERVICE_ROLE_KEY!, 'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` }
+        });
+        const tokens = await tokenRes.json();
+        const proposalToken = tokens[0]?.token;
+
+        // Send confirmation email to client
+        if (client?.email) {
+          try {
+            await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
+              },
+              body: JSON.stringify({
+                to: client.email,
+                subject: `Proposal #${quote?.quote_number || ''} - Signed Confirmation`,
+                type: 'signed_proposal',
+                data: {
+                  proposalNumber: quote?.quote_number,
+                  proposalTitle: quote?.title,
+                  clientName: client?.primary_contact_name || client?.name,
+                  companyName: company?.company_name,
+                  signerName: signerName,
+                  signedDate: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+                  viewUrl: proposalToken ? `https://billdora.com/proposal/${proposalToken}` : null
+                }
+              })
+            });
+          } catch (emailErr) {
+            console.error('Failed to send confirmation email:', emailErr);
+          }
+        }
       }
 
       return new Response(JSON.stringify({ success: true }), {

@@ -364,7 +364,7 @@ export default function ProposalPortalPage() {
           </h1>
           <p className="text-neutral-600 mb-6">
             {isAccepted 
-              ? 'Thank you for accepting this proposal. The team has been notified and will be in touch shortly.'
+              ? 'Thank you for accepting this proposal. A signed copy will be sent to your email shortly. The team has been notified and will be in touch soon.'
               : 'Your feedback has been sent. The team will review and get back to you soon.'}
           </p>
           {isAccepted && quote && (
