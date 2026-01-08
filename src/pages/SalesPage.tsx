@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, Filter, Download, MoreHorizontal, X, FileText, ArrowRight, Eye, Printer, Send, Check, XCircle, Mail, Trash2, List, LayoutGrid, ChevronDown, ChevronRight, ArrowLeft, Edit2, Loader2, Link2, Copy } from 'lucide-react';
+import { Plus, Search, Filter, Download, MoreHorizontal, X, FileText, ArrowRight, Eye, Printer, Send, Check, XCircle, Mail, Trash2, List, LayoutGrid, ChevronDown, ChevronRight, ArrowLeft, Edit2, Loader2, Link2, Copy, User } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { api, Client, Quote, clientPortalApi } from '../lib/api';
 import { NotificationService } from '../lib/notificationService';
@@ -1158,100 +1158,90 @@ function InlineClientEditor({ client, companyId, onClose, onSave, onDelete }: {
         )}
       </div>
 
-      {/* Primary Contact */}
+      {/* Contacts Section - Clean Layout */}
       {(isNew || !isNew) && (
         <div className="border border-neutral-200 rounded-xl p-5">
-          <h3 className="text-lg font-semibold text-neutral-900 mb-4">Primary Contact</h3>
+          <h3 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-4">Contacts</h3>
           {editing ? (
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm text-neutral-600 mb-1">Name</label>
-                  <input type="text" value={formData.primary_contact_name} onChange={(e) => setFormData({...formData, primary_contact_name: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none" />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Primary Contact Edit */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <User className="w-4 h-4 text-neutral-400" />
+                  <span className="text-sm font-medium text-neutral-700">Primary Contact</span>
                 </div>
-                <div>
-                  <label className="block text-sm text-neutral-600 mb-1">Title</label>
-                  <input type="text" value={formData.primary_contact_title} onChange={(e) => setFormData({...formData, primary_contact_title: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none" />
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm text-neutral-600 mb-1">Name</label>
+                    <input type="text" value={formData.primary_contact_name} onChange={(e) => setFormData({...formData, primary_contact_name: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-neutral-600 mb-1">Title</label>
+                    <input type="text" value={formData.primary_contact_title} onChange={(e) => setFormData({...formData, primary_contact_title: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-neutral-600 mb-1">Email</label>
+                    <input type="email" value={formData.primary_contact_email} onChange={(e) => setFormData({...formData, primary_contact_email: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-neutral-600 mb-1">Phone</label>
+                    <input type="tel" value={formData.primary_contact_phone} onChange={(e) => setFormData({...formData, primary_contact_phone: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none" />
+                  </div>
                 </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm text-neutral-600 mb-1">Email</label>
-                  <input type="email" value={formData.primary_contact_email} onChange={(e) => setFormData({...formData, primary_contact_email: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none" />
+              {/* Billing Contact Edit */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <User className="w-4 h-4 text-neutral-400" />
+                  <span className="text-sm font-medium text-neutral-700">Billing Contact</span>
                 </div>
-                <div>
-                  <label className="block text-sm text-neutral-600 mb-1">Phone</label>
-                  <input type="tel" value={formData.primary_contact_phone} onChange={(e) => setFormData({...formData, primary_contact_phone: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none" />
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm text-neutral-600 mb-1">Name</label>
+                    <input type="text" value={formData.billing_contact_name} onChange={(e) => setFormData({...formData, billing_contact_name: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-neutral-600 mb-1">Title</label>
+                    <input type="text" value={formData.billing_contact_title} onChange={(e) => setFormData({...formData, billing_contact_title: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-neutral-600 mb-1">Email</label>
+                    <input type="email" value={formData.billing_contact_email} onChange={(e) => setFormData({...formData, billing_contact_email: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-neutral-600 mb-1">Phone</label>
+                    <input type="tel" value={formData.billing_contact_phone} onChange={(e) => setFormData({...formData, billing_contact_phone: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none" />
+                  </div>
                 </div>
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Primary Contact View */}
               <div>
-                <p className="text-sm text-neutral-500">Name</p>
-                <p className="font-medium text-neutral-900">{client?.primary_contact_name || '-'}</p>
-              </div>
-              <div>
-                <p className="text-sm text-neutral-500">Title</p>
-                <p className="font-medium text-neutral-900">{client?.primary_contact_title || '-'}</p>
-              </div>
-              <div>
-                <p className="text-sm text-neutral-500">Email</p>
-                <p className="font-medium text-neutral-900">{client?.primary_contact_email || '-'}</p>
-              </div>
-              <div>
-                <p className="text-sm text-neutral-500">Phone</p>
-                <p className="font-medium text-neutral-900">{client?.primary_contact_phone || '-'}</p>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Billing Contact */}
-      {(isNew || !isNew) && (
-        <div className="border border-neutral-200 rounded-xl p-5">
-          <h3 className="text-lg font-semibold text-neutral-900 mb-4">Billing Contact</h3>
-          {editing ? (
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm text-neutral-600 mb-1">Name</label>
-                  <input type="text" value={formData.billing_contact_name} onChange={(e) => setFormData({...formData, billing_contact_name: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none" />
+                <div className="flex items-center gap-2 mb-3">
+                  <User className="w-4 h-4 text-neutral-400" />
+                  <span className="text-sm font-medium text-neutral-700">Primary Contact</span>
                 </div>
-                <div>
-                  <label className="block text-sm text-neutral-600 mb-1">Title</label>
-                  <input type="text" value={formData.billing_contact_title} onChange={(e) => setFormData({...formData, billing_contact_title: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none" />
+                <div className="space-y-2 pl-6">
+                  <p className="font-medium text-neutral-900">{client?.primary_contact_name || '-'}</p>
+                  {client?.primary_contact_title && <p className="text-sm text-neutral-500">{client.primary_contact_title}</p>}
+                  <p className="text-sm text-neutral-600">{client?.primary_contact_email || '-'}</p>
+                  <p className="text-sm text-neutral-600">{client?.primary_contact_phone || '-'}</p>
                 </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm text-neutral-600 mb-1">Email</label>
-                  <input type="email" value={formData.billing_contact_email} onChange={(e) => setFormData({...formData, billing_contact_email: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none" />
+              {/* Billing Contact View */}
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <User className="w-4 h-4 text-neutral-400" />
+                  <span className="text-sm font-medium text-neutral-700">Billing Contact</span>
                 </div>
-                <div>
-                  <label className="block text-sm text-neutral-600 mb-1">Phone</label>
-                  <input type="tel" value={formData.billing_contact_phone} onChange={(e) => setFormData({...formData, billing_contact_phone: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none" />
+                <div className="space-y-2 pl-6">
+                  <p className="font-medium text-neutral-900">{client?.billing_contact_name || '-'}</p>
+                  {client?.billing_contact_title && <p className="text-sm text-neutral-500">{client.billing_contact_title}</p>}
+                  <p className="text-sm text-neutral-600">{client?.billing_contact_email || '-'}</p>
+                  <p className="text-sm text-neutral-600">{client?.billing_contact_phone || '-'}</p>
                 </div>
-              </div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-neutral-500">Name</p>
-                <p className="font-medium text-neutral-900">{client?.billing_contact_name || '-'}</p>
-              </div>
-              <div>
-                <p className="text-sm text-neutral-500">Title</p>
-                <p className="font-medium text-neutral-900">{client?.billing_contact_title || '-'}</p>
-              </div>
-              <div>
-                <p className="text-sm text-neutral-500">Email</p>
-                <p className="font-medium text-neutral-900">{client?.billing_contact_email || '-'}</p>
-              </div>
-              <div>
-                <p className="text-sm text-neutral-500">Phone</p>
-                <p className="font-medium text-neutral-900">{client?.billing_contact_phone || '-'}</p>
               </div>
             </div>
           )}
