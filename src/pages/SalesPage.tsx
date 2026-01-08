@@ -243,6 +243,30 @@ export default function SalesPage() {
     setActiveQuoteMenu(null);
   };
 
+  const handleRecreateQuote = async (quote: Quote) => {
+    if (!profile?.company_id) return;
+    setActiveQuoteMenu(null);
+    try {
+      const newQuote = await api.createQuote({
+        company_id: profile.company_id,
+        client_id: quote.client_id,
+        title: `${quote.title} (Copy)`,
+        description: quote.description,
+        total_amount: quote.total_amount,
+        billing_model: quote.billing_model,
+        valid_until: quote.valid_until,
+        status: 'draft',
+        quote_number: generateQuoteNumber(),
+      });
+      showToast('Quote duplicated successfully', 'success');
+      await loadData();
+      navigate(`/quotes/${newQuote.id}/document`);
+    } catch (error: any) {
+      console.error('Failed to recreate quote:', error);
+      showToast(error?.message || 'Failed to recreate quote', 'error');
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -603,37 +627,18 @@ export default function SalesPage() {
                                   <MoreHorizontal className="w-4 h-4 text-neutral-400" />
                                 </button>
                                 {activeQuoteMenu === quote.id && (
-                                  <div className="absolute right-0 top-full mt-1 w-44 bg-white rounded-lg shadow-lg border border-neutral-100 py-1 z-20">
-                                    <button onClick={(e) => { e.stopPropagation(); navigate(`/quotes/${quote.id}/document`); }} className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50">
-                                      <Eye className="w-4 h-4" /> View/Edit
+                                  <div className="absolute right-0 top-full mt-1 w-44 bg-white rounded-lg shadow-lg border border-neutral-100 py-1 z-20" onClick={(e) => e.stopPropagation()}>
+                                    <button onClick={(e) => { e.stopPropagation(); setActiveQuoteMenu(null); navigate(`/quotes/${quote.id}/document`); }} className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50">
+                                      <Edit2 className="w-4 h-4" /> Edit
+                                    </button>
+                                    <button onClick={(e) => { e.stopPropagation(); handleRecreateQuote(quote); }} className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50">
+                                      <Copy className="w-4 h-4" /> Recreate
                                     </button>
                                     <button onClick={(e) => { e.stopPropagation(); generateQuotePDF(quote); }} className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50">
                                       <Printer className="w-4 h-4" /> Download PDF
                                     </button>
                                     <div className="border-t border-neutral-100 my-1"></div>
-                                    <p className="px-3 py-1 text-xs text-neutral-400 font-medium">Set Status</p>
-                                    {quote.status !== 'pending' && (
-                                      <button onClick={(e) => { e.stopPropagation(); updateQuoteStatus(quote.id, 'pending'); }} className="w-full flex items-center gap-2 px-3 py-1.5 text-left text-sm text-neutral-900 hover:bg-neutral-100">
-                                        <span className="w-2 h-2 rounded-full bg-neutral-1000"></span> Pending
-                                      </button>
-                                    )}
-                                    {quote.status !== 'sent' && (
-                                      <button onClick={(e) => { e.stopPropagation(); updateQuoteStatus(quote.id, 'sent'); }} className="w-full flex items-center gap-2 px-3 py-1.5 text-left text-sm text-blue-600 hover:bg-neutral-100">
-                                        <span className="w-2 h-2 rounded-full bg-neutral-1000"></span> Sent
-                                      </button>
-                                    )}
-                                    {quote.status !== 'approved' && (
-                                      <button onClick={(e) => { e.stopPropagation(); updateQuoteStatus(quote.id, 'approved'); }} className="w-full flex items-center gap-2 px-3 py-1.5 text-left text-sm text-neutral-900 hover:bg-neutral-100">
-                                        <span className="w-2 h-2 rounded-full bg-neutral-1000"></span> Approved
-                                      </button>
-                                    )}
-                                    {quote.status !== 'dropped' && (
-                                      <button onClick={(e) => { e.stopPropagation(); updateQuoteStatus(quote.id, 'dropped'); }} className="w-full flex items-center gap-2 px-3 py-1.5 text-left text-sm text-neutral-900 hover:bg-neutral-100">
-                                        <span className="w-2 h-2 rounded-full bg-neutral-1000"></span> Dropped
-                                      </button>
-                                    )}
-                                    <div className="border-t border-neutral-100 my-1"></div>
-                                    <button onClick={(e) => { e.stopPropagation(); handleDeleteQuote(quote.id); }} className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm text-neutral-900 hover:bg-neutral-100">
+                                    <button onClick={(e) => { e.stopPropagation(); handleDeleteQuote(quote.id); }} className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50">
                                       <Trash2 className="w-4 h-4" /> Delete
                                     </button>
                                   </div>
