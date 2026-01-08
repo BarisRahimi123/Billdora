@@ -715,7 +715,6 @@ export default function QuoteDocumentPage() {
                 <div className="mb-auto">
                   <p className="text-white/60 text-sm uppercase tracking-wider mb-2">Prepared For</p>
                   <h3 className="text-2xl font-semibold mb-1">{client?.name || 'Select a Client'}</h3>
-                  <p className="text-white/80">{client?.display_name}</p>
                   <p className="text-white/60 mt-4">{formatDate(quote?.created_at)}</p>
                 </div>
 
@@ -807,7 +806,7 @@ export default function QuoteDocumentPage() {
 
             {/* Letter Body */}
             <div className="mb-6">
-              <p className="text-neutral-900 mb-4">Dear {client?.name?.split(' ')[0] || 'Valued Client'},</p>
+              <p className="text-neutral-900 mb-4">Dear {client?.primary_contact_name?.split(' ')[0] || client?.name?.split(' ')[0] || 'Valued Client'},</p>
               <textarea
                 value={letterContent || `Thank you for the potential opportunity to work together on the ${documentTitle || projectName || 'project'}. I have attached the proposal for your consideration which includes a thorough Scope of Work, deliverable schedule, and Fee.\n\nPlease review and let me know if you have any questions or comments. If you are ready for us to start working on the project, please sign the proposal sheet.`}
                 onChange={(e) => { setLetterContent(e.target.value); setHasUnsavedChanges(true); }}
@@ -1511,7 +1510,6 @@ export default function QuoteDocumentPage() {
                   <div className="mb-auto">
                     <p className="text-white/60 text-sm uppercase tracking-wider mb-2">Prepared For</p>
                     <h3 className="text-2xl font-semibold mb-1">{client?.name || 'Client'}</h3>
-                    <p className="text-white/80">{client?.display_name}</p>
                     <p className="text-white/60 mt-4">{formatDate(quote?.created_at)}</p>
                   </div>
                   <div className="text-center py-16">
@@ -1580,7 +1578,7 @@ export default function QuoteDocumentPage() {
 
               {/* Letter Body */}
               <div className="mb-8">
-                <p className="text-neutral-900 mb-6">Dear {client?.name?.split(' ')[0] || 'Valued Client'},</p>
+                <p className="text-neutral-900 mb-6">Dear {client?.primary_contact_name?.split(' ')[0] || client?.name?.split(' ')[0] || 'Valued Client'},</p>
                 <div className="text-neutral-700 whitespace-pre-line leading-relaxed">
                   {letterContent || `Thank you for the potential opportunity to work together on the ${documentTitle || projectName || 'project'}. I have attached the proposal for your consideration which includes a thorough Scope of Work, deliverable schedule, and Fee.\n\nPlease review and let me know if you have any questions or comments. If you are ready for us to start working on the project, please sign the proposal sheet.`}
                 </div>
