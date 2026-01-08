@@ -197,7 +197,7 @@ export default function ResourcingPage() {
                 {activeTab === 'time' && <TimeTab staff={selectedStaff} companyId={profile?.company_id || ''} />}
                 {activeTab === 'performance' && <PerformanceTab staff={selectedStaff} companyId={profile?.company_id || ''} />}
                 {activeTab === 'personal' && <PersonalDetailsTab staff={selectedStaff} onEdit={() => { setEditingStaff(selectedStaff); setShowModal(true); }} onDelete={async () => { await userManagementApi.updateUserProfile(selectedStaff.id, { is_active: false }); loadStaff(); }} onToggleActive={async () => { await userManagementApi.updateUserProfile(selectedStaff.id, { is_active: !selectedStaff.is_active }); loadStaff(); }} />}
-                {activeTab === 'compensation' && <CompensationTab staff={selectedStaff} onUpdate={loadStaff} />}
+                {activeTab === 'compensation' && <CompensationTab staff={selectedStaff} companyId={profile?.company_id || ''} onUpdate={loadStaff} />}
               </div>
             </>
           ) : (
@@ -1189,8 +1189,9 @@ function PerformanceTab({ staff, companyId }: { staff: UserProfile; companyId: s
       const totalHours = timeEntries?.reduce((sum, t) => sum + (t.hours || 0), 0) || 0;
       const billableHours = timeEntries?.filter(t => t.billable).reduce((sum, t) => sum + (t.hours || 0), 0) || 0;
       const utilization = totalHours > 0 ? Math.round((billableHours / totalHours) * 100) : 0;
+      const revenueGenerated = billableHours * (staff.hourly_rate || 0);
 
-      setStats({ totalHours, billableHours, utilization });
+      setStats({ totalHours, billableHours, utilization, revenueGenerated });
     } catch (error) {
       console.error('Failed to load stats:', error);
     } finally {
@@ -1216,6 +1217,10 @@ function PerformanceTab({ staff, companyId }: { staff: UserProfile; companyId: s
           <span className="text-xl font-semibold text-neutral-900">{stats?.billableHours?.toFixed(1) || '0'}h</span>
         </div>
         <div className="flex justify-between items-center py-3 border-b border-neutral-100">
+          <span className="text-neutral-600">Revenue Generated</span>
+          <span className="text-xl font-semibold text-emerald-600">${(stats?.revenueGenerated || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+        </div>
+        <div className="flex justify-between items-center py-3 border-b border-neutral-100">
           <span className="text-neutral-600">Utilization Rate</span>
           <span className="text-xl font-semibold text-neutral-900">{stats?.utilization || 0}%</span>
         </div>
@@ -1233,10 +1238,11 @@ function PerformanceTab({ staff, companyId }: { staff: UserProfile; companyId: s
 }
 
 // Compensation & Costs Tab
-function CompensationTab({ staff, onUpdate }: { staff: UserProfile; onUpdate: () => void }) {
+function CompensationTab({ staff, companyId, onUpdate }: { staff: UserProfile; companyId: string; onUpdate: () => void }) {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [billableRevenue, setBillableRevenue] = useState<{ monthly: number; total: number; hours: number } | null>(null);
   const [formData, setFormData] = useState({
     hourly_pay_rate: (staff as any).hourly_pay_rate?.toString() || '',
     salary_type: (staff as any).salary_type || 'hourly',
@@ -1249,6 +1255,46 @@ function CompensationTab({ staff, onUpdate }: { staff: UserProfile; onUpdate: ()
     hourly_rate: staff.hourly_rate?.toString() || '',
     is_billable: staff.is_billable !== false,
   });
+
+  // Load billable revenue from time entries
+  useEffect(() => {
+    async function loadBillableRevenue() {
+      try {
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+        
+        // Get this month's billable hours
+        const { data: monthlyEntries } = await supabase
+          .from('time_entries')
+          .select('hours')
+          .eq('company_id', companyId)
+          .eq('user_id', staff.id)
+          .eq('billable', true)
+          .gte('date', startOfMonth);
+        
+        // Get all-time billable hours
+        const { data: allEntries } = await supabase
+          .from('time_entries')
+          .select('hours')
+          .eq('company_id', companyId)
+          .eq('user_id', staff.id)
+          .eq('billable', true);
+        
+        const monthlyHours = monthlyEntries?.reduce((sum, t) => sum + (t.hours || 0), 0) || 0;
+        const totalHours = allEntries?.reduce((sum, t) => sum + (t.hours || 0), 0) || 0;
+        const billingRate = staff.hourly_rate || 0;
+        
+        setBillableRevenue({
+          monthly: monthlyHours * billingRate,
+          total: totalHours * billingRate,
+          hours: monthlyHours
+        });
+      } catch (error) {
+        console.error('Failed to load billable revenue:', error);
+      }
+    }
+    loadBillableRevenue();
+  }, [staff.id, companyId, staff.hourly_rate]);
 
   // Update form when staff changes
   useEffect(() => {
@@ -1335,10 +1381,19 @@ function CompensationTab({ staff, onUpdate }: { staff: UserProfile; onUpdate: ()
         <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{saveError}</div>
       )}
 
-      {/* Summary */}
-      <div className="border-b border-neutral-200 pb-4">
-        <p className="text-sm text-neutral-500">Total Monthly Cost to Company</p>
-        <p className="text-2xl font-bold text-neutral-900 mt-1">${calculateMonthlyCost().toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+      {/* Summary - Cost vs Revenue */}
+      <div className="grid grid-cols-2 gap-6 border-b border-neutral-200 pb-4">
+        <div>
+          <p className="text-sm text-neutral-500">Total Monthly Cost</p>
+          <p className="text-2xl font-bold text-neutral-900 mt-1">${calculateMonthlyCost().toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+        </div>
+        <div>
+          <p className="text-sm text-neutral-500">Revenue Generated (This Month)</p>
+          <p className={`text-2xl font-bold mt-1 ${(billableRevenue?.monthly || 0) >= calculateMonthlyCost() ? 'text-emerald-600' : 'text-neutral-900'}`}>
+            ${(billableRevenue?.monthly || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </p>
+          <p className="text-xs text-neutral-400 mt-1">{billableRevenue?.hours?.toFixed(1) || 0}h × ${formData.hourly_rate || 0}/hr</p>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
