@@ -54,6 +54,14 @@ export default function SalesPage() {
     loadData();
   }, [profile?.company_id]);
 
+  // Close dropdown menu on outside click
+  useEffect(() => {
+    if (!activeQuoteMenu) return;
+    const handleClickOutside = () => setActiveQuoteMenu(null);
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [activeQuoteMenu]);
+
   async function loadData() {
     if (!profile?.company_id) {
       setLoading(false);
@@ -485,33 +493,33 @@ export default function SalesPage() {
                           </button>
                         )}
                         <button 
-                          onClick={() => setActiveQuoteMenu(activeQuoteMenu === quote.id ? null : quote.id)}
+                          onClick={(e) => { e.stopPropagation(); setActiveQuoteMenu(activeQuoteMenu === quote.id ? null : quote.id); }}
                           className="p-1.5 hover:bg-neutral-100 rounded-lg"
                         >
                           <MoreHorizontal className="w-4 h-4 text-neutral-500" />
                         </button>
                         {activeQuoteMenu === quote.id && (
-                          <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-xl shadow-lg border border-neutral-100 py-1 z-20">
-                            <button onClick={() => generateQuotePDF(quote)} className="w-full flex items-center gap-2 px-4 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50">
+                          <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-xl shadow-lg border border-neutral-100 py-1 z-20" onClick={(e) => e.stopPropagation()}>
+                            <button onClick={(e) => { e.stopPropagation(); generateQuotePDF(quote); }} className="w-full flex items-center gap-2 px-4 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50">
                               <Printer className="w-4 h-4" /> Download PDF
                             </button>
                             {quote.status === 'draft' && (
-                              <button onClick={() => updateQuoteStatus(quote.id, 'sent')} className="w-full flex items-center gap-2 px-4 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50">
+                              <button onClick={(e) => { e.stopPropagation(); updateQuoteStatus(quote.id, 'sent'); }} className="w-full flex items-center gap-2 px-4 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50">
                                 <Send className="w-4 h-4" /> Mark as Sent
                               </button>
                             )}
                             {(quote.status === 'sent' || quote.status === 'draft') && (
                               <>
-                                <button onClick={() => updateQuoteStatus(quote.id, 'accepted')} className="w-full flex items-center gap-2 px-4 py-2 text-left text-sm text-neutral-900 hover:bg-neutral-100">
+                                <button onClick={(e) => { e.stopPropagation(); updateQuoteStatus(quote.id, 'accepted'); }} className="w-full flex items-center gap-2 px-4 py-2 text-left text-sm text-neutral-900 hover:bg-neutral-100">
                                   <Check className="w-4 h-4" /> Mark as Accepted
                                 </button>
-                                <button onClick={() => updateQuoteStatus(quote.id, 'declined')} className="w-full flex items-center gap-2 px-4 py-2 text-left text-sm text-neutral-900 hover:bg-neutral-100">
+                                <button onClick={(e) => { e.stopPropagation(); updateQuoteStatus(quote.id, 'declined'); }} className="w-full flex items-center gap-2 px-4 py-2 text-left text-sm text-neutral-900 hover:bg-neutral-100">
                                   <XCircle className="w-4 h-4" /> Mark as Declined
                                 </button>
                               </>
                             )}
                             <div className="border-t border-neutral-100 my-1"></div>
-                            <button onClick={() => handleDeleteQuote(quote.id)} className="w-full flex items-center gap-2 px-4 py-2 text-left text-sm text-neutral-900 hover:bg-neutral-100">
+                            <button onClick={(e) => { e.stopPropagation(); handleDeleteQuote(quote.id); }} className="w-full flex items-center gap-2 px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50">
                               <Trash2 className="w-4 h-4" /> Delete Quote
                             </button>
                           </div>
