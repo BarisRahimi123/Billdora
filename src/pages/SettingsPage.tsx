@@ -246,117 +246,39 @@ export default function SettingsPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <div className="flex min-h-[calc(100vh-73px)] -m-4 lg:-m-6">
-      {/* Mobile Header */}
-      <div className="lg:hidden fixed top-[73px] left-0 right-0 z-50 bg-white border-b border-neutral-200">
-        <div className="flex items-center justify-between px-4 py-3">
-          <button 
-            onClick={() => navigate('/dashboard')}
-            className="flex items-center gap-2 text-neutral-600 hover:text-neutral-900"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            <span className="text-sm font-medium">Back</span>
-          </button>
-          <h1 className="text-lg font-semibold text-neutral-900">{tabs.find(t => t.id === activeTab)?.label || 'Settings'}</h1>
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-2 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded-lg"
-          >
-            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Settings className="w-5 h-5" />}
-          </button>
+    <div className="space-y-6">
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-neutral-900">Settings</h1>
+          <p className="text-neutral-500 text-sm mt-1">Manage your account and company preferences</p>
         </div>
-        
-        {/* Mobile Dropdown Menu */}
-        {mobileMenuOpen && (
-          <div className="absolute top-full left-0 right-0 bg-white border-b border-neutral-200 shadow-lg max-h-[60vh] overflow-y-auto">
-            <nav className="py-2">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => {
-                    setActiveTab(tab.id);
-                    setMobileMenuOpen(false);
-                  }}
-                  className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${
-                    activeTab === tab.id 
-                      ? 'bg-[#476E66]/10 text-[#476E66]' 
-                      : 'text-neutral-600 hover:bg-neutral-50'
-                  }`}
-                >
-                  <tab.icon className="w-5 h-5 flex-shrink-0" />
-                  <span className="font-medium text-sm">{tab.label}</span>
-                </button>
-              ))}
-              <div className="border-t border-neutral-100 mt-2 pt-2">
-                <button
-                  onClick={() => signOut()}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-red-600 hover:bg-red-50"
-                >
-                  <LogOut className="w-5 h-5" />
-                  <span className="text-sm font-medium">Sign Out</span>
-                </button>
-              </div>
-            </nav>
-          </div>
-        )}
       </div>
 
-      {/* Settings Sidebar - Desktop only */}
-      <aside className="hidden lg:flex w-64 text-white flex-col fixed top-[73px] h-[calc(100vh-73px)] z-20" style={{ backgroundColor: '#476E66' }}>
-        {/* Back Button Header */}
-        <div className="p-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.2)' }}>
-          <button 
-            onClick={() => navigate('/dashboard')}
-            className="flex items-center gap-3 w-full px-3 py-2.5 text-white/90 hover:text-white hover:bg-white/10 rounded-xl transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            <span className="font-medium text-sm">Back to Dashboard</span>
-          </button>
+      {/* Settings Tabs */}
+      <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
+        {/* Tab Navigation */}
+        <div className="border-b border-neutral-200 overflow-x-auto">
+          <nav className="flex min-w-max px-4">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                  activeTab === tab.id 
+                    ? 'border-[#476E66] text-[#476E66]' 
+                    : 'border-transparent text-neutral-500 hover:text-neutral-700 hover:border-neutral-300'
+                }`}
+              >
+                <tab.icon className="w-4 h-4" />
+                {tab.label}
+              </button>
+            ))}
+          </nav>
         </div>
 
-        {/* Settings Title */}
-        <div className="px-6 py-4">
-          <h2 className="text-lg font-semibold text-white">Settings</h2>
-          <p className="text-white/60 text-xs mt-0.5">Manage preferences</p>
-        </div>
-
-        {/* Settings Nav */}
-        <nav className="flex-1 py-2 overflow-y-auto">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`w-full flex items-center gap-3 px-4 py-3 mx-2 rounded-xl text-left transition-colors ${
-                activeTab === tab.id 
-                  ? 'bg-white/20 text-white' 
-                  : 'text-white/70 hover:text-white hover:bg-white/10'
-              }`}
-              style={{ width: 'calc(100% - 16px)' }}
-            >
-              <tab.icon className="w-5 h-5 flex-shrink-0" />
-              <span className="font-medium text-sm">{tab.label}</span>
-            </button>
-          ))}
-        </nav>
-
-        {/* Sign Out */}
-        <div className="p-4" style={{ borderTop: '1px solid rgba(255,255,255,0.2)' }}>
-          <button
-            onClick={() => signOut()}
-            className="flex items-center gap-3 w-full px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 rounded-xl transition-colors"
-          >
-            <LogOut className="w-5 h-5" />
-            <span className="text-sm font-medium">Sign Out</span>
-          </button>
-        </div>
-      </aside>
-
-      {/* Content Area */}
-      <div className="flex-1 lg:ml-64 p-4 lg:p-6 pt-20 lg:pt-6 overflow-y-auto" style={{ backgroundColor: '#F5F5F3' }}>
-        {/* Page Header - Desktop only */}
-        <div className="mb-6 hidden lg:block">
-          <h1 className="text-2xl font-bold text-neutral-900">{tabs.find(t => t.id === activeTab)?.label || 'Settings'}</h1>
-        </div>
+        {/* Tab Content */}
+        <div className="p-6">
 
         {/* Content */}
         <div className="w-full">
@@ -693,6 +615,7 @@ export default function SettingsPage() {
               <p className="text-neutral-500">This settings section is under development</p>
             </div>
           )}
+        </div>
         </div>
       </div>
 

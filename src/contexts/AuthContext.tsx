@@ -41,11 +41,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     async function loadUser() {
       try {
-        // Use getSession for faster cached response (doesn't hit network if session exists)
-        const { data: { session } } = await supabase.auth.getSession();
+        // Use getUser() to VALIDATE session against server (not just cached)
+        // This prevents stale/ghost sessions from being used
+        const { data: { user: validatedUser }, error: userError } = await supabase.auth.getUser();
         
         if (!isMounted) return;
-        const currentUser = session?.user || null;
+        
+        // If session validation failed, clear any stale cache
+        if (userError || !validatedUser) {
+          localStorage.removeItem('sb-bqxnagmmegdbqrzhheip-auth-token');
+          sessionStorage.removeItem('sb-bqxnagmmegdbqrzhheip-auth-token');
+          setUser(null);
+          setProfile(null);
+          setLoading(false);
+          return;
+        }
+        
+        const currentUser = validatedUser;
         
         if (currentUser) {
           // SESSION VALIDATION: Verify the cached session matches a real profile

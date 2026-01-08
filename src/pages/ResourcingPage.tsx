@@ -61,7 +61,8 @@ export default function ResourcingPage() {
     { id: 'billing', label: 'Client Billing Rate', icon: <DollarSign className="w-4 h-4" /> },
   ];
 
-  if (authLoading || loading) {
+  // Only show loading spinner briefly - don't wait forever
+  if (authLoading && loading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin w-8 h-8 border-2 border-neutral-500 border-t-transparent rounded-full" />
@@ -78,111 +79,92 @@ export default function ResourcingPage() {
   }
 
   return (
-    <div className="flex min-h-[calc(100vh-73px)] -m-4 lg:-m-6">
-      {/* Team Sidebar - Replaces main nav */}
-      <aside className="w-64 text-white flex flex-col fixed left-0 top-[73px] h-[calc(100vh-73px)] z-20" style={{ backgroundColor: '#476E66' }}>
-        {/* Back Button Header */}
-        <div className="p-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.2)' }}>
-          <button 
-            onClick={() => navigate('/dashboard')}
-            className="flex items-center gap-3 w-full px-3 py-2.5 text-white/90 hover:text-white hover:bg-white/10 rounded-xl transition-colors"
+    <div className="space-y-6">
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-neutral-900">Team</h1>
+          <p className="text-neutral-500 text-sm mt-1">Manage staff members and their assignments</p>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowInviteModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-neutral-200 text-neutral-700 rounded-xl hover:bg-neutral-50 transition-colors"
           >
-            <ArrowLeft className="w-5 h-5" />
-            <span className="font-medium text-sm">Back to Dashboard</span>
+            <Send className="w-4 h-4" />
+            Invite
+          </button>
+          <button
+            onClick={() => { setEditingStaff(null); setShowModal(true); }}
+            className="flex items-center gap-2 px-4 py-2 bg-[#476E66] text-white rounded-xl hover:bg-[#3A5B54] transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            Add Staff
           </button>
         </div>
+      </div>
 
-        {/* Title & Actions */}
-        <div className="px-4 py-4">
-          <h2 className="text-lg font-semibold text-white">Team</h2>
-          <p className="text-white/60 text-xs mt-0.5">Manage staff members</p>
-          <div className="flex gap-2 mt-3">
-            <button
-              onClick={() => setShowInviteModal(true)}
-              className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
-            >
-              <Send className="w-3 h-3" />
-              Invite
-            </button>
-            <button
-              onClick={() => { setEditingStaff(null); setShowModal(true); }}
-              className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs bg-white/20 hover:bg-white/30 rounded-lg transition-colors"
-            >
-              <Plus className="w-3 h-3" />
-              Add
-            </button>
+      {/* Staff Selector Bar */}
+      <div className="bg-white rounded-xl border border-neutral-200 p-4">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              placeholder="Search..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-40 px-3 py-1.5 text-sm rounded-lg bg-neutral-50 border border-neutral-200 focus:outline-none focus:ring-2 focus:ring-[#476E66]/20"
+            />
+            <label className="flex items-center gap-1.5 text-xs text-neutral-500 cursor-pointer whitespace-nowrap">
+              <input
+                type="checkbox"
+                checked={showInactive}
+                onChange={(e) => setShowInactive(e.target.checked)}
+                className="w-3 h-3 rounded"
+              />
+              Inactive
+            </label>
+          </div>
+          <div className="h-6 w-px bg-neutral-200" />
+          <div className="flex-1 overflow-x-auto">
+            <div className="flex gap-2">
+              {filteredStaff.map((member) => (
+                <button
+                  key={member.id}
+                  onClick={() => { setSelectedStaff(member); setActiveTab('activity'); }}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap ${
+                    selectedStaff?.id === member.id 
+                      ? 'bg-[#476E66] text-white' 
+                      : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
+                  }`}
+                >
+                  {member.avatar_url ? (
+                    <img src={member.avatar_url} alt="" className="w-6 h-6 rounded-full object-cover" />
+                  ) : (
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${
+                      selectedStaff?.id === member.id ? 'bg-white/20 text-white' : 'bg-[#476E66]/10 text-[#476E66]'
+                    }`}>
+                      {member.full_name?.charAt(0) || '?'}
+                    </div>
+                  )}
+                  <span className="text-sm font-medium">{member.full_name?.split(' ')[0] || 'Staff'}</span>
+                  {member.is_active === false && (
+                    <span className={`px-1 py-0.5 text-[10px] rounded ${
+                      selectedStaff?.id === member.id ? 'bg-white/20' : 'bg-neutral-200'
+                    }`}>Off</span>
+                  )}
+                </button>
+              ))}
+              {filteredStaff.length === 0 && (
+                <span className="text-neutral-400 text-sm">No staff found</span>
+              )}
+            </div>
           </div>
         </div>
+      </div>
 
-        {/* Search */}
-        <div className="px-4 pb-2">
-          <input
-            type="text"
-            placeholder="Search staff..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full px-3 py-2 text-sm rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/50 focus:outline-none focus:ring-1 focus:ring-white/30"
-          />
-          <label className="flex items-center gap-2 mt-2 text-xs text-white/60 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={showInactive}
-              onChange={(e) => setShowInactive(e.target.checked)}
-              className="w-3 h-3 rounded"
-            />
-            Show Inactive
-          </label>
-        </div>
-
-        {/* Staff List */}
-        <div className="flex-1 overflow-y-auto py-2">
-          {filteredStaff.map((member) => (
-            <button
-              key={member.id}
-              onClick={() => { setSelectedStaff(member); setActiveTab('activity'); }}
-              className={`w-full px-4 py-2.5 text-left flex items-center gap-3 transition-colors ${
-                selectedStaff?.id === member.id 
-                  ? 'bg-white/20 text-white' 
-                  : 'text-white/70 hover:text-white hover:bg-white/10'
-              }`}
-            >
-              {member.avatar_url ? (
-                <img src={member.avatar_url} alt="" className="w-8 h-8 rounded-full object-cover" />
-              ) : (
-                <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white text-sm font-medium">
-                  {member.full_name?.charAt(0) || '?'}
-                </div>
-              )}
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{member.full_name || 'No Name'}</p>
-                <p className="text-xs text-white/50 truncate">{member.role || 'Staff'}</p>
-              </div>
-              {member.is_active === false && (
-                <span className="px-1.5 py-0.5 bg-white/10 text-white/60 text-xs rounded">Inactive</span>
-              )}
-            </button>
-          ))}
-          {filteredStaff.length === 0 && (
-            <div className="text-center py-8 text-white/40 text-sm">No staff found</div>
-          )}
-        </div>
-
-        {/* Sign Out */}
-        <div className="p-4" style={{ borderTop: '1px solid rgba(255,255,255,0.2)' }}>
-          <button
-            onClick={() => signOut()}
-            className="flex items-center gap-3 w-full px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 rounded-xl transition-colors"
-          >
-            <LogOut className="w-5 h-5" />
-            <span className="text-sm font-medium">Sign Out</span>
-          </button>
-        </div>
-      </aside>
-
-      {/* Content Area */}
-      <div className="flex-1 ml-64 p-6 overflow-y-auto" style={{ backgroundColor: '#F5F5F3' }}>
-        {/* Right Panel - Tabbed Content */}
-        <div className="bg-white rounded-xl border border-neutral-200 flex flex-col min-h-[calc(100vh-120px)]">
+      {/* Staff Details */}
+      <div className="bg-white rounded-xl border border-neutral-200 flex flex-col min-h-[calc(100vh-280px)]">
           {selectedStaff ? (
             <>
               {/* Tab Bar */}
@@ -228,7 +210,6 @@ export default function ResourcingPage() {
               </div>
             </div>
           )}
-        </div>
       </div>
 
       {/* Modal */}

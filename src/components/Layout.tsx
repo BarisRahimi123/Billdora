@@ -35,9 +35,7 @@ export default function Layout() {
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
-  const isSettingsPage = location.pathname === '/settings';
-  const isResourcingPage = location.pathname === '/resourcing';
-  const hideSidebar = isSettingsPage || isResourcingPage;
+  const hideSidebar = false;
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');

@@ -37,11 +37,12 @@ Deno.serve(async (req) => {
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object;
       const invoiceId = session.metadata?.invoice_id;
+      const userId = session.metadata?.user_id;
 
+      // Handle invoice payment
       if (invoiceId) {
         console.log('Updating invoice status:', invoiceId);
         
-        // Update invoice status to paid
         const updateResponse = await fetch(
           `${supabaseUrl}/rest/v1/invoices?id=eq.${invoiceId}`,
           {
@@ -65,6 +66,152 @@ Deno.serve(async (req) => {
         } else {
           console.log('Invoice marked as paid:', invoiceId);
         }
+      }
+
+      // Handle subscription checkout
+      if (session.mode === 'subscription' && userId && session.subscription) {
+        console.log('Processing subscription checkout for user:', userId);
+        
+        // Get subscription details from Stripe
+        const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
+        const subResponse = await fetch(`https://api.stripe.com/v1/subscriptions/${session.subscription}`, {
+          headers: { 'Authorization': `Bearer ${stripeSecretKey}` }
+        });
+        const subscription = await subResponse.json();
+
+        // Find plan by price ID
+        const priceId = subscription.items?.data?.[0]?.price?.id;
+        const planRes = await fetch(
+          `${supabaseUrl}/rest/v1/billdora_plans?stripe_price_id=eq.${priceId}&select=id`,
+          {
+            headers: {
+              'Authorization': `Bearer ${serviceRoleKey}`,
+              'apikey': serviceRoleKey!
+            }
+          }
+        );
+        const plans = await planRes.json();
+        const planId = plans?.[0]?.id;
+
+        // Create or update subscription record
+        const subscriptionData = {
+          user_id: userId,
+          plan_id: planId,
+          stripe_subscription_id: session.subscription,
+          stripe_customer_id: session.customer,
+          status: subscription.status || 'active',
+          current_period_start: subscription.current_period_start ? new Date(subscription.current_period_start * 1000).toISOString() : null,
+          current_period_end: subscription.current_period_end ? new Date(subscription.current_period_end * 1000).toISOString() : null,
+          cancel_at_period_end: subscription.cancel_at_period_end || false,
+        };
+
+        // Upsert subscription
+        const upsertRes = await fetch(
+          `${supabaseUrl}/rest/v1/billdora_subscriptions`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${serviceRoleKey}`,
+              'apikey': serviceRoleKey!,
+              'Content-Type': 'application/json',
+              'Prefer': 'resolution=merge-duplicates'
+            },
+            body: JSON.stringify(subscriptionData)
+          }
+        );
+
+        if (!upsertRes.ok) {
+          console.error('Failed to create subscription:', await upsertRes.text());
+        } else {
+          console.log('Subscription created for user:', userId);
+        }
+      }
+    }
+
+    // Handle subscription updates (renewal, cancellation, etc.)
+    if (event.type === 'customer.subscription.updated' || event.type === 'customer.subscription.deleted') {
+      const subscription = event.data.object;
+      console.log('Subscription update event:', event.type, subscription.id);
+
+      const updateData: Record<string, any> = {
+        status: subscription.status,
+        current_period_start: subscription.current_period_start ? new Date(subscription.current_period_start * 1000).toISOString() : null,
+        current_period_end: subscription.current_period_end ? new Date(subscription.current_period_end * 1000).toISOString() : null,
+        cancel_at_period_end: subscription.cancel_at_period_end || false,
+      };
+
+      if (event.type === 'customer.subscription.deleted') {
+        updateData.status = 'canceled';
+      }
+
+      const updateRes = await fetch(
+        `${supabaseUrl}/rest/v1/billdora_subscriptions?stripe_subscription_id=eq.${subscription.id}`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${serviceRoleKey}`,
+            'apikey': serviceRoleKey!,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(updateData)
+        }
+      );
+
+      if (!updateRes.ok) {
+        console.error('Failed to update subscription:', await updateRes.text());
+      } else {
+        console.log('Subscription updated:', subscription.id);
+      }
+    }
+
+    // Handle successful invoice payment (for renewals)
+    if (event.type === 'invoice.payment_succeeded') {
+      const invoice = event.data.object;
+      if (invoice.subscription && invoice.billing_reason === 'subscription_cycle') {
+        console.log('Subscription renewed:', invoice.subscription);
+        
+        // Update period dates
+        const updateRes = await fetch(
+          `${supabaseUrl}/rest/v1/billdora_subscriptions?stripe_subscription_id=eq.${invoice.subscription}`,
+          {
+            method: 'PATCH',
+            headers: {
+              'Authorization': `Bearer ${serviceRoleKey}`,
+              'apikey': serviceRoleKey!,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              status: 'active',
+              current_period_start: invoice.period_start ? new Date(invoice.period_start * 1000).toISOString() : null,
+              current_period_end: invoice.period_end ? new Date(invoice.period_end * 1000).toISOString() : null,
+            })
+          }
+        );
+
+        if (!updateRes.ok) {
+          console.error('Failed to update subscription renewal:', await updateRes.text());
+        }
+      }
+    }
+
+    // Handle failed payment
+    if (event.type === 'invoice.payment_failed') {
+      const invoice = event.data.object;
+      if (invoice.subscription) {
+        console.log('Subscription payment failed:', invoice.subscription);
+        
+        await fetch(
+          `${supabaseUrl}/rest/v1/billdora_subscriptions?stripe_subscription_id=eq.${invoice.subscription}`,
+          {
+            method: 'PATCH',
+            headers: {
+              'Authorization': `Bearer ${serviceRoleKey}`,
+              'apikey': serviceRoleKey!,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ status: 'past_due' })
+          }
+        );
       }
     }
 
