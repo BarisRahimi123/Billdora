@@ -38,8 +38,13 @@ export default function CompanyExpensesPage() {
   // Form state
   const [name, setName] = useState('');
   const [category, setCategory] = useState('rent');
+  const [customCategory, setCustomCategory] = useState('');
   const [amount, setAmount] = useState('');
   const [frequency, setFrequency] = useState<CompanyExpense['frequency']>('monthly');
+  const [isRecurring, setIsRecurring] = useState(true);
+  const [unit, setUnit] = useState('');
+  const [quantity, setQuantity] = useState('');
+  const [vendor, setVendor] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [notes, setNotes] = useState('');
@@ -68,8 +73,13 @@ export default function CompanyExpensesPage() {
       setEditingExpense(expense);
       setName(expense.name);
       setCategory(expense.category);
+      setCustomCategory(expense.custom_category || '');
       setAmount(expense.amount.toString());
       setFrequency(expense.frequency);
+      setIsRecurring(expense.is_recurring);
+      setUnit(expense.unit || '');
+      setQuantity(expense.quantity?.toString() || '');
+      setVendor(expense.vendor || '');
       setStartDate(expense.start_date || '');
       setEndDate(expense.end_date || '');
       setNotes(expense.notes || '');
@@ -78,8 +88,13 @@ export default function CompanyExpensesPage() {
       setEditingExpense(null);
       setName('');
       setCategory('rent');
+      setCustomCategory('');
       setAmount('');
       setFrequency('monthly');
+      setIsRecurring(true);
+      setUnit('');
+      setQuantity('');
+      setVendor('');
       setStartDate('');
       setEndDate('');
       setNotes('');
@@ -97,8 +112,13 @@ export default function CompanyExpensesPage() {
         company_id: profile.company_id,
         name: name.trim(),
         category,
+        custom_category: category === 'other' ? customCategory.trim() || null : null,
         amount: parseFloat(amount),
         frequency,
+        is_recurring: isRecurring,
+        unit: unit.trim() || null,
+        quantity: quantity ? parseFloat(quantity) : null,
+        vendor: vendor.trim() || null,
         start_date: startDate || null,
         end_date: endDate || null,
         notes: notes.trim() || null,
@@ -252,13 +272,20 @@ export default function CompanyExpensesPage() {
                         <tr key={expense.id} className={`hover:bg-neutral-50 ${!expense.is_active ? 'opacity-50' : ''}`}>
                           <td className="px-6 py-4">
                             <p className="font-medium text-neutral-900">{expense.name}</p>
+                            {expense.vendor && <p className="text-xs text-neutral-400">{expense.vendor}</p>}
+                            {expense.unit && expense.quantity && <p className="text-xs text-neutral-500">{expense.quantity} {expense.unit}</p>}
                             {expense.notes && <p className="text-sm text-neutral-500 truncate max-w-xs">{expense.notes}</p>}
                           </td>
                           <td className="px-6 py-4 text-right font-medium text-neutral-900">{formatCurrency(expense.amount)}</td>
                           <td className="px-6 py-4 text-center">
-                            <span className="inline-flex px-2 py-1 text-xs font-medium bg-neutral-100 text-neutral-700 rounded-full capitalize">
-                              {expense.frequency}
-                            </span>
+                            <div className="flex flex-col items-center gap-1">
+                              <span className="inline-flex px-2 py-1 text-xs font-medium bg-neutral-100 text-neutral-700 rounded-full capitalize">
+                                {expense.frequency}
+                              </span>
+                              {expense.is_recurring && (
+                                <span className="text-xs text-blue-600">Recurring</span>
+                              )}
+                            </div>
                           </td>
                           <td className="px-6 py-4 text-center text-neutral-600">
                             {formatCurrency(companyExpensesApi.getMonthlyAmount(expense))}
@@ -338,18 +365,66 @@ export default function CompanyExpensesPage() {
                   </select>
                 </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1.5">Amount *</label>
-                <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500">$</span>
+              {category === 'other' && (
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1.5">Custom Category Name</label>
+                  <input
+                    type="text"
+                    value={customCategory}
+                    onChange={(e) => setCustomCategory(e.target.value)}
+                    placeholder="e.g., Legal Fees, Consulting"
+                    className="w-full px-4 py-2.5 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-[#476E66] focus:border-transparent outline-none"
+                  />
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1.5">Amount *</label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500">$</span>
+                    <input
+                      type="number"
+                      value={amount}
+                      onChange={(e) => setAmount(e.target.value)}
+                      placeholder="0.00"
+                      step="0.01"
+                      min="0"
+                      className="w-full pl-8 pr-4 py-2.5 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-[#476E66] focus:border-transparent outline-none"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1.5">Quantity</label>
                   <input
                     type="number"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    placeholder="0.00"
-                    step="0.01"
+                    value={quantity}
+                    onChange={(e) => setQuantity(e.target.value)}
+                    placeholder="1"
                     min="0"
-                    className="w-full pl-8 pr-4 py-2.5 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-[#476E66] focus:border-transparent outline-none"
+                    step="0.01"
+                    className="w-full px-4 py-2.5 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-[#476E66] focus:border-transparent outline-none"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1.5">Unit</label>
+                  <input
+                    type="text"
+                    value={unit}
+                    onChange={(e) => setUnit(e.target.value)}
+                    placeholder="e.g., sq ft, user, seat, license"
+                    className="w-full px-4 py-2.5 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-[#476E66] focus:border-transparent outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1.5">Vendor</label>
+                  <input
+                    type="text"
+                    value={vendor}
+                    onChange={(e) => setVendor(e.target.value)}
+                    placeholder="e.g., AWS, Adobe"
+                    className="w-full px-4 py-2.5 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-[#476E66] focus:border-transparent outline-none"
                   />
                 </div>
               </div>
@@ -383,15 +458,26 @@ export default function CompanyExpensesPage() {
                   className="w-full px-4 py-2.5 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-[#476E66] focus:border-transparent outline-none resize-none"
                 />
               </div>
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={isActive}
-                  onChange={(e) => setIsActive(e.target.checked)}
-                  className="w-4 h-4 rounded border-neutral-300 text-[#476E66] focus:ring-[#476E66]"
-                />
-                <span className="text-sm text-neutral-700">Active expense (include in calculations)</span>
-              </label>
+              <div className="flex flex-col gap-3">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={isRecurring}
+                    onChange={(e) => setIsRecurring(e.target.checked)}
+                    className="w-4 h-4 rounded border-neutral-300 text-[#476E66] focus:ring-[#476E66]"
+                  />
+                  <span className="text-sm text-neutral-700">Recurring expense</span>
+                </label>
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={isActive}
+                    onChange={(e) => setIsActive(e.target.checked)}
+                    className="w-4 h-4 rounded border-neutral-300 text-[#476E66] focus:ring-[#476E66]"
+                  />
+                  <span className="text-sm text-neutral-700">Active expense (include in calculations)</span>
+                </label>
+              </div>
             </div>
             <div className="px-6 py-4 border-t border-neutral-200 flex gap-3">
               <button

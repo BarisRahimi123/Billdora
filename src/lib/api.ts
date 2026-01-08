@@ -1974,8 +1974,13 @@ export interface CompanyExpense {
   company_id: string;
   name: string;
   category: string;
+  custom_category?: string;
   amount: number;
   frequency: 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly' | 'one-time';
+  is_recurring: boolean;
+  unit?: string;
+  quantity?: number;
+  vendor?: string;
   start_date?: string;
   end_date?: string;
   notes?: string;
