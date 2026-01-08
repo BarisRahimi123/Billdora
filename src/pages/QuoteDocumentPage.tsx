@@ -490,7 +490,7 @@ export default function QuoteDocumentPage() {
           estimated_days: item.estimatedDays || 1,
           start_offset: item.startOffset || 0,
           start_type: item.startType || 'parallel',
-          depends_on: item.dependsOn || '',
+          depends_on: item.dependsOn || null,
           overlap_days: item.overlapDays || 0
         })));
       }
