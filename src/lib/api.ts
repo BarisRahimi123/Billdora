@@ -1118,17 +1118,35 @@ export const api = {
     if (error) throw error;
   },
 
-  async saveQuoteLineItems(quoteId: string, items: Partial<QuoteLineItem>[]) {
-    // Delete existing items
-    await supabase.from('quote_line_items').delete().eq('quote_id', quoteId);
-    // Insert new items
+  async saveQuoteLineItems(quoteId: string, items: (Partial<QuoteLineItem> & { id?: string })[]) {
+    // Get existing item IDs
+    const { data: existingItems } = await supabase
+      .from('quote_line_items')
+      .select('id')
+      .eq('quote_id', quoteId);
+    const existingIds = new Set((existingItems || []).map(i => i.id));
+    
+    // Helper to check if ID looks like a valid UUID
+    const isValidUUID = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    
+    // Determine which IDs to keep and which to delete (only consider valid UUIDs)
+    const newIds = new Set(items.filter(i => i.id && isValidUUID(i.id)).map(i => i.id));
+    const idsToDelete = [...existingIds].filter(id => !newIds.has(id));
+    
+    // Delete removed items
+    if (idsToDelete.length > 0) {
+      await supabase.from('quote_line_items').delete().in('id', idsToDelete);
+    }
+    
+    // Upsert items (preserving IDs)
     if (items.length > 0) {
       const itemsWithQuoteId = items.map((item, index) => ({
         ...item,
+        id: (item.id && isValidUUID(item.id)) ? item.id : crypto.randomUUID(),
         quote_id: quoteId,
         sort_order: index,
       }));
-      const { error } = await supabase.from('quote_line_items').insert(itemsWithQuoteId);
+      const { error } = await supabase.from('quote_line_items').upsert(itemsWithQuoteId, { onConflict: 'id' });
       if (error) throw error;
     }
   },

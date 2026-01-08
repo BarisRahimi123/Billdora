@@ -480,6 +480,7 @@ export default function QuoteDocumentPage() {
       // Save line items
       if (savedQuoteId && savedQuoteId !== 'new') {
         await api.saveQuoteLineItems(savedQuoteId, lineItems.filter(item => item.description.trim()).map(item => ({
+          id: item.id,
           quote_id: savedQuoteId!,
           description: item.description.trim(),
           unit_price: item.unitPrice || 0,
