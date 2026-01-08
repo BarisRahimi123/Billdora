@@ -245,6 +245,7 @@ export default function ResourcingPage() {
       {showInviteModal && (
         <InviteModal
           companyId={profile?.company_id || ''}
+          currentUserId={profile?.id || ''}
           onClose={() => setShowInviteModal(false)}
           onSent={() => { setShowInviteModal(false); }}
         />
@@ -2000,8 +2001,9 @@ function StaffModal({ staff, companyId, onClose, onSave }: {
 
 
 // Invite Modal
-function InviteModal({ companyId, onClose, onSent }: {
+function InviteModal({ companyId, currentUserId, onClose, onSent }: {
   companyId: string;
+  currentUserId: string;
   onClose: () => void;
   onSent: () => void;
 }) {
@@ -2033,6 +2035,7 @@ function InviteModal({ companyId, onClose, onSent }: {
       
       // Send invitation email via edge function
       const { data: companyData } = await supabase.from('companies').select('name').eq('id', companyId).single();
+      const { data: inviterData } = await supabase.from('profiles').select('full_name').eq('id', currentUserId).single();
       
       const emailResult = await supabase.functions.invoke('send-email', {
         body: {
@@ -2040,7 +2043,7 @@ function InviteModal({ companyId, onClose, onSent }: {
           subject: `You've been invited to join ${companyData?.name || 'a company'} on Billdora`,
           type: 'invitation',
           data: {
-            inviterName: 'A team member',
+            inviterName: inviterData?.full_name || 'A team member',
             companyName: companyData?.name || 'a company',
             roleName: role,
             signupUrl: `${window.location.origin}/login?email=${encodeURIComponent(email.toLowerCase())}&signup=true`,
