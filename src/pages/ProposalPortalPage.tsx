@@ -32,6 +32,7 @@ interface LineItem {
 interface Client {
   name: string;
   email: string;
+  primary_contact_name?: string;
 }
 
 interface Company {
@@ -124,6 +125,13 @@ export default function ProposalPortalPage() {
         setTokenId(data.tokenId);
         setExistingResponse(data.existingResponse);
         setError('');
+        
+        // Pre-fill signer name from primary contact
+        if (data.client?.primary_contact_name) {
+          setSignerName(data.client.primary_contact_name);
+        } else if (data.client?.name) {
+          setSignerName(data.client.name);
+        }
         
         if (data.existingResponse?.status === 'accepted') {
           setStep('complete');
@@ -397,12 +405,19 @@ export default function ProposalPortalPage() {
               <p className="text-sm text-neutral-500">Proposal #{quote?.quote_number}</p>
             </div>
           </div>
-          <button
-            onClick={() => setStep('respond')}
-            className="px-6 py-2.5 bg-[#476E66] text-white rounded-lg font-medium hover:bg-[#3A5B54] transition-colors"
-          >
-            Respond to Proposal
-          </button>
+          {existingResponse?.status === 'accepted' ? (
+            <div className="flex items-center gap-2 px-4 py-2 bg-green-100 text-green-800 rounded-lg font-medium">
+              <Check className="w-5 h-5" />
+              Signed
+            </div>
+          ) : (
+            <button
+              onClick={() => setStep('respond')}
+              className="px-6 py-2.5 bg-[#476E66] text-white rounded-lg font-medium hover:bg-[#3A5B54] transition-colors"
+            >
+              Respond to Proposal
+            </button>
+          )}
         </div>
       </header>
 
@@ -584,14 +599,16 @@ export default function ProposalPortalPage() {
         )}
 
         {/* Action Button */}
-        <div className="text-center">
-          <button
-            onClick={() => setStep('respond')}
-            className="px-8 py-4 bg-[#476E66] text-white rounded-xl font-semibold text-lg hover:bg-[#3A5B54] transition-colors"
-          >
-            Respond to This Proposal
-          </button>
-        </div>
+        {existingResponse?.status !== 'accepted' && (
+          <div className="text-center">
+            <button
+              onClick={() => setStep('respond')}
+              className="px-8 py-4 bg-[#476E66] text-white rounded-xl font-semibold text-lg hover:bg-[#3A5B54] transition-colors"
+            >
+              Respond to This Proposal
+            </button>
+          </div>
+        )}
       </main>
 
       {/* Response Modal */}
@@ -671,14 +688,10 @@ export default function ProposalPortalPage() {
               ) : responseType === 'accept' ? (
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-neutral-700 mb-1">Your Name *</label>
-                    <input
-                      type="text"
-                      value={signerName}
-                      onChange={(e) => setSignerName(e.target.value)}
-                      className="w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none"
-                      placeholder="Full name"
-                    />
+                    <label className="block text-sm font-medium text-neutral-700 mb-1">Signing as</label>
+                    <div className="w-full px-4 py-2.5 bg-neutral-100 border border-neutral-200 rounded-lg text-neutral-900 font-medium">
+                      {signerName || client?.primary_contact_name || client?.name || 'Client'}
+                    </div>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-neutral-700 mb-1">Title (Optional)</label>
