@@ -46,20 +46,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         if (!isMounted) return;
         const currentUser = session?.user || null;
-        setUser(currentUser);
         
         if (currentUser) {
-          // Load profile BEFORE setting loading to false - pages depend on profile.company_id
+          // SESSION VALIDATION: Verify the cached session matches a real profile
+          // This prevents "ghost user" issues from stale cached sessions
           try {
-            const { data } = await supabase
+            const { data: profileData, error: profileError } = await supabase
               .from('profiles')
               .select('*')
               .eq('id', currentUser.id)
               .maybeSingle();
-            if (isMounted) setProfile(data);
+            
+            if (!isMounted) return;
+            
+            // If no profile exists for this user OR profile doesn't match, clear the invalid session
+            if (profileError || !profileData) {
+              console.warn('Session mismatch detected - clearing invalid session');
+              // Clear all Supabase auth storage to prevent ghost user
+              localStorage.removeItem('sb-bqxnagmmegdbqrzhheip-auth-token');
+              sessionStorage.removeItem('sb-bqxnagmmegdbqrzhheip-auth-token');
+              await supabase.auth.signOut();
+              setUser(null);
+              setProfile(null);
+            } else {
+              // Valid session - set user and profile
+              setUser(currentUser);
+              setProfile(profileData);
+            }
           } catch (e) {
-            console.error('Profile load error:', e);
+            console.error('Profile validation error:', e);
+            // On error, still try to use the session but without profile
+            setUser(currentUser);
           }
+        } else {
+          setUser(null);
+          setProfile(null);
         }
       } catch (error) {
         console.error('Auth load error:', error);
@@ -288,6 +309,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Clear local state first for immediate UI update
     setUser(null);
     setProfile(null);
+    // Clear Supabase auth storage explicitly to prevent ghost sessions
+    localStorage.removeItem('sb-bqxnagmmegdbqrzhheip-auth-token');
+    sessionStorage.removeItem('sb-bqxnagmmegdbqrzhheip-auth-token');
     // Then sign out from Supabase
     await supabase.auth.signOut();
   }
