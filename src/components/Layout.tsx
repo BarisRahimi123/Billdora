@@ -473,6 +473,13 @@ export default function Layout() {
 
                 {userMenuOpen && (
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-neutral-100 py-2 z-50">
+                    <button
+                      onClick={() => { navigate('/settings?tab=profile'); setUserMenuOpen(false); }}
+                      className="w-full flex items-center gap-2 px-4 py-2.5 text-left text-neutral-700 hover:bg-neutral-50"
+                    >
+                      <Users className="w-4 h-4" />
+                      My Profile
+                    </button>
                     {isAdmin && (
                     <button
                       onClick={() => { navigate('/settings'); setUserMenuOpen(false); }}
