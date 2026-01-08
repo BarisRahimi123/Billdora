@@ -573,7 +573,7 @@ export default function SalesPage() {
                 const clientQuotes = grouped[clientName];
                 const clientTotal = clientQuotes.reduce((sum, q) => sum + Number(q.total_amount || 0), 0);
                 return (
-                  <div key={clientName} className="bg-white rounded-2xl border border-neutral-100 overflow-hidden">
+                  <div key={clientName} className="bg-white rounded-2xl border border-neutral-100 overflow-visible">
                     <button
                       onClick={() => toggleClientExpanded(clientName)}
                       className="w-full flex items-center justify-between px-6 py-4 bg-neutral-50 hover:bg-neutral-100 transition-colors"
@@ -627,7 +627,7 @@ export default function SalesPage() {
                                   <MoreHorizontal className="w-4 h-4 text-neutral-400" />
                                 </button>
                                 {activeQuoteMenu === quote.id && (
-                                  <div className="absolute right-0 top-full mt-1 w-44 bg-white rounded-lg shadow-lg border border-neutral-100 py-1 z-20" onClick={(e) => e.stopPropagation()}>
+                                  <div className="absolute right-0 top-full mt-1 w-44 bg-white rounded-lg shadow-lg border border-neutral-100 py-1 z-50" onClick={(e) => e.stopPropagation()}>
                                     <button onClick={(e) => { e.stopPropagation(); setActiveQuoteMenu(null); navigate(`/quotes/${quote.id}/document`); }} className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50">
                                       <Edit2 className="w-4 h-4" /> Edit
                                     </button>
