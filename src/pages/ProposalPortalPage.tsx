@@ -711,13 +711,25 @@ export default function ProposalPortalPage() {
           </div>
         )}
         {existingResponse?.status !== 'accepted' && (
-          <div className="text-center">
+          <div className="text-center print:hidden">
             <button
               onClick={() => setStep('respond')}
               className="px-8 py-4 bg-[#476E66] text-white rounded-xl font-semibold text-lg hover:bg-[#3A5B54] transition-colors"
             >
               Respond to This Proposal
             </button>
+          </div>
+        )}
+        {/* Signed Confirmation for Print */}
+        {existingResponse?.status === 'accepted' && (
+          <div className="hidden print:block bg-green-50 border-2 border-green-200 rounded-xl p-6 text-center">
+            <div className="flex items-center justify-center gap-2 text-green-700 font-semibold text-lg mb-2">
+              <Check className="w-6 h-6" />
+              Proposal Accepted & Signed
+            </div>
+            <p className="text-green-600 text-sm">
+              Signed by {existingResponse.signer_name} on {new Date(existingResponse.responded_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+            </p>
           </div>
         )}
       </main>
