@@ -526,7 +526,8 @@ export default function ProposalPortalPage() {
                 });
 
                 const totalDays = Math.max(...schedule.map(s => s.endDay), 1);
-                const colors = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4'];
+                // Brand colors - teal/dark green palette
+                const colors = ['#2D5A4F', '#3D6B5F', '#4D7C6F', '#5D8D7F', '#6D9E8F', '#7DAF9F'];
 
                 return schedule.map((s, idx) => {
                   const leftPercent = ((s.startDay - 1) / totalDays) * 100;
