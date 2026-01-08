@@ -302,7 +302,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Settings Sidebar - Desktop only */}
-      <aside className="hidden lg:flex w-64 text-white flex-col fixed h-[calc(100vh-73px)] z-40" style={{ backgroundColor: '#476E66' }}>
+      <aside className="hidden lg:flex w-64 text-white flex-col fixed top-[73px] h-[calc(100vh-73px)] z-20" style={{ backgroundColor: '#476E66' }}>
         {/* Back Button Header */}
         <div className="p-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.2)' }}>
           <button 

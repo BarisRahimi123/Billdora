@@ -80,7 +80,7 @@ export default function ResourcingPage() {
   return (
     <div className="flex min-h-[calc(100vh-73px)] -m-4 lg:-m-6">
       {/* Team Sidebar - Replaces main nav */}
-      <aside className="w-64 text-white flex flex-col fixed left-0 top-[73px] h-[calc(100vh-73px)] z-40" style={{ backgroundColor: '#476E66' }}>
+      <aside className="w-64 text-white flex flex-col fixed left-0 top-[73px] h-[calc(100vh-73px)] z-20" style={{ backgroundColor: '#476E66' }}>
         {/* Back Button Header */}
         <div className="p-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.2)' }}>
           <button 
