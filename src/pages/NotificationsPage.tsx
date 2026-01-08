@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Check, CheckCheck, Trash2, Settings, Mail, Filter, FileText, Clock, ChevronRight, FolderKanban, Receipt } from 'lucide-react';
+import { Bell, Check, CheckCheck, Trash2, Settings, Mail, Filter, FileText, Clock, ChevronRight, ChevronDown, FolderKanban, Receipt, Eye, Send, AlertTriangle, DollarSign, UserPlus, Rocket } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { notificationsApi } from '../lib/api';
 
@@ -17,32 +17,96 @@ interface Notification {
   created_at?: string;
 }
 
+interface NotificationSetting { inApp: boolean; email: boolean }
+
 interface NotificationSettings {
-  proposal_signed: { inApp: boolean; email: boolean };
-  proposal_declined: { inApp: boolean; email: boolean };
-  proposal_viewed: { inApp: boolean; email: boolean };
-  invoice_paid: { inApp: boolean; email: boolean };
-  invoice_overdue: { inApp: boolean; email: boolean };
-  project_completed: { inApp: boolean; email: boolean };
+  // Proposals
+  proposal_viewed: NotificationSetting;
+  proposal_signed: NotificationSetting;
+  proposal_declined: NotificationSetting;
+  // Invoices
+  invoice_viewed: NotificationSetting;
+  invoice_sent: NotificationSetting;
+  invoice_paid: NotificationSetting;
+  invoice_overdue: NotificationSetting;
+  payment_received: NotificationSetting;
+  // Projects
+  project_created: NotificationSetting;
+  project_completed: NotificationSetting;
+  budget_warning: NotificationSetting;
+  // Other
+  new_client_added: NotificationSetting;
 }
 
 const defaultSettings: NotificationSettings = {
+  // Proposals
+  proposal_viewed: { inApp: true, email: false },
   proposal_signed: { inApp: true, email: true },
   proposal_declined: { inApp: true, email: true },
-  proposal_viewed: { inApp: true, email: false },
+  // Invoices
+  invoice_viewed: { inApp: true, email: false },
+  invoice_sent: { inApp: true, email: false },
   invoice_paid: { inApp: true, email: true },
   invoice_overdue: { inApp: true, email: true },
+  payment_received: { inApp: true, email: true },
+  // Projects
+  project_created: { inApp: true, email: false },
   project_completed: { inApp: true, email: false },
+  budget_warning: { inApp: true, email: true },
+  // Other
+  new_client_added: { inApp: true, email: false },
 };
 
-const notificationLabels: Record<string, { label: string; description: string; icon: React.ReactNode }> = {
-  proposal_signed: { label: 'Proposal Signed', description: 'When a client signs a proposal', icon: <FileText className="w-5 h-5 text-emerald-500" /> },
-  proposal_declined: { label: 'Proposal Declined', description: 'When a client declines a proposal', icon: <FileText className="w-5 h-5 text-red-500" /> },
-  proposal_viewed: { label: 'Proposal Viewed', description: 'When a client views a proposal', icon: <FileText className="w-5 h-5 text-blue-500" /> },
-  invoice_paid: { label: 'Invoice Paid', description: 'When an invoice is marked as paid', icon: <FileText className="w-5 h-5 text-emerald-500" /> },
-  invoice_overdue: { label: 'Invoice Overdue', description: 'When an invoice becomes overdue', icon: <FileText className="w-5 h-5 text-amber-500" /> },
-  project_completed: { label: 'Project Completed', description: 'When a project is marked complete', icon: <FileText className="w-5 h-5 text-purple-500" /> },
-};
+const settingsCategories = [
+  {
+    key: 'proposals',
+    label: 'Proposals',
+    icon: <FileText className="w-5 h-5" />,
+    color: 'text-blue-600',
+    bgColor: 'bg-blue-50',
+    items: [
+      { key: 'proposal_viewed', label: 'Proposal Viewed', description: 'When a client views your proposal', icon: <Eye className="w-5 h-5 text-blue-500" /> },
+      { key: 'proposal_signed', label: 'Proposal Signed', description: 'When a client accepts and signs a proposal', icon: <Check className="w-5 h-5 text-emerald-500" /> },
+      { key: 'proposal_declined', label: 'Proposal Declined', description: 'When a client declines a proposal', icon: <FileText className="w-5 h-5 text-red-500" /> },
+    ]
+  },
+  {
+    key: 'invoices',
+    label: 'Invoices',
+    icon: <Receipt className="w-5 h-5" />,
+    color: 'text-emerald-600',
+    bgColor: 'bg-emerald-50',
+    items: [
+      { key: 'invoice_viewed', label: 'Invoice Viewed', description: 'When a client views an invoice', icon: <Eye className="w-5 h-5 text-blue-500" /> },
+      { key: 'invoice_sent', label: 'Invoice Sent', description: 'When an invoice is sent to client', icon: <Send className="w-5 h-5 text-blue-500" /> },
+      { key: 'invoice_paid', label: 'Invoice Paid', description: 'When an invoice is fully paid', icon: <Check className="w-5 h-5 text-emerald-500" /> },
+      { key: 'invoice_overdue', label: 'Invoice Overdue', description: 'When an invoice becomes past due', icon: <AlertTriangle className="w-5 h-5 text-amber-500" /> },
+      { key: 'payment_received', label: 'Payment Received', description: 'When a partial or full payment is received', icon: <DollarSign className="w-5 h-5 text-emerald-500" /> },
+    ]
+  },
+  {
+    key: 'projects',
+    label: 'Projects',
+    icon: <FolderKanban className="w-5 h-5" />,
+    color: 'text-purple-600',
+    bgColor: 'bg-purple-50',
+    items: [
+      { key: 'project_created', label: 'Project Created', description: 'When a proposal converts to a project', icon: <Rocket className="w-5 h-5 text-purple-500" /> },
+      { key: 'project_completed', label: 'Project Completed', description: 'When a project is marked as complete', icon: <Check className="w-5 h-5 text-emerald-500" /> },
+      { key: 'budget_warning', label: 'Budget Warning', description: 'When a project reaches 80% of budget', icon: <AlertTriangle className="w-5 h-5 text-amber-500" /> },
+    ]
+  },
+  {
+    key: 'other',
+    label: 'Other',
+    icon: <Bell className="w-5 h-5" />,
+    color: 'text-neutral-600',
+    bgColor: 'bg-neutral-50',
+    items: [
+      { key: 'new_client_added', label: 'New Client Added', description: 'When a new client is added to your account', icon: <UserPlus className="w-5 h-5 text-blue-500" /> },
+    ]
+  },
+];
 
 export default function NotificationsPage() {
   const navigate = useNavigate();
@@ -52,6 +116,7 @@ export default function NotificationsPage() {
   const [activeTab, setActiveTab] = useState<'proposals' | 'projects' | 'invoices' | 'settings'>('proposals');
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
   const [settings, setSettings] = useState<NotificationSettings>(defaultSettings);
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['proposals', 'invoices', 'projects', 'other']));
 
   useEffect(() => {
     loadNotifications();
@@ -283,58 +348,95 @@ export default function NotificationsPage() {
       )}
 
       {activeTab === 'settings' && (
-        <div className="bg-white rounded-2xl border border-neutral-100 overflow-hidden">
-          <div className="p-6 border-b border-neutral-100">
-            <h2 className="text-lg font-semibold text-neutral-900">Notification Preferences</h2>
-            <p className="text-sm text-neutral-500 mt-1">Choose how you want to be notified for each event type</p>
+        <div className="space-y-4">
+          <div className="bg-white rounded-2xl border border-neutral-100 overflow-hidden">
+            <div className="p-6 border-b border-neutral-100">
+              <h2 className="text-lg font-semibold text-neutral-900">Notification Preferences</h2>
+              <p className="text-sm text-neutral-500 mt-1">Choose how you want to be notified for each event type</p>
+            </div>
           </div>
-          <div className="divide-y divide-neutral-100">
-            {Object.entries(notificationLabels).map(([key, { label, description, icon }]) => (
-              <div key={key} className="flex items-center justify-between p-5">
-                <div className="flex items-center gap-4">
-                  {icon}
-                  <div>
-                    <p className="font-medium text-neutral-900">{label}</p>
-                    <p className="text-sm text-neutral-500">{description}</p>
+
+          {settingsCategories.map((category) => (
+            <div key={category.key} className="bg-white rounded-2xl border border-neutral-100 overflow-hidden">
+              <button
+                onClick={() => {
+                  const newExpanded = new Set(expandedCategories);
+                  if (newExpanded.has(category.key)) {
+                    newExpanded.delete(category.key);
+                  } else {
+                    newExpanded.add(category.key);
+                  }
+                  setExpandedCategories(newExpanded);
+                }}
+                className="w-full flex items-center justify-between p-5 hover:bg-neutral-50 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-xl ${category.bgColor} flex items-center justify-center ${category.color}`}>
+                    {category.icon}
+                  </div>
+                  <div className="text-left">
+                    <p className="font-semibold text-neutral-900">{category.label}</p>
+                    <p className="text-sm text-neutral-500">{category.items.length} notification type{category.items.length !== 1 ? 's' : ''}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-6">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={settings[key as keyof NotificationSettings]?.inApp ?? true}
-                      onChange={(e) => {
-                        const newSettings = {
-                          ...settings,
-                          [key]: { ...settings[key as keyof NotificationSettings], inApp: e.target.checked }
-                        };
-                        saveSettings(newSettings);
-                      }}
-                      className="w-4 h-4 rounded border-neutral-300 text-[#476E66] focus:ring-[#476E66]"
-                    />
-                    <Bell className="w-4 h-4 text-neutral-400" />
-                    <span className="text-sm text-neutral-600">In-app</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={settings[key as keyof NotificationSettings]?.email ?? false}
-                      onChange={(e) => {
-                        const newSettings = {
-                          ...settings,
-                          [key]: { ...settings[key as keyof NotificationSettings], email: e.target.checked }
-                        };
-                        saveSettings(newSettings);
-                      }}
-                      className="w-4 h-4 rounded border-neutral-300 text-[#476E66] focus:ring-[#476E66]"
-                    />
-                    <Mail className="w-4 h-4 text-neutral-400" />
-                    <span className="text-sm text-neutral-600">Email</span>
-                  </label>
+                {expandedCategories.has(category.key) ? (
+                  <ChevronDown className="w-5 h-5 text-neutral-400" />
+                ) : (
+                  <ChevronRight className="w-5 h-5 text-neutral-400" />
+                )}
+              </button>
+
+              {expandedCategories.has(category.key) && (
+                <div className="border-t border-neutral-100 divide-y divide-neutral-100">
+                  {category.items.map((item) => (
+                    <div key={item.key} className="flex items-center justify-between p-5 pl-8">
+                      <div className="flex items-center gap-4">
+                        {item.icon}
+                        <div>
+                          <p className="font-medium text-neutral-900">{item.label}</p>
+                          <p className="text-sm text-neutral-500">{item.description}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-6">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={settings[item.key as keyof NotificationSettings]?.inApp ?? true}
+                            onChange={(e) => {
+                              const newSettings = {
+                                ...settings,
+                                [item.key]: { ...settings[item.key as keyof NotificationSettings], inApp: e.target.checked }
+                              };
+                              saveSettings(newSettings);
+                            }}
+                            className="w-4 h-4 rounded border-neutral-300 text-[#476E66] focus:ring-[#476E66]"
+                          />
+                          <Bell className="w-4 h-4 text-neutral-400" />
+                          <span className="text-sm text-neutral-600">In-app</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={settings[item.key as keyof NotificationSettings]?.email ?? false}
+                            onChange={(e) => {
+                              const newSettings = {
+                                ...settings,
+                                [item.key]: { ...settings[item.key as keyof NotificationSettings], email: e.target.checked }
+                              };
+                              saveSettings(newSettings);
+                            }}
+                            className="w-4 h-4 rounded border-neutral-300 text-[#476E66] focus:ring-[#476E66]"
+                          />
+                          <Mail className="w-4 h-4 text-neutral-400" />
+                          <span className="text-sm text-neutral-600">Email</span>
+                        </label>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              </div>
-            ))}
-          </div>
+              )}
+            </div>
+          ))}
         </div>
       )}
     </div>
