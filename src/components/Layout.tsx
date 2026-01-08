@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { usePermissions } from '../contexts/PermissionsContext';
-import { api, Project, notificationsApi, Notification as AppNotification } from '../lib/api';
+import { api, Project, Client, Invoice, notificationsApi, Notification as AppNotification } from '../lib/api';
 import { 
   LayoutDashboard, Users, FolderKanban, Clock, FileText, Calendar, BarChart3, Settings, LogOut,
   Search, Bell, ChevronDown, X, Play, Pause, Square, Menu, PieChart, ArrowLeft
@@ -41,8 +41,6 @@ export default function Layout() {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
-  const [searching, setSearching] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
@@ -60,6 +58,13 @@ export default function Layout() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const notificationsRef = useRef<HTMLDivElement>(null);
+  
+  // Search cache - loaded once, searched locally
+  const [searchCache, setSearchCache] = useState<{
+    projects: Project[];
+    clients: Client[];
+    invoices: Invoice[];
+  } | null>(null);
 
   // Close sidebar on route change (mobile)
   useEffect(() => {
@@ -142,46 +147,52 @@ export default function Layout() {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  // Load search cache once when search opens (not on every keystroke)
   useEffect(() => {
-    const searchData = async () => {
-      if (!searchQuery.trim() || !profile?.company_id) {
-        setSearchResults([]);
-        return;
-      }
-      setSearching(true);
+    const loadSearchCache = async () => {
+      if (!searchOpen || searchCache || !profile?.company_id) return;
+      
       try {
         const [projectsData, clientsData, invoicesData] = await Promise.all([
           api.getProjects(profile.company_id),
           api.getClients(profile.company_id),
           api.getInvoices(profile.company_id),
         ]);
-
-        const query = searchQuery.toLowerCase();
-        const results: SearchResult[] = [];
-
-        projectsData.filter(p => p.name.toLowerCase().includes(query)).slice(0, 3).forEach(p => {
-          results.push({ id: p.id, type: 'project', title: p.name, subtitle: p.client?.name, path: `/projects/${p.id}` });
-        });
-
-        clientsData.filter(c => c.name.toLowerCase().includes(query) || c.display_name?.toLowerCase().includes(query)).slice(0, 3).forEach(c => {
-          results.push({ id: c.id, type: 'client', title: c.name, subtitle: c.email, path: '/sales' });
-        });
-
-        invoicesData.filter(i => i.invoice_number?.toLowerCase().includes(query) || i.client?.name?.toLowerCase().includes(query)).slice(0, 3).forEach(i => {
-          results.push({ id: i.id, type: 'invoice', title: i.invoice_number || 'Invoice', subtitle: i.client?.name, path: '/invoicing' });
-        });
-
-        setSearchResults(results);
+        setSearchCache({ projects: projectsData, clients: clientsData, invoices: invoicesData });
       } catch (error) {
-        console.error('Search failed:', error);
-      } finally {
-        setSearching(false);
+        console.error('Failed to load search data:', error);
       }
     };
+    
+    loadSearchCache();
+  }, [searchOpen, profile?.company_id, searchCache]);
 
-    const debounce = setTimeout(searchData, 300);
-    return () => clearTimeout(debounce);
-  }, [searchQuery, profile?.company_id]);
+  // Invalidate cache when company changes
+  useEffect(() => {
+    setSearchCache(null);
+  }, [profile?.company_id]);
+
+  // Search locally from cache (instant, no network requests)
+  const filteredSearchResults = useMemo(() => {
+    if (!searchQuery.trim() || !searchCache) return [];
+    
+    const query = searchQuery.toLowerCase();
+    const results: SearchResult[] = [];
+
+    searchCache.projects.filter(p => p.name.toLowerCase().includes(query)).slice(0, 3).forEach(p => {
+      results.push({ id: p.id, type: 'project', title: p.name, subtitle: p.client?.name, path: `/projects/${p.id}` });
+    });
+
+    searchCache.clients.filter(c => c.name.toLowerCase().includes(query) || c.display_name?.toLowerCase().includes(query)).slice(0, 3).forEach(c => {
+      results.push({ id: c.id, type: 'client', title: c.name, subtitle: c.email, path: '/sales' });
+    });
+
+    searchCache.invoices.filter(i => i.invoice_number?.toLowerCase().includes(query) || i.client?.name?.toLowerCase().includes(query)).slice(0, 3).forEach(i => {
+      results.push({ id: i.id, type: 'invoice', title: i.invoice_number || 'Invoice', subtitle: i.client?.name, path: '/invoicing' });
+    });
+
+    return results;
+  }, [searchQuery, searchCache]);
 
   const formatTimer = (seconds: number) => {
     const h = Math.floor(seconds / 3600);
@@ -344,11 +355,11 @@ export default function Layout() {
                       <X className="w-4 h-4 text-neutral-400" />
                     </button>
                   </div>
-                  {searching ? (
-                    <div className="p-4 text-center text-neutral-500 text-sm">Searching...</div>
-                  ) : searchResults.length > 0 ? (
+                  {!searchCache && searchQuery.trim() ? (
+                    <div className="p-4 text-center text-neutral-500 text-sm">Loading...</div>
+                  ) : filteredSearchResults.length > 0 ? (
                     <div className="max-h-80 overflow-y-auto py-2">
-                      {searchResults.map((result) => (
+                      {filteredSearchResults.map((result) => (
                         <button
                           key={`${result.type}-${result.id}`}
                           onClick={() => handleSearchSelect(result)}
@@ -363,7 +374,7 @@ export default function Layout() {
                         </button>
                       ))}
                     </div>
-                  ) : searchQuery && (
+                  ) : searchQuery && searchCache && (
                     <div className="p-4 text-center text-neutral-500 text-sm">No results found</div>
                   )}
                 </div>

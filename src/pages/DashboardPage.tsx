@@ -87,92 +87,13 @@ export default function DashboardPage() {
     }
   }, [searchParams, setSearchParams, refreshSubscription]);
 
-  useEffect(() => {
-    async function loadData() {
-      if (!profile?.company_id || !user?.id) {
-        setLoading(false);
-        return;
-      }
-      try {
-        const [statsData, projectsData, timeEntries, invoicesData] = await Promise.all([
-          api.getDashboardStats(profile.company_id, user.id),
-          api.getProjects(profile.company_id),
-          api.getTimeEntries(profile.company_id, user.id),
-          api.getInvoices(profile.company_id),
-        ]);
-        
-        // Calculate additional stats
-        const activeProjects = projectsData.filter(p => p.status === 'active' || p.status === 'in_progress').length;
-        const totalRevenue = invoicesData.filter(i => i.status === 'paid').reduce((sum, i) => sum + Number(i.total), 0);
-        const outstandingInvoices = invoicesData.filter(i => i.status === 'sent').reduce((sum, i) => sum + Number(i.total), 0);
-        const hoursThisWeek = statsData.billableHours + statsData.nonBillableHours;
-        
-        setStats({
-          ...statsData,
-          activeProjects,
-          totalRevenue,
-          outstandingInvoices,
-          hoursThisWeek,
-        });
-        setProjects(projectsData);
-        
-        // Build recent activities from time entries
-        const recentActivities: ActivityItem[] = timeEntries.slice(0, 5).map((te: TimeEntry) => ({
-          id: te.id,
-          type: 'time' as const,
-          description: `Logged ${te.hours}h on ${te.project?.name || 'No project'}`,
-          date: te.date,
-          meta: te.description,
-        }));
-        setActivities(recentActivities);
-        
-        // Calculate revenue trends (last 6 months)
-        const monthlyRevenue: Record<string, number> = {};
-        const now = new Date();
-        for (let i = 5; i >= 0; i--) {
-          const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-          const key = d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
-          monthlyRevenue[key] = 0;
-        }
-        invoicesData.filter(i => i.status === 'paid').forEach(inv => {
-          if (inv.created_at) {
-            const d = new Date(inv.created_at);
-            const key = d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
-            if (monthlyRevenue[key] !== undefined) {
-              monthlyRevenue[key] += Number(inv.total) || 0;
-            }
-          }
-        });
-        setRevenueData(Object.entries(monthlyRevenue).map(([month, revenue]) => ({ month, revenue })));
-        
-        // Calculate aging report
-        const aging = { '0-30': { count: 0, amount: 0 }, '31-60': { count: 0, amount: 0 }, '61-90': { count: 0, amount: 0 }, '90+': { count: 0, amount: 0 } };
-        const today = new Date();
-        invoicesData.filter(i => i.status === 'sent' && i.due_date).forEach(inv => {
-          const due = new Date(inv.due_date!);
-          const daysOverdue = Math.floor((today.getTime() - due.getTime()) / (1000 * 60 * 60 * 24));
-          const amount = Number(inv.total) || 0;
-          if (daysOverdue <= 30) { aging['0-30'].count++; aging['0-30'].amount += amount; }
-          else if (daysOverdue <= 60) { aging['31-60'].count++; aging['31-60'].amount += amount; }
-          else if (daysOverdue <= 90) { aging['61-90'].count++; aging['61-90'].amount += amount; }
-          else { aging['90+'].count++; aging['90+'].amount += amount; }
-        });
-        setAgingData(Object.entries(aging).map(([range, data]) => ({ range, ...data })));
-      } catch (err) {
-        console.error('Failed to load dashboard data:', err);
-        setError('Failed to load dashboard data. Please try again.');
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadData();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profile?.company_id, user?.id]);
-
-  // Extract loadData as a callable function for refresh
+  // Load dashboard data function - used by both initial load and refresh
   const loadData = useCallback(async () => {
-    if (!profile?.company_id || !user?.id) return;
-    setLoading(true);
+    if (!profile?.company_id || !user?.id) {
+      setLoading(false);
+      return;
+    }
+    
     try {
       const [statsData, projectsData, timeEntries, invoicesData] = await Promise.all([
         api.getDashboardStats(profile.company_id, user.id),
@@ -180,22 +101,70 @@ export default function DashboardPage() {
         api.getTimeEntries(profile.company_id, user.id),
         api.getInvoices(profile.company_id),
       ]);
+      
+      // Calculate additional stats
       const activeProjects = projectsData.filter(p => p.status === 'active' || p.status === 'in_progress').length;
       const totalRevenue = invoicesData.filter(i => i.status === 'paid').reduce((sum, i) => sum + Number(i.total), 0);
       const outstandingInvoices = invoicesData.filter(i => i.status === 'sent').reduce((sum, i) => sum + Number(i.total), 0);
       const hoursThisWeek = statsData.billableHours + statsData.nonBillableHours;
+      
       setStats({ ...statsData, activeProjects, totalRevenue, outstandingInvoices, hoursThisWeek });
       setProjects(projectsData);
-      const recentActivities = timeEntries.slice(0, 5).map((te: TimeEntry) => ({
-        id: te.id, type: 'time' as const, description: `Logged ${te.hours}h on ${te.project?.name || 'No project'}`, date: te.date, meta: te.description,
+      
+      // Build recent activities from time entries
+      const recentActivities: ActivityItem[] = timeEntries.slice(0, 5).map((te: TimeEntry) => ({
+        id: te.id,
+        type: 'time' as const,
+        description: `Logged ${te.hours}h on ${te.project?.name || 'No project'}`,
+        date: te.date,
+        meta: te.description,
       }));
       setActivities(recentActivities);
+      
+      // Calculate revenue trends (last 6 months)
+      const monthlyRevenue: Record<string, number> = {};
+      const now = new Date();
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const key = d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+        monthlyRevenue[key] = 0;
+      }
+      invoicesData.filter(i => i.status === 'paid').forEach(inv => {
+        if (inv.created_at) {
+          const d = new Date(inv.created_at);
+          const key = d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+          if (monthlyRevenue[key] !== undefined) {
+            monthlyRevenue[key] += Number(inv.total) || 0;
+          }
+        }
+      });
+      setRevenueData(Object.entries(monthlyRevenue).map(([month, revenue]) => ({ month, revenue })));
+      
+      // Calculate aging report
+      const aging = { '0-30': { count: 0, amount: 0 }, '31-60': { count: 0, amount: 0 }, '61-90': { count: 0, amount: 0 }, '90+': { count: 0, amount: 0 } };
+      const today = new Date();
+      invoicesData.filter(i => i.status === 'sent' && i.due_date).forEach(inv => {
+        const due = new Date(inv.due_date!);
+        const daysOverdue = Math.floor((today.getTime() - due.getTime()) / (1000 * 60 * 60 * 24));
+        const amount = Number(inv.total) || 0;
+        if (daysOverdue <= 30) { aging['0-30'].count++; aging['0-30'].amount += amount; }
+        else if (daysOverdue <= 60) { aging['31-60'].count++; aging['31-60'].amount += amount; }
+        else if (daysOverdue <= 90) { aging['61-90'].count++; aging['61-90'].amount += amount; }
+        else { aging['90+'].count++; aging['90+'].amount += amount; }
+      });
+      setAgingData(Object.entries(aging).map(([range, data]) => ({ range, ...data })));
     } catch (err) {
-      console.error('Failed to refresh dashboard data:', err);
+      console.error('Failed to load dashboard data:', err);
+      setError('Failed to load dashboard data. Please try again.');
     } finally {
       setLoading(false);
     }
   }, [profile?.company_id, user?.id]);
+
+  // Initial data load
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
