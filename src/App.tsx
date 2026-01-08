@@ -19,6 +19,7 @@ import QuoteDocumentPage from './pages/QuoteDocumentPage';
 import ProposalPortalPage from './pages/ProposalPortalPage';
 import InvoiceViewPage from './pages/InvoiceViewPage';
 import ClientPortalPage from './pages/ClientPortalPage';
+import CompanyExpensesPage from './pages/CompanyExpensesPage';
 
 import LandingPage from './pages/LandingPage';
 import CheckEmailPage from './pages/CheckEmailPage';
@@ -69,6 +70,7 @@ function AppRoutes() {
         <Route path="/resourcing" element={<ResourcingPage />} />
         <Route path="/analytics" element={<AnalyticsPage />} />
         <Route path="/reports" element={<ReportsPage />} />
+        <Route path="/company-expenses" element={<CompanyExpensesPage />} />
         <Route path="/settings" element={<SettingsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

@@ -5,7 +5,7 @@ import { usePermissions } from '../contexts/PermissionsContext';
 import { api, Project, Client, Invoice, notificationsApi, Notification as AppNotification } from '../lib/api';
 import { 
   LayoutDashboard, Users, FolderKanban, Clock, FileText, Calendar, BarChart3, Settings, LogOut,
-  Search, Bell, ChevronDown, X, Play, Pause, Square, Menu, PieChart, ArrowLeft
+  Search, Bell, ChevronDown, X, Play, Pause, Square, Menu, PieChart, ArrowLeft, Wallet
 } from 'lucide-react';
 
 const navItems = [
@@ -17,6 +17,7 @@ const navItems = [
   { path: '/resourcing', icon: Calendar, label: 'Team' },
   { path: '/reports', icon: PieChart, label: 'Reports' },
   { path: '/analytics', icon: BarChart3, label: 'Analytics' },
+  { path: '/company-expenses', icon: Wallet, label: 'Expenses' },
   { path: '/settings', icon: Settings, label: 'Settings' },
 ];
 

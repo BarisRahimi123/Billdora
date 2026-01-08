@@ -1968,6 +1968,77 @@ export interface ClientPortalToken {
   client?: Client;
 }
 
+// Company Expenses (Overhead costs)
+export interface CompanyExpense {
+  id: string;
+  company_id: string;
+  name: string;
+  category: string;
+  amount: number;
+  frequency: 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly' | 'one-time';
+  start_date?: string;
+  end_date?: string;
+  notes?: string;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export const companyExpensesApi = {
+  async getExpenses(companyId: string) {
+    const { data, error } = await supabase
+      .from('company_expenses')
+      .select('*')
+      .eq('company_id', companyId)
+      .order('category', { ascending: true })
+      .order('name', { ascending: true });
+    if (error) throw error;
+    return data as CompanyExpense[];
+  },
+
+  async createExpense(expense: Partial<CompanyExpense>) {
+    const { data, error } = await supabase
+      .from('company_expenses')
+      .insert(expense)
+      .select()
+      .single();
+    if (error) throw error;
+    return data as CompanyExpense;
+  },
+
+  async updateExpense(id: string, updates: Partial<CompanyExpense>) {
+    const { data, error } = await supabase
+      .from('company_expenses')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data as CompanyExpense;
+  },
+
+  async deleteExpense(id: string) {
+    const { error } = await supabase
+      .from('company_expenses')
+      .delete()
+      .eq('id', id);
+    if (error) throw error;
+  },
+
+  // Calculate monthly equivalent for any frequency
+  getMonthlyAmount(expense: CompanyExpense): number {
+    switch (expense.frequency) {
+      case 'daily': return expense.amount * 30;
+      case 'weekly': return expense.amount * 4.33;
+      case 'monthly': return expense.amount;
+      case 'quarterly': return expense.amount / 3;
+      case 'yearly': return expense.amount / 12;
+      case 'one-time': return 0;
+      default: return expense.amount;
+    }
+  }
+};
+
 export const clientPortalApi = {
   async getTokenByClient(clientId: string) {
     const { data, error } = await supabase
