@@ -290,7 +290,7 @@ export default function QuoteDocumentPage() {
 
   const addLineItem = () => {
     setLineItems([...lineItems, { 
-      id: Date.now().toString(), 
+      id: crypto.randomUUID(), 
       description: '', 
       unitPrice: 0, 
       qty: 1,
@@ -1936,7 +1936,7 @@ export default function QuoteDocumentPage() {
                         : service.pricing_type === 'fixed' ? 'project' 
                         : 'each';
                       newItems.push({
-                        id: (Date.now() + index).toString(),
+                        id: crypto.randomUUID(),
                         description: service.name + (service.description ? ` - ${service.description}` : ''),
                         unitPrice: rate,
                         qty: 1,
