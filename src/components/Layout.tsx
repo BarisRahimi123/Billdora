@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { usePermissions } from '../contexts/PermissionsContext';
-import { api, Project, Client, Invoice, notificationsApi, Notification as AppNotification } from '../lib/api';
+import { api, Project, Client, Invoice, Task, notificationsApi, Notification as AppNotification } from '../lib/api';
 import { 
   LayoutDashboard, Users, FolderKanban, Clock, FileText, Calendar, BarChart3, Settings, LogOut,
   Search, Bell, ChevronDown, X, Play, Pause, Square, Menu, PieChart, ArrowLeft, Wallet
@@ -47,9 +47,11 @@ export default function Layout() {
   const [timerRunning, setTimerRunning] = useState(false);
   const [timerSeconds, setTimerSeconds] = useState(0);
   const [timerProjectId, setTimerProjectId] = useState('');
+  const [timerTaskId, setTimerTaskId] = useState('');
   const [timerDescription, setTimerDescription] = useState('');
   const [showTimerWidget, setShowTimerWidget] = useState(false);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [projectTasks, setProjectTasks] = useState<Task[]>([]);
   const timerInterval = useRef<NodeJS.Timeout | null>(null);
   
   // Notifications state
@@ -118,6 +120,16 @@ export default function Layout() {
     }
     return () => { if (timerInterval.current) clearInterval(timerInterval.current); };
   }, [timerRunning]);
+
+  // Load tasks when project changes
+  useEffect(() => {
+    if (timerProjectId && profile?.company_id) {
+      api.getTasks(timerProjectId).then(setProjectTasks).catch(console.error);
+    } else {
+      setProjectTasks([]);
+    }
+    setTimerTaskId(''); // Reset task when project changes
+  }, [timerProjectId, profile?.company_id]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -211,6 +223,7 @@ export default function Layout() {
           company_id: profile.company_id,
           user_id: profile.id,
           project_id: timerProjectId || undefined,
+          task_id: timerTaskId || undefined,
           hours: Math.max(0.25, hours),
           description: timerDescription,
           date: new Date().toISOString().split('T')[0],
@@ -224,6 +237,7 @@ export default function Layout() {
     }
     setTimerSeconds(0);
     setTimerDescription('');
+    setTimerTaskId('');
     setShowTimerWidget(false);
   };
 
@@ -536,6 +550,18 @@ export default function Layout() {
               <option value="">No Project</option>
               {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
+
+            {timerProjectId && (
+              <select
+                value={timerTaskId}
+                onChange={(e) => setTimerTaskId(e.target.value)}
+                disabled={timerRunning}
+                className="w-full px-3 py-2 border border-neutral-200 rounded-lg text-sm mb-3"
+              >
+                <option value="">No Task</option>
+                {projectTasks.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+              </select>
+            )}
 
             <input
               type="text"

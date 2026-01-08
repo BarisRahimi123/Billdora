@@ -29,7 +29,7 @@ const PROJECT_CATEGORIES = [
   { value: 'O', label: 'Other', color: 'bg-neutral-400' },
 ];
 
-const DEFAULT_COLUMNS = ['project', 'client', 'team', 'budget', 'status'];
+const DEFAULT_COLUMNS = ['project', 'client', 'budget', 'status'];
 const ALL_COLUMNS = [
   { key: 'project', label: 'Project' },
   { key: 'client', label: 'Client' },
@@ -389,8 +389,8 @@ export default function ProjectsPage() {
 
         {/* Tabs */}
         <div className="flex gap-1 p-1 bg-neutral-100 rounded-xl w-fit">
-          {(['vitals', 'client', 'details', 'tasks', 'team', 'financials', 'billing'] as DetailTab[]).filter(tab => {
-            if (!canViewFinancials && (tab === 'financials' || tab === 'billing' || tab === 'team')) return false;
+          {(['vitals', 'client', 'details', 'tasks', 'financials', 'billing'] as DetailTab[]).filter(tab => {
+            if (!canViewFinancials && (tab === 'financials' || tab === 'billing')) return false;
             return true;
           }).map(tab => (
             <button
@@ -436,6 +436,7 @@ export default function ProjectsPage() {
           {activeTab === 'tasks' && (
             <TasksTabContent
               tasks={tasks}
+              timeEntries={timeEntries}
               projectId={selectedProject.id}
               companyId={profile?.company_id || ''}
               onTasksChange={() => { if (projectId) loadProjectDetails(projectId); }}
@@ -696,6 +697,7 @@ export default function ProjectsPage() {
             companyProfiles={companyProfiles}
             onClose={() => { setShowTaskModal(false); setEditingTask(null); }}
             onSave={() => { if (projectId) loadProjectDetails(projectId); setShowTaskModal(false); setEditingTask(null); }}
+            onDelete={async (taskId) => { await deleteTask(taskId); setShowTaskModal(false); setEditingTask(null); }}
             canViewFinancials={canViewFinancials}
           />
         )}
@@ -1310,7 +1312,7 @@ function ProjectModal({ project, clients, companyId, onClose, onSave }: {
   );
 }
 
-function TaskModal({ task, projectId, companyId, teamMembers, companyProfiles, onClose, onSave, canViewFinancials = true }: { 
+function TaskModal({ task, projectId, companyId, teamMembers, companyProfiles, onClose, onSave, onDelete, canViewFinancials = true }: { 
   task: Task | null;
   projectId: string;
   companyId: string;
@@ -1318,6 +1320,7 @@ function TaskModal({ task, projectId, companyId, teamMembers, companyProfiles, o
   companyProfiles: {id: string; full_name?: string; avatar_url?: string; email?: string; role?: string}[];
   onClose: () => void; 
   onSave: () => void;
+  onDelete?: (taskId: string) => void;
   canViewFinancials?: boolean;
 }) {
   const [name, setName] = useState(task?.name || '');
@@ -1439,6 +1442,19 @@ function TaskModal({ task, projectId, companyId, teamMembers, companyProfiles, o
             </div>
           )}
           <div className="flex gap-3 pt-4">
+            {task && onDelete && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (confirm('Are you sure you want to delete this task?')) {
+                    onDelete(task.id);
+                  }
+                }}
+                className="px-4 py-2.5 border border-red-200 text-red-600 rounded-xl hover:bg-red-50 transition-colors flex items-center gap-2"
+              >
+                <Trash2 className="w-4 h-4" /> Delete
+              </button>
+            )}
             <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors">Cancel</button>
             <button type="submit" disabled={saving} className="flex-1 px-4 py-2.5 bg-[#476E66] text-white rounded-xl hover:bg-[#3A5B54] transition-colors disabled:opacity-50">
               {saving ? 'Saving...' : task ? 'Update Task' : 'Create Task'}
@@ -1869,8 +1885,9 @@ function ClientTabContent({ client, onClientUpdate, canViewFinancials = true, is
 }
 
 // Tasks Tab Component with BigTime-style layout
-function TasksTabContent({ tasks, projectId, companyId, onTasksChange, onEditTask, onAddTask, canViewFinancials = true }: {
+function TasksTabContent({ tasks, timeEntries = [], projectId, companyId, onTasksChange, onEditTask, onAddTask, canViewFinancials = true }: {
   tasks: Task[];
+  timeEntries?: TimeEntry[];
   projectId: string;
   companyId: string;
   onTasksChange: () => void;
@@ -2050,67 +2067,100 @@ function TasksTabContent({ tasks, projectId, companyId, onTasksChange, onEditTas
                 {filteredTasks.map(task => {
                   const assignee = teamMembers.find(m => m.id === task.assigned_to);
                   const isCompleted = task.status === 'completed';
+                  const taskTimeEntries = timeEntries.filter(te => te.task_id === task.id);
+                  const isExpanded = expandedTasks.has(task.id);
                   return (
-                    <div key={task.id} className={`flex items-center gap-4 px-4 py-3 hover:bg-neutral-50 ${isCompleted ? 'opacity-60' : ''}`}>
-                      {/* Completion Toggle */}
-                      <button
-                        onClick={async (e) => {
-                          e.stopPropagation();
-                          try {
-                            await api.updateTask(task.id, { 
-                              status: isCompleted ? 'not_started' : 'completed',
-                              completion_percentage: isCompleted ? 0 : 100
-                            });
-                            onTasksChange();
-                          } catch (err) { console.error(err); }
-                        }}
-                        className="flex items-center justify-center w-5 h-5 rounded-full border-2 transition-all hover:scale-110 flex-shrink-0"
-                        style={{
-                          borderColor: isCompleted ? '#476E66' : '#d1d5db',
-                          backgroundColor: isCompleted ? '#476E66' : 'transparent'
-                        }}
-                      >
-                        {isCompleted && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
-                      </button>
-                      
-                      {/* Task Info */}
-                      <div className="flex-1 min-w-0 cursor-pointer" onClick={() => onEditTask(task)}>
-                        <p className={`font-medium ${isCompleted ? 'line-through text-neutral-400' : 'text-neutral-900'}`}>{task.name}</p>
-                        {task.description && <p className="text-sm text-neutral-500 line-clamp-1">{task.description}</p>}
+                    <div key={task.id}>
+                      <div className={`flex items-center gap-4 px-4 py-3 hover:bg-neutral-50 ${isCompleted ? 'opacity-60' : ''}`}>
+                        {/* Completion Toggle */}
+                        <button
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            try {
+                              await api.updateTask(task.id, { 
+                                status: isCompleted ? 'not_started' : 'completed',
+                                completion_percentage: isCompleted ? 0 : 100
+                              });
+                              onTasksChange();
+                            } catch (err) { console.error(err); }
+                          }}
+                          className="flex items-center justify-center w-5 h-5 rounded-full border-2 transition-all hover:scale-110 flex-shrink-0"
+                          style={{
+                            borderColor: isCompleted ? '#476E66' : '#d1d5db',
+                            backgroundColor: isCompleted ? '#476E66' : 'transparent'
+                          }}
+                        >
+                          {isCompleted && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
+                        </button>
+                        
+                        {/* Task Info */}
+                        <div className="flex-1 min-w-0 cursor-pointer" onClick={() => onEditTask(task)}>
+                          <p className={`font-medium ${isCompleted ? 'line-through text-neutral-400' : 'text-neutral-900'}`}>{task.name}</p>
+                          {task.description && <p className="text-sm text-neutral-500 line-clamp-1">{task.description}</p>}
+                        </div>
+                        
+                        {/* Time Entries Badge */}
+                        {taskTimeEntries.length > 0 && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); toggleExpand(task.id); }}
+                            className="flex items-center gap-1 px-2 py-1 bg-neutral-100 hover:bg-neutral-200 rounded text-xs text-neutral-600"
+                            title="View work logs"
+                          >
+                            <Clock className="w-3 h-3" />
+                            {taskTimeEntries.length} {taskTimeEntries.length === 1 ? 'log' : 'logs'}
+                          </button>
+                        )}
+                        
+                        {/* Status Badge */}
+                        <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
+                          task.status === 'completed' ? 'bg-[#476E66]/10 text-[#476E66]' :
+                          task.status === 'in_progress' ? 'bg-neutral-200 text-neutral-700' :
+                          'bg-neutral-100 text-neutral-500'
+                        }`}>
+                          {task.status === 'completed' ? 'Done' : task.status === 'in_progress' ? 'In Progress' : 'To Do'}
+                        </span>
+                        
+                        {/* Assignee */}
+                        {assignee ? (
+                          <div className="flex items-center gap-2 w-32">
+                            {assignee.avatar_url ? (
+                              <img src={assignee.avatar_url} alt="" className="w-6 h-6 rounded-full" />
+                            ) : (
+                              <div className="w-6 h-6 rounded-full bg-[#476E66]/20 flex items-center justify-center text-xs font-medium text-[#476E66]">
+                                {assignee.full_name?.charAt(0) || '?'}
+                              </div>
+                            )}
+                            <span className="text-sm text-neutral-600 truncate">{assignee.full_name}</span>
+                          </div>
+                        ) : (
+                          <span className="text-sm text-neutral-400 w-32">Unassigned</span>
+                        )}
+                        
+                        {/* Hours */}
+                        <span className="text-sm text-neutral-500 w-16 text-right">
+                          {task.estimated_hours ? `${task.estimated_hours}h` : '-'}
+                        </span>
+                        
+                        {/* Arrow */}
+                        <ChevronRight className="w-4 h-4 text-neutral-300 cursor-pointer" onClick={() => onEditTask(task)} />
                       </div>
                       
-                      {/* Status Badge */}
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
-                        task.status === 'completed' ? 'bg-[#476E66]/10 text-[#476E66]' :
-                        task.status === 'in_progress' ? 'bg-neutral-200 text-neutral-700' :
-                        'bg-neutral-100 text-neutral-500'
-                      }`}>
-                        {task.status === 'completed' ? 'Done' : task.status === 'in_progress' ? 'In Progress' : 'To Do'}
-                      </span>
-                      
-                      {/* Assignee */}
-                      {assignee ? (
-                        <div className="flex items-center gap-2 w-32">
-                          {assignee.avatar_url ? (
-                            <img src={assignee.avatar_url} alt="" className="w-6 h-6 rounded-full" />
-                          ) : (
-                            <div className="w-6 h-6 rounded-full bg-[#476E66]/20 flex items-center justify-center text-xs font-medium text-[#476E66]">
-                              {assignee.full_name?.charAt(0) || '?'}
-                            </div>
-                          )}
-                          <span className="text-sm text-neutral-600 truncate">{assignee.full_name}</span>
+                      {/* Expanded Time Entries */}
+                      {isExpanded && taskTimeEntries.length > 0 && (
+                        <div className="bg-neutral-50 border-t border-neutral-100 px-4 py-3 ml-9">
+                          <p className="text-xs font-medium text-neutral-500 mb-2">Work Logs</p>
+                          <div className="space-y-2">
+                            {taskTimeEntries.map(entry => (
+                              <div key={entry.id} className="flex items-start gap-3 text-sm">
+                                <span className="text-neutral-400 w-20 flex-shrink-0">{new Date(entry.date).toLocaleDateString()}</span>
+                                <span className="text-neutral-600 font-medium w-12 flex-shrink-0">{entry.hours}h</span>
+                                <span className="text-neutral-700 flex-1">{entry.description || 'No description'}</span>
+                                <span className="text-neutral-400 text-xs">{entry.user?.full_name || 'Unknown'}</span>
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                      ) : (
-                        <span className="text-sm text-neutral-400 w-32">Unassigned</span>
                       )}
-                      
-                      {/* Hours */}
-                      <span className="text-sm text-neutral-500 w-16 text-right">
-                        {task.estimated_hours ? `${task.estimated_hours}h` : '-'}
-                      </span>
-                      
-                      {/* Arrow */}
-                      <ChevronRight className="w-4 h-4 text-neutral-300 cursor-pointer" onClick={() => onEditTask(task)} />
                     </div>
                   );
                 })}
