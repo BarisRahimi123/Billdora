@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { User } from '@supabase/supabase-js';
 import { supabase, Profile } from '../lib/supabase';
 
@@ -23,21 +23,33 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Track if auth has ever been initialized (persists across re-renders)
+let globalAuthInitialized = false;
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Only show loading on very first mount, never again
+  const [loading, setLoading] = useState(!globalAuthInitialized);
+  const hasInitialized = useRef(globalAuthInitialized);
 
   useEffect(() => {
     let isMounted = true;
-    let initialLoadComplete = false;
+    let initialLoadComplete = hasInitialized.current;
+    
+    // If already initialized, skip loading state entirely
+    if (hasInitialized.current) {
+      setLoading(false);
+    }
     
     // Safety timeout - never let loading state hang forever
     const timeout = setTimeout(() => {
-      if (isMounted) {
+      if (isMounted && !hasInitialized.current) {
         console.warn('Auth check timed out after 10 seconds');
         setLoading(false);
         initialLoadComplete = true;
+        hasInitialized.current = true;
+        globalAuthInitialized = true;
       }
     }, 10000);
     
@@ -113,6 +125,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (isMounted) {
           setLoading(false);
           initialLoadComplete = true;
+          hasInitialized.current = true;
+          globalAuthInitialized = true;
         }
       }
     }
