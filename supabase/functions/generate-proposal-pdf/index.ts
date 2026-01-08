@@ -43,6 +43,16 @@ Deno.serve(async (req) => {
     const companies = await companyRes.json();
     const company = companies[0];
 
+    // Fetch company settings for default_terms
+    const settingsRes = await fetch(`${SUPABASE_URL}/rest/v1/company_settings?company_id=eq.${quote.company_id}&select=default_terms`, {
+      headers: {
+        'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        'apikey': SUPABASE_SERVICE_ROLE_KEY
+      }
+    });
+    const settings = await settingsRes.json();
+    const defaultTerms = settings[0]?.default_terms || '';
+
     // Fetch client
     const clientRes = await fetch(`${SUPABASE_URL}/rest/v1/clients?id=eq.${quote.client_id}&select=*`, {
       headers: {
@@ -77,7 +87,7 @@ Deno.serve(async (req) => {
       if (responses[0]) {
         signature = responses[0].signature_data;
         signedDate = responses[0].created_at;
-        signerName = responses[0].signer_name || client?.primary_contact_name || client?.company_name;
+        signerName = responses[0].signer_name || client?.primary_contact_name || client?.name;
       }
     }
 
@@ -96,7 +106,8 @@ Deno.serve(async (req) => {
       totals: { subtotal, tax, total },
       signature,
       signedDate,
-      signerName
+      signerName,
+      defaultTerms
     });
 
     return new Response(JSON.stringify({
@@ -118,7 +129,7 @@ Deno.serve(async (req) => {
 });
 
 function generateProposalHtml(data: any): string {
-  const { quote, company, client, lineItems, totals, signature, signedDate, signerName } = data;
+  const { quote, company, client, lineItems, totals, signature, signedDate, signerName, defaultTerms } = data;
   
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '';
@@ -205,12 +216,16 @@ function generateProposalHtml(data: any): string {
     <div class="cover-content">
       ${company?.logo_url ? `<img src="${company.logo_url}" class="cover-logo" alt="Logo">` : ''}
       <h1 class="cover-title">${quote.title || 'Proposal'}</h1>
-      <p class="cover-subtitle">Prepared for ${client?.company_name || 'Valued Client'}</p>
+      <p class="cover-subtitle">Prepared for ${client?.name || 'Valued Client'}</p>
       <p class="cover-volume">${quote.volume_number || ''}</p>
     </div>
   </div>
   
   <div class="details-page">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid #eee;">
+      <h2 style="font-size: 20px; color: #476E66;">Proposal #${quote.quote_number || ''}</h2>
+      <p style="font-size: 14px; color: #666;">Date: ${formatDate(quote.created_at)}</p>
+    </div>
     <div class="header">
       <div class="company-info">
         ${company?.logo_url ? `<img src="${company.logo_url}" style="max-height: 50px; margin-bottom: 16px;" alt="Logo">` : ''}
@@ -222,7 +237,7 @@ function generateProposalHtml(data: any): string {
       </div>
       <div class="client-box">
         <h3>Prepared For</h3>
-        <p class="name">${client?.company_name || ''}</p>
+        <p class="name">${client?.name || ''}</p>
         ${client?.primary_contact_name ? `<p>${client.primary_contact_name}</p>` : ''}
         <p>${client?.email || ''}</p>
         <p>${client?.phone || ''}</p>
@@ -269,10 +284,10 @@ function generateProposalHtml(data: any): string {
     
     ${quote.valid_until ? `<p class="valid-until">Valid until: ${formatDate(quote.valid_until)}</p>` : ''}
     
-    ${quote.terms ? `
+    ${defaultTerms ? `
     <div class="terms">
       <h4>Terms & Conditions</h4>
-      <p>${quote.terms}</p>
+      <p>${defaultTerms}</p>
     </div>
     ` : ''}
     

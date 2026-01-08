@@ -345,35 +345,7 @@ export default function ProposalPortalPage() {
   if (step === 'complete') {
     const isAccepted = responseType === 'accept' || existingResponse?.status === 'accepted';
     
-    const downloadSignedPdf = async () => {
-      try {
-        const res = await fetch(`${SUPABASE_URL}/functions/v1/generate-proposal-pdf`, {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-          },
-          body: JSON.stringify({
-            quoteId: quote?.id,
-            includeSignature: true
-          })
-        });
-        const data = await res.json();
-        if (data.success && data.pdfUrl) {
-          window.open(data.pdfUrl, '_blank');
-        } else if (data.html) {
-          // Fallback: open print dialog
-          const printWindow = window.open('', '_blank');
-          if (printWindow) {
-            printWindow.document.write(data.html);
-            printWindow.document.close();
-            printWindow.onload = () => setTimeout(() => printWindow.print(), 300);
-          }
-        }
-      } catch (err) {
-        console.error('Failed to download PDF:', err);
-      }
-    };
+    
     
     return (
       <div className="min-h-screen bg-neutral-100 flex items-center justify-center p-4">
@@ -390,13 +362,17 @@ export default function ProposalPortalPage() {
               : 'Your feedback has been sent. The team will review and get back to you soon.'}
           </p>
           {isAccepted && (
-            <button
-              onClick={downloadSignedPdf}
-              className="w-full py-3 bg-[#476E66] text-white rounded-xl font-medium hover:bg-[#3A5B54] flex items-center justify-center gap-2 mb-4"
-            >
-              <Download className="w-5 h-5" />
-              Download Signed Proposal
-            </button>
+            <div className="bg-neutral-50 rounded-xl p-4 mb-4 text-left">
+              <div className="flex items-start gap-3">
+                <FileText className="w-5 h-5 text-[#476E66] mt-0.5" />
+                <div>
+                  <p className="font-medium text-neutral-900 mb-1">Access Your Documents</p>
+                  <p className="text-sm text-neutral-600">
+                    Check your email for a link to your Client Portal where you can view and download all your proposals and invoices.
+                  </p>
+                </div>
+              </div>
+            </div>
           )}
           {company && (
             <p className="text-sm text-neutral-500">
