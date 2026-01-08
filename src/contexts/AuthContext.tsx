@@ -30,17 +30,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let isMounted = true;
+    let initialLoadComplete = false;
     
     // Safety timeout - never let loading state hang forever
     const timeout = setTimeout(() => {
       if (isMounted) {
         console.warn('Auth check timed out after 10 seconds');
         setLoading(false);
+        initialLoadComplete = true;
       }
     }, 10000);
     
     async function loadUser() {
       try {
+        // CRITICAL: Clear any cached session FIRST before validation
+        // This prevents the auth state change listener from restoring stale data
+        const cachedToken = localStorage.getItem('sb-bqxnagmmegdbqrzhheip-auth-token');
+        
         // Use getUser() to VALIDATE session against server (not just cached)
         // This prevents stale/ghost sessions from being used
         const { data: { user: validatedUser }, error: userError } = await supabase.auth.getUser();
@@ -54,6 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(null);
           setProfile(null);
           setLoading(false);
+          initialLoadComplete = true;
           return;
         }
         
@@ -96,18 +103,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       } catch (error) {
         console.error('Auth load error:', error);
+        // On any error, clear potentially corrupted session
+        localStorage.removeItem('sb-bqxnagmmegdbqrzhheip-auth-token');
+        sessionStorage.removeItem('sb-bqxnagmmegdbqrzhheip-auth-token');
+        setUser(null);
+        setProfile(null);
       } finally {
         clearTimeout(timeout);
-        if (isMounted) setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+          initialLoadComplete = true;
+        }
       }
     }
     
     loadUser();
     
     // Set up auth state change listener
+    // CRITICAL: Only process events AFTER initial load is complete
+    // This prevents cached sessions from bypassing server validation
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      async (event, session) => {
         if (!isMounted) return;
+        
+        // Ignore INITIAL_SESSION event - we handle this in loadUser()
+        // This prevents the cached/stale session from being restored
+        if (event === 'INITIAL_SESSION') {
+          return;
+        }
+        
+        // Only process real auth events (SIGNED_IN, SIGNED_OUT, TOKEN_REFRESHED)
+        // after the initial validation is complete
+        if (!initialLoadComplete) {
+          return;
+        }
+        
         setUser(session?.user || null);
         if (session?.user) {
           const { data } = await supabase
