@@ -345,8 +345,6 @@ export default function ProposalPortalPage() {
   if (step === 'complete') {
     const isAccepted = responseType === 'accept' || existingResponse?.status === 'accepted';
     
-    
-    
     return (
       <div className="min-h-screen bg-neutral-100 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
@@ -361,19 +359,6 @@ export default function ProposalPortalPage() {
               ? 'Thank you for accepting this proposal. The team has been notified and will be in touch shortly.'
               : 'Your feedback has been sent. The team will review and get back to you soon.'}
           </p>
-          {isAccepted && (
-            <div className="bg-neutral-50 rounded-xl p-4 mb-4 text-left">
-              <div className="flex items-start gap-3">
-                <FileText className="w-5 h-5 text-[#476E66] mt-0.5" />
-                <div>
-                  <p className="font-medium text-neutral-900 mb-1">Access Your Documents</p>
-                  <p className="text-sm text-neutral-600">
-                    Check your email for a link to your Client Portal where you can view and download all your proposals and invoices.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
           {company && (
             <p className="text-sm text-neutral-500">
               Questions? Contact {company.company_name} at {company.phone}
