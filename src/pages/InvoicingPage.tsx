@@ -116,9 +116,10 @@ export default function InvoicingPage() {
 
   const menuRef = useRef<HTMLDivElement>(null);
 
+  // Reload data when navigating to this page or when profile changes
   useEffect(() => {
     loadData();
-  }, [profile?.company_id, user?.id]);
+  }, [profile?.company_id, user?.id, location.pathname]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {

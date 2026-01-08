@@ -167,10 +167,10 @@ export default function Layout() {
     loadSearchCache();
   }, [searchOpen, profile?.company_id, searchCache]);
 
-  // Invalidate cache when company changes
+  // Invalidate cache when company changes or navigating to refresh data
   useEffect(() => {
     setSearchCache(null);
-  }, [profile?.company_id]);
+  }, [profile?.company_id, location.pathname]);
 
   // Search locally from cache (instant, no network requests)
   const filteredSearchResults = useMemo(() => {
