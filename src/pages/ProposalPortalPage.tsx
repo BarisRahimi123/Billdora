@@ -483,6 +483,68 @@ export default function ProposalPortalPage() {
           </div>
         )}
 
+        {/* Cover Letter */}
+        <div className="bg-white rounded-xl shadow-sm p-8 mb-6">
+          {/* Letterhead */}
+          <div className="flex justify-between items-start mb-8">
+            <div className="flex items-start gap-4">
+              {company?.logo_url ? (
+                <img src={company.logo_url} alt="" className="w-12 h-12 object-contain" />
+              ) : (
+                <div className="w-12 h-12 bg-[#476E66] rounded-lg flex items-center justify-center text-white font-bold text-xl">
+                  {company?.company_name?.charAt(0) || 'P'}
+                </div>
+              )}
+              <div>
+                <p className="font-bold text-neutral-900 text-lg">{company?.company_name}</p>
+                {company?.address && <p className="text-neutral-600 text-sm">{company.address}</p>}
+                {(company?.city || company?.state || company?.zip) && (
+                  <p className="text-neutral-600 text-sm">
+                    {[company?.city, company?.state].filter(Boolean).join(', ')} {company?.zip}
+                  </p>
+                )}
+                <p className="text-neutral-600 text-sm">
+                  {company?.phone}{company?.phone && company?.website && ' | '}{company?.website}
+                </p>
+              </div>
+            </div>
+            <p className="text-neutral-500 text-sm">
+              {quote?.created_at ? new Date(quote.created_at).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' }) : ''}
+            </p>
+          </div>
+
+          {/* Recipient */}
+          <div className="mb-6">
+            <p className="font-semibold text-neutral-900">{client?.name}</p>
+            {client?.primary_contact_name && <p className="text-neutral-600 text-sm">{client.primary_contact_name}</p>}
+            {(client?.primary_contact_email || client?.email) && (
+              <p className="text-neutral-600 text-sm">{client.primary_contact_email || client.email}</p>
+            )}
+          </div>
+
+          {/* Subject */}
+          <div className="mb-6">
+            <p className="text-neutral-900"><span className="font-semibold">Subject:</span> {quote?.title}</p>
+          </div>
+
+          {/* Greeting & Body */}
+          <div className="mb-8">
+            <p className="text-neutral-700 mb-4">Dear {client?.primary_contact_name?.split(' ')[0] || client?.name},</p>
+            <p className="text-neutral-700 mb-4">
+              Thank you for the potential opportunity to work together on the {quote?.title}. I have attached the proposal for your consideration which includes a thorough Scope of Work, deliverable schedule, and Fee.
+            </p>
+            <p className="text-neutral-700">
+              Please review and let me know if you have any questions or comments. If you are ready for us to start working on the project, please sign the proposal sheet.
+            </p>
+          </div>
+
+          {/* Signature */}
+          <div>
+            <p className="text-neutral-700 mb-4">Sincerely,</p>
+            <p className="font-semibold text-neutral-900">{company?.company_name}</p>
+          </div>
+        </div>
+
         {/* Project Info Header */}
         <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
           <div className="grid md:grid-cols-2 gap-8 mb-6">
