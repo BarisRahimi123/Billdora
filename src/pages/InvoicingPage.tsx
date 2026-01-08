@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { api, Invoice, Client, Project, reminderHistoryApi, ReminderHistory, recurringInvoicesApi, RecurringInvoice } from '../lib/api';
+import { NotificationService } from '../lib/notificationService';
 import { supabase } from '../lib/supabase';
 import { Plus, Search, Filter, Download, MoreHorizontal, DollarSign, FileText, Clock, X, Check, Send, Printer, Copy, Mail, CreditCard, Eye, ChevronLeft, RefreshCw, Camera, Save, Trash2, Edit2, ArrowUpRight, List, LayoutGrid, ChevronDown, ChevronRight, Bell, Calendar, CheckCircle, AlertCircle, Repeat, History, User } from 'lucide-react';
 import PaymentModal from '../components/PaymentModal';
@@ -713,6 +714,18 @@ export default function InvoicingPage() {
               payment_date: payment.date,
               payment_method: payment.method
             });
+            
+            // Send notification for payment
+            if (profile?.company_id) {
+              const clientName = clients.find(c => c.id === selectedInvoice.client_id)?.name || 'Client';
+              const amount = formatCurrency(payment.amount);
+              if (newStatus === 'paid') {
+                NotificationService.invoicePaid(profile.company_id, selectedInvoice.invoice_number, clientName, amount, selectedInvoice.id);
+              } else {
+                NotificationService.paymentReceived(profile.company_id, selectedInvoice.invoice_number, clientName, amount, selectedInvoice.id);
+              }
+            }
+            
             loadData();
             setShowPaymentModal(false);
             setSelectedInvoice(null);
@@ -740,6 +753,17 @@ export default function InvoicingPage() {
                   payment_date: paymentInfo.date,
                   payment_method: paymentInfo.method
                 });
+                
+                // Send notification for payment
+                if (profile?.company_id) {
+                  const clientName = clients.find(c => c.id === invoice.client_id)?.name || 'Client';
+                  const amount = formatCurrency(payment.amount);
+                  if (newStatus === 'paid') {
+                    NotificationService.invoicePaid(profile.company_id, invoice.invoice_number, clientName, amount, invoice.id);
+                  } else {
+                    NotificationService.paymentReceived(profile.company_id, invoice.invoice_number, clientName, amount, invoice.id);
+                  }
+                }
               }
             }
             loadData();

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Plus, Search, Filter, Download, MoreHorizontal, X, FileText, ArrowRight, Eye, Printer, Send, Check, XCircle, Mail, Trash2, List, LayoutGrid, ChevronDown, ChevronRight, ArrowLeft, Edit2, Loader2, Link2, Copy } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { api, Client, Quote, clientPortalApi } from '../lib/api';
+import { NotificationService } from '../lib/notificationService';
 import { useToast } from '../components/Toast';
 import { FieldError } from '../components/ErrorBoundary';
 import { validateEmail } from '../lib/validation';
@@ -220,6 +221,11 @@ export default function SalesPage() {
     try {
       const result = await api.convertQuoteToProject(quote.id, profile.company_id);
       showToast(`Project "${result.projectName}" created with ${result.tasksCreated} tasks!`, 'success');
+      
+      // Send notification for project creation
+      const clientName = clients.find(c => c.id === quote.client_id)?.name || 'Client';
+      NotificationService.projectCreated(profile.company_id, result.projectName, clientName, result.projectId);
+      
       await loadData();
       setTimeout(() => navigate(`/projects`), 2000);
     } catch (error: any) {
@@ -954,6 +960,8 @@ function InlineClientEditor({ client, companyId, onClose, onSave, onDelete }: {
           company_id: companyId, 
           ...dataToSave
         });
+        // Send notification for new client
+        NotificationService.newClientAdded(companyId, savedClient.name || savedClient.display_name || 'New Client', savedClient.id);
       }
       console.log('Saved client:', savedClient);
       setEditing(false);
