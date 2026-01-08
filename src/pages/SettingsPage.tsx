@@ -1902,6 +1902,15 @@ function RoleModal({ role, companyId, onClose, onSave }: {
 function ProfileTab() {
   const { profile, refreshProfile } = useAuth();
   const [fullName, setFullName] = useState(profile?.full_name || '');
+  const [phone, setPhone] = useState(profile?.phone || '');
+  const [dateOfBirth, setDateOfBirth] = useState(profile?.date_of_birth || '');
+  const [address, setAddress] = useState(profile?.address || '');
+  const [city, setCity] = useState(profile?.city || '');
+  const [profileState, setProfileState] = useState(profile?.state || '');
+  const [zipCode, setZipCode] = useState(profile?.zip_code || '');
+  const [emergencyContactName, setEmergencyContactName] = useState(profile?.emergency_contact_name || '');
+  const [emergencyContactPhone, setEmergencyContactPhone] = useState(profile?.emergency_contact_phone || '');
+  const [hireDate, setHireDate] = useState(profile?.hire_date || '');
   const [companyName, setCompanyName] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -1910,6 +1919,15 @@ function ProfileTab() {
   useEffect(() => {
     if (profile) {
       setFullName(profile.full_name || '');
+      setPhone(profile.phone || '');
+      setDateOfBirth(profile.date_of_birth || '');
+      setAddress(profile.address || '');
+      setCity(profile.city || '');
+      setProfileState(profile.state || '');
+      setZipCode(profile.zip_code || '');
+      setEmergencyContactName(profile.emergency_contact_name || '');
+      setEmergencyContactPhone(profile.emergency_contact_phone || '');
+      setHireDate(profile.hire_date || '');
     }
   }, [profile]);
 
@@ -1938,6 +1956,15 @@ function ProfileTab() {
         .from('profiles')
         .update({
           full_name: fullName || null,
+          phone: phone || null,
+          date_of_birth: dateOfBirth || null,
+          address: address || null,
+          city: city || null,
+          state: profileState || null,
+          zip_code: zipCode || null,
+          emergency_contact_name: emergencyContactName || null,
+          emergency_contact_phone: emergencyContactPhone || null,
+          hire_date: hireDate || null,
         })
         .eq('id', profile.id);
       
@@ -1970,39 +1997,172 @@ function ProfileTab() {
           </div>
         )}
 
-        <div>
-          <label className="block text-sm font-medium text-neutral-700 mb-1.5">Full Name</label>
-          <input
-            type="text"
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
-            placeholder="Your name"
-            className="w-full h-12 px-4 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-400 outline-none"
-          />
+        {/* Basic Info Section */}
+        <div className="space-y-4">
+          <h3 className="text-sm font-semibold text-neutral-900 uppercase tracking-wider">Basic Information</h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-1.5">Full Name</label>
+              <input
+                type="text"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                placeholder="Your name"
+                className="w-full h-12 px-4 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-400 outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-1.5">Phone Number</label>
+              <input
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="+1 (555) 123-4567"
+                className="w-full h-12 px-4 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-400 outline-none"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-1.5">Email</label>
+              <input
+                type="email"
+                value={profile?.email || ''}
+                disabled
+                className="w-full h-12 px-4 rounded-xl border border-neutral-200 bg-neutral-50 text-neutral-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-1.5">Date of Birth</label>
+              <input
+                type="date"
+                value={dateOfBirth}
+                onChange={(e) => setDateOfBirth(e.target.value)}
+                className="w-full h-12 px-4 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-400 outline-none"
+              />
+            </div>
+          </div>
+
+          {companyName && (
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-1.5">Company</label>
+              <input
+                type="text"
+                value={companyName}
+                disabled
+                className="w-full h-12 px-4 rounded-xl border border-neutral-200 bg-neutral-50 text-neutral-500"
+              />
+              <p className="text-xs text-neutral-500 mt-1">You are a member of this company</p>
+            </div>
+          )}
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-neutral-700 mb-1.5">Email</label>
-          <input
-            type="email"
-            value={profile?.email || ''}
-            disabled
-            className="w-full h-12 px-4 rounded-xl border border-neutral-200 bg-neutral-50 text-neutral-500"
-          />
-        </div>
-
-        {companyName && (
+        {/* Address Section */}
+        <div className="space-y-4 pt-4 border-t border-neutral-100">
+          <h3 className="text-sm font-semibold text-neutral-900 uppercase tracking-wider">Address</h3>
+          
           <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1.5">Company</label>
+            <label className="block text-sm font-medium text-neutral-700 mb-1.5">Street Address</label>
             <input
               type="text"
-              value={companyName}
-              disabled
-              className="w-full h-12 px-4 rounded-xl border border-neutral-200 bg-neutral-50 text-neutral-500"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              placeholder="123 Main St"
+              className="w-full h-12 px-4 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-400 outline-none"
             />
-            <p className="text-xs text-neutral-500 mt-1">You are a member of this company</p>
           </div>
-        )}
+
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-1.5">City</label>
+              <input
+                type="text"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                placeholder="City"
+                className="w-full h-12 px-4 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-400 outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-1.5">State</label>
+              <input
+                type="text"
+                value={profileState}
+                onChange={(e) => setProfileState(e.target.value)}
+                placeholder="CA"
+                className="w-full h-12 px-4 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-400 outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-1.5">Zip Code</label>
+              <input
+                type="text"
+                value={zipCode}
+                onChange={(e) => setZipCode(e.target.value)}
+                placeholder="12345"
+                className="w-full h-12 px-4 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-400 outline-none"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Emergency Contact Section */}
+        <div className="space-y-4 pt-4 border-t border-neutral-100">
+          <h3 className="text-sm font-semibold text-neutral-900 uppercase tracking-wider">Emergency Contact</h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-1.5">Contact Name</label>
+              <input
+                type="text"
+                value={emergencyContactName}
+                onChange={(e) => setEmergencyContactName(e.target.value)}
+                placeholder="Jane Doe"
+                className="w-full h-12 px-4 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-400 outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-1.5">Contact Phone</label>
+              <input
+                type="tel"
+                value={emergencyContactPhone}
+                onChange={(e) => setEmergencyContactPhone(e.target.value)}
+                placeholder="+1 (555) 987-6543"
+                className="w-full h-12 px-4 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-400 outline-none"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Employment Section */}
+        <div className="space-y-4 pt-4 border-t border-neutral-100">
+          <h3 className="text-sm font-semibold text-neutral-900 uppercase tracking-wider">Employment</h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-1.5">Date of Hire</label>
+              <input
+                type="date"
+                value={hireDate}
+                onChange={(e) => setHireDate(e.target.value)}
+                className="w-full h-12 px-4 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-400 outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-1.5">Role</label>
+              <input
+                type="text"
+                value={profile?.role || ''}
+                disabled
+                className="w-full h-12 px-4 rounded-xl border border-neutral-200 bg-neutral-50 text-neutral-500 capitalize"
+              />
+            </div>
+          </div>
+        </div>
 
         <div className="pt-4">
           <button

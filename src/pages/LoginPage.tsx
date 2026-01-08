@@ -22,6 +22,9 @@ export default function LoginPage() {
   // Staff onboarding fields for invited users
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [address, setAddress] = useState('');
+  const [city, setCity] = useState('');
+  const [state, setState] = useState('');
+  const [zipCode, setZipCode] = useState('');
   const [emergencyContactName, setEmergencyContactName] = useState('');
   const [emergencyContactPhone, setEmergencyContactPhone] = useState('');
   const [dateOfHire, setDateOfHire] = useState(new Date().toISOString().split('T')[0]);
@@ -86,7 +89,7 @@ export default function LoginPage() {
     try {
       if (isSignUp) {
         // For invited users, pass staff profile data; for regular signups, pass company name
-        const staffData = invitedEmail ? { dateOfBirth, address, emergencyContactName, emergencyContactPhone, dateOfHire } : null;
+        const staffData = invitedEmail ? { dateOfBirth, address, city, state, zipCode, emergencyContactName, emergencyContactPhone, dateOfHire } : null;
         const result = await signUp(email, password, fullName, phone, invitedEmail ? '' : companyName, staffData);
         if (result.error) throw result.error;
         
@@ -208,15 +211,54 @@ export default function LoginPage() {
 
                     <div>
                       <label className="block text-xs font-bold uppercase tracking-wider text-neutral-900 mb-2">
-                        Address
+                        Street Address
                       </label>
                       <input
                         type="text"
                         value={address}
                         onChange={(e) => setAddress(e.target.value)}
                         className="w-full h-14 px-4 border-2 border-border bg-white focus:border-neutral-900 outline-none transition-colors text-neutral-900 placeholder:text-text-secondary/50"
-                        placeholder="123 Main St, City, State"
+                        placeholder="123 Main St"
                       />
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-neutral-900 mb-2">
+                          City
+                        </label>
+                        <input
+                          type="text"
+                          value={city}
+                          onChange={(e) => setCity(e.target.value)}
+                          className="w-full h-14 px-4 border-2 border-border bg-white focus:border-neutral-900 outline-none transition-colors text-neutral-900 placeholder:text-text-secondary/50"
+                          placeholder="City"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-neutral-900 mb-2">
+                          State
+                        </label>
+                        <input
+                          type="text"
+                          value={state}
+                          onChange={(e) => setState(e.target.value)}
+                          className="w-full h-14 px-4 border-2 border-border bg-white focus:border-neutral-900 outline-none transition-colors text-neutral-900 placeholder:text-text-secondary/50"
+                          placeholder="CA"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-neutral-900 mb-2">
+                          Zip Code
+                        </label>
+                        <input
+                          type="text"
+                          value={zipCode}
+                          onChange={(e) => setZipCode(e.target.value)}
+                          className="w-full h-14 px-4 border-2 border-border bg-white focus:border-neutral-900 outline-none transition-colors text-neutral-900 placeholder:text-text-secondary/50"
+                          placeholder="12345"
+                        />
+                      </div>
                     </div>
 
                     <div>

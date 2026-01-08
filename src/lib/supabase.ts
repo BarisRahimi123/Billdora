@@ -122,10 +122,20 @@ export type Profile = {
   company_id?: string;
   email: string;
   full_name?: string;
+  phone?: string;
   role?: string;
   role_id?: string;
   hourly_rate?: number;
   is_billable?: boolean;
   is_active?: boolean;
   avatar_url?: string;
+  // Personal info (from onboarding)
+  date_of_birth?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  zip_code?: string;
+  emergency_contact_name?: string;
+  emergency_contact_phone?: string;
+  hire_date?: string;
 };
