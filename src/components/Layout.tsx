@@ -317,7 +317,7 @@ export default function Layout() {
       {/* Main Content */}
       <div className={`flex-1 ${hideSidebar ? '' : (sidebarExpanded ? 'lg:ml-64' : 'lg:ml-20')} transition-all duration-300`}>
         {/* Header */}
-        <header className="bg-white border-b border-neutral-100 sticky top-0 z-20">
+        <header className="bg-white border-b border-neutral-100 sticky top-0 z-30">
           <div className="flex items-center justify-between px-4 lg:px-6 py-4">
             {/* Mobile menu button */}
             <button 
@@ -340,7 +340,7 @@ export default function Layout() {
               </button>
 
               {searchOpen && (
-                <div className="absolute top-0 left-0 w-full bg-white rounded-xl shadow-2xl border border-neutral-200 overflow-hidden">
+                <div className="absolute top-0 left-0 w-full bg-white rounded-xl shadow-2xl border border-neutral-200 overflow-hidden z-50">
                   <div className="flex items-center gap-2 px-4 py-3 border-b border-neutral-100">
                     <Search className="w-4 h-4 text-neutral-400" />
                     <input
