@@ -16,7 +16,6 @@ const navItems = [
   { path: '/invoicing', icon: FileText, label: 'Invoicing' },
   { path: '/resourcing', icon: Calendar, label: 'Team' },
   { path: '/reports', icon: PieChart, label: 'Reports' },
-  { path: '/analytics', icon: BarChart3, label: 'Analytics' },
   { path: '/company-expenses', icon: Wallet, label: 'Expenses' },
   { path: '/settings', icon: Settings, label: 'Settings' },
 ];
