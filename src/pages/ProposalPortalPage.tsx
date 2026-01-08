@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { Lock, Check, MessageSquare, Clock, FileText, Download, Pen, X } from 'lucide-react';
+import { Lock, Check, MessageSquare, Clock, FileText, Printer, Pen, X } from 'lucide-react';
 
 interface Quote {
   id: string;
@@ -368,13 +368,25 @@ export default function ProposalPortalPage() {
               : 'Your feedback has been sent. The team will review and get back to you soon.'}
           </p>
           {isAccepted && quote && (
-            <button
-              onClick={() => setStep('view')}
-              className="w-full py-3 bg-[#476E66] text-white rounded-xl font-medium hover:bg-[#3A5B54] flex items-center justify-center gap-2 mb-4"
-            >
-              <FileText className="w-5 h-5" />
-              View Signed Proposal
-            </button>
+            <div className="space-y-3">
+              <button
+                onClick={() => setStep('view')}
+                className="w-full py-3 bg-[#476E66] text-white rounded-xl font-medium hover:bg-[#3A5B54] flex items-center justify-center gap-2"
+              >
+                <FileText className="w-5 h-5" />
+                View Signed Proposal
+              </button>
+              <button
+                onClick={() => {
+                  setStep('view');
+                  setTimeout(() => window.print(), 500);
+                }}
+                className="w-full py-3 border-2 border-[#476E66] text-[#476E66] rounded-xl font-medium hover:bg-[#476E66]/5 flex items-center justify-center gap-2"
+              >
+                <Printer className="w-5 h-5" />
+                Print / Save as PDF
+              </button>
+            </div>
           )}
           {company && (
             <p className="text-sm text-neutral-500">
@@ -598,7 +610,18 @@ export default function ProposalPortalPage() {
           </div>
         )}
 
-        {/* Action Button */}
+        {/* Action Buttons */}
+        {existingResponse?.status === 'accepted' && (
+          <div className="text-center mb-6 print:hidden">
+            <button
+              onClick={() => window.print()}
+              className="px-8 py-4 bg-[#476E66] text-white rounded-xl font-semibold text-lg hover:bg-[#3A5B54] transition-colors flex items-center justify-center gap-2 mx-auto"
+            >
+              <Printer className="w-5 h-5" />
+              Print / Save as PDF
+            </button>
+          </div>
+        )}
         {existingResponse?.status !== 'accepted' && (
           <div className="text-center">
             <button

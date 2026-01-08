@@ -36,3 +36,28 @@ img {
 .fixed {
   position: fixed;
 }
+
+/* Print styles for proposal */
+@media print {
+  body {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  
+  .print\\:hidden {
+    display: none !important;
+  }
+  
+  header {
+    display: none !important;
+  }
+  
+  .fixed {
+    display: none !important;
+  }
+  
+  main {
+    padding: 0 !important;
+    max-width: 100% !important;
+  }
+}
