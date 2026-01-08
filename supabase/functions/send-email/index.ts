@@ -84,7 +84,7 @@ Deno.serve(async (req) => {
         </div>
       `;
     } else if (type === 'signed_proposal') {
-      const { proposalNumber, proposalTitle, clientName, companyName, signerName, signedDate, viewUrl } = data || {};
+      const { proposalNumber, proposalTitle, clientName, companyName, signerName, signedDate, viewUrl, accessCode } = data || {};
       htmlContent = `
         <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; background: #ffffff;">
           <div style="text-align: center; margin-bottom: 40px;">
@@ -113,6 +113,13 @@ Deno.serve(async (req) => {
               View Signed Proposal
             </a>
           </div>
+          ${accessCode ? `
+          <div style="background: #FEF3C7; border: 1px solid #F59E0B; border-radius: 12px; padding: 16px; margin: 24px 0; text-align: center;">
+            <p style="margin: 0 0 8px; color: #92400E; font-size: 14px; font-weight: 600;">Your Access Code</p>
+            <p style="margin: 0; color: #111827; font-size: 28px; font-weight: bold; letter-spacing: 8px;">${accessCode}</p>
+            <p style="margin: 8px 0 0; color: #92400E; font-size: 12px;">Use this code to view your signed proposal anytime</p>
+          </div>
+          ` : ''}
           ` : ''}
           <p style="color: #4B5563; font-size: 16px; line-height: 1.6;">
             Our team will be in touch shortly to discuss next steps.

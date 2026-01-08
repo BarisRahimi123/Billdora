@@ -226,12 +226,13 @@ Deno.serve(async (req) => {
         const companies = await companyRes.json();
         const company = companies[0];
 
-        // Get the proposal token for view URL
-        const tokenRes = await fetch(`${SUPABASE_URL}/rest/v1/proposal_tokens?id=eq.${tokenId}&select=token`, {
+        // Get the proposal token and access code for view URL
+        const tokenRes = await fetch(`${SUPABASE_URL}/rest/v1/proposal_tokens?id=eq.${tokenId}&select=token,access_code`, {
           headers: { 'apikey': SUPABASE_SERVICE_ROLE_KEY!, 'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` }
         });
         const tokens = await tokenRes.json();
         const proposalToken = tokens[0]?.token;
+        const accessCode = tokens[0]?.access_code;
 
         // Send confirmation email to client
         if (client?.email) {
@@ -253,7 +254,8 @@ Deno.serve(async (req) => {
                   companyName: company?.company_name,
                   signerName: signerName,
                   signedDate: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
-                  viewUrl: proposalToken ? `https://billdora.com/proposal/${proposalToken}` : null
+                  viewUrl: proposalToken ? `https://billdora.com/proposal/${proposalToken}` : null,
+                  accessCode: accessCode
                 }
               })
             });
