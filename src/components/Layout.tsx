@@ -49,6 +49,7 @@ export default function Layout() {
   const [timerProjectId, setTimerProjectId] = useState('');
   const [timerTaskId, setTimerTaskId] = useState('');
   const [timerDescription, setTimerDescription] = useState('');
+  const [manualHours, setManualHours] = useState('');
   const [showTimerWidget, setShowTimerWidget] = useState(false);
   const [projects, setProjects] = useState<Project[]>([]);
   const [projectTasks, setProjectTasks] = useState<Task[]>([]);
@@ -239,6 +240,31 @@ export default function Layout() {
     setTimerDescription('');
     setTimerTaskId('');
     setShowTimerWidget(false);
+  };
+
+  const saveManualEntry = async () => {
+    const hours = parseFloat(manualHours);
+    if (!hours || hours <= 0 || !profile?.company_id) return;
+    try {
+      await api.createTimeEntry({
+        company_id: profile.company_id,
+        user_id: profile.id,
+        project_id: timerProjectId || undefined,
+        task_id: timerTaskId || undefined,
+        hours,
+        description: timerDescription,
+        date: new Date().toISOString().split('T')[0],
+        billable: true,
+        hourly_rate: profile.hourly_rate || 150,
+        approval_status: 'draft',
+      });
+      setManualHours('');
+      setTimerDescription('');
+      setTimerTaskId('');
+      setShowTimerWidget(false);
+    } catch (error) {
+      console.error('Failed to save time entry:', error);
+    }
   };
 
   const handleSearchSelect = (result: SearchResult) => {
@@ -568,30 +594,55 @@ export default function Layout() {
               placeholder="What are you working on?"
               value={timerDescription}
               onChange={(e) => setTimerDescription(e.target.value)}
-              className="w-full px-3 py-2 border border-neutral-200 rounded-lg text-sm mb-4"
+              className="w-full px-3 py-2 border border-neutral-200 rounded-lg text-sm mb-3"
             />
 
-            <div className="flex items-center justify-center gap-2">
-              {!timerRunning ? (
-                <button onClick={startTimer} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-neutral-1000 text-white rounded-xl hover:bg-emerald-600">
-                  <Play className="w-4 h-4" /> Start
-                </button>
-              ) : (
-                <button onClick={pauseTimer} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-neutral-1000 text-white rounded-xl hover:bg-amber-600">
-                  <Pause className="w-4 h-4" /> Pause
-                </button>
-              )}
+            {/* Manual Time Entry */}
+            <div className="flex items-center gap-2 mb-4">
+              <label className="text-xs text-neutral-500">Or enter hours:</label>
+              <input
+                type="number"
+                step="0.25"
+                min="0"
+                placeholder="0.00"
+                value={manualHours}
+                onChange={(e) => setManualHours(e.target.value)}
+                disabled={timerRunning}
+                className="w-20 px-2 py-1.5 border border-neutral-200 rounded-lg text-sm text-center"
+              />
               <button
-                onClick={stopTimer}
-                disabled={timerSeconds < 60}
-                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-neutral-1000 text-white rounded-xl hover:bg-red-600 disabled:opacity-50"
+                onClick={saveManualEntry}
+                disabled={!manualHours || parseFloat(manualHours) <= 0}
+                className="px-3 py-1.5 bg-[#476E66] text-white text-sm rounded-lg hover:bg-[#3A5B54] disabled:opacity-50"
               >
-                <Square className="w-4 h-4" /> Stop
+                Save
               </button>
             </div>
-            {timerSeconds > 0 && timerSeconds < 60 && (
-              <p className="text-xs text-neutral-500 text-center mt-2">Minimum 1 minute to save</p>
-            )}
+
+            <div className="border-t border-neutral-100 pt-3">
+              <p className="text-xs text-neutral-400 text-center mb-2">Or use timer:</p>
+              <div className="flex items-center justify-center gap-2">
+                {!timerRunning ? (
+                  <button onClick={startTimer} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-[#476E66] text-white rounded-xl hover:bg-[#3A5B54]">
+                    <Play className="w-4 h-4" /> Start
+                  </button>
+                ) : (
+                  <button onClick={pauseTimer} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-amber-500 text-white rounded-xl hover:bg-amber-600">
+                    <Pause className="w-4 h-4" /> Pause
+                  </button>
+                )}
+                <button
+                  onClick={stopTimer}
+                  disabled={timerSeconds < 60}
+                  className="flex items-center justify-center gap-2 px-4 py-2.5 bg-red-500 text-white rounded-xl hover:bg-red-600 disabled:opacity-50"
+                >
+                  <Square className="w-4 h-4" /> Stop
+                </button>
+              </div>
+              {timerSeconds > 0 && timerSeconds < 60 && (
+                <p className="text-xs text-neutral-500 text-center mt-2">Minimum 1 minute to save</p>
+              )}
+            </div>
           </div>
         )}
       </div>
