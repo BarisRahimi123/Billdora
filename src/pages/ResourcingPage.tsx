@@ -57,8 +57,7 @@ export default function ResourcingPage() {
     { id: 'time', label: 'Time Tracking', icon: <Clock className="w-4 h-4" /> },
     { id: 'performance', label: 'Performance', icon: <TrendingUp className="w-4 h-4" /> },
     { id: 'personal', label: 'Personal Details', icon: <User className="w-4 h-4" /> },
-    { id: 'compensation', label: 'Compensation & Costs', icon: <Wallet className="w-4 h-4" /> },
-    { id: 'billing', label: 'Client Billing Rate', icon: <DollarSign className="w-4 h-4" /> },
+    { id: 'compensation', label: 'Compensation & Rates', icon: <Wallet className="w-4 h-4" /> },
   ];
 
   // Only show loading spinner briefly - don't wait forever
@@ -199,7 +198,6 @@ export default function ResourcingPage() {
                 {activeTab === 'performance' && <PerformanceTab staff={selectedStaff} companyId={profile?.company_id || ''} />}
                 {activeTab === 'personal' && <PersonalDetailsTab staff={selectedStaff} onEdit={() => { setEditingStaff(selectedStaff); setShowModal(true); }} onDelete={async () => { await userManagementApi.updateUserProfile(selectedStaff.id, { is_active: false }); loadStaff(); }} onToggleActive={async () => { await userManagementApi.updateUserProfile(selectedStaff.id, { is_active: !selectedStaff.is_active }); loadStaff(); }} />}
                 {activeTab === 'compensation' && <CompensationTab staff={selectedStaff} onUpdate={loadStaff} />}
-                {activeTab === 'billing' && <BillingRateTab staff={selectedStaff} onUpdate={loadStaff} />}
               </div>
             </>
           ) : (
@@ -1238,20 +1236,39 @@ function PerformanceTab({ staff, companyId }: { staff: UserProfile; companyId: s
 function CompensationTab({ staff, onUpdate }: { staff: UserProfile; onUpdate: () => void }) {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
-    hourly_pay_rate: (staff as any).hourly_pay_rate || '',
+    hourly_pay_rate: (staff as any).hourly_pay_rate?.toString() || '',
     salary_type: (staff as any).salary_type || 'hourly',
-    annual_salary: (staff as any).annual_salary || '',
-    health_insurance_cost: (staff as any).health_insurance_cost || '',
-    retirement_contribution: (staff as any).retirement_contribution || '',
-    other_benefits_cost: (staff as any).other_benefits_cost || '',
-    additional_expenses: (staff as any).additional_expenses || '',
+    annual_salary: (staff as any).annual_salary?.toString() || '',
+    health_insurance_cost: (staff as any).health_insurance_cost?.toString() || '',
+    retirement_contribution: (staff as any).retirement_contribution?.toString() || '',
+    other_benefits_cost: (staff as any).other_benefits_cost?.toString() || '',
+    additional_expenses: (staff as any).additional_expenses?.toString() || '',
+    // Client billing fields
+    hourly_rate: staff.hourly_rate?.toString() || '',
+    is_billable: staff.is_billable !== false,
   });
+
+  // Update form when staff changes
+  useEffect(() => {
+    setFormData({
+      hourly_pay_rate: (staff as any).hourly_pay_rate?.toString() || '',
+      salary_type: (staff as any).salary_type || 'hourly',
+      annual_salary: (staff as any).annual_salary?.toString() || '',
+      health_insurance_cost: (staff as any).health_insurance_cost?.toString() || '',
+      retirement_contribution: (staff as any).retirement_contribution?.toString() || '',
+      other_benefits_cost: (staff as any).other_benefits_cost?.toString() || '',
+      additional_expenses: (staff as any).additional_expenses?.toString() || '',
+      hourly_rate: staff.hourly_rate?.toString() || '',
+      is_billable: staff.is_billable !== false,
+    });
+  }, [staff.id]);
 
   const calculateMonthlyCost = () => {
     let monthlySalary = 0;
     if (formData.salary_type === 'hourly' && formData.hourly_pay_rate) {
-      monthlySalary = parseFloat(formData.hourly_pay_rate) * 160; // ~40hr/week
+      monthlySalary = parseFloat(formData.hourly_pay_rate) * 160;
     } else if (formData.annual_salary) {
       monthlySalary = parseFloat(formData.annual_salary) / 12;
     }
@@ -1266,24 +1283,31 @@ function CompensationTab({ staff, onUpdate }: { staff: UserProfile; onUpdate: ()
 
   async function handleSave() {
     setSaving(true);
+    setSaveError(null);
     try {
-      await supabase
+      const { error } = await supabase
         .from('profiles')
         .update({
-          hourly_pay_rate: formData.hourly_pay_rate || null,
+          hourly_pay_rate: formData.hourly_pay_rate ? parseFloat(formData.hourly_pay_rate) : null,
           salary_type: formData.salary_type,
-          annual_salary: formData.annual_salary || null,
-          health_insurance_cost: formData.health_insurance_cost || null,
-          retirement_contribution: formData.retirement_contribution || null,
-          other_benefits_cost: formData.other_benefits_cost || null,
-          additional_expenses: formData.additional_expenses || null,
+          annual_salary: formData.annual_salary ? parseFloat(formData.annual_salary) : null,
+          health_insurance_cost: formData.health_insurance_cost ? parseFloat(formData.health_insurance_cost) : null,
+          retirement_contribution: formData.retirement_contribution ? parseFloat(formData.retirement_contribution) : null,
+          other_benefits_cost: formData.other_benefits_cost ? parseFloat(formData.other_benefits_cost) : null,
+          additional_expenses: formData.additional_expenses ? parseFloat(formData.additional_expenses) : null,
+          hourly_rate: formData.hourly_rate ? parseFloat(formData.hourly_rate) : null,
+          is_billable: formData.is_billable,
+          updated_at: new Date().toISOString(),
         })
         .eq('id', staff.id);
       
+      if (error) throw error;
+      
       setEditing(false);
       onUpdate();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to save compensation:', error);
+      setSaveError(error?.message || 'Failed to save. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -1292,14 +1316,14 @@ function CompensationTab({ staff, onUpdate }: { staff: UserProfile; onUpdate: ()
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-neutral-500">Compensation and cost tracking for {staff.full_name}</p>
+        <p className="text-sm text-neutral-500">Compensation, costs and billing rates for {staff.full_name}</p>
         {!editing ? (
           <button onClick={() => setEditing(true)} className="px-3 py-1.5 text-sm bg-neutral-100 hover:bg-neutral-200 rounded-lg transition-colors">
             Edit
           </button>
         ) : (
           <div className="flex gap-2">
-            <button onClick={() => setEditing(false)} className="px-3 py-1.5 text-sm border border-neutral-200 rounded-lg hover:bg-neutral-50">Cancel</button>
+            <button onClick={() => { setEditing(false); setSaveError(null); }} className="px-3 py-1.5 text-sm border border-neutral-200 rounded-lg hover:bg-neutral-50">Cancel</button>
             <button onClick={handleSave} disabled={saving} className="px-3 py-1.5 text-sm bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54] disabled:opacity-50">
               {saving ? 'Saving...' : 'Save'}
             </button>
@@ -1307,13 +1331,17 @@ function CompensationTab({ staff, onUpdate }: { staff: UserProfile; onUpdate: ()
         )}
       </div>
 
+      {saveError && (
+        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{saveError}</div>
+      )}
+
       {/* Summary */}
       <div className="border-b border-neutral-200 pb-4">
         <p className="text-sm text-neutral-500">Total Monthly Cost to Company</p>
         <p className="text-2xl font-bold text-neutral-900 mt-1">${calculateMonthlyCost().toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Salary Section */}
         <div className="border border-neutral-200 rounded-xl p-5">
           <h3 className="font-medium text-neutral-900 mb-4">Salary / Pay Rate</h3>
@@ -1377,7 +1405,7 @@ function CompensationTab({ staff, onUpdate }: { staff: UserProfile; onUpdate: ()
               )}
             </div>
             <div>
-              <label className="block text-sm text-neutral-600 mb-1">Other Benefits (PTO, Equipment)</label>
+              <label className="block text-sm text-neutral-600 mb-1">Other Benefits</label>
               {editing ? (
                 <input type="number" value={formData.other_benefits_cost} onChange={(e) => setFormData({...formData, other_benefits_cost: e.target.value})} className="w-full px-3 py-2 border border-neutral-200 rounded-lg" placeholder="0.00" />
               ) : (
@@ -1394,93 +1422,37 @@ function CompensationTab({ staff, onUpdate }: { staff: UserProfile; onUpdate: ()
             </div>
           </div>
         </div>
-      </div>
-    </div>
-  );
-}
 
-// Client Billing Rate Tab
-function BillingRateTab({ staff, onUpdate }: { staff: UserProfile; onUpdate: () => void }) {
-  const [editing, setEditing] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [hourlyRate, setHourlyRate] = useState(staff.hourly_rate?.toString() || '');
-  const [isBillable, setIsBillable] = useState(staff.is_billable !== false);
-
-  async function handleSave() {
-    setSaving(true);
-    try {
-      await supabase
-        .from('profiles')
-        .update({
-          hourly_rate: hourlyRate || null,
-          is_billable: isBillable,
-        })
-        .eq('id', staff.id);
-      
-      setEditing(false);
-      onUpdate();
-    } catch (error) {
-      console.error('Failed to save billing rate:', error);
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-neutral-500">Client billing rate for {staff.full_name}'s time</p>
-        {!editing ? (
-          <button onClick={() => setEditing(true)} className="px-3 py-1.5 text-sm bg-neutral-100 hover:bg-neutral-200 rounded-lg transition-colors">
-            Edit
-          </button>
-        ) : (
-          <div className="flex gap-2">
-            <button onClick={() => setEditing(false)} className="px-3 py-1.5 text-sm border border-neutral-200 rounded-lg hover:bg-neutral-50">Cancel</button>
-            <button onClick={handleSave} disabled={saving} className="px-3 py-1.5 text-sm bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54] disabled:opacity-50">
-              {saving ? 'Saving...' : 'Save'}
-            </button>
-          </div>
-        )}
-      </div>
-
-      <div className="border border-neutral-200 rounded-xl p-6">
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
+        {/* Client Billing Rate Section */}
+        <div className="border border-neutral-200 rounded-xl p-5">
+          <h3 className="font-medium text-neutral-900 mb-4">Client Billing Rate</h3>
+          <div className="space-y-4">
             <div>
-              <h3 className="font-medium text-neutral-900">Billable Status</h3>
-              <p className="text-sm text-neutral-500">Whether this staff member's time can be billed to clients</p>
+              <label className="block text-sm text-neutral-600 mb-1">Billable Status</label>
+              {editing ? (
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" checked={formData.is_billable} onChange={(e) => setFormData({...formData, is_billable: e.target.checked})} className="sr-only peer" />
+                  <div className="w-11 h-6 bg-neutral-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:bg-[#476E66] after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
+                  <span className="ml-2 text-sm text-neutral-600">{formData.is_billable ? 'Billable' : 'Non-Billable'}</span>
+                </label>
+              ) : (
+                <span className={`px-3 py-1 rounded-full text-sm font-medium ${formData.is_billable ? 'bg-emerald-100 text-emerald-700' : 'bg-neutral-100 text-neutral-600'}`}>
+                  {formData.is_billable ? 'Billable' : 'Non-Billable'}
+                </span>
+              )}
             </div>
-            {editing ? (
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" checked={isBillable} onChange={(e) => setIsBillable(e.target.checked)} className="sr-only peer" />
-                <div className="w-11 h-6 bg-neutral-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:bg-[#476E66] after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
-              </label>
-            ) : (
-              <span className={`px-3 py-1 rounded-full text-sm font-medium ${isBillable ? 'bg-emerald-100 text-emerald-700' : 'bg-neutral-100 text-neutral-600'}`}>
-                {isBillable ? 'Billable' : 'Non-Billable'}
-              </span>
-            )}
-          </div>
-
-          <div>
-            <label className="block font-medium text-neutral-900 mb-1">Hourly Rate (Client Billing)</label>
-            <p className="text-sm text-neutral-500 mb-3">The rate charged to clients when this staff member logs billable time</p>
-            {editing ? (
-              <div className="relative w-48">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400">$</span>
-                <input 
-                  type="number" 
-                  value={hourlyRate} 
-                  onChange={(e) => setHourlyRate(e.target.value)} 
-                  className="w-full pl-7 pr-12 py-2 border border-neutral-200 rounded-lg" 
-                  placeholder="0.00" 
-                />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400">/hr</span>
-              </div>
-            ) : (
-              <p className="text-2xl font-bold text-neutral-900">{hourlyRate ? `$${hourlyRate}/hr` : 'Not set'}</p>
-            )}
+            <div>
+              <label className="block text-sm text-neutral-600 mb-1">Hourly Rate (Client)</label>
+              <p className="text-xs text-neutral-400 mb-2">Rate charged to clients for billable time</p>
+              {editing ? (
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400">$</span>
+                  <input type="number" value={formData.hourly_rate} onChange={(e) => setFormData({...formData, hourly_rate: e.target.value})} className="w-full pl-7 pr-3 py-2 border border-neutral-200 rounded-lg" placeholder="0.00" />
+                </div>
+              ) : (
+                <p className="text-neutral-900 text-lg font-medium">{formData.hourly_rate ? `$${formData.hourly_rate}/hr` : '-'}</p>
+              )}
+            </div>
           </div>
         </div>
       </div>
