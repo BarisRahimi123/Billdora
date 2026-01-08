@@ -615,45 +615,45 @@ export default function ProposalPortalPage() {
 
                   <button
                     onClick={() => setResponseType('changes')}
-                    className="w-full p-4 border-2 border-amber-200 bg-amber-50 rounded-xl text-left hover:border-amber-400 transition-colors"
+                    className="w-full p-4 border-2 border-[#2D5A4F]/20 bg-[#2D5A4F]/5 rounded-xl text-left hover:border-[#2D5A4F]/40 transition-colors"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-amber-600 rounded-full flex items-center justify-center">
+                      <div className="w-10 h-10 bg-[#2D5A4F] rounded-full flex items-center justify-center">
                         <Pen className="w-5 h-5 text-white" />
                       </div>
                       <div>
-                        <p className="font-semibold text-amber-900">Request Changes</p>
-                        <p className="text-sm text-amber-700">I'd like some modifications to the proposal</p>
+                        <p className="font-semibold text-[#2D5A4F]">Request Changes</p>
+                        <p className="text-sm text-[#2D5A4F]/70">I'd like some modifications to the proposal</p>
                       </div>
                     </div>
                   </button>
 
                   <button
                     onClick={() => setResponseType('discuss')}
-                    className="w-full p-4 border-2 border-blue-200 bg-blue-50 rounded-xl text-left hover:border-blue-400 transition-colors"
+                    className="w-full p-4 border-2 border-[#2D5A4F]/20 bg-[#2D5A4F]/5 rounded-xl text-left hover:border-[#2D5A4F]/40 transition-colors"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
+                      <div className="w-10 h-10 bg-[#2D5A4F] rounded-full flex items-center justify-center">
                         <MessageSquare className="w-5 h-5 text-white" />
                       </div>
                       <div>
-                        <p className="font-semibold text-blue-900">Need to Discuss</p>
-                        <p className="text-sm text-blue-700">I'd like to talk before making a decision</p>
+                        <p className="font-semibold text-[#2D5A4F]">Need to Discuss</p>
+                        <p className="text-sm text-[#2D5A4F]/70">I'd like to talk before making a decision</p>
                       </div>
                     </div>
                   </button>
 
                   <button
                     onClick={() => setResponseType('later')}
-                    className="w-full p-4 border-2 border-neutral-200 bg-neutral-50 rounded-xl text-left hover:border-neutral-400 transition-colors"
+                    className="w-full p-4 border-2 border-[#2D5A4F]/20 bg-[#2D5A4F]/5 rounded-xl text-left hover:border-[#2D5A4F]/40 transition-colors"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-neutral-600 rounded-full flex items-center justify-center">
+                      <div className="w-10 h-10 bg-[#2D5A4F] rounded-full flex items-center justify-center">
                         <Clock className="w-5 h-5 text-white" />
                       </div>
                       <div>
-                        <p className="font-semibold text-neutral-900">Not Right Now</p>
-                        <p className="text-sm text-neutral-600">The timing isn't right, but maybe later</p>
+                        <p className="font-semibold text-[#2D5A4F]">Not Right Now</p>
+                        <p className="text-sm text-[#2D5A4F]/70">The timing isn't right, but maybe later</p>
                       </div>
                     </div>
                   </button>
