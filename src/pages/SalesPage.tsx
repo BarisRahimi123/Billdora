@@ -913,15 +913,20 @@ function InlineClientEditor({ client, companyId, onClose, onSave, onDelete }: {
     setSaving(true);
     try {
       let savedClient: Client;
+      const dataToSave = {
+        ...formData,
+        display_name: formData.display_name || formData.name
+      };
+      console.log('Saving client data:', dataToSave);
       if (client) {
-        savedClient = await api.updateClient(client.id, formData);
+        savedClient = await api.updateClient(client.id, dataToSave);
       } else {
         savedClient = await api.createClient({ 
           company_id: companyId, 
-          ...formData,
-          display_name: formData.display_name || formData.name
+          ...dataToSave
         });
       }
+      console.log('Saved client:', savedClient);
       setEditing(false);
       onSave(savedClient);
     } catch (err: any) {
