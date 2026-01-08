@@ -1978,12 +1978,10 @@ function TasksTabContent({ tasks, projectId, companyId, onTasksChange, onEditTas
     setMenuOpen(null);
   };
 
+  // Simplified sub-tabs - Schedule, Allocations, Checklist hidden for now
   const subTabs: { key: TaskSubTab; label: string }[] = [
-    { key: 'overview', label: 'Overview/Status' },
+    { key: 'overview', label: 'Overview' },
     { key: 'editor', label: 'Editor' },
-    { key: 'schedule', label: 'Schedule' },
-    { key: 'allocations', label: 'Allocations' },
-    { key: 'checklist', label: 'Checklist Items' },
   ];
 
   return (
@@ -2003,92 +2001,120 @@ function TasksTabContent({ tasks, projectId, companyId, onTasksChange, onEditTas
         ))}
       </div>
 
-      {/* Overview/Status Sub-tab */}
+      {/* Overview Sub-tab - Simplified with consistent colors */}
       {subTab === 'overview' && (
         <div className="space-y-6">
-          <div className="grid grid-cols-4 gap-4">
-            <div className="bg-neutral-50 rounded-lg p-4"><p className="text-sm text-neutral-500">Total Tasks</p><p className="text-2xl font-bold text-neutral-900">{taskStats.total}</p></div>
-            <div className="bg-neutral-100 rounded-lg p-4"><p className="text-sm text-neutral-900">Completed</p><p className="text-2xl font-bold text-emerald-700">{taskStats.completed}</p></div>
-            <div className="bg-neutral-100 rounded-lg p-4"><p className="text-sm text-blue-600">In Progress</p><p className="text-2xl font-bold text-blue-700">{taskStats.inProgress}</p></div>
-            <div className="bg-neutral-100 rounded-lg p-4"><p className="text-sm text-neutral-900">Not Started</p><p className="text-2xl font-bold text-amber-700">{taskStats.notStarted}</p></div>
-          </div>
-          {canViewFinancials && (
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white border border-neutral-200 rounded-lg p-4"><p className="text-sm text-neutral-500 mb-1">Total Estimated Hours</p><p className="text-xl font-semibold">{taskStats.totalHours}h</p></div>
-              <div className="bg-white border border-neutral-200 rounded-lg p-4"><p className="text-sm text-neutral-500 mb-1">Estimated Value</p><p className="text-xl font-semibold">${(taskStats.totalHours * 150).toLocaleString()}</p></div>
+          {/* Stats Row - Single line, consistent neutral/brand colors */}
+          <div className="flex items-center gap-6 p-4 bg-neutral-50 rounded-xl">
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-neutral-500">Total:</span>
+              <span className="text-xl font-bold text-neutral-900">{taskStats.total}</span>
             </div>
-          )}
-          <div>
-            <div className="flex justify-between text-sm mb-2"><span className="text-neutral-600">Overall Progress</span><span className="font-medium">{taskStats.total > 0 ? Math.round((taskStats.completed / taskStats.total) * 100) : 0}%</span></div>
-            <div className="w-full bg-neutral-200 rounded-full h-3"><div className="bg-neutral-1000 h-3 rounded-full transition-all" style={{ width: `${taskStats.total > 0 ? (taskStats.completed / taskStats.total) * 100 : 0}%` }} /></div>
+            <div className="w-px h-8 bg-neutral-200" />
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-neutral-500">Done:</span>
+              <span className="text-xl font-bold text-[#476E66]">{taskStats.completed}</span>
+            </div>
+            <div className="w-px h-8 bg-neutral-200" />
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-neutral-500">In Progress:</span>
+              <span className="text-xl font-bold text-neutral-700">{taskStats.inProgress}</span>
+            </div>
+            <div className="w-px h-8 bg-neutral-200" />
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-neutral-500">To Do:</span>
+              <span className="text-xl font-bold text-neutral-500">{taskStats.notStarted}</span>
+            </div>
+            <div className="flex-1" />
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-neutral-500">Progress:</span>
+              <div className="w-32 h-2 bg-neutral-200 rounded-full overflow-hidden">
+                <div className="h-full bg-[#476E66] rounded-full transition-all" style={{ width: `${taskStats.total > 0 ? (taskStats.completed / taskStats.total) * 100 : 0}%` }} />
+              </div>
+              <span className="text-sm font-medium text-neutral-700">{taskStats.total > 0 ? Math.round((taskStats.completed / taskStats.total) * 100) : 0}%</span>
+            </div>
           </div>
           
-          {/* Tasks List */}
+          {/* Tasks List with completion toggle */}
           <div className="bg-white border border-neutral-200 rounded-lg overflow-hidden">
             <div className="px-4 py-3 bg-neutral-50 border-b border-neutral-200 flex items-center justify-between">
-              <span className="font-medium">Tasks</span>
-              <button onClick={onAddTask} className="text-sm text-neutral-600 hover:text-neutral-700 font-medium flex items-center gap-1">
+              <span className="font-medium text-neutral-900">Tasks</span>
+              <button onClick={onAddTask} className="text-sm text-[#476E66] hover:text-[#3A5B54] font-medium flex items-center gap-1">
                 <Plus className="w-4 h-4" /> Add Task
               </button>
             </div>
             {filteredTasks.length === 0 ? (
-              <div className="px-4 py-8 text-center text-neutral-500">No tasks yet</div>
+              <div className="px-4 py-8 text-center text-neutral-500">No tasks yet. Click "Add Task" to create one.</div>
             ) : (
-              <table className="w-full">
-                <thead className="bg-neutral-50 border-b border-neutral-200">
-                  <tr>
-                    <th className="text-left px-4 py-2 text-xs font-semibold text-neutral-600 uppercase">Task</th>
-                    <th className="text-left px-4 py-2 text-xs font-semibold text-neutral-600 uppercase w-28">Status</th>
-                    <th className="text-left px-4 py-2 text-xs font-semibold text-neutral-600 uppercase w-36">Assignee</th>
-                    <th className="text-right px-4 py-2 text-xs font-semibold text-neutral-600 uppercase w-20">Hours</th>
-                    <th className="w-8"></th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-neutral-100">
-                  {filteredTasks.map(task => {
-                    const assignee = teamMembers.find(m => m.id === task.assigned_to);
-                    return (
-                      <tr key={task.id} className="hover:bg-neutral-50 cursor-pointer" onClick={() => onEditTask(task)}>
-                        <td className="px-4 py-3">
-                          <p className="font-medium text-neutral-900">{task.name}</p>
-                          {task.description && <p className="text-sm text-neutral-500 line-clamp-1">{task.description}</p>}
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            task.status === 'completed' ? 'bg-emerald-100 text-emerald-700' :
-                            task.status === 'in_progress' ? 'bg-blue-100 text-blue-700' :
-                            'bg-neutral-100 text-neutral-600'
-                          }`}>
-                            {task.status?.replace('_', ' ') || 'not started'}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3">
-                          {assignee ? (
-                            <div className="flex items-center gap-2">
-                              {assignee.avatar_url ? (
-                                <img src={assignee.avatar_url} alt="" className="w-6 h-6 rounded-full" />
-                              ) : (
-                                <div className="w-6 h-6 rounded-full bg-neutral-200 flex items-center justify-center text-xs font-medium">
-                                  {assignee.full_name?.charAt(0) || '?'}
-                                </div>
-                              )}
-                              <span className="text-sm text-neutral-700">{assignee.full_name}</span>
-                            </div>
+              <div className="divide-y divide-neutral-100">
+                {filteredTasks.map(task => {
+                  const assignee = teamMembers.find(m => m.id === task.assigned_to);
+                  const isCompleted = task.status === 'completed';
+                  return (
+                    <div key={task.id} className={`flex items-center gap-4 px-4 py-3 hover:bg-neutral-50 ${isCompleted ? 'opacity-60' : ''}`}>
+                      {/* Completion Toggle */}
+                      <button
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          try {
+                            await api.updateTask(task.id, { 
+                              status: isCompleted ? 'not_started' : 'completed',
+                              completion_percentage: isCompleted ? 0 : 100
+                            });
+                            onTasksChange();
+                          } catch (err) { console.error(err); }
+                        }}
+                        className="flex items-center justify-center w-5 h-5 rounded-full border-2 transition-all hover:scale-110 flex-shrink-0"
+                        style={{
+                          borderColor: isCompleted ? '#476E66' : '#d1d5db',
+                          backgroundColor: isCompleted ? '#476E66' : 'transparent'
+                        }}
+                      >
+                        {isCompleted && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
+                      </button>
+                      
+                      {/* Task Info */}
+                      <div className="flex-1 min-w-0 cursor-pointer" onClick={() => onEditTask(task)}>
+                        <p className={`font-medium ${isCompleted ? 'line-through text-neutral-400' : 'text-neutral-900'}`}>{task.name}</p>
+                        {task.description && <p className="text-sm text-neutral-500 line-clamp-1">{task.description}</p>}
+                      </div>
+                      
+                      {/* Status Badge */}
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
+                        task.status === 'completed' ? 'bg-[#476E66]/10 text-[#476E66]' :
+                        task.status === 'in_progress' ? 'bg-neutral-200 text-neutral-700' :
+                        'bg-neutral-100 text-neutral-500'
+                      }`}>
+                        {task.status === 'completed' ? 'Done' : task.status === 'in_progress' ? 'In Progress' : 'To Do'}
+                      </span>
+                      
+                      {/* Assignee */}
+                      {assignee ? (
+                        <div className="flex items-center gap-2 w-32">
+                          {assignee.avatar_url ? (
+                            <img src={assignee.avatar_url} alt="" className="w-6 h-6 rounded-full" />
                           ) : (
-                            <span className="text-sm text-neutral-400">Unassigned</span>
+                            <div className="w-6 h-6 rounded-full bg-[#476E66]/20 flex items-center justify-center text-xs font-medium text-[#476E66]">
+                              {assignee.full_name?.charAt(0) || '?'}
+                            </div>
                           )}
-                        </td>
-                        <td className="px-4 py-3 text-right text-sm text-neutral-600">
-                          {task.estimated_hours ? `${task.estimated_hours}h` : '-'}
-                        </td>
-                        <td className="px-4 py-3">
-                          <ChevronRight className="w-4 h-4 text-neutral-400" />
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                          <span className="text-sm text-neutral-600 truncate">{assignee.full_name}</span>
+                        </div>
+                      ) : (
+                        <span className="text-sm text-neutral-400 w-32">Unassigned</span>
+                      )}
+                      
+                      {/* Hours */}
+                      <span className="text-sm text-neutral-500 w-16 text-right">
+                        {task.estimated_hours ? `${task.estimated_hours}h` : '-'}
+                      </span>
+                      
+                      {/* Arrow */}
+                      <ChevronRight className="w-4 h-4 text-neutral-300 cursor-pointer" onClick={() => onEditTask(task)} />
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </div>
         </div>
@@ -2154,90 +2180,210 @@ function TasksTabContent({ tasks, projectId, companyId, onTasksChange, onEditTas
         </div>
       )}
 
-      {/* Editor Sub-tab (Main Task Table) */}
+      {/* Editor Sub-tab - Simplified */}
       {subTab === 'editor' && (<>
-      {/* Toolbar */}
-      <div className="flex items-center justify-between gap-4 flex-wrap">
+      {/* Toolbar - Simplified */}
+      <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="relative">
-            <button onClick={() => setShowAddDropdown(!showAddDropdown)} className="flex items-center gap-1 px-4 py-2 bg-[#476E66] text-white text-sm font-medium rounded-lg hover:bg-[#3A5B54]">
-              Add Task <ChevronDown className="w-4 h-4" />
-            </button>
-            {showAddDropdown && (
-              <div className="absolute top-full left-0 mt-1 bg-white border border-neutral-200 rounded-lg shadow-lg py-1 z-10 min-w-[160px]">
-                <button onClick={() => { onAddTask(); setShowAddDropdown(false); }} className="w-full px-4 py-2 text-left text-sm hover:bg-neutral-50">New Task</button>
-                <button onClick={() => setShowAddDropdown(false)} className="w-full px-4 py-2 text-left text-sm hover:bg-neutral-50">New Sub-task</button>
-                <button onClick={() => setShowAddDropdown(false)} className="w-full px-4 py-2 text-left text-sm hover:bg-neutral-50">Import Tasks</button>
-              </div>
-            )}
-          </div>
+          <button onClick={onAddTask} className="flex items-center gap-1 px-4 py-2 bg-[#476E66] text-white text-sm font-medium rounded-lg hover:bg-[#3A5B54]">
+            <Plus className="w-4 h-4" /> Add Task
+          </button>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-            <input type="text" placeholder="Search" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9 pr-4 py-2 w-48 text-sm border border-neutral-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
+            <input type="text" placeholder="Search tasks..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9 pr-4 py-2 w-56 text-sm border border-neutral-200 rounded-lg focus:ring-2 focus:ring-[#476E66] focus:border-transparent outline-none" />
           </div>
           <label className="flex items-center gap-2 text-sm text-neutral-600 cursor-pointer">
-            <input type="checkbox" checked={hideCompleted} onChange={(e) => setHideCompleted(e.target.checked)} className="w-4 h-4 rounded border-neutral-300 text-neutral-500 focus:ring-primary-500" />
-            Hide Completed Tasks
+            <input type="checkbox" checked={hideCompleted} onChange={(e) => setHideCompleted(e.target.checked)} className="w-4 h-4 rounded border-neutral-300 text-[#476E66] focus:ring-[#476E66]" />
+            Hide Completed
           </label>
-          <label className="flex items-center gap-2 text-sm text-neutral-600 cursor-pointer">
-            <input type="checkbox" checked={includeInactive} onChange={(e) => setIncludeInactive(e.target.checked)} className="w-4 h-4 rounded border-neutral-300 text-neutral-500 focus:ring-primary-500" />
-            Include Inactive Team Members
-          </label>
-          <select
-            value={assigneeFilter}
-            onChange={(e) => setAssigneeFilter(e.target.value)}
-            className="px-3 py-2 text-sm border border-neutral-200 rounded-lg bg-white focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
-          >
-            <option value="all">All Assignees</option>
-            <option value="unassigned">Unassigned</option>
-            {filteredTeamMembers.map(m => <option key={m.id} value={m.id}>{m.full_name}</option>)}
-          </select>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-neutral-600">AutoSave</span>
-          <button onClick={() => setAutoSave(!autoSave)} className={`relative w-12 h-6 rounded-full transition-colors ${autoSave ? 'bg-[#476E66]' : 'bg-neutral-300'}`}>
-            <span className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${autoSave ? 'left-7' : 'left-1'}`} />
-          </button>
-          <span className={`text-xs font-medium ${autoSave ? 'text-neutral-600' : 'text-neutral-400'}`}>{autoSave ? 'ON' : 'OFF'}</span>
-        </div>
+        <select
+          value={assigneeFilter}
+          onChange={(e) => setAssigneeFilter(e.target.value)}
+          className="px-3 py-2 text-sm border border-neutral-200 rounded-lg bg-white focus:ring-2 focus:ring-[#476E66] focus:border-transparent outline-none"
+        >
+          <option value="all">All Assignees</option>
+          <option value="unassigned">Unassigned</option>
+          {filteredTeamMembers.map(m => <option key={m.id} value={m.id}>{m.full_name}</option>)}
+        </select>
       </div>
 
-      {/* Task Table */}
+      {/* Task Table - Simplified columns */}
       <div className="border border-neutral-200 rounded-lg overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-neutral-50 border-b border-neutral-200">
             <tr>
-              <th className="w-[44px] px-2"></th>
-              <th className="text-left px-4 py-3 font-medium text-neutral-600 w-[280px]">Task</th>
-              {canViewFinancials && <th className="text-right px-4 py-3 font-medium text-neutral-600 w-[100px]">Fees</th>}
-              <th className="text-right px-4 py-3 font-medium text-neutral-600 w-[80px]">Qty</th>
-              <th className="text-center px-4 py-3 font-medium text-neutral-600 w-[80px]">Unit</th>
+              <th className="w-[44px] px-3"></th>
+              <th className="text-left px-4 py-3 font-medium text-neutral-600">Task</th>
+              <th className="text-left px-4 py-3 font-medium text-neutral-600 w-[100px]">Status</th>
+              <th className="text-left px-4 py-3 font-medium text-neutral-600 w-[150px]">Assignee</th>
+              <th className="text-right px-4 py-3 font-medium text-neutral-600 w-[80px]">Hours</th>
               <th className="text-left px-4 py-3 font-medium text-neutral-600 w-[120px]">Due Date</th>
-              <th className="text-left px-4 py-3 font-medium text-neutral-600 w-[140px]">Assignment</th>
-              {canViewFinancials && <th className="text-right px-4 py-3 font-medium text-neutral-600 w-[100px]">Estimate</th>}
-              <th className="text-right px-4 py-3 font-medium text-neutral-600 w-[70px]">%</th>
               <th className="w-[50px]"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-neutral-100">
-            {filteredTasks.map((task) => (
-              <TaskTableRow key={task.id} task={task} editingCell={editingCell} editValues={editValues} onStartEditing={startEditing} onEditChange={handleEditChange} onSaveEdit={saveEdit} menuOpen={menuOpen} setMenuOpen={setMenuOpen} onEdit={() => onEditTask(task)} onDelete={() => handleDeleteTask(task.id)} onAddSubTask={() => { setParentTaskId(task.id); setMenuOpen(null); }} teamMembers={filteredTeamMembers} onAssignmentChange={async (taskId, userId) => { try { await api.updateTask(taskId, { assigned_to: userId || null }); onTasksChange(); } catch(e) { console.error(e); } }} onStatusChange={async (taskId, status) => { try { await api.updateTask(taskId, { status, completion_percentage: status === 'completed' ? 100 : undefined }); onTasksChange(); } catch(e) { console.error(e); } }} onUnitChange={async (taskId, unit) => { try { await api.updateTask(taskId, { billing_unit: unit }); onTasksChange(); } catch(e) { console.error(e); } }} canViewFinancials={canViewFinancials} />
-            ))}
+            {filteredTasks.map((task) => {
+              const assignee = teamMembers.find(m => m.id === task.assigned_to);
+              const isCompleted = task.status === 'completed';
+              return (
+                <tr key={task.id} className={`hover:bg-neutral-50 ${isCompleted ? 'opacity-60' : ''}`}>
+                  {/* Completion Toggle */}
+                  <td className="px-3 py-3">
+                    <button
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        try {
+                          await api.updateTask(task.id, { 
+                            status: isCompleted ? 'not_started' : 'completed',
+                            completion_percentage: isCompleted ? 0 : 100
+                          });
+                          onTasksChange();
+                        } catch (err) { console.error(err); }
+                      }}
+                      className="flex items-center justify-center w-5 h-5 rounded-full border-2 transition-all hover:scale-110"
+                      style={{
+                        borderColor: isCompleted ? '#476E66' : '#d1d5db',
+                        backgroundColor: isCompleted ? '#476E66' : 'transparent'
+                      }}
+                    >
+                      {isCompleted && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
+                    </button>
+                  </td>
+                  {/* Task Name */}
+                  <td className="px-4 py-3 cursor-pointer" onClick={() => onEditTask(task)}>
+                    <span className={`font-medium ${isCompleted ? 'line-through text-neutral-400' : 'text-neutral-900'}`}>{task.name}</span>
+                    {task.description && <p className="text-xs text-neutral-500 line-clamp-1 mt-0.5">{task.description}</p>}
+                  </td>
+                  {/* Status */}
+                  <td className="px-4 py-3">
+                    <select
+                      value={task.status || 'not_started'}
+                      onClick={(e) => e.stopPropagation()}
+                      onChange={async (e) => {
+                        try {
+                          const newStatus = e.target.value;
+                          await api.updateTask(task.id, { 
+                            status: newStatus,
+                            completion_percentage: newStatus === 'completed' ? 100 : (newStatus === 'in_progress' ? 50 : 0)
+                          });
+                          onTasksChange();
+                        } catch (err) { console.error(err); }
+                      }}
+                      className={`px-2 py-1 text-xs font-medium rounded-full border-0 cursor-pointer ${
+                        task.status === 'completed' ? 'bg-[#476E66]/10 text-[#476E66]' :
+                        task.status === 'in_progress' ? 'bg-neutral-200 text-neutral-700' :
+                        'bg-neutral-100 text-neutral-500'
+                      }`}
+                    >
+                      <option value="not_started">To Do</option>
+                      <option value="in_progress">In Progress</option>
+                      <option value="completed">Done</option>
+                    </select>
+                  </td>
+                  {/* Assignee */}
+                  <td className="px-4 py-3">
+                    <select
+                      value={task.assigned_to || ''}
+                      onClick={(e) => e.stopPropagation()}
+                      onChange={async (e) => {
+                        try {
+                          await api.updateTask(task.id, { assigned_to: e.target.value || null });
+                          onTasksChange();
+                        } catch (err) { console.error(err); }
+                      }}
+                      className="w-full px-2 py-1 text-sm border border-neutral-200 rounded bg-white cursor-pointer focus:ring-1 focus:ring-[#476E66] outline-none"
+                    >
+                      <option value="">Unassigned</option>
+                      {teamMembers.map(m => <option key={m.id} value={m.id}>{m.full_name}</option>)}
+                    </select>
+                  </td>
+                  {/* Hours */}
+                  <td className="px-4 py-3 text-right">
+                    {editingCell?.taskId === task.id && editingCell?.field === 'hours' ? (
+                      <input
+                        type="number"
+                        value={editValues[task.id]?.hours ?? task.estimated_hours?.toString() ?? '0'}
+                        onChange={(e) => handleEditChange(task.id, 'hours', e.target.value)}
+                        onBlur={() => saveEdit(task.id, 'hours')}
+                        onKeyDown={(e) => e.key === 'Enter' && saveEdit(task.id, 'hours')}
+                        className="w-16 px-2 py-1 text-right text-sm border border-neutral-300 rounded outline-none"
+                        autoFocus
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    ) : (
+                      <span 
+                        onClick={(e) => { e.stopPropagation(); startEditing(task.id, 'hours', task.estimated_hours?.toString() || '0'); }}
+                        className="cursor-pointer hover:bg-neutral-100 px-2 py-1 rounded inline-block text-neutral-600"
+                      >
+                        {task.estimated_hours ? `${task.estimated_hours}h` : '-'}
+                      </span>
+                    )}
+                  </td>
+                  {/* Due Date */}
+                  <td className="px-4 py-3">
+                    {editingCell?.taskId === task.id && editingCell?.field === 'due_date' ? (
+                      <input
+                        type="date"
+                        value={editValues[task.id]?.due_date ?? task.due_date?.split('T')[0] ?? ''}
+                        onChange={(e) => handleEditChange(task.id, 'due_date', e.target.value)}
+                        onBlur={() => saveEdit(task.id, 'due_date')}
+                        className="px-2 py-1 text-sm border border-neutral-300 rounded outline-none"
+                        autoFocus
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    ) : (
+                      <span 
+                        onClick={(e) => { e.stopPropagation(); startEditing(task.id, 'due_date', task.due_date?.split('T')[0] || ''); }}
+                        className="cursor-pointer hover:bg-neutral-100 px-2 py-1 rounded inline-block text-neutral-600"
+                      >
+                        {task.due_date ? new Date(task.due_date).toLocaleDateString() : '-'}
+                      </span>
+                    )}
+                  </td>
+                  {/* Actions */}
+                  <td className="px-2 py-3 relative">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setMenuOpen(menuOpen === task.id ? null : task.id); }}
+                      className="p-1.5 hover:bg-neutral-100 rounded"
+                    >
+                      <MoreVertical className="w-4 h-4 text-neutral-400" />
+                    </button>
+                    {menuOpen === task.id && (
+                      <div className="absolute right-0 top-full mt-1 bg-white border border-neutral-200 rounded-lg shadow-lg py-1 z-10 min-w-[120px]">
+                        <button onClick={() => { onEditTask(task); setMenuOpen(null); }} className="w-full px-3 py-2 text-left text-sm hover:bg-neutral-50 flex items-center gap-2">
+                          <Edit2 className="w-3.5 h-3.5" /> Edit
+                        </button>
+                        <button onClick={() => handleDeleteTask(task.id)} className="w-full px-3 py-2 text-left text-sm hover:bg-neutral-50 text-red-600 flex items-center gap-2">
+                          <Trash2 className="w-3.5 h-3.5" /> Delete
+                        </button>
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+            {/* Quick Add Row */}
             <tr className="bg-neutral-50/50">
-              <td className="px-4 py-2" colSpan={9}>
-                <div className="flex items-center gap-2">
-                  <Plus className="w-4 h-4 text-neutral-400" />
-                  <input type="text" placeholder="Add new task..." value={quickAddName} onChange={(e) => setQuickAddName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleQuickAdd()} onBlur={handleQuickAdd} className="flex-1 px-2 py-1 text-sm bg-transparent border-none outline-none placeholder:text-neutral-400" />
-                </div>
+              <td className="px-3 py-2"><Plus className="w-4 h-4 text-neutral-400" /></td>
+              <td className="px-4 py-2" colSpan={6}>
+                <input 
+                  type="text" 
+                  placeholder="Type task name and press Enter..." 
+                  value={quickAddName} 
+                  onChange={(e) => setQuickAddName(e.target.value)} 
+                  onKeyDown={(e) => e.key === 'Enter' && handleQuickAdd()} 
+                  className="w-full px-2 py-1 text-sm bg-transparent border-none outline-none placeholder:text-neutral-400" 
+                />
               </td>
             </tr>
           </tbody>
         </table>
       </div>
-      {filteredTasks.length === 0 && !quickAddName && subTab === 'editor' && (
+      {filteredTasks.length === 0 && !quickAddName && (
         <div className="text-center py-8 text-neutral-500">
-          <p>No tasks found.</p>
-          <button onClick={onAddTask} className="text-neutral-500 hover:text-neutral-600 font-medium mt-1">Create your first task</button>
+          <p>No tasks yet.</p>
+          <button onClick={onAddTask} className="text-[#476E66] hover:text-[#3A5B54] font-medium mt-1">Create your first task</button>
         </div>
       )}
       </>)}
