@@ -529,7 +529,7 @@ export default function ProposalPortalPage() {
 
           {/* Greeting & Body */}
           <div className="mb-8">
-            <p className="text-neutral-700 mb-4">Dear {client?.primary_contact_name?.split(' ')[0] || client?.name},</p>
+            <p className="text-neutral-700 mb-4">Dear {client?.primary_contact_name?.split(' ')[0] || 'Valued Client'},</p>
             <p className="text-neutral-700 mb-4">
               Thank you for the potential opportunity to work together on the {quote?.title}. I have attached the proposal for your consideration which includes a thorough Scope of Work, deliverable schedule, and Fee.
             </p>
