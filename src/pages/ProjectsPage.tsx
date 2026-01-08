@@ -692,6 +692,7 @@ export default function ProjectsPage() {
             projectId={selectedProject.id}
             companyId={profile?.company_id || ''}
             teamMembers={companyProfiles.map(p => ({ staff_member_id: p.id, profile: p }))}
+            companyProfiles={companyProfiles}
             onClose={() => { setShowTaskModal(false); setEditingTask(null); }}
             onSave={() => { if (projectId) loadProjectDetails(projectId); setShowTaskModal(false); setEditingTask(null); }}
             canViewFinancials={canViewFinancials}
@@ -1308,11 +1309,12 @@ function ProjectModal({ project, clients, companyId, onClose, onSave }: {
   );
 }
 
-function TaskModal({ task, projectId, companyId, teamMembers, onClose, onSave, canViewFinancials = true }: { 
+function TaskModal({ task, projectId, companyId, teamMembers, companyProfiles, onClose, onSave, canViewFinancials = true }: { 
   task: Task | null;
   projectId: string;
   companyId: string;
   teamMembers: {staff_member_id: string; profile?: {id?: string; full_name?: string; avatar_url?: string}}[];
+  companyProfiles: {id: string; full_name?: string; avatar_url?: string; email?: string; role?: string}[];
   onClose: () => void; 
   onSave: () => void;
   canViewFinancials?: boolean;
@@ -1401,8 +1403,8 @@ function TaskModal({ task, projectId, companyId, teamMembers, onClose, onSave, c
             <label className="block text-sm font-medium text-neutral-700 mb-1.5">Assignee</label>
             <select value={assignedTo} onChange={(e) => setAssignedTo(e.target.value)} disabled={!canViewFinancials} className={`w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none ${!canViewFinancials ? 'bg-neutral-100 cursor-not-allowed opacity-60' : ''}`}>
               <option value="">Unassigned</option>
-              {teamMembers.map(m => (
-                <option key={m.staff_member_id} value={m.staff_member_id}>{m.profile?.full_name || 'Unknown'}</option>
+              {companyProfiles.map(p => (
+                <option key={p.id} value={p.id}>{p.full_name || 'Unknown'}</option>
               ))}
             </select>
           </div>
@@ -2265,7 +2267,7 @@ function TaskTableRow({ task, editingCell, editValues, onStartEditing, onEditCha
       {/* Completion Radio Button */}
       <td className="px-2 py-2">
         <button
-          onClick={() => onStatusChange(task.id, isCompleted ? 'not_started' : 'completed')}
+          onClick={(e) => { e.stopPropagation(); onStatusChange(task.id, isCompleted ? 'not_started' : 'completed'); }}
           className="flex items-center justify-center w-5 h-5 rounded-full border-2 transition-all duration-200 hover:scale-110"
           style={{
             borderColor: isCompleted ? '#10b981' : '#d1d5db',
@@ -2340,6 +2342,7 @@ function TaskTableRow({ task, editingCell, editValues, onStartEditing, onEditCha
               <select 
                 className={`absolute inset-0 w-full ${canViewFinancials ? 'opacity-0 cursor-pointer' : 'opacity-0 pointer-events-none'}`}
                 value={task.assigned_to || ''} 
+                onClick={(e) => e.stopPropagation()}
                 onChange={(e) => onAssignmentChange(task.id, e.target.value)}
                 disabled={!canViewFinancials}
               >

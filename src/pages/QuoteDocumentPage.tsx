@@ -88,6 +88,7 @@ export default function QuoteDocumentPage() {
   const [editingTitle, setEditingTitle] = useState(false);
   const [services, setServices] = useState<Service[]>([]);
   const [showServicesModal, setShowServicesModal] = useState(false);
+  const [selectedServices, setSelectedServices] = useState<Set<string>>(new Set());
   const [showNewClientModal, setShowNewClientModal] = useState(false);
 
   // Section visibility toggles
@@ -510,7 +511,11 @@ export default function QuoteDocumentPage() {
       return;
     }
     if (!quote && isNewQuote) {
-      showToast('Please save the quote first', 'error');
+      showToast('Please save the proposal first before sending', 'error');
+      return;
+    }
+    if (hasUnsavedChanges) {
+      showToast('You have unsaved changes. Please save the proposal before sending.', 'error');
       return;
     }
     setShowSendModal(true);
@@ -1803,13 +1808,13 @@ export default function QuoteDocumentPage() {
         );
       })()}
 
-      {/* Services Modal - Minimalistic Design */}
+      {/* Services Modal - Multi-Select Design */}
       {showServicesModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl w-full max-w-md mx-4 max-h-[70vh] overflow-hidden flex flex-col shadow-2xl">
             <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100">
               <h2 className="text-base font-medium text-neutral-900">Add from Services</h2>
-              <button onClick={() => setShowServicesModal(false)} className="p-1.5 hover:bg-neutral-100 rounded-full text-neutral-400 hover:text-neutral-600">
+              <button onClick={() => { setShowServicesModal(false); setSelectedServices(new Set()); }} className="p-1.5 hover:bg-neutral-100 rounded-full text-neutral-400 hover:text-neutral-600">
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -1822,47 +1827,39 @@ export default function QuoteDocumentPage() {
                     const isAlreadyAdded = lineItems.some(item => 
                       item.description.startsWith(service.name)
                     );
+                    const isSelected = selectedServices.has(service.id);
                     return (
                       <button
                         key={service.id}
                         disabled={isAlreadyAdded}
                         onClick={() => {
                           if (isAlreadyAdded) return;
-                          const rate = service.pricing_type === 'per_sqft' 
-                            ? (service.min_rate || 0) 
-                            : (service.base_rate || 0);
-                          const unit = service.pricing_type === 'per_sqft' ? 'sq ft' 
-                            : service.pricing_type === 'hourly' ? 'hour' 
-                            : service.pricing_type === 'fixed' ? 'project' 
-                            : 'each';
-                          const newItem: LineItem = {
-                            id: Date.now().toString(),
-                            description: service.name + (service.description ? ` - ${service.description}` : ''),
-                            unitPrice: rate,
-                            qty: 1,
-                            unit,
-                            taxed: false,
-                            estimatedDays: 1,
-                            startOffset: 0,
-                            dependsOn: '',
-                            startType: 'parallel',
-                            overlapDays: 0
-                          };
-                          // Remove empty rows before adding
-                          const filteredItems = lineItems.filter(item => item.description.trim() !== '');
-                          setLineItems([...filteredItems, newItem]);
-                          setHasUnsavedChanges(true);
-                          setShowServicesModal(false);
+                          const newSelected = new Set(selectedServices);
+                          if (isSelected) {
+                            newSelected.delete(service.id);
+                          } else {
+                            newSelected.add(service.id);
+                          }
+                          setSelectedServices(newSelected);
                         }}
                         className={`w-full text-left px-5 py-3 flex justify-between items-center transition-colors ${
                           isAlreadyAdded 
                             ? 'opacity-40 cursor-not-allowed bg-neutral-50' 
+                            : isSelected
+                            ? 'bg-[#476E66]/10'
                             : 'hover:bg-neutral-50'
                         }`}
                       >
-                        <div className="min-w-0 flex-1">
-                          <p className="font-medium text-neutral-900 text-sm truncate">{service.name}</p>
-                          <p className="text-xs text-neutral-400">{service.category}</p>
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <div className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 ${
+                            isSelected ? 'bg-[#476E66] border-[#476E66]' : 'border-neutral-300'
+                          }`}>
+                            {isSelected && <Check className="w-3 h-3 text-white" />}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-medium text-neutral-900 text-sm truncate">{service.name}</p>
+                            <p className="text-xs text-neutral-400">{service.category}</p>
+                          </div>
                         </div>
                         <div className="text-right ml-4 flex-shrink-0">
                           <p className="font-medium text-neutral-900 text-sm">
@@ -1873,7 +1870,7 @@ export default function QuoteDocumentPage() {
                           <p className="text-xs text-neutral-400">per {service.unit_label}</p>
                         </div>
                         {isAlreadyAdded && (
-                          <Check className="w-4 h-4 text-neutral-700 ml-3" />
+                          <Check className="w-4 h-4 text-neutral-400 ml-3" />
                         )}
                       </button>
                     );
@@ -1881,6 +1878,45 @@ export default function QuoteDocumentPage() {
                 </div>
               )}
             </div>
+            {selectedServices.size > 0 && (
+              <div className="px-5 py-4 border-t border-neutral-100 bg-neutral-50">
+                <button
+                  onClick={() => {
+                    const newItems: LineItem[] = [];
+                    services.filter(s => selectedServices.has(s.id)).forEach((service, index) => {
+                      const rate = service.pricing_type === 'per_sqft' 
+                        ? (service.min_rate || 0) 
+                        : (service.base_rate || 0);
+                      const unit = service.pricing_type === 'per_sqft' ? 'sq ft' 
+                        : service.pricing_type === 'hourly' ? 'hour' 
+                        : service.pricing_type === 'fixed' ? 'project' 
+                        : 'each';
+                      newItems.push({
+                        id: (Date.now() + index).toString(),
+                        description: service.name + (service.description ? ` - ${service.description}` : ''),
+                        unitPrice: rate,
+                        qty: 1,
+                        unit,
+                        taxed: false,
+                        estimatedDays: 1,
+                        startOffset: 0,
+                        dependsOn: '',
+                        startType: 'parallel',
+                        overlapDays: 0
+                      });
+                    });
+                    const filteredItems = lineItems.filter(item => item.description.trim() !== '');
+                    setLineItems([...filteredItems, ...newItems]);
+                    setHasUnsavedChanges(true);
+                    setSelectedServices(new Set());
+                    setShowServicesModal(false);
+                  }}
+                  className="w-full py-2.5 bg-[#476E66] text-white rounded-lg hover:bg-[#3a5b54] transition-colors font-medium text-sm"
+                >
+                  Add {selectedServices.size} Service{selectedServices.size > 1 ? 's' : ''}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
