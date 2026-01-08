@@ -11,7 +11,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { signIn, signUp, signInWithGoogle, signInWithApple, signInWithFacebook } = useAuth();
+  const { signIn, signUp, signInWithGoogle, signInWithApple, signInWithFacebook, signOut, user } = useAuth();
   
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
@@ -34,6 +34,13 @@ export default function LoginPage() {
     const emailParam = searchParams.get('email');
     const signupParam = searchParams.get('signup');
     
+    // If this is an invite link and there's an existing session, sign out first
+    // This prevents "ghost user" issues where a previous session interferes
+    if (emailParam && signupParam === 'true' && user) {
+      signOut();
+      return; // The effect will re-run after signOut clears the user
+    }
+    
     if (emailParam) {
       setInvitedEmail(emailParam.toLowerCase());
       if (emailRef.current) {
@@ -43,7 +50,7 @@ export default function LoginPage() {
     if (signupParam === 'true') {
       setIsSignUp(true);
     }
-  }, [searchParams]);
+  }, [searchParams, user, signOut]);
 
   const handleSubmit = async () => {
     const email = emailRef.current?.value || '';
