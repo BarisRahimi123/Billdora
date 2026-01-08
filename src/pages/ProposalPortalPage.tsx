@@ -32,7 +32,20 @@ interface LineItem {
 interface Client {
   name: string;
   email: string;
+  phone?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
+  website?: string;
   primary_contact_name?: string;
+  primary_contact_title?: string;
+  primary_contact_email?: string;
+  primary_contact_phone?: string;
+  billing_contact_name?: string;
+  billing_contact_title?: string;
+  billing_contact_email?: string;
+  billing_contact_phone?: string;
 }
 
 interface Company {
@@ -45,6 +58,7 @@ interface Company {
   zip: string;
   phone: string;
   website: string;
+  email?: string;
 }
 
 const SUPABASE_URL = 'https://bqxnagmmegdbqrzhheip.supabase.co';
@@ -457,24 +471,98 @@ export default function ProposalPortalPage() {
           </div>
         )}
 
-        {/* Project Info */}
+        {/* Project Info Header */}
         <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
-          <h2 className="text-2xl font-semibold text-neutral-900 mb-2">{quote?.title}</h2>
-          <p className="text-neutral-600 mb-4">{quote?.description}</p>
-          <div className="flex flex-wrap gap-6 text-sm">
+          <div className="grid md:grid-cols-2 gap-8 mb-6">
+            {/* From: Company */}
             <div>
-              <span className="text-neutral-500">Client:</span>
-              <span className="ml-2 font-medium text-neutral-900">{client?.name}</span>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-500 mb-3">From</h3>
+              <div className="space-y-1">
+                <p className="font-semibold text-neutral-900 text-lg">{company?.company_name}</p>
+                {company?.address && (
+                  <p className="text-neutral-600 text-sm">{company.address}</p>
+                )}
+                {(company?.city || company?.state || company?.zip) && (
+                  <p className="text-neutral-600 text-sm">
+                    {[company?.city, company?.state].filter(Boolean).join(', ')} {company?.zip}
+                  </p>
+                )}
+                {company?.phone && (
+                  <p className="text-neutral-600 text-sm">{company.phone}</p>
+                )}
+                {company?.email && (
+                  <p className="text-neutral-600 text-sm">{company.email}</p>
+                )}
+                {company?.website && (
+                  <p className="text-neutral-600 text-sm">{company.website}</p>
+                )}
+              </div>
             </div>
+
+            {/* To: Client */}
             <div>
-              <span className="text-neutral-500">Valid Until:</span>
-              <span className="ml-2 font-medium text-neutral-900">
-                {quote?.valid_until ? new Date(quote.valid_until).toLocaleDateString() : 'N/A'}
-              </span>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-500 mb-3">Prepared For</h3>
+              <div className="space-y-1">
+                <p className="font-semibold text-neutral-900 text-lg">{client?.name}</p>
+                {client?.primary_contact_name && (
+                  <p className="text-neutral-700 text-sm">
+                    <span className="font-medium">Attn:</span> {client.primary_contact_name}
+                    {client.primary_contact_title && <span className="text-neutral-500"> ({client.primary_contact_title})</span>}
+                  </p>
+                )}
+                {client?.address && (
+                  <p className="text-neutral-600 text-sm">{client.address}</p>
+                )}
+                {(client?.city || client?.state || client?.zip) && (
+                  <p className="text-neutral-600 text-sm">
+                    {[client?.city, client?.state].filter(Boolean).join(', ')} {client?.zip}
+                  </p>
+                )}
+                {(client?.primary_contact_email || client?.email) && (
+                  <p className="text-neutral-600 text-sm">{client.primary_contact_email || client.email}</p>
+                )}
+                {(client?.primary_contact_phone || client?.phone) && (
+                  <p className="text-neutral-600 text-sm">{client.primary_contact_phone || client.phone}</p>
+                )}
+                {/* Billing Contact if different from primary */}
+                {client?.billing_contact_name && client.billing_contact_name !== client.primary_contact_name && (
+                  <div className="mt-3 pt-3 border-t border-neutral-100">
+                    <p className="text-xs font-bold uppercase tracking-wider text-neutral-400 mb-1">Billing Contact</p>
+                    <p className="text-neutral-700 text-sm">
+                      {client.billing_contact_name}
+                      {client.billing_contact_title && <span className="text-neutral-500"> ({client.billing_contact_title})</span>}
+                    </p>
+                    {client.billing_contact_email && (
+                      <p className="text-neutral-600 text-sm">{client.billing_contact_email}</p>
+                    )}
+                    {client.billing_contact_phone && (
+                      <p className="text-neutral-600 text-sm">{client.billing_contact_phone}</p>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
-            <div>
-              <span className="text-neutral-500">Total:</span>
-              <span className="ml-2 font-semibold text-neutral-900 text-lg">{formatCurrency(subtotal)}</span>
+          </div>
+
+          {/* Proposal Details Bar */}
+          <div className="border-t pt-6">
+            <h2 className="text-2xl font-semibold text-neutral-900 mb-2">{quote?.title}</h2>
+            {quote?.description && <p className="text-neutral-600 mb-4">{quote.description}</p>}
+            <div className="flex flex-wrap gap-6 items-center">
+              <div className="bg-neutral-50 rounded-lg px-4 py-2">
+                <p className="text-xs text-neutral-500 uppercase tracking-wider">Proposal #</p>
+                <p className="font-semibold text-neutral-900">{quote?.quote_number}</p>
+              </div>
+              <div className="bg-neutral-50 rounded-lg px-4 py-2">
+                <p className="text-xs text-neutral-500 uppercase tracking-wider">Valid Until</p>
+                <p className="font-semibold text-neutral-900">
+                  {quote?.valid_until ? new Date(quote.valid_until).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
+                </p>
+              </div>
+              <div className="bg-[#476E66]/10 rounded-lg px-4 py-2 ml-auto">
+                <p className="text-xs text-[#476E66] uppercase tracking-wider">Total</p>
+                <p className="font-bold text-[#476E66] text-xl">{formatCurrency(subtotal)}</p>
+              </div>
             </div>
           </div>
         </div>
