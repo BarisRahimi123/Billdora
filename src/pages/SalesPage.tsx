@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Search, Filter, Download, MoreHorizontal, X, FileText, ArrowRight, Eye, Printer, Send, Check, XCircle, Mail, Trash2, List, LayoutGrid, ChevronDown, ChevronRight, ArrowLeft, Edit2, Loader2, Link2, Copy, User } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { usePermissions } from '../contexts/PermissionsContext';
 import { api, Client, Quote, clientPortalApi } from '../lib/api';
 import { NotificationService } from '../lib/notificationService';
 import { useToast } from '../components/Toast';
@@ -23,6 +24,7 @@ function generateQuoteNumber(): string {
 export default function SalesPage() {
   const navigate = useNavigate();
   const { profile, loading: authLoading } = useAuth();
+  const { isAdmin } = usePermissions();
   const [activeTab, setActiveTab] = useState<Tab>('quotes');
   const [clients, setClients] = useState<Client[]>([]);
   const [quotes, setQuotes] = useState<Quote[]>([]);
@@ -443,6 +445,7 @@ export default function SalesPage() {
                   loadData();
                   setSelectedClient(null);
                 }}
+                isAdmin={isAdmin}
               />
             </div>
           )}
@@ -810,12 +813,13 @@ export default function SalesPage() {
 }
 
 // Inline Client Editor Component - No modal, shows inline
-function InlineClientEditor({ client, companyId, onClose, onSave, onDelete }: { 
+function InlineClientEditor({ client, companyId, onClose, onSave, onDelete, isAdmin = false }: { 
   client: Client | null; 
   companyId: string; 
   onClose: () => void; 
   onSave: (client: Client) => void;
   onDelete: () => void;
+  isAdmin?: boolean;
 }) {
   const isNew = !client;
   const [saving, setSaving] = useState(false);
@@ -1158,8 +1162,8 @@ function InlineClientEditor({ client, companyId, onClose, onSave, onDelete }: {
         )}
       </div>
 
-      {/* Contacts Section - Clean Layout */}
-      {(isNew || !isNew) && (
+      {/* Contacts Section - Clean Layout (Admin only) */}
+      {isAdmin && (
         <div className="border border-neutral-200 rounded-xl p-5">
           <h3 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-4">Contacts</h3>
           {editing ? (

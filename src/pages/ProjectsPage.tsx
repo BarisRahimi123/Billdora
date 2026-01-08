@@ -49,7 +49,7 @@ export default function ProjectsPage() {
   const { projectId } = useParams();
   const navigate = useNavigate();
   const { profile, user, loading: authLoading } = useAuth();
-  const { canCreate, canEdit, canDelete, canViewFinancials } = usePermissions();
+  const { canCreate, canEdit, canDelete, canViewFinancials, isAdmin } = usePermissions();
   const [projects, setProjects] = useState<Project[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
@@ -429,6 +429,7 @@ export default function ProjectsPage() {
                 if (projectId) loadProjectDetails(projectId);
               }}
               canViewFinancials={canViewFinancials}
+              isAdmin={isAdmin}
             />
           )}
 
@@ -1625,10 +1626,11 @@ function ProjectVitalsTab({ project, clients, onSave, canViewFinancials, formatC
 }
 
 // Client Tab Component
-function ClientTabContent({ client, onClientUpdate, canViewFinancials = true }: {
+function ClientTabContent({ client, onClientUpdate, canViewFinancials = true, isAdmin = false }: {
   client?: Client;
   onClientUpdate: (client: Client) => Promise<void>;
   canViewFinancials?: boolean;
+  isAdmin?: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [editData, setEditData] = useState<Partial<Client>>({});
@@ -1773,8 +1775,8 @@ function ClientTabContent({ client, onClientUpdate, canViewFinancials = true }: 
         )}
       </div>
 
-      {/* Contacts Section - Clean Layout */}
-      {canViewFinancials && (
+      {/* Contacts Section - Clean Layout (Admin only) */}
+      {isAdmin && (
       <div className="border border-neutral-200 rounded-xl p-5">
         <h3 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-4">Contacts</h3>
         {editing ? (
@@ -4106,7 +4108,7 @@ function InlineBillingInvoiceView({
 }
 
 
-// Project Details Tab Component
+// Project Details Tab Component - Simplified
 function ProjectDetailsTab({ 
   project, 
   companyId,
@@ -4119,102 +4121,31 @@ function ProjectDetailsTab({
   const [formData, setFormData] = useState({
     status: project.status || 'active',
     category: project.category || 'O',
-    display_as: project.display_as || '',
-    budget_style: project.budget_style || 'standard_by_task',
-    project_type_id: project.project_type_id || '',
-    allow_everyone_billing: project.allow_everyone_billing || false,
-    hours_non_billable: project.hours_non_billable || false,
-    current_status_id: project.current_status_id || '',
-    status_notes: project.status_notes || '',
-    billing_status_id: project.billing_status_id || '',
     start_date: project.start_date || '',
     due_date: project.due_date || '',
-    group_id: project.group_id || '',
-    function_id: project.function_id || '',
-    location_id: project.location_id || '',
-    quickbooks_link: project.quickbooks_link || '',
-    default_class: project.default_class || '',
-    salesforce_link: project.salesforce_link || '',
+    status_notes: project.status_notes || '',
   });
   
-  const [projectTypes, setProjectTypes] = useState<FieldValue[]>([]);
-  const [projectStatuses, setProjectStatuses] = useState<StatusCode[]>([]);
-  const [billingStatuses, setBillingStatuses] = useState<StatusCode[]>([]);
-  const [costCenterGroups, setCostCenterGroups] = useState<CostCenter[]>([]);
-  const [costCenterFunctions, setCostCenterFunctions] = useState<CostCenter[]>([]);
-  const [costCenterLocations, setCostCenterLocations] = useState<CostCenter[]>([]);
   const [saving, setSaving] = useState(false);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (companyId) loadDropdownData();
-  }, [companyId]);
 
   useEffect(() => {
     setFormData({
       status: project.status || 'active',
       category: project.category || 'O',
-      display_as: project.display_as || '',
-      budget_style: project.budget_style || 'standard_by_task',
-      project_type_id: project.project_type_id || '',
-      allow_everyone_billing: project.allow_everyone_billing || false,
-      hours_non_billable: project.hours_non_billable || false,
-      current_status_id: project.current_status_id || '',
-      status_notes: project.status_notes || '',
-      billing_status_id: project.billing_status_id || '',
       start_date: project.start_date || '',
       due_date: project.due_date || '',
-      group_id: project.group_id || '',
-      function_id: project.function_id || '',
-      location_id: project.location_id || '',
-      quickbooks_link: project.quickbooks_link || '',
-      default_class: project.default_class || '',
-      salesforce_link: project.salesforce_link || '',
+      status_notes: project.status_notes || '',
     });
   }, [project]);
-
-  async function loadDropdownData() {
-    setLoading(true);
-    try {
-      const [types, pStatuses, bStatuses, groups, functions, locations] = await Promise.all([
-        settingsApi.getFieldValues('project_types', companyId),
-        settingsApi.getStatusCodes('project_statuses', companyId),
-        settingsApi.getStatusCodes('billing_statuses', companyId),
-        settingsApi.getCostCenters('cost_center_groups', companyId),
-        settingsApi.getCostCenters('cost_center_functions', companyId),
-        settingsApi.getCostCenters('cost_center_locations', companyId),
-      ]);
-      setProjectTypes(types);
-      setProjectStatuses(pStatuses);
-      setBillingStatuses(bStatuses);
-      setCostCenterGroups(groups);
-      setCostCenterFunctions(functions);
-      setCostCenterLocations(locations);
-    } catch (error) {
-      console.error('Failed to load dropdown data:', error);
-    }
-    setLoading(false);
-  }
 
   async function handleSave() {
     setSaving(true);
     try {
-      // Convert empty strings to null for UUID and date fields
       const cleanedData = {
         ...formData,
-        project_type_id: formData.project_type_id || null,
-        current_status_id: formData.current_status_id || null,
-        billing_status_id: formData.billing_status_id || null,
-        group_id: formData.group_id || null,
-        function_id: formData.function_id || null,
-        location_id: formData.location_id || null,
         start_date: formData.start_date || null,
         due_date: formData.due_date || null,
-        display_as: formData.display_as || null,
         status_notes: formData.status_notes || null,
-        quickbooks_link: formData.quickbooks_link || null,
-        default_class: formData.default_class || null,
-        salesforce_link: formData.salesforce_link || null,
       };
       await onUpdate(cleanedData);
       alert('Project details saved successfully!');
@@ -4225,27 +4156,12 @@ function ProjectDetailsTab({
     setSaving(false);
   }
 
-  const BUDGET_STYLES = [
-    { value: 'standard_by_task', label: 'Standard By Task' },
-    { value: 'fixed_fee', label: 'Fixed Fee' },
-    { value: 'time_materials', label: 'Time & Materials' },
-    { value: 'retainer', label: 'Retainer' },
-  ];
-
   const STATUS_OPTIONS = [
     { value: 'not_started', label: 'Not Started' },
     { value: 'active', label: 'Active' },
     { value: 'on_hold', label: 'On Hold' },
     { value: 'completed', label: 'Completed' },
   ];
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <div className="animate-spin w-8 h-8 border-2 border-neutral-400 border-t-transparent rounded-full" />
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
@@ -4260,14 +4176,25 @@ function ProjectDetailsTab({
         </button>
       </div>
 
-      {/* Status & Category - Primary Fields */}
-      <div className="grid grid-cols-2 gap-6 p-4 bg-[#476E66]/10 rounded-xl border border-neutral-900-100">
+      {/* Project Name - Read Only */}
+      <div>
+        <label className="block text-sm font-medium text-neutral-700 mb-1">Project Name</label>
+        <input
+          type="text"
+          value={project.name}
+          disabled
+          className="w-full px-3 py-2 border border-neutral-200 rounded-lg bg-neutral-50 text-neutral-600"
+        />
+      </div>
+
+      {/* Status & Category */}
+      <div className="grid grid-cols-2 gap-6">
         <div>
           <label className="block text-sm font-medium text-neutral-700 mb-1">Project Status</label>
           <select
             value={formData.status}
             onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-            className="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none bg-white"
+            className="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-[#476E66] outline-none bg-white"
           >
             {STATUS_OPTIONS.map(opt => (
               <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -4279,7 +4206,7 @@ function ProjectDetailsTab({
           <select
             value={formData.category}
             onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-            className="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none bg-white"
+            className="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-[#476E66] outline-none bg-white"
           >
             {PROJECT_CATEGORIES.map(cat => (
               <option key={cat.value} value={cat.value}>{cat.label}</option>
@@ -4288,244 +4215,41 @@ function ProjectDetailsTab({
         </div>
       </div>
 
-      {/* Basic Info */}
+      {/* Dates */}
       <div className="grid grid-cols-2 gap-6">
         <div>
-          <label className="block text-sm font-medium text-neutral-700 mb-1">Name</label>
+          <label className="block text-sm font-medium text-neutral-700 mb-1">Start Date</label>
           <input
-            type="text"
-            value={project.name}
-            disabled
-            className="w-full px-3 py-2 border border-neutral-200 rounded-lg bg-neutral-50 text-neutral-500"
+            type="date"
+            value={formData.start_date}
+            onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+            className="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-[#476E66] outline-none"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-neutral-700 mb-1">ID</label>
+          <label className="block text-sm font-medium text-neutral-700 mb-1">Due Date</label>
           <input
-            type="text"
-            value={project.id}
-            disabled
-            className="w-full px-3 py-2 border border-neutral-200 rounded-lg bg-neutral-50 text-neutral-500 font-mono text-sm"
+            type="date"
+            value={formData.due_date}
+            onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
+            className="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-[#476E66] outline-none"
           />
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-6">
-        <div>
-          <label className="block text-sm font-medium text-neutral-700 mb-1">Display As</label>
-          <input
-            type="text"
-            value={formData.display_as}
-            onChange={(e) => setFormData({ ...formData, display_as: e.target.value })}
-            placeholder="Alternative display name"
-            className="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-neutral-400 outline-none"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-neutral-700 mb-1">Budget Style</label>
-          <select
-            value={formData.budget_style}
-            onChange={(e) => setFormData({ ...formData, budget_style: e.target.value })}
-            className="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-neutral-400 outline-none"
-          >
-            {BUDGET_STYLES.map(style => (
-              <option key={style.value} value={style.value}>{style.label}</option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-6">
-        <div>
-          <label className="block text-sm font-medium text-neutral-700 mb-1">Project Type</label>
-          <select
-            value={formData.project_type_id}
-            onChange={(e) => setFormData({ ...formData, project_type_id: e.target.value })}
-            className="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-neutral-400 outline-none"
-          >
-            <option value="">Select type...</option>
-            {projectTypes.map(type => (
-              <option key={type.id} value={type.id}>{type.value}</option>
-            ))}
-          </select>
-        </div>
-        <div className="flex items-end gap-6">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={formData.allow_everyone_billing}
-              onChange={(e) => setFormData({ ...formData, allow_everyone_billing: e.target.checked })}
-              className="w-4 h-4 rounded border-neutral-300"
-            />
-            <span className="text-sm text-neutral-700">Allow everyone to bill</span>
-          </label>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={formData.hours_non_billable}
-              onChange={(e) => setFormData({ ...formData, hours_non_billable: e.target.checked })}
-              className="w-4 h-4 rounded border-neutral-300"
-            />
-            <span className="text-sm text-neutral-700">Hours/Expenses non-billable</span>
-          </label>
-        </div>
-      </div>
-
-      {/* Status Section */}
-      <div className="border-t border-neutral-200 pt-6">
-        <h4 className="text-md font-medium text-neutral-800 mb-4">Status</h4>
-        <div className="grid grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1">Current Status</label>
-            <select
-              value={formData.current_status_id}
-              onChange={(e) => setFormData({ ...formData, current_status_id: e.target.value })}
-              className="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-neutral-400 outline-none"
-            >
-              <option value="">Select status...</option>
-              {projectStatuses.map(status => (
-                <option key={status.id} value={status.id}>{status.value}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1">Billing Status</label>
-            <select
-              value={formData.billing_status_id}
-              onChange={(e) => setFormData({ ...formData, billing_status_id: e.target.value })}
-              className="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-neutral-400 outline-none"
-            >
-              <option value="">Select status...</option>
-              {billingStatuses.map(status => (
-                <option key={status.id} value={status.id}>{status.value}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-        <div className="mt-4">
-          <label className="block text-sm font-medium text-neutral-700 mb-1">Status Notes</label>
-          <textarea
-            value={formData.status_notes}
-            onChange={(e) => setFormData({ ...formData, status_notes: e.target.value })}
-            rows={2}
-            className="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-neutral-400 outline-none resize-none"
-            placeholder="Add notes about the current status..."
-          />
-        </div>
-      </div>
-
-      {/* Dates Section */}
-      <div className="border-t border-neutral-200 pt-6">
-        <h4 className="text-md font-medium text-neutral-800 mb-4">Dates</h4>
-        <div className="grid grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1">Start Date</label>
-            <input
-              type="date"
-              value={formData.start_date}
-              onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
-              className="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-neutral-400 outline-none"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1">Due Date</label>
-            <input
-              type="date"
-              value={formData.due_date}
-              onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
-              className="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-neutral-400 outline-none"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Cost Centers Section */}
-      <div className="border-t border-neutral-200 pt-6">
-        <h4 className="text-md font-medium text-neutral-800 mb-4">Cost Centers</h4>
-        <div className="grid grid-cols-3 gap-6">
-          <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1">Group</label>
-            <select
-              value={formData.group_id}
-              onChange={(e) => setFormData({ ...formData, group_id: e.target.value })}
-              className="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-neutral-400 outline-none"
-            >
-              <option value="">Select group...</option>
-              {costCenterGroups.map(g => (
-                <option key={g.id} value={g.id}>{g.name}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1">Function</label>
-            <select
-              value={formData.function_id}
-              onChange={(e) => setFormData({ ...formData, function_id: e.target.value })}
-              className="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-neutral-400 outline-none"
-            >
-              <option value="">Select function...</option>
-              {costCenterFunctions.map(f => (
-                <option key={f.id} value={f.id}>{f.name}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1">Location</label>
-            <select
-              value={formData.location_id}
-              onChange={(e) => setFormData({ ...formData, location_id: e.target.value })}
-              className="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-neutral-400 outline-none"
-            >
-              <option value="">Select location...</option>
-              {costCenterLocations.map(l => (
-                <option key={l.id} value={l.id}>{l.name}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </div>
-
-      {/* Integrations Section */}
-      <div className="border-t border-neutral-200 pt-6">
-        <h4 className="text-md font-medium text-neutral-800 mb-4">Integrations</h4>
-        <div className="grid grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1">QuickBooks Customer/Job Link</label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={formData.quickbooks_link}
-                onChange={(e) => setFormData({ ...formData, quickbooks_link: e.target.value })}
-                className="flex-1 px-3 py-2 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-neutral-400 outline-none"
-                placeholder="QuickBooks link..."
-              />
-              <button className="px-3 py-2 border border-neutral-200 rounded-lg hover:bg-neutral-50 text-sm">
-                Sync
-              </button>
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1">Default Class</label>
-            <input
-              type="text"
-              value={formData.default_class}
-              onChange={(e) => setFormData({ ...formData, default_class: e.target.value })}
-              className="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-neutral-400 outline-none"
-              placeholder="Default class..."
-            />
-          </div>
-        </div>
-        <div className="mt-4">
-          <label className="block text-sm font-medium text-neutral-700 mb-1">Salesforce Opportunity/Job Link</label>
-          <input
-            type="text"
-            value={formData.salesforce_link}
-            onChange={(e) => setFormData({ ...formData, salesforce_link: e.target.value })}
-            className="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-neutral-400 outline-none"
-            placeholder="Salesforce link..."
-          />
-        </div>
+      {/* Notes */}
+      <div>
+        <label className="block text-sm font-medium text-neutral-700 mb-1">Notes</label>
+        <textarea
+          value={formData.status_notes}
+          onChange={(e) => setFormData({ ...formData, status_notes: e.target.value })}
+          rows={3}
+          className="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-[#476E66] outline-none resize-none"
+          placeholder="Add any notes about this project..."
+        />
       </div>
     </div>
   );
 }
+
+
