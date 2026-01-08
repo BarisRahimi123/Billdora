@@ -277,6 +277,18 @@ export default function ProposalPortalPage() {
 
       const data = await res.json();
       if (data.success) {
+        // Update existingResponse so the view shows correct state
+        const statusMap: Record<string, string> = {
+          accept: 'accepted',
+          changes: 'changes_requested',
+          discuss: 'discussion_requested',
+          later: 'deferred'
+        };
+        setExistingResponse({
+          status: statusMap[responseType],
+          signer_name: signerName,
+          responded_at: new Date().toISOString()
+        });
         setStep('complete');
       } else {
         setError(data.error || 'Failed to submit response');
