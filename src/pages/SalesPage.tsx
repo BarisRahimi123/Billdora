@@ -454,6 +454,7 @@ export default function SalesPage() {
                   <th className="text-left px-6 py-4 text-xs font-medium text-neutral-500 uppercase tracking-wider">Client</th>
                   <th className="text-left px-6 py-4 text-xs font-medium text-neutral-500 uppercase tracking-wider">Amount</th>
                   <th className="text-left px-6 py-4 text-xs font-medium text-neutral-500 uppercase tracking-wider">Status</th>
+                  <th className="text-left px-6 py-4 text-xs font-medium text-neutral-500 uppercase tracking-wider">Views</th>
                   <th className="text-left px-6 py-4 text-xs font-medium text-neutral-500 uppercase tracking-wider">Valid Until</th>
                   <th className="w-48"></th>
                 </tr>
@@ -480,6 +481,23 @@ export default function SalesPage() {
                       <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(quote.status)}`}>
                         {quote.status || 'draft'}
                       </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      {(quote.view_count ?? 0) > 0 ? (
+                        <div className="text-sm">
+                          <div className="flex items-center gap-1 text-[#476E66] font-medium">
+                            <Eye className="w-3.5 h-3.5" />
+                            {quote.view_count} view{quote.view_count !== 1 ? 's' : ''}
+                          </div>
+                          {quote.last_viewed_at && (
+                            <div className="text-xs text-neutral-400 mt-0.5">
+                              Last: {new Date(quote.last_viewed_at).toLocaleDateString()} {new Date(quote.last_viewed_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-neutral-400 text-sm">Not viewed</span>
+                      )}
                     </td>
                     <td className="px-6 py-4 text-neutral-600">
                       {quote.valid_until ? new Date(quote.valid_until).toLocaleDateString() : '-'}
@@ -600,6 +618,12 @@ export default function SalesPage() {
                               <p className="font-medium text-neutral-900 truncate">{quote.title}</p>
                               <p className="text-sm text-neutral-500">
                                 {quote.quote_number} • {new Date(quote.created_at || '').toLocaleDateString()}
+                                {(quote.view_count ?? 0) > 0 && (
+                                  <span className="ml-2 text-[#476E66]">
+                                    • <Eye className="w-3 h-3 inline" /> {quote.view_count} view{quote.view_count !== 1 ? 's' : ''}
+                                    {quote.last_viewed_at && ` (${new Date(quote.last_viewed_at).toLocaleDateString()} ${new Date(quote.last_viewed_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})})`}
+                                  </span>
+                                )}
                               </p>
                             </div>
                             <div className="flex items-center shrink-0">

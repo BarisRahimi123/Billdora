@@ -453,6 +453,12 @@ export default function Layout() {
                         ))
                       )}
                     </div>
+                    <button
+                      onClick={() => { navigate('/notifications'); setNotificationsOpen(false); }}
+                      className="w-full p-2 text-center text-sm text-[#476E66] hover:bg-neutral-50 border-t border-neutral-100"
+                    >
+                      View all notifications
+                    </button>
                   </div>
                 )}
               </div>

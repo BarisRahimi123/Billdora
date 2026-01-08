@@ -204,6 +204,8 @@ export interface Quote {
   cover_volume_number?: string;
   scope_of_work?: string;
   created_at?: string;
+  view_count?: number;
+  last_viewed_at?: string;
   client?: Client;
 }
 

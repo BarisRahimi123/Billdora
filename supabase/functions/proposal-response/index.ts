@@ -65,7 +65,7 @@ Deno.serve(async (req) => {
           });
         }
 
-        // Update viewed_at
+        // Update viewed_at on token
         await fetch(`${SUPABASE_URL}/rest/v1/proposal_tokens?id=eq.${tokenRecord.id}`, {
           method: 'PATCH',
           headers: {
@@ -74,6 +74,17 @@ Deno.serve(async (req) => {
             'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
           },
           body: JSON.stringify({ viewed_at: new Date().toISOString() })
+        });
+
+        // Increment view_count and update last_viewed_at on quote
+        await fetch(`${SUPABASE_URL}/rest/v1/rpc/increment_quote_view_count`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_SERVICE_ROLE_KEY!,
+            'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
+          },
+          body: JSON.stringify({ quote_id_param: tokenRecord.quote_id })
         });
 
         // Get quote data
@@ -194,6 +205,45 @@ Deno.serve(async (req) => {
       if (!saveRes.ok) {
         throw new Error('Failed to save response');
       }
+
+      // Get quote and client info for notifications
+      const quoteInfoRes = await fetch(`${SUPABASE_URL}/rest/v1/quotes?id=eq.${quoteId}&select=*`, {
+        headers: { 'apikey': SUPABASE_SERVICE_ROLE_KEY!, 'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` }
+      });
+      const quoteInfo = (await quoteInfoRes.json())[0];
+      
+      const clientInfoRes = await fetch(`${SUPABASE_URL}/rest/v1/clients?id=eq.${quoteInfo?.client_id}&select=*`, {
+        headers: { 'apikey': SUPABASE_SERVICE_ROLE_KEY!, 'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` }
+      });
+      const clientInfo = (await clientInfoRes.json())[0];
+      const clientName = clientInfo?.primary_contact_name?.trim() || clientInfo?.name || 'Client';
+
+      // Create notification for proposal response
+      const notificationType = status === 'accepted' ? 'proposal_signed' : status === 'declined' ? 'proposal_declined' : 'proposal_response';
+      const notificationTitle = status === 'accepted' ? '🎉 Proposal Signed!' : status === 'declined' ? 'Proposal Declined' : 'Proposal Response';
+      const notificationMessage = status === 'accepted' 
+        ? `${clientName} signed proposal #${quoteInfo?.quote_number || ''} - ${quoteInfo?.title || 'Untitled'}`
+        : status === 'declined'
+        ? `${clientName} declined proposal #${quoteInfo?.quote_number || ''}`
+        : `${clientName} responded to proposal #${quoteInfo?.quote_number || ''}`;
+
+      await fetch(`${SUPABASE_URL}/rest/v1/notifications`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_SERVICE_ROLE_KEY!,
+          'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
+        },
+        body: JSON.stringify({
+          company_id: companyId,
+          type: notificationType,
+          title: notificationTitle,
+          message: notificationMessage,
+          reference_id: quoteId,
+          reference_type: 'quote',
+          is_read: false
+        })
+      });
 
       // Update quote status if accepted and send confirmation email
       if (status === 'accepted') {
