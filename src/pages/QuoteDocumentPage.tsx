@@ -538,6 +538,8 @@ export default function QuoteDocumentPage() {
           companyId: profile?.company_id,
           clientEmail: client.email,
           clientName: client.name,
+          billingContactEmail: client.billing_contact_email || null,
+          billingContactName: client.billing_contact_name || null,
           projectName: projectName || documentTitle,
           companyName: companyInfo.name,
           senderName: profile?.full_name || companyInfo.name,
@@ -1005,13 +1007,57 @@ export default function QuoteDocumentPage() {
                     </div>
                   </div>
                   {client && (
-                    <div className="space-y-1">
-                      <p className="font-semibold text-neutral-900">{client.name}</p>
-                      {client.display_name && client.display_name !== client.name && (
-                        <p className="text-neutral-600 text-sm">{client.display_name}</p>
+                    <div className="space-y-3">
+                      {/* Company Info */}
+                      <div>
+                        <p className="font-semibold text-neutral-900">{client.name}</p>
+                        {client.display_name && client.display_name !== client.name && (
+                          <p className="text-neutral-600 text-sm">{client.display_name}</p>
+                        )}
+                        {(client.address || client.city || client.state || client.zip) && (
+                          <p className="text-neutral-500 text-sm">
+                            {[client.address, client.city, client.state, client.zip].filter(Boolean).join(', ')}
+                          </p>
+                        )}
+                        {client.website && (
+                          <p className="text-neutral-500 text-sm">{client.website}</p>
+                        )}
+                        {client.phone && <p className="text-neutral-500 text-sm">{client.phone}</p>}
+                      </div>
+                      
+                      {/* Primary Contact */}
+                      {client.primary_contact_name && (
+                        <div className="border-t border-neutral-100 pt-2">
+                          <p className="text-xs font-medium text-neutral-400 uppercase tracking-wider mb-1">Primary Contact</p>
+                          <p className="text-sm font-medium text-neutral-800">{client.primary_contact_name}</p>
+                          {client.primary_contact_title && (
+                            <p className="text-xs text-neutral-500">{client.primary_contact_title}</p>
+                          )}
+                          {client.primary_contact_email && (
+                            <p className="text-sm text-neutral-600">{client.primary_contact_email}</p>
+                          )}
+                          {client.primary_contact_phone && (
+                            <p className="text-sm text-neutral-600">{client.primary_contact_phone}</p>
+                          )}
+                        </div>
                       )}
-                      {client.email && <p className="text-neutral-500 text-sm">{client.email}</p>}
-                      {client.phone && <p className="text-neutral-500 text-sm">{client.phone}</p>}
+                      
+                      {/* Billing Contact */}
+                      {client.billing_contact_name && (
+                        <div className="border-t border-neutral-100 pt-2">
+                          <p className="text-xs font-medium text-neutral-400 uppercase tracking-wider mb-1">Billing Contact</p>
+                          <p className="text-sm font-medium text-neutral-800">{client.billing_contact_name}</p>
+                          {client.billing_contact_title && (
+                            <p className="text-xs text-neutral-500">{client.billing_contact_title}</p>
+                          )}
+                          {client.billing_contact_email && (
+                            <p className="text-sm text-neutral-600">{client.billing_contact_email}</p>
+                          )}
+                          {client.billing_contact_phone && (
+                            <p className="text-sm text-neutral-600">{client.billing_contact_phone}</p>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
                   {!client && <p className="text-neutral-400 text-sm italic">No client selected</p>}
@@ -1992,6 +2038,12 @@ export default function QuoteDocumentPage() {
                   <p className="text-sm text-neutral-500 mb-1">Sending to</p>
                   <p className="font-medium text-neutral-900">{client?.name}</p>
                   <p className="text-sm text-neutral-600">{client?.email}</p>
+                  {client?.billing_contact_email && (
+                    <div className="mt-2 pt-2 border-t border-neutral-200">
+                      <p className="text-xs text-neutral-400">CC: Billing Contact</p>
+                      <p className="text-sm text-neutral-600">{client.billing_contact_name || 'Billing'} - {client.billing_contact_email}</p>
+                    </div>
+                  )}
                 </div>
                 <div className="bg-neutral-50 rounded-xl p-4">
                   <p className="text-sm text-neutral-500 mb-1">Proposal</p>

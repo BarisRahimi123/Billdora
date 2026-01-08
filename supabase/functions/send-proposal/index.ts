@@ -10,7 +10,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { quoteId, companyId, clientEmail, clientName, projectName, companyName, senderName, validUntil, portalUrl, letterContent } = await req.json();
+    const { quoteId, companyId, clientEmail, clientName, billingContactEmail, billingContactName, projectName, companyName, senderName, validUntil, portalUrl, letterContent } = await req.json();
 
     const SENDGRID_API_KEY = Deno.env.get('SENDGRID_API_KEY');
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
@@ -140,7 +140,10 @@ Deno.serve(async (req) => {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        personalizations: [{ to: [{ email: clientEmail, name: clientName }] }],
+        personalizations: [{ 
+          to: [{ email: clientEmail, name: clientName }],
+          ...(billingContactEmail ? { cc: [{ email: billingContactEmail, name: billingContactName || 'Billing' }] } : {})
+        }],
         from: { email: 'info@billdora.com', name: companyName },
         subject: `Proposal for ${projectName} - ${companyName}`,
         content: [
