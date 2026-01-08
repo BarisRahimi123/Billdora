@@ -221,6 +221,9 @@ export interface QuoteLineItem {
   sort_order?: number;
   estimated_days?: number;
   start_offset?: number;
+  start_type?: string;
+  depends_on?: string;
+  overlap_days?: number;
   created_at?: string;
 }
 

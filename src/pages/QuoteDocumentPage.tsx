@@ -487,7 +487,10 @@ export default function QuoteDocumentPage() {
           taxed: item.taxed || false,
           amount: (item.unitPrice || 0) * (item.qty || 1),
           estimated_days: item.estimatedDays || 1,
-          start_offset: item.startOffset || 0
+          start_offset: item.startOffset || 0,
+          start_type: item.startType || 'parallel',
+          depends_on: item.dependsOn || '',
+          overlap_days: item.overlapDays || 0
         })));
       }
 
