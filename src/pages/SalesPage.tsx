@@ -1122,7 +1122,7 @@ function InlineClientEditor({ client, companyId, onClose, onSave, onDelete }: {
       </div>
 
       {/* Primary Contact */}
-      {!isNew && (
+      {(isNew || !isNew) && (
         <div className="border border-neutral-200 rounded-xl p-5">
           <h3 className="text-lg font-semibold text-neutral-900 mb-4">Primary Contact</h3>
           {editing ? (
@@ -1172,7 +1172,7 @@ function InlineClientEditor({ client, companyId, onClose, onSave, onDelete }: {
       )}
 
       {/* Billing Contact */}
-      {!isNew && (
+      {(isNew || !isNew) && (
         <div className="border border-neutral-200 rounded-xl p-5">
           <h3 className="text-lg font-semibold text-neutral-900 mb-4">Billing Contact</h3>
           {editing ? (
