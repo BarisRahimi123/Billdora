@@ -1902,6 +1902,7 @@ function RoleModal({ role, companyId, onClose, onSave }: {
 function ProfileTab() {
   const { profile, refreshProfile } = useAuth();
   const [fullName, setFullName] = useState(profile?.full_name || '');
+  const [companyName, setCompanyName] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -1911,6 +1912,18 @@ function ProfileTab() {
       setFullName(profile.full_name || '');
     }
   }, [profile]);
+
+  // Load company name for staff to see which company they belong to
+  useEffect(() => {
+    async function loadCompanyName() {
+      if (!profile?.company_id) return;
+      try {
+        const { data } = await supabase.from('companies').select('name').eq('id', profile.company_id).single();
+        if (data?.name) setCompanyName(data.name);
+      } catch (err) { /* ignore */ }
+    }
+    loadCompanyName();
+  }, [profile?.company_id]);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1978,7 +1991,18 @@ function ProfileTab() {
           />
         </div>
 
-
+        {companyName && (
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 mb-1.5">Company</label>
+            <input
+              type="text"
+              value={companyName}
+              disabled
+              className="w-full h-12 px-4 rounded-xl border border-neutral-200 bg-neutral-50 text-neutral-500"
+            />
+            <p className="text-xs text-neutral-500 mt-1">You are a member of this company</p>
+          </div>
+        )}
 
         <div className="pt-4">
           <button

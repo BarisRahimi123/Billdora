@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { Clock, CheckSquare, DollarSign, TrendingUp, Plus, FileText, FolderPlus, Timer, ChevronDown, X, CheckCircle, XCircle, BarChart3 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { usePermissions } from '../contexts/PermissionsContext';
@@ -44,7 +44,7 @@ interface AgingData {
 }
 
 export default function DashboardPage() {
-  const { user, profile } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
   const { canViewFinancials } = usePermissions();
   const { refreshSubscription } = useSubscription();
   const { showToast } = useToast();
@@ -166,6 +166,35 @@ export default function DashboardPage() {
       }
     }
     loadData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile?.company_id, user?.id]);
+
+  // Extract loadData as a callable function for refresh
+  const loadData = useCallback(async () => {
+    if (!profile?.company_id || !user?.id) return;
+    setLoading(true);
+    try {
+      const [statsData, projectsData, timeEntries, invoicesData] = await Promise.all([
+        api.getDashboardStats(profile.company_id, user.id),
+        api.getProjects(profile.company_id),
+        api.getTimeEntries(profile.company_id, user.id),
+        api.getInvoices(profile.company_id),
+      ]);
+      const activeProjects = projectsData.filter(p => p.status === 'active' || p.status === 'in_progress').length;
+      const totalRevenue = invoicesData.filter(i => i.status === 'paid').reduce((sum, i) => sum + Number(i.total), 0);
+      const outstandingInvoices = invoicesData.filter(i => i.status === 'sent').reduce((sum, i) => sum + Number(i.total), 0);
+      const hoursThisWeek = statsData.billableHours + statsData.nonBillableHours;
+      setStats({ ...statsData, activeProjects, totalRevenue, outstandingInvoices, hoursThisWeek });
+      setProjects(projectsData);
+      const recentActivities = timeEntries.slice(0, 5).map((te: TimeEntry) => ({
+        id: te.id, type: 'time' as const, description: `Logged ${te.hours}h on ${te.project?.name || 'No project'}`, date: te.date, meta: te.description,
+      }));
+      setActivities(recentActivities);
+    } catch (err) {
+      console.error('Failed to refresh dashboard data:', err);
+    } finally {
+      setLoading(false);
+    }
   }, [profile?.company_id, user?.id]);
 
   useEffect(() => {
@@ -233,8 +262,8 @@ export default function DashboardPage() {
       setShowTimeModal(false);
       setTimeEntry({ project_id: '', hours: '', description: '', date: new Date().toISOString().split('T')[0] });
       setTimeErrors({});
-      // Reload page to refresh all stats
-      window.location.reload();
+      // Refresh data without full page reload
+      loadData();
     } catch (err) {
       console.error('Failed to save time entry:', err);
       showToast('Failed to save time entry. Please try again.', 'error');
@@ -243,7 +272,7 @@ export default function DashboardPage() {
     }
   };
 
-  if (loading) {
+  if (authLoading || loading) {
     return <DashboardSkeleton />;
   }
 

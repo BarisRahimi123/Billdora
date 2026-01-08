@@ -12,7 +12,7 @@ interface AuthContextType {
   profile: Profile | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signUp: (email: string, password: string, fullName: string, phone: string, companyName?: string) => Promise<SignUpResult>;
+  signUp: (email: string, password: string, fullName: string, phone: string, companyName?: string, staffData?: { dateOfBirth?: string; address?: string; emergencyContactName?: string; emergencyContactPhone?: string; dateOfHire?: string } | null) => Promise<SignUpResult>;
   signInWithGoogle: () => Promise<{ error: Error | null }>;
   signInWithApple: () => Promise<{ error: Error | null }>;
   signInWithFacebook: () => Promise<{ error: Error | null }>;
@@ -118,7 +118,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error };
   }
 
-  async function signUp(email: string, password: string, fullName: string, phone: string, companyName?: string): Promise<SignUpResult> {
+  async function signUp(email: string, password: string, fullName: string, phone: string, companyName?: string, staffData?: { dateOfBirth?: string; address?: string; emergencyContactName?: string; emergencyContactPhone?: string; dateOfHire?: string } | null): Promise<SignUpResult> {
     const { data, error } = await supabase.auth.signUp({ 
       email, 
       password,
@@ -202,6 +202,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             company_name: companyName || null,
           };
           if (roleId) updateData.role_id = roleId;
+          // Add staff onboarding data if provided (for invited users)
+          if (staffData) {
+            if (staffData.dateOfBirth) updateData.date_of_birth = staffData.dateOfBirth;
+            if (staffData.address) updateData.address = staffData.address;
+            if (staffData.emergencyContactName) updateData.emergency_contact_name = staffData.emergencyContactName;
+            if (staffData.emergencyContactPhone) updateData.emergency_contact_phone = staffData.emergencyContactPhone;
+            if (staffData.dateOfHire) updateData.hire_date = staffData.dateOfHire;
+          }
           
           const { data: updatedProfile } = await supabase.from('profiles')
             .update(updateData)
@@ -222,6 +230,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             company_name: companyName || null,
           };
           if (roleId) profileData.role_id = roleId;
+          // Add staff onboarding data if provided (for invited users)
+          if (staffData) {
+            if (staffData.dateOfBirth) profileData.date_of_birth = staffData.dateOfBirth;
+            if (staffData.address) profileData.address = staffData.address;
+            if (staffData.emergencyContactName) profileData.emergency_contact_name = staffData.emergencyContactName;
+            if (staffData.emergencyContactPhone) profileData.emergency_contact_phone = staffData.emergencyContactPhone;
+            if (staffData.dateOfHire) profileData.hire_date = staffData.dateOfHire;
+          }
           
           const { data: newProfile } = await supabase.from('profiles').insert(profileData).select().single();
           setProfile(newProfile);

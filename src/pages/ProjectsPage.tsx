@@ -121,14 +121,15 @@ export default function ProjectsPage() {
     try {
       const projectsData = await api.getProjects(profile.company_id);
       setProjects(projectsData || []);
-      // Load team members for each project
+      // Load team members for projects in parallel
       const teamsMap: Record<string, {id: string; full_name?: string; avatar_url?: string}[]> = {};
-      for (const p of (projectsData || []).slice(0, 10)) {
-        try {
-          const team = await api.getProjectTeamMembers(p.id);
-          teamsMap[p.id] = (team || []).map(m => ({ id: m.staff_member_id, full_name: m.profile?.full_name, avatar_url: m.profile?.avatar_url }));
-        } catch (e) { /* ignore */ }
-      }
+      const teamPromises = (projectsData || []).slice(0, 10).map(p => 
+        api.getProjectTeamMembers(p.id)
+          .then(team => ({ projectId: p.id, team: (team || []).map(m => ({ id: m.staff_member_id, full_name: m.profile?.full_name, avatar_url: m.profile?.avatar_url })) }))
+          .catch(() => ({ projectId: p.id, team: [] }))
+      );
+      const teams = await Promise.all(teamPromises);
+      teams.forEach(({ projectId, team }) => { teamsMap[projectId] = team; });
       setProjectTeamsMap(teamsMap);
     } catch (error) {
       console.error('Failed to load projects:', error);

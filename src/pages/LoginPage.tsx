@@ -19,6 +19,13 @@ export default function LoginPage() {
   const phoneRef = useRef<HTMLInputElement>(null);
   const companyNameRef = useRef<HTMLInputElement>(null);
   
+  // Staff onboarding fields for invited users
+  const [dateOfBirth, setDateOfBirth] = useState('');
+  const [address, setAddress] = useState('');
+  const [emergencyContactName, setEmergencyContactName] = useState('');
+  const [emergencyContactPhone, setEmergencyContactPhone] = useState('');
+  const [dateOfHire, setDateOfHire] = useState(new Date().toISOString().split('T')[0]);
+  
   // Track if this is an invite-based signup (email locked)
   const [invitedEmail, setInvitedEmail] = useState<string | null>(null);
 
@@ -71,7 +78,9 @@ export default function LoginPage() {
 
     try {
       if (isSignUp) {
-        const result = await signUp(email, password, fullName, phone, companyName);
+        // For invited users, pass staff profile data; for regular signups, pass company name
+        const staffData = invitedEmail ? { dateOfBirth, address, emergencyContactName, emergencyContactPhone, dateOfHire } : null;
+        const result = await signUp(email, password, fullName, phone, invitedEmail ? '' : companyName, staffData);
         if (result.error) throw result.error;
         
         // Redirect to check-email page if confirmation required
@@ -175,17 +184,85 @@ export default function LoginPage() {
                   />
                 </div>
 
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-neutral-900 mb-2">
-                    Company Name <span className="text-neutral-400 text-[10px] normal-case">(optional)</span>
-                  </label>
-                  <input
-                    ref={companyNameRef}
-                    type="text"
-                    className="w-full h-14 px-4 border-2 border-border bg-white focus:border-neutral-900 outline-none transition-colors text-neutral-900 placeholder:text-text-secondary/50"
-                    placeholder="Acme Inc."
-                  />
-                </div>
+                {/* Staff onboarding fields for invited users */}
+                {invitedEmail ? (
+                  <>
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-neutral-900 mb-2">
+                        Date of Birth
+                      </label>
+                      <input
+                        type="date"
+                        value={dateOfBirth}
+                        onChange={(e) => setDateOfBirth(e.target.value)}
+                        className="w-full h-14 px-4 border-2 border-border bg-white focus:border-neutral-900 outline-none transition-colors text-neutral-900"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-neutral-900 mb-2">
+                        Address
+                      </label>
+                      <input
+                        type="text"
+                        value={address}
+                        onChange={(e) => setAddress(e.target.value)}
+                        className="w-full h-14 px-4 border-2 border-border bg-white focus:border-neutral-900 outline-none transition-colors text-neutral-900 placeholder:text-text-secondary/50"
+                        placeholder="123 Main St, City, State"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-neutral-900 mb-2">
+                        Emergency Contact Name
+                      </label>
+                      <input
+                        type="text"
+                        value={emergencyContactName}
+                        onChange={(e) => setEmergencyContactName(e.target.value)}
+                        className="w-full h-14 px-4 border-2 border-border bg-white focus:border-neutral-900 outline-none transition-colors text-neutral-900 placeholder:text-text-secondary/50"
+                        placeholder="Jane Doe"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-neutral-900 mb-2">
+                        Emergency Contact Phone
+                      </label>
+                      <input
+                        type="tel"
+                        value={emergencyContactPhone}
+                        onChange={(e) => setEmergencyContactPhone(e.target.value)}
+                        className="w-full h-14 px-4 border-2 border-border bg-white focus:border-neutral-900 outline-none transition-colors text-neutral-900 placeholder:text-text-secondary/50"
+                        placeholder="+1 (555) 987-6543"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-neutral-900 mb-2">
+                        Date of Hire
+                      </label>
+                      <input
+                        type="date"
+                        value={dateOfHire}
+                        onChange={(e) => setDateOfHire(e.target.value)}
+                        className="w-full h-14 px-4 border-2 border-border bg-white focus:border-neutral-900 outline-none transition-colors text-neutral-900"
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-neutral-900 mb-2">
+                      Company Name <span className="text-neutral-400 text-[10px] normal-case">(optional)</span>
+                    </label>
+                    <input
+                      ref={companyNameRef}
+                      type="text"
+                      className="w-full h-14 px-4 border-2 border-border bg-white focus:border-neutral-900 outline-none transition-colors text-neutral-900 placeholder:text-text-secondary/50"
+                      placeholder="Acme Inc."
+                    />
+                  </div>
+                )}
               </>
             )}
 
