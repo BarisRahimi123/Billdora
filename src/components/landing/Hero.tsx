@@ -55,7 +55,7 @@ export default function Hero() {
               className="text-base md:text-xl mb-6 md:mb-8 max-w-lg"
               style={{ color: '#6B6B6B' }}
             >
-              From proposal to payment — manage your entire business cycle in one elegant platform.
+              From proposal to payment, manage your entire business cycle in one elegant platform.
             </motion.p>
             <motion.div
               initial={{ opacity: 0, y: 20 }}

@@ -149,7 +149,18 @@ export const Pricing = () => {
   }
 
   // Build tiers from database plans or fallback to defaults
-  const tiers = plans.length > 0 ? plans.map((plan) => {
+  // Filter plans to only show the ones matching current billing cycle
+  const filteredPlans = plans.filter((plan) => {
+    const isMonthly = plan.interval === 'month';
+    const isYearly = plan.interval === 'year';
+    const isStarter = plan.name.toLowerCase() === 'starter' || plan.amount === 0;
+    const isEnterprise = plan.name.toLowerCase().includes('enterprise');
+    // Keep starter and enterprise always, filter others by billing cycle
+    if (isStarter || isEnterprise) return true;
+    return billingCycle === 'monthly' ? isMonthly : isYearly;
+  });
+  
+  const tiers = filteredPlans.length > 0 ? filteredPlans.map((plan) => {
     const planKey = plan.name.toLowerCase().split(' ')[0];
     const features = plan.features?.length > 0 
       ? plan.features 
