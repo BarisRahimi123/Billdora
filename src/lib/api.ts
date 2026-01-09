@@ -2054,7 +2054,7 @@ export const companyExpensesApi = {
   getMonthlyAmount(expense: CompanyExpense): number {
     switch (expense.frequency) {
       case 'daily': return expense.amount * 30;
-      case 'weekly': return expense.amount * 4.33;
+      case 'weekly': return expense.amount * 4;
       case 'monthly': return expense.amount;
       case 'quarterly': return expense.amount / 3;
       case 'yearly': return expense.amount / 12;
