@@ -1,9 +1,10 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { Clock, CheckSquare, DollarSign, TrendingUp, Plus, FileText, FolderPlus, Timer, ChevronDown, X, CheckCircle, XCircle, BarChart3 } from 'lucide-react';
+import { Clock, CheckSquare, DollarSign, TrendingUp, Plus, FileText, FolderPlus, Timer, ChevronDown, X, CheckCircle, XCircle, BarChart3, TreePine } from 'lucide-react';
+import BusinessHealthTree from '../components/BusinessHealthTree';
 import { useAuth } from '../contexts/AuthContext';
 import { usePermissions } from '../contexts/PermissionsContext';
 import { useSubscription } from '../contexts/SubscriptionContext';
-import { api, Project, Client, TimeEntry, Invoice } from '../lib/api';
+import { api, Project, Client, TimeEntry, Invoice, Quote, Expense, companyExpensesApi } from '../lib/api';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { DashboardSkeleton } from '../components/Skeleton';
 import { useToast } from '../components/Toast';
@@ -64,6 +65,22 @@ export default function DashboardPage() {
   const [agingData, setAgingData] = useState<AgingData[]>([]);
   const quickAddRef = useRef<HTMLDivElement>(null);
   const [subscriptionNotice, setSubscriptionNotice] = useState<{ type: 'success' | 'canceled'; message: string } | null>(null);
+  const [activeTab, setActiveTab] = useState<'overview' | 'health'>('overview');
+  const [showTargetsModal, setShowTargetsModal] = useState(false);
+  const [healthTargets, setHealthTargets] = useState({
+    cashFlow: 80,
+    utilization: 75,
+    winRate: 30,
+    momentum: 10,
+    profitMargin: 20,
+  });
+  const [healthMetrics, setHealthMetrics] = useState({
+    cashFlow: 0,
+    utilization: 0,
+    winRate: 0,
+    momentum: 0,
+    profitMargin: 0,
+  });
 
   // Handle subscription success/cancel URL params
   useEffect(() => {
@@ -95,11 +112,15 @@ export default function DashboardPage() {
     }
     
     try {
-      const [statsData, projectsData, timeEntries, invoicesData] = await Promise.all([
+      const [statsData, projectsData, timeEntries, invoicesData, quotesData, allTimeEntries, companyExpenses, companyProfiles] = await Promise.all([
         api.getDashboardStats(profile.company_id, user.id),
         api.getProjects(profile.company_id),
         api.getTimeEntries(profile.company_id, user.id),
         api.getInvoices(profile.company_id),
+        api.getQuotes(profile.company_id),
+        api.getTimeEntries(profile.company_id), // All company time entries for utilization
+        companyExpensesApi.getExpenses(profile.company_id),
+        api.getCompanyProfiles(profile.company_id), // Get employee count for capacity
       ]);
       
       // Calculate additional stats
@@ -153,6 +174,48 @@ export default function DashboardPage() {
         else { aging['90+'].count++; aging['90+'].amount += amount; }
       });
       setAgingData(Object.entries(aging).map(([range, data]) => ({ range, ...data })));
+
+      // Calculate Business Health Metrics
+      // 1. Cash Flow: paid invoices / total invoices
+      const totalInvoiceAmount = invoicesData.reduce((sum, i) => sum + Number(i.total || 0), 0);
+      const paidInvoiceAmount = invoicesData.filter(i => i.status === 'paid').reduce((sum, i) => sum + Number(i.total || 0), 0);
+      const cashFlowPct = totalInvoiceAmount > 0 ? Math.round((paidInvoiceAmount / totalInvoiceAmount) * 100) : 0;
+
+      // 2. Utilization: billable hours this month / expected capacity (employees × 160 hrs/month)
+      const activeEmployees = companyProfiles?.length || 1;
+      const expectedCapacity = activeEmployees * 160; // 40 hrs/week × 4 weeks
+      const currentMonth = new Date();
+      const monthStart = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).toISOString().split('T')[0];
+      const billableThisMonth = allTimeEntries
+        .filter(e => e.billable && e.date && e.date >= monthStart)
+        .reduce((sum, e) => sum + Number(e.hours || 0), 0);
+      const utilizationPct = expectedCapacity > 0 ? Math.min(100, Math.round((billableThisMonth / expectedCapacity) * 100)) : 0;
+
+      // 3. Win Rate: accepted quotes / total quotes
+      const totalQuotes = quotesData.length;
+      const acceptedQuotes = quotesData.filter(q => q.status === 'accepted' || q.status === 'converted').length;
+      const winRatePct = totalQuotes > 0 ? Math.round((acceptedQuotes / totalQuotes) * 100) : 0;
+
+      // 4. Momentum: quotes created this month
+      const thisMonth = new Date();
+      const firstOfMonth = new Date(thisMonth.getFullYear(), thisMonth.getMonth(), 1).toISOString();
+      const quotesThisMonth = quotesData.filter(q => q.created_at && q.created_at >= firstOfMonth).length;
+
+      // 5. Profit Margin: (revenue - expenses) / revenue
+      const monthlyOverhead = companyExpenses.reduce((sum, e) => {
+        return sum + companyExpensesApi.getMonthlyAmount(e);
+      }, 0);
+      const annualRevenue = totalRevenue; // Using all-time for now
+      const annualOverhead = monthlyOverhead * 12;
+      const profitMarginPct = annualRevenue > 0 ? Math.round(((annualRevenue - annualOverhead) / annualRevenue) * 100) : 0;
+
+      setHealthMetrics({
+        cashFlow: cashFlowPct,
+        utilization: utilizationPct,
+        winRate: winRatePct,
+        momentum: quotesThisMonth,
+        profitMargin: Math.max(0, profitMarginPct), // Don't show negative
+      });
     } catch (err) {
       console.error('Failed to load dashboard data:', err);
       setError('Failed to load dashboard data. Please try again.');
@@ -282,8 +345,29 @@ export default function DashboardPage() {
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-neutral-900">Dashboard</h1>
-          <p className="text-sm sm:text-base text-neutral-500">Welcome back, {profile?.full_name || 'User'}</p>
+          <div className="flex items-center gap-4">
+            <h1 className="text-xl sm:text-2xl font-bold text-neutral-900">Dashboard</h1>
+            <div className="flex bg-neutral-100 rounded-lg p-1">
+              <button
+                onClick={() => setActiveTab('overview')}
+                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                  activeTab === 'overview' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-600 hover:text-neutral-900'
+                }`}
+              >
+                Overview
+              </button>
+              <button
+                onClick={() => setActiveTab('health')}
+                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors flex items-center gap-1.5 ${
+                  activeTab === 'health' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-600 hover:text-neutral-900'
+                }`}
+              >
+                <TreePine className="w-4 h-4" />
+                Business Health
+              </button>
+            </div>
+          </div>
+          <p className="text-sm sm:text-base text-neutral-500 mt-1">Welcome back, {profile?.full_name || 'User'}</p>
         </div>
         <div className="relative" ref={quickAddRef}>
           <button 
@@ -314,6 +398,14 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {activeTab === 'health' ? (
+        <BusinessHealthTree
+          metrics={healthMetrics}
+          targets={healthTargets}
+          onConfigureTargets={() => setShowTargetsModal(true)}
+        />
+      ) : (
+      <>
       {/* KPI Cards - Row 1 */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {canViewFinancials && <div className="bg-white rounded-2xl p-6 border border-neutral-100">
@@ -560,6 +652,53 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
+
+      </>
+      )}
+
+      {/* Targets Config Modal */}
+      {showTargetsModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-semibold text-neutral-900">Configure Health Targets</h3>
+              <button onClick={() => setShowTargetsModal(false)} className="p-1 hover:bg-neutral-100 rounded-lg">
+                <X className="w-5 h-5 text-neutral-500" />
+              </button>
+            </div>
+            <div className="space-y-4">
+              {[
+                { key: 'cashFlow', label: 'Cash Flow Target', suffix: '%' },
+                { key: 'utilization', label: 'Utilization Target', suffix: '%' },
+                { key: 'winRate', label: 'Win Rate Target', suffix: '%' },
+                { key: 'momentum', label: 'Monthly Quotes Target', suffix: '' },
+                { key: 'profitMargin', label: 'Profit Margin Target', suffix: '%' },
+              ].map(({ key, label, suffix }) => (
+                <div key={key}>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1">{label}</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      value={healthTargets[key as keyof typeof healthTargets]}
+                      onChange={(e) => setHealthTargets(prev => ({ ...prev, [key]: Number(e.target.value) }))}
+                      className="flex-1 px-3 py-2 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-[#476E66] focus:border-transparent"
+                    />
+                    {suffix && <span className="text-neutral-500">{suffix}</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-end gap-3 mt-6">
+              <button onClick={() => setShowTargetsModal(false)} className="px-4 py-2 text-neutral-700 hover:bg-neutral-100 rounded-lg">
+                Cancel
+              </button>
+              <button onClick={() => setShowTargetsModal(false)} className="px-4 py-2 bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54]">
+                Save Targets
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Log Time Modal */}
       {showTimeModal && (
