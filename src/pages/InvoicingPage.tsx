@@ -407,7 +407,7 @@ export default function InvoicingPage() {
             className="flex items-center gap-2 px-4 py-2.5 border border-neutral-200 bg-white text-neutral-700 rounded-xl hover:bg-neutral-50 transition-colors"
           >
             <DollarSign className="w-4 h-4" />
-            Make a Payment
+            Log Payment
           </button>
           <button
             onClick={() => setShowInvoiceModal(true)}
