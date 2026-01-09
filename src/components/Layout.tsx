@@ -355,8 +355,8 @@ export default function Layout() {
       {/* Main Content */}
       <div className={`flex-1 ${hideSidebar ? '' : (sidebarExpanded ? 'lg:ml-64' : 'lg:ml-20')} transition-all duration-300`}>
         {/* Header */}
-        <header className="bg-white border-b border-neutral-100 sticky top-0 z-30">
-          <div className="flex items-center justify-between px-4 lg:px-6 py-4">
+        <header className="bg-white border-b border-neutral-100 sticky top-0 z-30" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+          <div className="flex items-center justify-between px-3 lg:px-6 py-2">
             {/* Mobile menu button */}
             <button 
               onClick={() => setSidebarOpen(true)}
@@ -548,7 +548,7 @@ export default function Layout() {
         </header>
 
         {/* Page Content */}
-        <main className="p-4 lg:p-6">
+        <main className="p-3 lg:p-6">
           <Outlet />
         </main>
 

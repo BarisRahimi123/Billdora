@@ -652,7 +652,7 @@ export default function TimeExpensePage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 p-1 bg-neutral-100 rounded-xl w-fit">
+      <div className="flex gap-1 p-1 bg-neutral-100 rounded-xl w-fit overflow-x-auto">
         <button
           onClick={() => setActiveTab('timesheet')}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${

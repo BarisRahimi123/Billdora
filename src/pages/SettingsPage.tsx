@@ -4870,6 +4870,359 @@ function IntegrationsTab({ companyId }: { companyId: string }) {
           </ul>
         </div>
       </div>
+
+      {/* BigTime Integration Card */}
+      <BigTimeIntegrationCard companyId={companyId} />
+    </div>
+  );
+}
+
+// BigTime Integration Component
+function BigTimeIntegrationCard({ companyId }: { companyId: string }) {
+  const { showToast } = useToast();
+  const [loading, setLoading] = useState(true);
+  const [connecting, setConnecting] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState<{ current: number; total: number; type: string } | null>(null);
+  
+  // Credentials
+  const [apiToken, setApiToken] = useState('');
+  const [firmId, setFirmId] = useState('');
+  const [isConnected, setIsConnected] = useState(false);
+  
+  // Import options
+  const [importClients, setImportClients] = useState(true);
+  const [importProjects, setImportProjects] = useState(true);
+  const [importTasks, setImportTasks] = useState(true);
+  const [importStaff, setImportStaff] = useState(true);
+  const [importTimeEntries, setImportTimeEntries] = useState(false);
+  
+  const SUPABASE_URL = 'https://bqxnagmmegdbqrzhheip.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJxeG5hZ21tZWdkYnFyemhoZWlwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI2OTM5NTgsImV4cCI6MjA2ODI2OTk1OH0.LBb7KaCSs7LpsD9NZCOcartkcDIIALBIrpnYcv5Y0yY';
+
+  useEffect(() => {
+    loadBigTimeStatus();
+  }, [companyId]);
+
+  async function loadBigTimeStatus() {
+    setLoading(true);
+    try {
+      const settings = await api.getCompanySettings(companyId);
+      if (settings?.bigtime_api_token && settings?.bigtime_firm_id) {
+        setApiToken(settings.bigtime_api_token);
+        setFirmId(settings.bigtime_firm_id);
+        setIsConnected(true);
+      }
+    } catch (error) {
+      console.error('Failed to load BigTime status:', error);
+    }
+    setLoading(false);
+  }
+
+  async function handleConnect() {
+    if (!apiToken.trim() || !firmId.trim()) {
+      showToast('Please enter both API Token and Firm ID', 'error');
+      return;
+    }
+    setConnecting(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      // Validate credentials by testing the API
+      const testResponse = await fetch(`${SUPABASE_URL}/functions/v1/bigtime-import`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${session?.access_token || SUPABASE_ANON_KEY}`
+        },
+        body: JSON.stringify({
+          action: 'validate',
+          company_id: companyId,
+          api_token: apiToken,
+          firm_id: firmId
+        })
+      });
+      const result = await testResponse.json();
+      if (result.error) {
+        throw new Error(result.error.message || 'Invalid credentials');
+      }
+      // Save credentials
+      await api.upsertCompanySettings({
+        company_id: companyId,
+        bigtime_api_token: apiToken,
+        bigtime_firm_id: firmId
+      });
+      setIsConnected(true);
+      showToast('BigTime connected successfully!', 'success');
+    } catch (error: any) {
+      console.error('BigTime connect error:', error);
+      showToast(error.message || 'Failed to connect to BigTime', 'error');
+    }
+    setConnecting(false);
+  }
+
+  async function handleDisconnect() {
+    if (!confirm('Are you sure you want to disconnect BigTime? Your imported data will remain.')) {
+      return;
+    }
+    setDisconnecting(true);
+    try {
+      await api.upsertCompanySettings({
+        company_id: companyId,
+        bigtime_api_token: null,
+        bigtime_firm_id: null
+      });
+      setApiToken('');
+      setFirmId('');
+      setIsConnected(false);
+      showToast('BigTime disconnected', 'success');
+    } catch (error: any) {
+      console.error('BigTime disconnect error:', error);
+      showToast(error.message || 'Failed to disconnect BigTime', 'error');
+    }
+    setDisconnecting(false);
+  }
+
+  async function handleStartImport() {
+    const selectedTypes = [];
+    if (importClients) selectedTypes.push('clients');
+    if (importProjects) selectedTypes.push('projects');
+    if (importTasks) selectedTypes.push('tasks');
+    if (importStaff) selectedTypes.push('staff');
+    if (importTimeEntries) selectedTypes.push('time_entries');
+
+    if (selectedTypes.length === 0) {
+      showToast('Please select at least one data type to import', 'error');
+      return;
+    }
+
+    setImporting(true);
+    setImportProgress({ current: 0, total: selectedTypes.length, type: selectedTypes[0] });
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      for (let i = 0; i < selectedTypes.length; i++) {
+        const dataType = selectedTypes[i];
+        setImportProgress({ current: i, total: selectedTypes.length, type: dataType });
+        
+        const response = await fetch(`${SUPABASE_URL}/functions/v1/bigtime-import`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${session?.access_token || SUPABASE_ANON_KEY}`
+          },
+          body: JSON.stringify({
+            action: 'import',
+            company_id: companyId,
+            api_token: apiToken,
+            firm_id: firmId,
+            data_type: dataType
+          })
+        });
+        
+        const result = await response.json();
+        if (result.error) {
+          throw new Error(`Failed to import ${dataType}: ${result.error.message}`);
+        }
+      }
+      
+      setImportProgress({ current: selectedTypes.length, total: selectedTypes.length, type: 'complete' });
+      showToast('Import completed successfully!', 'success');
+    } catch (error: any) {
+      console.error('Import error:', error);
+      showToast(error.message || 'Import failed', 'error');
+    }
+    
+    setTimeout(() => {
+      setImporting(false);
+      setImportProgress(null);
+    }, 2000);
+  }
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-2xl border border-neutral-100 p-6 mt-6">
+        <div className="flex justify-center py-8">
+          <div className="animate-spin w-6 h-6 border-2 border-neutral-600 border-t-transparent rounded-full" />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-2xl border border-neutral-100 p-6 mt-6">
+      <h2 className="text-xl font-semibold text-neutral-900 mb-6">Data Import</h2>
+      
+      {/* BigTime Card */}
+      <div className="border border-neutral-200 rounded-xl p-6">
+        <div className="flex items-start gap-4">
+          {/* BigTime Logo - Clock Icon */}
+          <div className="w-12 h-12 bg-[#0066CC] rounded-xl flex items-center justify-center flex-shrink-0">
+            <svg viewBox="0 0 24 24" className="w-7 h-7 text-white" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12,6 12,12 16,14" />
+            </svg>
+          </div>
+          
+          <div className="flex-1">
+            <div className="flex items-center gap-3 mb-2">
+              <h3 className="text-lg font-semibold text-neutral-900">BigTime</h3>
+              {isConnected ? (
+                <span className="px-2.5 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-medium">
+                  Connected
+                </span>
+              ) : (
+                <span className="px-2.5 py-1 bg-neutral-100 text-neutral-600 rounded-full text-xs font-medium">
+                  Not Connected
+                </span>
+              )}
+            </div>
+            <p className="text-neutral-600 text-sm mb-4">
+              Import your existing clients, projects, tasks, staff, and time entries from BigTime.
+            </p>
+            
+            {isConnected ? (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-sm text-neutral-600">
+                  <Check className="w-4 h-4 text-emerald-600" />
+                  <span>Firm ID: {firmId}</span>
+                </div>
+                
+                {/* Import Options */}
+                <div className="border-t border-neutral-100 pt-4 mt-4">
+                  <h4 className="font-medium text-neutral-900 mb-3">Select data to import:</h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {[
+                      { id: 'clients', label: 'Clients', checked: importClients, onChange: setImportClients },
+                      { id: 'projects', label: 'Projects', checked: importProjects, onChange: setImportProjects },
+                      { id: 'tasks', label: 'Tasks', checked: importTasks, onChange: setImportTasks },
+                      { id: 'staff', label: 'Staff/Users', checked: importStaff, onChange: setImportStaff },
+                      { id: 'timeEntries', label: 'Time Entries', checked: importTimeEntries, onChange: setImportTimeEntries },
+                    ].map(opt => (
+                      <label key={opt.id} className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={opt.checked}
+                          onChange={(e) => opt.onChange(e.target.checked)}
+                          disabled={importing}
+                          className="w-4 h-4 rounded border-neutral-300 text-[#0066CC] focus:ring-[#0066CC]"
+                        />
+                        <span className="text-sm text-neutral-700">{opt.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                
+                {/* Import Progress */}
+                {importing && importProgress && (
+                  <div className="bg-blue-50 border border-blue-100 rounded-lg p-4">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="animate-spin w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full" />
+                      <span className="text-sm font-medium text-blue-900">
+                        {importProgress.type === 'complete' 
+                          ? 'Import complete!' 
+                          : `Importing ${importProgress.type}...`}
+                      </span>
+                    </div>
+                    <div className="w-full bg-blue-200 rounded-full h-2">
+                      <div 
+                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${(importProgress.current / importProgress.total) * 100}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-blue-700 mt-1">
+                      {importProgress.current} of {importProgress.total} data types processed
+                    </p>
+                  </div>
+                )}
+                
+                {/* Action Buttons */}
+                <div className="flex items-center gap-3 pt-2">
+                  <button
+                    onClick={handleStartImport}
+                    disabled={importing}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-[#0066CC] text-white font-medium rounded-lg hover:bg-[#0052A3] transition-colors disabled:opacity-50"
+                  >
+                    {importing ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        Importing...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-4 h-4" />
+                        Start Import
+                      </>
+                    )}
+                  </button>
+                  <button
+                    onClick={handleDisconnect}
+                    disabled={disconnecting || importing}
+                    className="px-4 py-2 text-sm font-medium text-neutral-700 border border-neutral-300 rounded-lg hover:bg-neutral-50 transition-colors disabled:opacity-50"
+                  >
+                    {disconnecting ? 'Disconnecting...' : 'Disconnect'}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* Credentials Form */}
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-1">
+                      API Token
+                    </label>
+                    <input
+                      type="password"
+                      value={apiToken}
+                      onChange={(e) => setApiToken(e.target.value)}
+                      placeholder="Enter your BigTime API token"
+                      className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-[#0066CC] focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-1">
+                      Firm ID
+                    </label>
+                    <input
+                      type="text"
+                      value={firmId}
+                      onChange={(e) => setFirmId(e.target.value)}
+                      placeholder="Enter your BigTime Firm ID"
+                      className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-[#0066CC] focus:border-transparent"
+                    />
+                  </div>
+                </div>
+                
+                <button
+                  onClick={handleConnect}
+                  disabled={connecting}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-[#0066CC] text-white font-medium rounded-lg hover:bg-[#0052A3] transition-colors disabled:opacity-50"
+                >
+                  {connecting ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Connecting...
+                    </>
+                  ) : (
+                    <>
+                      <Link className="w-4 h-4" />
+                      Connect BigTime
+                    </>
+                  )}
+                </button>
+                
+                <p className="text-xs text-neutral-500">
+                  Find your API credentials in BigTime under My Account → API Settings
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

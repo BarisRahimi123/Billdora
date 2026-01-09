@@ -51,7 +51,7 @@ function AppRoutes() {
 
   return (
     <Routes>
-      <Route path="/" element={<LandingPage />} />
+      <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/login" element={loading ? <div className="min-h-screen flex items-center justify-center bg-neutral-50"><div className="animate-spin w-8 h-8 border-2 border-neutral-500 border-t-transparent rounded-full" /></div> : (user ? <Navigate to="/dashboard" replace /> : <LoginPage />)} />
       <Route path="/check-email" element={<CheckEmailPage />} />
       <Route path="/terms" element={<TermsPage />} />

@@ -246,6 +246,8 @@ export interface CompanySettings {
   default_tax_rate?: number;
   default_terms?: string;
   stripe_account_id?: string;
+  bigtime_api_token?: string | null;
+  bigtime_firm_id?: string | null;
   created_at?: string;
 }
 

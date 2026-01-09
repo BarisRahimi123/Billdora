@@ -340,70 +340,72 @@ export default function ProjectsPage() {
           </span>
         </div>
 
-        {/* Quick Stats */}
-        <div className="grid grid-cols-4 gap-4">
-          <div className="bg-white rounded-xl border border-neutral-100 p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                <Clock className="w-5 h-5 text-blue-600" />
+        {/* Quick Stats - Responsive grid */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
+          <div className="bg-white rounded-xl border border-neutral-100 p-3 sm:p-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
+                <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
               </div>
-              <div>
-                <p className="text-sm text-neutral-500">Hours Logged</p>
-                <p className="text-xl font-bold text-neutral-900">{stats.totalHours}h</p>
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm text-neutral-500">Hours</p>
+                <p className="text-base sm:text-xl font-bold text-neutral-900">{stats.totalHours}h</p>
               </div>
             </div>
           </div>
-          {canViewFinancials && <div className="bg-white rounded-xl border border-neutral-100 p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center">
-                <DollarSign className="w-5 h-5 text-neutral-900" />
+          {canViewFinancials && <div className="bg-white rounded-xl border border-neutral-100 p-3 sm:p-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-neutral-900" />
               </div>
-              <div>
-                <p className="text-sm text-neutral-500">Budget</p>
-                <p className="text-xl font-bold text-neutral-900">{formatCurrency(selectedProject.budget)}</p>
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm text-neutral-500">Budget</p>
+                <p className="text-base sm:text-xl font-bold text-neutral-900 truncate">{formatCurrency(selectedProject.budget)}</p>
               </div>
             </div>
           </div>}
-          <div className="bg-white rounded-xl border border-neutral-100 p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
-                <CheckSquare className="w-5 h-5 text-purple-600" />
+          <div className="bg-white rounded-xl border border-neutral-100 p-3 sm:p-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0">
+                <CheckSquare className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600" />
               </div>
-              <div>
-                <p className="text-sm text-neutral-500">Tasks</p>
-                <p className="text-xl font-bold text-neutral-900">{tasks.filter(t => t.status === 'completed').length}/{tasks.length}</p>
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm text-neutral-500">Tasks</p>
+                <p className="text-base sm:text-xl font-bold text-neutral-900">{tasks.filter(t => t.status === 'completed').length}/{tasks.length}</p>
               </div>
             </div>
           </div>
-          {canViewFinancials && <div className="bg-white rounded-xl border border-neutral-100 p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center">
-                <FileText className="w-5 h-5 text-neutral-900" />
+          {canViewFinancials && <div className="bg-white rounded-xl border border-neutral-100 p-3 sm:p-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
+                <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-neutral-900" />
               </div>
-              <div>
-                <p className="text-sm text-neutral-500">Invoiced</p>
-                <p className="text-xl font-bold text-neutral-900">{formatCurrency(stats.totalInvoiced)}</p>
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm text-neutral-500">Invoiced</p>
+                <p className="text-base sm:text-xl font-bold text-neutral-900 truncate">{formatCurrency(stats.totalInvoiced)}</p>
               </div>
             </div>
           </div>}
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-1 p-1 bg-neutral-100 rounded-xl w-fit">
-          {(['vitals', 'client', 'details', 'tasks', 'financials', 'billing'] as DetailTab[]).filter(tab => {
-            if (!canViewFinancials && (tab === 'financials' || tab === 'billing')) return false;
-            return true;
-          }).map(tab => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors capitalize ${
-                activeTab === tab ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-600 hover:text-neutral-900'
-              }`}
-            >
-              {tab}
-            </button>
-          ))}
+        {/* Tabs - Horizontally scrollable on mobile */}
+        <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+          <div className="flex gap-1 p-1 bg-neutral-100 rounded-xl w-max sm:w-fit">
+            {(['vitals', 'client', 'details', 'tasks', 'financials', 'billing'] as DetailTab[]).filter(tab => {
+              if (!canViewFinancials && (tab === 'financials' || tab === 'billing')) return false;
+              return true;
+            }).map(tab => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition-colors capitalize whitespace-nowrap min-h-[44px] ${
+                  activeTab === tab ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-600 hover:text-neutral-900'
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Tab Content */}
@@ -2234,16 +2236,16 @@ function TasksTabContent({ tasks, timeEntries = [], projectId, companyId, onTask
       {/* Editor Sub-tab - Simplified */}
       {subTab === 'editor' && (<>
       {/* Toolbar - Simplified */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <button onClick={onAddTask} className="flex items-center gap-1 px-4 py-2 bg-[#476E66] text-white text-sm font-medium rounded-lg hover:bg-[#3A5B54]">
             <Plus className="w-4 h-4" /> Add Task
           </button>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-            <input type="text" placeholder="Search tasks..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9 pr-4 py-2 w-56 text-sm border border-neutral-200 rounded-lg focus:ring-2 focus:ring-[#476E66] focus:border-transparent outline-none" />
+            <input type="text" placeholder="Search tasks..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9 pr-4 py-2 w-40 lg:w-56 text-sm border border-neutral-200 rounded-lg focus:ring-2 focus:ring-[#476E66] focus:border-transparent outline-none" />
           </div>
-          <label className="flex items-center gap-2 text-sm text-neutral-600 cursor-pointer">
+          <label className="flex items-center gap-2 text-sm text-neutral-600 cursor-pointer whitespace-nowrap">
             <input type="checkbox" checked={hideCompleted} onChange={(e) => setHideCompleted(e.target.checked)} className="w-4 h-4 rounded border-neutral-300 text-[#476E66] focus:ring-[#476E66]" />
             Hide Completed
           </label>

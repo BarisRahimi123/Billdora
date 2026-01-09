@@ -128,9 +128,9 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white flex">
+    <div className="min-h-screen bg-white flex" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
       {/* Left Side - Form */}
-      <div className="w-full lg:w-1/2 flex flex-col justify-center px-6 sm:px-12 lg:px-24 py-8 sm:py-12">
+      <div className="w-full lg:w-1/2 flex flex-col justify-center px-5 sm:px-12 lg:px-24 py-6 sm:py-12">
         <div className="max-w-md w-full mx-auto">
           {/* Logo */}
           <motion.div 

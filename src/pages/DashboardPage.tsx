@@ -4,7 +4,7 @@ import BusinessHealthTree from '../components/BusinessHealthTree';
 import { useAuth } from '../contexts/AuthContext';
 import { usePermissions } from '../contexts/PermissionsContext';
 import { useSubscription } from '../contexts/SubscriptionContext';
-import { api, Project, Client, TimeEntry, Invoice, Quote, Expense, companyExpensesApi } from '../lib/api';
+import { api, Project, Client, TimeEntry, Invoice, Quote, Expense, Task, companyExpensesApi } from '../lib/api';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { DashboardSkeleton } from '../components/Skeleton';
 import { useToast } from '../components/Toast';
@@ -59,7 +59,8 @@ export default function DashboardPage() {
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [showTimeModal, setShowTimeModal] = useState(false);
   const [projects, setProjects] = useState<Project[]>([]);
-  const [timeEntry, setTimeEntry] = useState({ project_id: '', hours: '', description: '', date: new Date().toISOString().split('T')[0] });
+  const [timeEntry, setTimeEntry] = useState({ project_id: '', task_id: '', hours: '', description: '', date: new Date().toISOString().split('T')[0] });
+  const [projectTasks, setProjectTasks] = useState<Task[]>([]);
   const [timeErrors, setTimeErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [revenueData, setRevenueData] = useState<RevenueData[]>([]);
@@ -230,6 +231,16 @@ export default function DashboardPage() {
     loadData();
   }, [loadData]);
 
+  // Load tasks when project changes in time entry modal
+  useEffect(() => {
+    if (timeEntry.project_id) {
+      api.getTasks(timeEntry.project_id).then(setProjectTasks).catch(console.error);
+    } else {
+      setProjectTasks([]);
+    }
+    setTimeEntry(prev => ({ ...prev, task_id: '' })); // Reset task when project changes
+  }, [timeEntry.project_id]);
+
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (quickAddRef.current && !quickAddRef.current.contains(event.target as Node)) {
@@ -285,6 +296,7 @@ export default function DashboardPage() {
         company_id: profile.company_id,
         user_id: user.id,
         project_id: timeEntry.project_id || undefined,
+        task_id: timeEntry.task_id || undefined,
         hours: parseFloat(timeEntry.hours),
         description: timeEntry.description,
         date: timeEntry.date,
@@ -293,7 +305,7 @@ export default function DashboardPage() {
       });
       showToast('Time entry saved successfully', 'success');
       setShowTimeModal(false);
-      setTimeEntry({ project_id: '', hours: '', description: '', date: new Date().toISOString().split('T')[0] });
+      setTimeEntry({ project_id: '', task_id: '', hours: '', description: '', date: new Date().toISOString().split('T')[0] });
       setTimeErrors({});
       // Refresh data without full page reload
       loadData();
@@ -717,7 +729,7 @@ export default function DashboardPage() {
                 <select 
                   value={timeEntry.project_id} 
                   onChange={(e) => setTimeEntry({ ...timeEntry, project_id: e.target.value })}
-                  className="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  className="w-full px-3 py-2.5 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-base"
                 >
                   <option value="">No Project</option>
                   {projects.map((p) => (
@@ -725,6 +737,21 @@ export default function DashboardPage() {
                   ))}
                 </select>
               </div>
+              {timeEntry.project_id && projectTasks.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1">Task</label>
+                  <select 
+                    value={timeEntry.task_id} 
+                    onChange={(e) => setTimeEntry({ ...timeEntry, task_id: e.target.value })}
+                    className="w-full px-3 py-2.5 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-base"
+                  >
+                    <option value="">No Task</option>
+                    {projectTasks.map((t) => (
+                      <option key={t.id} value={t.id}>{t.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-neutral-700 mb-1">Hours *</label>

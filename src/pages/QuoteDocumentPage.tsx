@@ -1064,10 +1064,134 @@ export default function QuoteDocumentPage() {
                 </div>
               </div>
 
-              {/* Line Items - Clean Minimal Design */}
-              <div className="px-8 py-4">
-                <h3 className="text-sm font-semibold text-neutral-900 uppercase tracking-wider mb-3">Line Items</h3>
-                <div className="border border-neutral-200 rounded-lg overflow-hidden">
+              {/* Line Items - Mobile Card / Desktop Table Layout */}
+              <div className="px-4 sm:px-8 py-4">
+                <h3 className="text-sm font-semibold text-neutral-900 uppercase tracking-wider mb-3 sticky top-0 bg-white z-10 py-2 -mt-2">Line Items</h3>
+                
+                {/* Mobile Card Layout */}
+                <div className="block lg:hidden space-y-4">
+                  {lineItems.map((item, idx) => (
+                    <div key={item.id} className="border border-neutral-200 rounded-xl p-4 bg-white shadow-sm">
+                      <div className="flex justify-between items-start mb-3">
+                        <span className="text-xs font-medium text-neutral-400 uppercase">Item {idx + 1}</span>
+                        {lineItems.length > 1 && (
+                          <button
+                            onClick={() => removeLineItem(item.id)}
+                            className="p-2 -m-2 text-red-500 hover:bg-red-50 rounded-lg print:hidden"
+                          >
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                        )}
+                      </div>
+                      
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-xs text-neutral-500 mb-1">Description</label>
+                          <input
+                            type="text"
+                            value={item.description}
+                            onChange={(e) => updateLineItem(item.id, { description: e.target.value })}
+                            className="w-full px-3 py-3 border border-neutral-200 rounded-lg text-neutral-900 text-base"
+                            placeholder="Item description..."
+                          />
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs text-neutral-500 mb-1">Unit Price</label>
+                            <input
+                              type="number"
+                              value={item.unitPrice || ''}
+                              onChange={(e) => updateLineItem(item.id, { unitPrice: parseFloat(e.target.value) || 0 })}
+                              className="w-full px-3 py-3 border border-neutral-200 rounded-lg text-neutral-900 text-base"
+                              placeholder="0.00"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-neutral-500 mb-1">Quantity</label>
+                            <input
+                              type="number"
+                              value={item.qty || ''}
+                              onChange={(e) => updateLineItem(item.id, { qty: parseInt(e.target.value) || 1 })}
+                              className="w-full px-3 py-3 border border-neutral-200 rounded-lg text-neutral-900 text-base"
+                              min="1"
+                            />
+                          </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs text-neutral-500 mb-1">Unit</label>
+                            <select
+                              value={item.unit}
+                              onChange={(e) => updateLineItem(item.id, { unit: e.target.value })}
+                              className="w-full px-3 py-3 border border-neutral-200 rounded-lg text-neutral-900 text-base bg-white"
+                            >
+                              <option value="each">each</option>
+                              <option value="hour">hour</option>
+                              <option value="day">day</option>
+                              <option value="week">week</option>
+                              <option value="month">month</option>
+                              <option value="sq ft">sq ft</option>
+                              <option value="project">project</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-xs text-neutral-500 mb-1">Est. Days</label>
+                            <input
+                              type="number"
+                              value={item.estimatedDays || ''}
+                              onChange={(e) => updateLineItem(item.id, { estimatedDays: parseInt(e.target.value) || 1 })}
+                              className="w-full px-3 py-3 border border-neutral-200 rounded-lg text-neutral-900 text-base"
+                              min="1"
+                            />
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center justify-between pt-2 border-t border-neutral-100">
+                          <label className="flex items-center gap-3 py-2">
+                            <input
+                              type="checkbox"
+                              checked={item.taxed}
+                              onChange={(e) => updateLineItem(item.id, { taxed: e.target.checked })}
+                              className="w-5 h-5 rounded border-neutral-300"
+                            />
+                            <span className="text-sm text-neutral-600">Taxable</span>
+                          </label>
+                          <div className="text-right">
+                            <span className="text-xs text-neutral-500">Amount</span>
+                            <p className="text-lg font-semibold text-neutral-900">
+                              {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(item.unitPrice * item.qty)}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {/* Mobile Add Buttons */}
+                  <div className="flex flex-wrap gap-3 print:hidden">
+                    <button
+                      onClick={addLineItem}
+                      className="flex items-center gap-2 px-4 py-3 text-sm text-neutral-600 bg-neutral-50 hover:bg-neutral-100 rounded-xl min-h-[44px]"
+                    >
+                      <Plus className="w-5 h-5" />
+                      Add Item
+                    </button>
+                    {services.length > 0 && (
+                      <button
+                        onClick={() => setShowServicesModal(true)}
+                        className="flex items-center gap-2 px-4 py-3 text-sm text-neutral-600 bg-neutral-50 hover:bg-neutral-100 rounded-xl min-h-[44px]"
+                      >
+                        <Package className="w-5 h-5" />
+                        From Services
+                      </button>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Desktop Table Layout */}
+                <div className="hidden lg:block border border-neutral-200 rounded-lg overflow-hidden">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="bg-neutral-50 border-b border-neutral-200">
@@ -1226,11 +1350,11 @@ export default function QuoteDocumentPage() {
                     </tbody>
                   </table>
                   
-                  {/* Add Line Item Buttons */}
+                  {/* Add Line Item Buttons - Desktop */}
                   <div className="px-5 py-3 border-t border-neutral-100 print:hidden flex gap-4">
                     <button
                       onClick={addLineItem}
-                      className="flex items-center gap-2 text-sm text-neutral-500 hover:text-neutral-900"
+                      className="flex items-center gap-2 text-sm text-neutral-500 hover:text-neutral-900 min-h-[44px]"
                     >
                       <Plus className="w-4 h-4" />
                       Add Item
@@ -1238,7 +1362,7 @@ export default function QuoteDocumentPage() {
                     {services.length > 0 && (
                       <button
                         onClick={() => setShowServicesModal(true)}
-                        className="flex items-center gap-2 text-sm text-neutral-500 hover:text-neutral-900"
+                        className="flex items-center gap-2 text-sm text-neutral-500 hover:text-neutral-900 min-h-[44px]"
                       >
                         <Package className="w-4 h-4" />
                         From Services
@@ -1463,24 +1587,23 @@ export default function QuoteDocumentPage() {
         
         return (
         <div className="fixed inset-0 bg-black/80 z-50 overflow-auto print:bg-white print:overflow-visible">
-          {/* Toolbar */}
-          <div className="sticky top-0 bg-white border-b px-6 py-3 flex items-center justify-between print:hidden">
-            <h2 className="font-semibold text-neutral-900">Export Preview</h2>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setShowExportPreview(false)}
-                className="px-4 py-2 text-neutral-600 hover:text-neutral-900"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => window.print()}
-                className="px-4 py-2 bg-neutral-800 text-white rounded-lg hover:bg-neutral-700"
-              >
-                <Download className="w-4 h-4 inline mr-2" />
-                Download PDF
-              </button>
-            </div>
+          {/* Toolbar - Fixed on mobile for easy access */}
+          <div className="sticky top-0 bg-white border-b px-4 sm:px-6 py-3 flex items-center justify-between print:hidden z-50">
+            <button
+              onClick={() => setShowExportPreview(false)}
+              className="flex items-center gap-2 px-3 py-2 text-neutral-700 hover:bg-neutral-100 rounded-lg min-h-[44px]"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              <span className="hidden sm:inline">Back</span>
+            </button>
+            <h2 className="font-semibold text-neutral-900 text-sm sm:text-base">Preview</h2>
+            <button
+              onClick={() => window.print()}
+              className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-neutral-800 text-white rounded-lg hover:bg-neutral-700 min-h-[44px]"
+            >
+              <Download className="w-4 h-4" />
+              <span className="hidden sm:inline">Download PDF</span>
+            </button>
           </div>
 
           <div className="py-8 flex flex-col items-center gap-8 print:p-0 print:gap-0">
