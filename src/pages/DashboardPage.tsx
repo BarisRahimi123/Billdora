@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { usePermissions } from '../contexts/PermissionsContext';
 import { useSubscription } from '../contexts/SubscriptionContext';
 import { api, Project, Client, TimeEntry, Invoice, Quote, Expense, companyExpensesApi } from '../lib/api';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { DashboardSkeleton } from '../components/Skeleton';
 import { useToast } from '../components/Toast';
 import { InlineError } from '../components/ErrorBoundary';
@@ -50,6 +50,7 @@ export default function DashboardPage() {
   const { refreshSubscription } = useSubscription();
   const { showToast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -222,9 +223,9 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [profile?.company_id, user?.id]);
+  }, [profile?.company_id, user?.id, location.pathname]);
 
-  // Initial data load
+  // Initial data load and reload on navigation
   useEffect(() => {
     loadData();
   }, [loadData]);

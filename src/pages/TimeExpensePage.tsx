@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { usePermissions } from '../contexts/PermissionsContext';
 import { api, Project, Task, TimeEntry, Expense } from '../lib/api';
@@ -168,6 +169,7 @@ interface SubmittedRow {
 }
 
 export default function TimeExpensePage() {
+  const location = useLocation();
   const { user, profile, loading: authLoading } = useAuth();
   const { canViewFinancials, canApprove } = usePermissions();
   const [activeTab, setActiveTab] = useState<TimeTab>('timesheet');
@@ -282,7 +284,7 @@ export default function TimeExpensePage() {
 
   useEffect(() => {
     loadData();
-  }, [profile?.company_id, user?.id, weekStart]);
+  }, [profile?.company_id, user?.id, weekStart, location.pathname]);
 
   useEffect(() => {
     if (timerRunning) {

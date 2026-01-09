@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Users, Plus, Search, Mail, Phone, Edit2, X, UserCheck, UserX, Clock, DollarSign, Activity, UsersRound, Shield, User, ChevronRight, Calendar, Briefcase, CheckCircle2, MoreVertical, Trash2, UserPlus, Send, ArrowLeft, LogOut, ListTodo, TrendingUp, Wallet } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { api, userManagementApi, UserProfile, Role, TimeEntry, Expense, Task } from '../lib/api';
@@ -9,6 +9,7 @@ type TabType = 'activity' | 'tasks' | 'time' | 'performance' | 'personal' | 'com
 
 export default function ResourcingPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { profile, signOut, loading: authLoading } = useAuth();
   const [staff, setStaff] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -22,7 +23,7 @@ export default function ResourcingPage() {
 
   useEffect(() => {
     loadStaff();
-  }, [profile?.company_id]);
+  }, [profile?.company_id, location.pathname]);
 
   async function loadStaff() {
     if (!profile?.company_id) {

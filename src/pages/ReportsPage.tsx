@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { api, Project, TimeEntry, Invoice, Expense } from '../lib/api';
 import { BarChart3, Clock, DollarSign, TrendingUp, Users, Download, ChevronDown, ChevronRight, Building2, FolderOpen } from 'lucide-react';
@@ -294,6 +295,7 @@ function TimeByUserReport({ timeEntries, profiles, formatCurrency }: {
 }
 
 export default function ReportsPage() {
+  const location = useLocation();
   const { profile, user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [activeReport, setActiveReport] = useState<ReportType>('time_by_project');
@@ -331,7 +333,7 @@ export default function ReportsPage() {
 
   useEffect(() => {
     loadData();
-  }, [profile?.company_id, user?.id, dateRange]);
+  }, [profile?.company_id, user?.id, dateRange, location.pathname]);
 
   async function loadData() {
     if (!profile?.company_id) {

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Plus, Search, Filter, Download, MoreHorizontal, X, FileText, ArrowRight, Eye, Printer, Send, Check, XCircle, Mail, Trash2, List, LayoutGrid, ChevronDown, ChevronRight, ArrowLeft, Edit2, Loader2, Link2, Copy, User } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { usePermissions } from '../contexts/PermissionsContext';
@@ -23,6 +23,7 @@ function generateQuoteNumber(): string {
 
 export default function SalesPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { profile, loading: authLoading } = useAuth();
   const { isAdmin } = usePermissions();
   const [activeTab, setActiveTab] = useState<Tab>('quotes');
@@ -55,7 +56,7 @@ export default function SalesPage() {
 
   useEffect(() => {
     loadData();
-  }, [profile?.company_id]);
+  }, [profile?.company_id, location.pathname]);
 
   // Close dropdown menu on outside click
   useEffect(() => {

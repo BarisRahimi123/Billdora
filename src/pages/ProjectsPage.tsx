@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { usePermissions } from '../contexts/PermissionsContext';
 import { api, Project, Task, Client, TimeEntry, Invoice, Expense, ProjectTeamMember, settingsApi, FieldValue, StatusCode, CostCenter } from '../lib/api';
@@ -48,6 +48,7 @@ function getCategoryInfo(category?: string) {
 export default function ProjectsPage() {
   const { projectId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { profile, user, loading: authLoading } = useAuth();
   const { canCreate, canEdit, canDelete, canViewFinancials, isAdmin } = usePermissions();
   const [projects, setProjects] = useState<Project[]>([]);
@@ -96,7 +97,7 @@ export default function ProjectsPage() {
 
   useEffect(() => {
     loadData();
-  }, [profile?.company_id]);
+  }, [profile?.company_id, location.pathname]);
 
   useEffect(() => {
     if (projectId && projects.length > 0) {
