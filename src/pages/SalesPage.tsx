@@ -82,31 +82,24 @@ export default function SalesPage() {
       const quotesData = await api.getQuotes(profile.company_id);
       setQuotes(quotesData);
       
-      // Auto-convert accepted quotes to projects OR update existing project budget
-      for (const quote of quotesData) {
-        if ((quote.status === 'accepted' || quote.status === 'approved')) {
-          if (!quote.project_id) {
-            // No project yet - convert
-            try {
-              await api.convertQuoteToProject(quote.id, profile.company_id);
-              console.log(`Auto-converted quote ${quote.quote_number} to project`);
-            } catch (err) {
-              console.error(`Failed to auto-convert quote ${quote.id}:`, err);
-            }
-          } else {
-            // Project exists - update budget to match current quote total
-            try {
-              await api.updateProject(quote.project_id, { budget: quote.total_amount });
-              console.log(`Updated project budget for quote ${quote.quote_number}`);
-            } catch (err) {
-              console.error(`Failed to update project budget for quote ${quote.id}:`, err);
-            }
+      // Auto-convert accepted quotes in BACKGROUND (non-blocking)
+      const quotesToProcess = quotesData.filter(q => 
+        (q.status === 'accepted' || q.status === 'approved') && !q.project_id
+      );
+      if (quotesToProcess.length > 0) {
+        // Run in background, don't await
+        Promise.all(quotesToProcess.map(async (quote) => {
+          try {
+            await api.convertQuoteToProject(quote.id, profile.company_id);
+            console.log(`Auto-converted quote ${quote.quote_number} to project`);
+          } catch (err) {
+            console.error(`Failed to auto-convert quote ${quote.id}:`, err);
           }
-        }
+        })).then(() => {
+          // Refresh quotes after background conversion completes
+          api.getQuotes(profile.company_id).then(setQuotes);
+        });
       }
-      // Reload quotes after auto-conversion
-      const updatedQuotes = await api.getQuotes(profile.company_id);
-      setQuotes(updatedQuotes);
     } catch (error) {
       console.error('Failed to load quotes:', error);
     }
