@@ -1209,8 +1209,8 @@ export default function QuoteDocumentPage() {
                         <th className="text-center px-4 py-3.5 font-semibold text-neutral-500 text-xs uppercase tracking-wider w-20">Unit</th>
                         <th className="text-center px-4 py-3.5 font-semibold text-neutral-500 text-xs uppercase tracking-wider w-14">Qty</th>
                         <th className="text-center px-4 py-3.5 font-semibold text-neutral-500 text-xs uppercase tracking-wider w-14">Tax</th>
-                        <th className="text-center px-3 py-3.5 font-semibold text-neutral-500 text-xs uppercase tracking-wider w-16">Days</th>
-                        <th className="text-center px-3 py-3.5 font-semibold text-neutral-500 text-xs uppercase tracking-wider w-40">Scheduling</th>
+                        <th className="text-center px-2 py-3 font-semibold text-neutral-500 text-xs uppercase tracking-wider w-12">Days</th>
+                        <th className="text-center px-2 py-3 font-semibold text-neutral-500 text-xs uppercase tracking-wider w-28">Scheduling</th>
                         <th className="text-right px-5 py-3.5 font-semibold text-neutral-500 text-xs uppercase tracking-wider w-24">Amount</th>
                         <th className="w-10 print:hidden"></th>
                       </tr>
@@ -1267,17 +1267,17 @@ export default function QuoteDocumentPage() {
                               className="w-4 h-4 rounded border-neutral-300 text-neutral-900 focus:ring-neutral-500"
                             />
                           </td>
-                          <td className="px-3 py-3 text-center">
+                          <td className="px-1 py-2 text-center">
                             <input
                               type="number"
                               value={item.estimatedDays}
                               onChange={(e) => updateLineItem(item.id, { estimatedDays: parseInt(e.target.value) || 1 })}
-                              className="w-12 text-center bg-transparent outline-none text-neutral-900 text-xs"
+                              className="w-10 text-center bg-transparent outline-none text-neutral-900 text-xs"
                               min="1"
                               title="Estimated days to complete"
                             />
                           </td>
-                          <td className="px-3 py-3 text-center">
+                          <td className="px-1 py-2 text-center">
                             {(() => {
                               // Find items that would NOT create a circular dependency
                               const wouldCreateCycle = (depId: string): boolean => {
@@ -1315,9 +1315,9 @@ export default function QuoteDocumentPage() {
                                         });
                                       }
                                     }}
-                                    className="w-full text-center bg-transparent outline-none text-neutral-900 text-xs"
+                                    className="w-full text-center bg-transparent outline-none text-neutral-900 text-[10px]"
                                   >
-                                    <option value="parallel">Starts Day 1</option>
+                                    <option value="parallel">Day 1</option>
                                     {availableDeps.map(other => (
                                       <optgroup key={other.id} label={other.description.substring(0, 20)}>
                                         <option value={`sequential:${other.id}`}>After "{other.description.substring(0, 15)}"</option>
@@ -1326,17 +1326,17 @@ export default function QuoteDocumentPage() {
                                     ))}
                                   </select>
                                   {item.startType === 'overlap' && item.dependsOn && (
-                                    <div className="flex items-center gap-1 mt-1 text-xs text-neutral-500">
+                                    <div className="flex items-center justify-center gap-1 mt-0.5 text-[10px] text-neutral-500">
                                       <span>+</span>
                                       <input
                                         type="number"
                                         value={item.overlapDays}
                                         onChange={(e) => updateLineItem(item.id, { overlapDays: Math.max(0, parseInt(e.target.value) || 0) })}
-                                        className="w-10 text-center bg-neutral-100 rounded px-1"
+                                        className="w-8 text-center bg-neutral-100 rounded px-0.5 py-0.5"
                                         min="0"
                                         step="1"
                                       />
-                                      <span>days</span>
+                                      <span>d</span>
                                     </div>
                                   )}
                                 </>
