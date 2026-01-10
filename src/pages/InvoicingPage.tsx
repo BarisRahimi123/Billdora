@@ -35,6 +35,7 @@ export default function InvoicingPage() {
     const saved = localStorage.getItem('invoicesExpandedClients');
     return saved ? new Set(JSON.parse(saved)) : new Set();
   });
+  const [company, setCompany] = useState<{ name: string; logo_url?: string; address?: string; city?: string; state?: string; zip?: string; phone?: string } | null>(null);
 
   const toggleClientExpanded = (clientName: string) => {
     const newExpanded = new Set(expandedClients);
@@ -139,16 +140,18 @@ export default function InvoicingPage() {
     }
     setLoading(true);
     try {
-      const [invoicesData, clientsData, projectsData, recurringData] = await Promise.all([
+      const [invoicesData, clientsData, projectsData, recurringData, companyData] = await Promise.all([
         api.getInvoices(profile.company_id),
         api.getClients(profile.company_id),
         api.getProjects(profile.company_id),
         recurringInvoicesApi.getAll(profile.company_id),
+        supabase.from('companies').select('name, logo_url, address, city, state, zip, phone').eq('id', profile.company_id).single(),
       ]);
       setInvoices(invoicesData);
       setClients(clientsData);
       setProjects(projectsData);
       setRecurringInvoices(recurringData);
+      if (companyData.data) setCompany(companyData.data);
     } catch (error) {
       console.error('Failed to load data:', error);
     } finally {
@@ -784,6 +787,7 @@ export default function InvoicingPage() {
           clients={clients}
           projects={projects}
           companyId={profile?.company_id || ''}
+          company={company}
           onClose={() => setViewingInvoice(null)}
           onUpdate={() => { loadData(); }}
           getStatusColor={getStatusColor}
@@ -1551,6 +1555,7 @@ function InvoiceDetailView({
   clients, 
   projects, 
   companyId, 
+  company,
   onClose, 
   onUpdate,
   getStatusColor,
@@ -1560,6 +1565,7 @@ function InvoiceDetailView({
   clients: Client[];
   projects: Project[];
   companyId: string;
+  company: { name: string; logo_url?: string; address?: string; city?: string; state?: string; zip?: string; phone?: string } | null;
   onClose: () => void; 
   onUpdate: () => void;
   getStatusColor: (status?: string) => string;
@@ -2110,11 +2116,20 @@ function InvoiceDetailView({
               {/* Header */}
               <div className="flex justify-between items-start mb-8">
                 <div>
-                  <div className="w-16 h-16 bg-[#476E66] rounded-xl flex items-center justify-center text-white font-bold text-2xl mb-4">P</div>
+                  {company?.logo_url ? (
+                    <img src={company.logo_url} alt="" className="h-16 w-auto object-contain mb-4" />
+                  ) : (
+                    <div className="w-16 h-16 bg-[#476E66] rounded-xl flex items-center justify-center text-white font-bold text-2xl mb-4">
+                      {company?.name?.charAt(0) || 'C'}
+                    </div>
+                  )}
                   <div className="text-sm text-neutral-600">
-                    <p className="font-semibold text-neutral-900 text-base">Your Company</p>
-                    <p>123 Business Ave</p>
-                    <p>City, State 12345</p>
+                    <p className="font-semibold text-neutral-900 text-base">{company?.name || 'Your Company'}</p>
+                    {company?.address && <p>{company.address}</p>}
+                    {(company?.city || company?.state || company?.zip) && (
+                      <p>{[company.city, company.state, company.zip].filter(Boolean).join(', ')}</p>
+                    )}
+                    {company?.phone && <p>{company.phone}</p>}
                   </div>
                 </div>
                 <div className="text-right">

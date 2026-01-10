@@ -817,7 +817,7 @@ export const api = {
     return apiCall(async () => {
       const { data, error } = await supabase
         .from('invoices')
-        .select('*, client:clients(id, name, display_name, email), project:projects(id, name)')
+        .select('*, client:clients(id, name, display_name, email, address, city, state, zip, phone, website), project:projects(id, name)')
         .eq('company_id', companyId)
         .order('created_at', { ascending: false });
       if (error) throw error;
