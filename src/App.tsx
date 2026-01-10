@@ -20,6 +20,7 @@ import ProposalPortalPage from './pages/ProposalPortalPage';
 import InvoiceViewPage from './pages/InvoiceViewPage';
 import ClientPortalPage from './pages/ClientPortalPage';
 import CompanyExpensesPage from './pages/CompanyExpensesPage';
+import FinancialsPage from './pages/FinancialsPage';
 import NotificationsPage from './pages/NotificationsPage';
 
 import LandingPage from './pages/LandingPage';
@@ -71,6 +72,7 @@ function AppRoutes() {
         <Route path="/resourcing" element={<ErrorBoundary><ResourcingPage /></ErrorBoundary>} />
         <Route path="/analytics" element={<ErrorBoundary><AnalyticsPage /></ErrorBoundary>} />
         <Route path="/reports" element={<ErrorBoundary><ReportsPage /></ErrorBoundary>} />
+        <Route path="/financials" element={<ErrorBoundary><FinancialsPage /></ErrorBoundary>} />
         <Route path="/company-expenses" element={<ErrorBoundary><CompanyExpensesPage /></ErrorBoundary>} />
         <Route path="/notifications" element={<ErrorBoundary><NotificationsPage /></ErrorBoundary>} />
         <Route path="/settings" element={<ErrorBoundary><SettingsPage /></ErrorBoundary>} />
