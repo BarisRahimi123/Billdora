@@ -15,7 +15,7 @@ interface Invoice {
   total: number;
   due_date: string;
   created_at: string;
-  client: { name: string; email: string; address?: string; city?: string; state?: string; zip?: string };
+  client: { name: string; email: string; address?: string; city?: string; state?: string; zip?: string; phone?: string; website?: string };
   project: { name: string } | null;
 }
 
@@ -53,7 +53,7 @@ export default function InvoiceViewPage() {
   async function loadInvoice() {
     try {
       const res = await fetch(
-        `${SUPABASE_URL}/rest/v1/invoices?id=eq.${invoiceId}&select=*,client:clients(name,email,address,city,state,zip),project:projects(name)`,
+        `${SUPABASE_URL}/rest/v1/invoices?id=eq.${invoiceId}&select=*,client:clients(name,email,address,city,state,zip,phone,website),project:projects(name)`,
         {
           headers: {
             'apikey': SUPABASE_ANON_KEY,
@@ -278,6 +278,8 @@ export default function InvoiceViewPage() {
                   </p>
                 )}
                 {invoice?.client?.email && <p className="text-neutral-600">{invoice.client.email}</p>}
+                {invoice?.client?.phone && <p className="text-neutral-600">{invoice.client.phone}</p>}
+                {invoice?.client?.website && <p className="text-neutral-600">{invoice.client.website}</p>}
               </div>
               {invoice?.project && (
                 <div>

@@ -4067,6 +4067,15 @@ function InlineBillingInvoiceView({
             <div className="mb-4 sm:mb-6 lg:mb-8">
               <p className="text-xs sm:text-sm text-neutral-500 mb-1">Bill To:</p>
               <p className="font-semibold text-base sm:text-lg">{invoice.client?.name || project?.client?.name}</p>
+              {(invoice.client?.address || project?.client?.address) && <p className="text-neutral-600 text-sm">{invoice.client?.address || project?.client?.address}</p>}
+              {(invoice.client?.city || invoice.client?.state || invoice.client?.zip || project?.client?.city || project?.client?.state || project?.client?.zip) && (
+                <p className="text-neutral-600 text-sm">
+                  {[invoice.client?.city || project?.client?.city, invoice.client?.state || project?.client?.state, invoice.client?.zip || project?.client?.zip].filter(Boolean).join(', ')}
+                </p>
+              )}
+              {(invoice.client?.email || project?.client?.email) && <p className="text-neutral-600 text-sm">{invoice.client?.email || project?.client?.email}</p>}
+              {(invoice.client?.phone || project?.client?.phone) && <p className="text-neutral-600 text-sm">{invoice.client?.phone || project?.client?.phone}</p>}
+              {(invoice.client?.website || project?.client?.website) && <p className="text-neutral-600 text-sm">{invoice.client?.website || project?.client?.website}</p>}
             </div>
 
             {/* Calculator-based Content */}
