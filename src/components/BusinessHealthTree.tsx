@@ -91,9 +91,9 @@ const getStatusInfo = (actual: number, target: number, isCount: boolean = false)
   const percentage = isCount ? (actual / target) * 100 : (actual / target) * 100;
   const healthPercent = Math.min(percentage, 100);
   
-  if (healthPercent >= 80) return { label: 'Healthy', color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200' };
-  if (healthPercent >= 50) return { label: 'Warning', color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200' };
-  return { label: 'Critical', color: 'text-red-600', bg: 'bg-red-50', border: 'border-red-200' };
+  if (healthPercent >= 80) return { label: 'Healthy', color: 'text-[#476E66]', bg: 'bg-[#476E66]/10' };
+  if (healthPercent >= 50) return { label: 'Warning', color: 'text-amber-600', bg: 'bg-amber-50' };
+  return { label: 'Critical', color: 'text-red-600', bg: 'bg-red-50' };
 };
 
 const METRIC_CONFIG = [
@@ -228,15 +228,15 @@ export default function BusinessHealthTree({ metrics, targets, onConfigureTarget
   const overallHealth = Math.round((rootsValue + trunkValue + branchesValue + leavesValue + profitValue) / 5);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-2 sm:gap-3">
       {/* Tree Visualization */}
-      <div className="lg:col-span-7 bg-white rounded-2xl border border-neutral-100 p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-neutral-900">Business Health</h2>
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-neutral-500">Overall:</span>
-            <span className={`text-xl font-bold ${
-              overallHealth >= 70 ? 'text-emerald-600' : 
+      <div className="lg:col-span-7 bg-white rounded-xl p-4" style={{ boxShadow: 'var(--shadow-card)' }}>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-semibold text-neutral-900">Business Health</h2>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-neutral-500">Overall:</span>
+            <span className={`text-lg font-bold ${
+              overallHealth >= 70 ? 'text-[#476E66]' : 
               overallHealth >= 40 ? 'text-amber-600' : 'text-red-600'
             }`}>
               {overallHealth}%
@@ -245,12 +245,12 @@ export default function BusinessHealthTree({ metrics, targets, onConfigureTarget
         </div>
         
         {/* Simulator Toggle */}
-        <div className="flex items-center gap-2 mb-4">
+        <div className="flex items-center gap-2 mb-3 flex-wrap">
           <button
             onClick={() => setSimulatorMode(!simulatorMode)}
-            className={`flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg transition-all ${
               simulatorMode 
-                ? 'bg-indigo-100 text-indigo-700 ring-2 ring-indigo-200' 
+                ? 'bg-[#476E66]/10 text-[#476E66] ring-1 ring-[#476E66]/20' 
                 : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
             }`}
           >
@@ -263,7 +263,7 @@ export default function BusinessHealthTree({ metrics, targets, onConfigureTarget
                 setSimValues({ ...metrics });
                 setSimulatorMode(false);
               }}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-neutral-100 text-neutral-600 hover:bg-neutral-200 transition-all"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg bg-neutral-100 text-neutral-600 hover:bg-neutral-200 transition-all"
             >
               <RotateCcw className="w-3.5 h-3.5" />
               Back to Live Data
@@ -272,7 +272,7 @@ export default function BusinessHealthTree({ metrics, targets, onConfigureTarget
         </div>
         
         {simulatorMode && (
-          <div className="text-xs px-3 py-2 rounded-lg mb-3 bg-indigo-50 text-indigo-700">
+          <div className="text-xs px-3 py-2 rounded-lg mb-3 bg-[#476E66]/5 text-[#476E66]">
             🎮 Drag the sliders below to see how each metric affects your business tree
           </div>
         )}
@@ -366,9 +366,9 @@ export default function BusinessHealthTree({ metrics, targets, onConfigureTarget
         </div>
 
       {/* Metrics Panel */}
-      <div className="lg:col-span-5 space-y-4">
+      <div className="lg:col-span-5 space-y-2 sm:space-y-3">
         <div className="flex items-center justify-between flex-wrap gap-2">
-          <h2 className="text-lg font-semibold text-neutral-900">Metrics</h2>
+          <h2 className="text-sm font-semibold text-neutral-900">Metrics</h2>
           <div className="flex items-center gap-2">
             {simulatorMode && (
               <button
@@ -376,7 +376,7 @@ export default function BusinessHealthTree({ metrics, targets, onConfigureTarget
                   setSimValues({ ...metrics });
                   setSimulatorMode(false);
                 }}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-neutral-100 text-neutral-600 hover:bg-neutral-200 transition-all"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg bg-neutral-100 text-neutral-600 hover:bg-neutral-200 transition-all"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
                 Reset
@@ -385,22 +385,23 @@ export default function BusinessHealthTree({ metrics, targets, onConfigureTarget
             {onConfigureTargets && (
               <button
                 onClick={onConfigureTargets}
-                className="flex items-center gap-2 px-3 py-1.5 text-sm text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded-lg transition-colors"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded-lg transition-colors font-medium"
               >
-                <Settings className="w-4 h-4" />
-                Configure Targets
+                <Settings className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Configure Targets</span>
+                <span className="sm:hidden">Targets</span>
               </button>
             )}
           </div>
         </div>
         
         {simulatorMode && (
-          <div className="text-xs px-3 py-2 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-100">
+          <div className="text-xs px-3 py-2 rounded-lg bg-[#476E66]/5 text-[#476E66]">
             🎮 Drag the sliders to see how metrics affect your tree
           </div>
         )}
 
-        <div className="space-y-3">
+        <div className="space-y-2">
           {METRIC_CONFIG.map((config) => {
             const actual = activeMetrics[config.key as keyof typeof activeMetrics];
             const target = targets[config.key as keyof typeof targets];
@@ -419,33 +420,34 @@ export default function BusinessHealthTree({ metrics, targets, onConfigureTarget
             return (
               <div 
                 key={config.id} 
-                className={`bg-white rounded-xl border ${status.border} p-4 transition-all hover:shadow-sm`}
+                className="bg-white rounded-lg p-3 transition-all"
+                style={{ boxShadow: 'var(--shadow-card)' }}
               >
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-neutral-100 flex items-center justify-center flex-shrink-0">
-                    <Icon className="w-5 h-5 text-neutral-500" />
+                <div className="flex items-start gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-[#476E66]/10 flex items-center justify-center flex-shrink-0">
+                    <Icon className="w-4 h-4 text-[#476E66]" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center justify-between gap-2 mb-1">
                       <h3 
-                        className={`font-medium text-neutral-900 px-2 py-0.5 -ml-2 rounded-lg transition-all ${isCritical ? 'text-red-700' : ''}`}
+                        className={`text-sm font-medium text-neutral-900 px-1.5 py-0.5 -ml-1.5 rounded-lg transition-all ${isCritical ? 'text-red-700' : ''}`}
                         style={titleCriticalStyle}
                       >{config.name}</h3>
                       <span className={`text-xs px-2 py-0.5 rounded-full ${status.bg} ${status.color} font-medium`}>
                         {status.label}
                       </span>
                     </div>
-                    <p className="text-xs text-neutral-500 mt-0.5">{config.meaning}</p>
-                    <div className="flex items-baseline gap-2 mt-2">
-                      <span className="text-2xl font-bold text-neutral-900">
+                    <p className="text-xs text-neutral-400 mb-2">{config.meaning}</p>
+                    <div className="flex items-baseline gap-1.5 mb-2">
+                      <span className="text-lg font-bold text-neutral-900">
                         {config.isCount ? actual : `${actual.toFixed(1)}%`}
                       </span>
-                      <span className="text-sm text-neutral-400">
-                        / {config.isCount ? target : `${target}%`} target
+                      <span className="text-xs text-neutral-400">
+                        / {config.isCount ? target : `${target}%`}
                       </span>
                     </div>
                     {/* Interactive Slider */}
-                    <div className="mt-3">
+                    <div className="mt-2">
                       <input
                         type="range"
                         min="0"

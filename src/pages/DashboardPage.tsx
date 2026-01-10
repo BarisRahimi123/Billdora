@@ -9,6 +9,7 @@ import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { DashboardSkeleton } from '../components/Skeleton';
 import { useToast } from '../components/Toast';
 import { InlineError } from '../components/ErrorBoundary';
+import { DEFAULT_HOURLY_RATE, EXPECTED_MONTHLY_HOURS, RECENT_ACTIVITIES_LIMIT, REVENUE_TREND_MONTHS, MIN_TIME_ENTRY_HOURS, MAX_TIME_ENTRY_HOURS } from '../lib/constants';
 
 interface DashboardStats {
   hoursToday: number;
@@ -107,13 +108,15 @@ export default function DashboardPage() {
   }, [searchParams, setSearchParams, refreshSubscription]);
 
   // Load dashboard data function - used by both initial load and refresh
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (signal?: AbortSignal) => {
     if (!profile?.company_id || !user?.id) {
       setLoading(false);
       return;
     }
     
     try {
+      // Check if request was cancelled
+      if (signal?.aborted) return;
       const [statsData, projectsData, timeEntries, invoicesData, quotesData, allTimeEntries, companyExpenses, companyProfiles] = await Promise.all([
         api.getDashboardStats(profile.company_id, user.id),
         api.getProjects(profile.company_id),
@@ -135,7 +138,7 @@ export default function DashboardPage() {
       setProjects(projectsData);
       
       // Build recent activities from time entries
-      const recentActivities: ActivityItem[] = timeEntries.slice(0, 5).map((te: TimeEntry) => ({
+      const recentActivities: ActivityItem[] = timeEntries.slice(0, RECENT_ACTIVITIES_LIMIT).map((te: TimeEntry) => ({
         id: te.id,
         type: 'time' as const,
         description: `Logged ${te.hours}h on ${te.project?.name || 'No project'}`,
@@ -147,7 +150,7 @@ export default function DashboardPage() {
       // Calculate revenue trends (last 6 months)
       const monthlyRevenue: Record<string, number> = {};
       const now = new Date();
-      for (let i = 5; i >= 0; i--) {
+      for (let i = REVENUE_TREND_MONTHS - 1; i >= 0; i--) {
         const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
         const key = d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
         monthlyRevenue[key] = 0;
@@ -185,7 +188,7 @@ export default function DashboardPage() {
 
       // 2. Utilization: billable hours this month / expected capacity (employees × 160 hrs/month)
       const activeEmployees = companyProfiles?.length || 1;
-      const expectedCapacity = activeEmployees * 160; // 40 hrs/week × 4 weeks
+      const expectedCapacity = activeEmployees * EXPECTED_MONTHLY_HOURS;
       const currentMonth = new Date();
       const monthStart = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).toISOString().split('T')[0];
       const billableThisMonth = allTimeEntries
@@ -219,16 +222,26 @@ export default function DashboardPage() {
         profitMargin: Math.max(0, profitMarginPct), // Don't show negative
       });
     } catch (err) {
+      // Don't show error if request was cancelled
+      if (signal?.aborted) return;
       console.error('Failed to load dashboard data:', err);
       setError('Failed to load dashboard data. Please try again.');
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) {
+        setLoading(false);
+      }
     }
   }, [profile?.company_id, user?.id, location.pathname]);
 
-  // Initial data load and reload on navigation
+  // Initial data load and reload on navigation with cancellation support
   useEffect(() => {
-    loadData();
+    const abortController = new AbortController();
+    loadData(abortController.signal);
+    
+    // Cleanup function to cancel request when component unmounts or dependencies change
+    return () => {
+      abortController.abort();
+    };
   }, [loadData]);
 
   // Load tasks when project changes in time entry modal
@@ -270,16 +283,36 @@ export default function DashboardPage() {
     const errors: Record<string, string> = {};
     const hours = parseFloat(timeEntry.hours);
     
+    // Validate hours
     if (!timeEntry.hours || isNaN(hours)) {
       errors.hours = 'Hours is required';
-    } else if (hours < 0.25) {
-      errors.hours = 'Minimum 0.25 hours';
-    } else if (hours > 24) {
-      errors.hours = 'Maximum 24 hours per entry';
+    } else if (hours < MIN_TIME_ENTRY_HOURS) {
+      errors.hours = `Minimum ${MIN_TIME_ENTRY_HOURS} hours`;
+    } else if (hours > MAX_TIME_ENTRY_HOURS) {
+      errors.hours = `Maximum ${MAX_TIME_ENTRY_HOURS} hours per entry`;
+    } else if (hours % 0.25 !== 0) {
+      errors.hours = 'Hours must be in 0.25 increments';
     }
     
+    // Validate date
     if (!timeEntry.date) {
       errors.date = 'Date is required';
+    } else {
+      const entryDate = new Date(timeEntry.date);
+      const today = new Date();
+      const oneYearAgo = new Date();
+      oneYearAgo.setFullYear(today.getFullYear() - 1);
+      
+      if (entryDate > today) {
+        errors.date = 'Date cannot be in the future';
+      } else if (entryDate < oneYearAgo) {
+        errors.date = 'Date cannot be more than 1 year ago';
+      }
+    }
+    
+    // Validate description length
+    if (timeEntry.description && timeEntry.description.length > 500) {
+      errors.description = 'Description must be less than 500 characters';
     }
     
     setTimeErrors(errors);
@@ -301,7 +334,7 @@ export default function DashboardPage() {
         description: timeEntry.description,
         date: timeEntry.date,
         billable: true,
-        hourly_rate: profile.hourly_rate || 150,
+        hourly_rate: profile.hourly_rate || DEFAULT_HOURLY_RATE,
       });
       showToast('Time entry saved successfully', 'success');
       setShowTimeModal(false);
@@ -333,10 +366,10 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3 lg:space-y-4">
       {/* Subscription Notice Banner */}
       {subscriptionNotice && (
-        <div className={`flex items-center gap-3 p-4 rounded-xl border ${
+        <div className={`flex items-center gap-2 p-3 rounded-lg border ${
           subscriptionNotice.type === 'success' 
             ? 'bg-emerald-50 border-emerald-200 text-emerald-800' 
             : 'bg-amber-50 border-amber-200 text-amber-800'
@@ -356,14 +389,14 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3">
         <div>
-          <div className="flex items-center gap-4">
-            <h1 className="text-xl sm:text-2xl font-bold text-neutral-900">Dashboard</h1>
-            <div className="flex bg-neutral-100 rounded-lg p-1">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <h1 className="text-lg sm:text-xl font-bold text-neutral-900">Dashboard</h1>
+            <div className="flex bg-neutral-100 rounded-lg p-0.5">
               <button
                 onClick={() => setActiveTab('overview')}
-                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                className={`px-2.5 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-colors ${
                   activeTab === 'overview' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-600 hover:text-neutral-900'
                 }`}
               >
@@ -371,38 +404,39 @@ export default function DashboardPage() {
               </button>
               <button
                 onClick={() => setActiveTab('health')}
-                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors flex items-center gap-1.5 ${
+                className={`px-2.5 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-colors flex items-center gap-1 ${
                   activeTab === 'health' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-600 hover:text-neutral-900'
                 }`}
               >
-                <TreePine className="w-4 h-4" />
-                Business Health
+                <TreePine className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">Business Health</span>
+                <span className="sm:hidden">Health</span>
               </button>
             </div>
           </div>
-          <p className="text-sm sm:text-base text-neutral-500 mt-1">Welcome back, {profile?.full_name || 'User'}</p>
+          <p className="text-xs text-neutral-500 mt-0.5">Welcome back, {profile?.full_name || 'User'}</p>
         </div>
-        <div className="relative" ref={quickAddRef}>
+        <div className="relative inline-block" ref={quickAddRef}>
           <button 
             onClick={() => setShowQuickAdd(!showQuickAdd)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-[#476E66] text-white rounded-xl hover:bg-[#3A5B54] transition-colors text-sm sm:text-base"
+            className="flex items-center gap-1.5 px-3 py-2 bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54] transition-colors text-sm font-medium"
           >
             <Plus className="w-4 h-4" />
             <span className="hidden sm:inline">Quick Add</span>
             <span className="sm:hidden">Add</span>
-            <ChevronDown className="w-4 h-4" />
+            <ChevronDown className="w-3.5 h-3.5" />
           </button>
           {showQuickAdd && (
-            <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-neutral-100 py-2 z-10">
-              <button onClick={() => { setShowTimeModal(true); setShowQuickAdd(false); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-neutral-700 hover:bg-neutral-50">
+            <div className="absolute left-0 sm:left-auto sm:right-0 top-full mt-2 w-48 bg-white rounded-xl py-2 z-50" style={{ boxShadow: 'var(--shadow-dropdown)' }}>
+              <button onClick={() => { setShowTimeModal(true); setShowQuickAdd(false); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-neutral-700 hover:bg-neutral-50 transition-colors">
                 <Timer className="w-4 h-4" />
                 Log Time
               </button>
-              <button onClick={() => { navigate('/projects?new=1'); setShowQuickAdd(false); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-neutral-700 hover:bg-neutral-50">
+              <button onClick={() => { navigate('/projects?new=1'); setShowQuickAdd(false); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-neutral-700 hover:bg-neutral-50 transition-colors">
                 <FolderPlus className="w-4 h-4" />
                 New Project
               </button>
-              <button onClick={() => { navigate('/invoicing?new=1'); setShowQuickAdd(false); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-neutral-700 hover:bg-neutral-50">
+              <button onClick={() => { navigate('/invoicing?new=1'); setShowQuickAdd(false); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-neutral-700 hover:bg-neutral-50 transition-colors">
                 <FileText className="w-4 h-4" />
                 Create Invoice
               </button>
@@ -420,129 +454,131 @@ export default function DashboardPage() {
       ) : (
       <>
       {/* KPI Cards - Row 1 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {canViewFinancials && <div className="bg-white rounded-2xl p-6 border border-neutral-100">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center">
-              <DollarSign className="w-5 h-5 text-neutral-700" />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+        {canViewFinancials && <div className="bg-white rounded-lg p-2" style={{ boxShadow: 'var(--shadow-card)' }}>
+          <div className="flex items-center gap-1 mb-0.5">
+            <div className="w-6 h-6 rounded-lg bg-[#476E66]/10 flex items-center justify-center">
+              <DollarSign className="w-3 h-3 text-[#476E66]" />
             </div>
-            <span className="text-neutral-500 text-sm">Total Revenue</span>
+            <span className="text-neutral-500 text-[11px]">Total Revenue</span>
           </div>
-          <p className="text-3xl font-bold text-neutral-900">{formatCurrency(stats?.totalRevenue || 0)}</p>
-          <p className="text-sm text-neutral-500 mt-1">All-time paid invoices</p>
+          <p className="text-base font-bold text-neutral-900">{formatCurrency(stats?.totalRevenue || 0)}</p>
+          <p className="text-[10px] text-neutral-400 mt-0">All-time paid</p>
         </div>}
 
-        {canViewFinancials && <div className="bg-white rounded-2xl p-6 border border-neutral-100">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center">
-              <FileText className="w-5 h-5 text-neutral-700" />
+        {canViewFinancials && <div className="bg-white rounded-lg p-2" style={{ boxShadow: 'var(--shadow-card)' }}>
+          <div className="flex items-center gap-1 mb-0.5">
+            <div className="w-6 h-6 rounded-lg bg-[#476E66]/10 flex items-center justify-center">
+              <FileText className="w-3 h-3 text-[#476E66]" />
             </div>
-            <span className="text-neutral-500 text-sm">Outstanding</span>
+            <span className="text-neutral-500 text-[11px]">Outstanding</span>
           </div>
-          <p className="text-3xl font-bold text-neutral-900">{formatCurrency(stats?.outstandingInvoices || 0)}</p>
-          <p className="text-sm text-neutral-500 mt-1">Awaiting payment</p>
+          <p className="text-base font-bold text-neutral-900">{formatCurrency(stats?.outstandingInvoices || 0)}</p>
+          <p className="text-[10px] text-neutral-400 mt-0">Awaiting payment</p>
         </div>}
 
-        <div className="bg-white rounded-2xl p-6 border border-neutral-100">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-[#476E66]/10 flex items-center justify-center">
-              <Clock className="w-5 h-5 text-neutral-500" />
+        <div className="bg-white rounded-lg p-2" style={{ boxShadow: 'var(--shadow-card)' }}>
+          <div className="flex items-center gap-1 mb-0.5">
+            <div className="w-6 h-6 rounded-lg bg-[#476E66]/10 flex items-center justify-center">
+              <Clock className="w-3 h-3 text-[#476E66]" />
             </div>
-            <span className="text-neutral-500 text-sm">Hours This Week</span>
+            <span className="text-neutral-500 text-[11px]">Hours/Week</span>
           </div>
-          <p className="text-3xl font-bold text-neutral-900">{stats?.hoursThisWeek || 0}h</p>
-          <p className="text-sm text-neutral-500 mt-1">{stats?.hoursToday || 0}h today</p>
+          <p className="text-base font-bold text-neutral-900">{stats?.hoursThisWeek || 0}h</p>
+          <p className="text-[10px] text-neutral-400 mt-0">{stats?.hoursToday || 0}h today</p>
         </div>
 
-        <div className="bg-white rounded-2xl p-6 border border-neutral-100">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center">
-              <FolderPlus className="w-5 h-5 text-neutral-700" />
+        <div className="bg-white rounded-lg p-2" style={{ boxShadow: 'var(--shadow-card)' }}>
+          <div className="flex items-center gap-1 mb-0.5">
+            <div className="w-6 h-6 rounded-lg bg-[#476E66]/10 flex items-center justify-center">
+              <FolderPlus className="w-3 h-3 text-[#476E66]" />
             </div>
-            <span className="text-neutral-500 text-sm">Active Projects</span>
+            <span className="text-neutral-500 text-[11px]">Projects</span>
           </div>
-          <p className="text-3xl font-bold text-neutral-900">{stats?.activeProjects || 0}</p>
-          <p className="text-sm text-neutral-500 mt-1">{stats?.pendingTasks || 0} pending tasks</p>
+          <p className="text-base font-bold text-neutral-900">{stats?.activeProjects || 0}</p>
+          <p className="text-[10px] text-neutral-400 mt-0">{stats?.pendingTasks || 0} tasks</p>
         </div>
       </div>
 
       {/* KPI Cards - Row 2 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {canViewFinancials && <div className="bg-white rounded-2xl p-6 border border-neutral-100">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center">
-              <TrendingUp className="w-5 h-5 text-neutral-700" />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+        {canViewFinancials && <div className="bg-white rounded-lg p-2" style={{ boxShadow: 'var(--shadow-card)' }}>
+          <div className="flex items-center gap-1 mb-0.5">
+            <div className="w-6 h-6 rounded-lg bg-[#476E66]/10 flex items-center justify-center">
+              <TrendingUp className="w-3 h-3 text-[#476E66]" />
             </div>
-            <span className="text-neutral-500 text-sm">Unbilled WIP</span>
+            <span className="text-neutral-500 text-[11px]">Unbilled WIP</span>
           </div>
-          <p className="text-3xl font-bold text-neutral-900">{formatCurrency(stats?.unbilledWIP || 0)}</p>
+          <p className="text-base font-bold text-neutral-900">{formatCurrency(stats?.unbilledWIP || 0)}</p>
         </div>}
 
-        <div className="bg-white rounded-2xl p-6 border border-neutral-100">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center">
-              <CheckSquare className="w-5 h-5 text-neutral-700" />
+        <div className="bg-white rounded-lg p-2" style={{ boxShadow: 'var(--shadow-card)' }}>
+          <div className="flex items-center gap-1 mb-0.5">
+            <div className="w-6 h-6 rounded-lg bg-[#476E66]/10 flex items-center justify-center">
+              <CheckSquare className="w-3 h-3 text-[#476E66]" />
             </div>
-            <span className="text-neutral-500 text-sm">Pending Tasks</span>
+            <span className="text-neutral-500 text-[11px]">Tasks</span>
           </div>
-          <p className="text-3xl font-bold text-neutral-900">{stats?.pendingTasks || 0}</p>
+          <p className="text-base font-bold text-neutral-900">{stats?.pendingTasks || 0}</p>
+          <p className="text-[10px] text-neutral-400 mt-0">Pending</p>
         </div>
 
-        <div className="bg-white rounded-2xl p-6 border border-neutral-100">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center">
-              <TrendingUp className="w-5 h-5 text-neutral-700" />
+        <div className="bg-white rounded-lg p-2" style={{ boxShadow: 'var(--shadow-card)' }}>
+          <div className="flex items-center gap-1 mb-0.5">
+            <div className="w-6 h-6 rounded-lg bg-[#476E66]/10 flex items-center justify-center">
+              <TrendingUp className="w-3 h-3 text-[#476E66]" />
             </div>
-            <span className="text-neutral-500 text-sm">Utilization</span>
+            <span className="text-neutral-500 text-[11px]">Utilization</span>
           </div>
-          <p className="text-3xl font-bold text-neutral-900">{stats?.utilization || 0}%</p>
+          <p className="text-base font-bold text-neutral-900">{stats?.utilization || 0}%</p>
         </div>
 
         {canViewFinancials && (
-          <div className="bg-white rounded-2xl p-6 border border-neutral-100">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center">
-                <FileText className="w-5 h-5 text-neutral-700" />
+          <div className="bg-white rounded-lg p-2" style={{ boxShadow: 'var(--shadow-card)' }}>
+            <div className="flex items-center gap-1 mb-0.5">
+              <div className="w-6 h-6 rounded-lg bg-[#476E66]/10 flex items-center justify-center">
+                <FileText className="w-3 h-3 text-[#476E66]" />
               </div>
-              <span className="text-neutral-500 text-sm">Draft Invoices</span>
+              <span className="text-neutral-500 text-[11px]">Drafts</span>
             </div>
-            <p className="text-3xl font-bold text-neutral-900">{stats?.draftInvoices || 0}</p>
+            <p className="text-base font-bold text-neutral-900">{stats?.draftInvoices || 0}</p>
+            <p className="text-[10px] text-neutral-400 mt-0">Invoices</p>
           </div>
         )}
       </div>
 
       {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
         {/* Billability Chart */}
-        <div className="bg-white rounded-2xl p-4 sm:p-6 border border-neutral-100">
-          <h3 className="text-lg font-semibold text-neutral-900 mb-4 sm:mb-6">Billability</h3>
-          <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-8">
-            <div className="relative w-32 h-32">
+        <div className="bg-white rounded-lg p-3" style={{ boxShadow: 'var(--shadow-card)' }}>
+          <h3 className="text-xs font-semibold text-neutral-900 mb-2">Billability</h3>
+          <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-6">
+            <div className="relative w-28 h-28">
               <svg className="w-full h-full transform -rotate-90">
-                <circle cx="64" cy="64" r="56" fill="none" stroke="#E5E7EB" strokeWidth="12" />
+                <circle cx="56" cy="56" r="48" fill="none" stroke="#E5E7EB" strokeWidth="10" />
                 <circle
-                  cx="64" cy="64" r="56" fill="none" stroke="#111827" strokeWidth="12"
-                  strokeDasharray={`${(stats?.utilization || 0) * 3.52} 352`}
+                  cx="56" cy="56" r="48" fill="none" stroke="#111827" strokeWidth="10"
+                  strokeDasharray={`${(stats?.utilization || 0) * 3.01} 301`}
                   strokeLinecap="round"
                 />
               </svg>
               <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-2xl font-bold text-neutral-900">{stats?.utilization || 0}%</span>
+                <span className="text-xl font-bold text-neutral-900">{stats?.utilization || 0}%</span>
               </div>
             </div>
-            <div className="space-y-3">
+            <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-[#476E66]" />
-                <span className="text-neutral-600">Billable</span>
-                <span className="font-medium text-neutral-900 ml-auto">{stats?.billableHours || 0}h</span>
+                <div className="w-2.5 h-2.5 rounded-full bg-[#476E66]" />
+                <span className="text-neutral-600 text-xs">Billable</span>
+                <span className="font-medium text-neutral-900 ml-auto text-xs">{stats?.billableHours || 0}h</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-neutral-200" />
-                <span className="text-neutral-600">Non-Billable</span>
-                <span className="font-medium text-neutral-900 ml-auto">{stats?.nonBillableHours || 0}h</span>
+                <div className="w-2.5 h-2.5 rounded-full bg-neutral-200" />
+                <span className="text-neutral-600 text-xs">Non-Billable</span>
+                <span className="font-medium text-neutral-900 ml-auto text-xs">{stats?.nonBillableHours || 0}h</span>
               </div>
-              <div className="pt-2 border-t border-neutral-100">
-                <p className="text-neutral-600 font-medium">{stats?.utilization || 0}% Overall Utilization</p>
+              <div className="pt-1.5 border-t border-neutral-100">
+                <p className="text-neutral-600 font-medium text-xs">{stats?.utilization || 0}% Overall Utilization</p>
               </div>
             </div>
           </div>
@@ -550,20 +586,20 @@ export default function DashboardPage() {
 
         {/* Invoicing Summary */}
         {canViewFinancials && (
-          <div className="bg-white rounded-2xl p-6 border border-neutral-100">
-            <h3 className="text-lg font-semibold text-neutral-900 mb-6">Invoicing Summary</h3>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="text-center p-4 bg-neutral-50 rounded-xl">
-                <p className="text-2xl font-bold text-neutral-900">{formatCurrency(stats?.unbilledWIP || 0)}</p>
-                <p className="text-sm text-neutral-500 mt-1">Unbilled WIP</p>
+          <div className="bg-white rounded-lg p-3" style={{ boxShadow: 'var(--shadow-card)' }}>
+            <h3 className="text-xs font-semibold text-neutral-900 mb-2">Invoicing Summary</h3>
+            <div className="grid grid-cols-3 gap-2">
+              <div className="text-center p-2 bg-neutral-50 rounded-lg">
+                <p className="text-base font-bold text-neutral-900">{formatCurrency(stats?.unbilledWIP || 0)}</p>
+                <p className="text-[10px] text-neutral-500 mt-0">Unbilled WIP</p>
               </div>
-              <div className="text-center p-4 bg-neutral-50 rounded-xl">
-                <p className="text-2xl font-bold text-neutral-900">{stats?.draftInvoices || 0}</p>
-                <p className="text-sm text-neutral-500 mt-1">Drafts</p>
+              <div className="text-center p-2 bg-neutral-50 rounded-lg">
+                <p className="text-base font-bold text-neutral-900">{stats?.draftInvoices || 0}</p>
+                <p className="text-[10px] text-neutral-500 mt-0">Drafts</p>
               </div>
-              <div className="text-center p-4 bg-neutral-50 rounded-xl">
-                <p className="text-2xl font-bold text-neutral-900">{stats?.sentInvoices || 0}</p>
-                <p className="text-sm text-neutral-500 mt-1">Finalized</p>
+              <div className="text-center p-2 bg-neutral-50 rounded-lg">
+                <p className="text-base font-bold text-neutral-900">{stats?.sentInvoices || 0}</p>
+                <p className="text-[10px] text-neutral-500 mt-0">Finalized</p>
               </div>
             </div>
           </div>
@@ -572,37 +608,37 @@ export default function DashboardPage() {
 
       {/* Analytics Charts Row */}
       {canViewFinancials && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
           {/* Revenue Trend Chart */}
-          <div className="bg-white rounded-2xl p-6 border border-neutral-100">
-            <div className="flex items-center gap-3 mb-6">
-              <BarChart3 className="w-5 h-5 text-neutral-700" />
-              <h3 className="text-lg font-semibold text-neutral-900">Revenue Trend (6 Months)</h3>
+          <div className="bg-white rounded-lg p-3" style={{ boxShadow: 'var(--shadow-card)' }}>
+            <div className="flex items-center gap-1.5 mb-2">
+              <BarChart3 className="w-3.5 h-3.5 text-neutral-700" />
+              <h3 className="text-xs font-semibold text-neutral-900">Revenue Trend (6 Months)</h3>
             </div>
-            <div className="h-48">
+            <div className="h-40">
               {revenueData.length > 0 ? (
-                <div className="flex items-end justify-between h-full gap-2">
+                <div className="flex items-end justify-between h-full gap-1.5">
                   {revenueData.map((d, i) => {
                     const maxRevenue = Math.max(...revenueData.map(r => r.revenue), 1);
                     const height = (d.revenue / maxRevenue) * 100;
                     return (
-                      <div key={i} className="flex-1 flex flex-col items-center gap-2">
-                        <div className="w-full flex flex-col items-center justify-end h-36">
-                          <span className="text-xs font-medium text-neutral-600 mb-1">
+                      <div key={i} className="flex-1 flex flex-col items-center gap-1.5">
+                        <div className="w-full flex flex-col items-center justify-end h-32">
+                          <span className="text-[10px] font-medium text-neutral-600 mb-0.5">
                             {formatCurrency(d.revenue)}
                           </span>
                           <div 
-                            className="w-full max-w-10 bg-[#476E66] rounded-t-lg transition-all"
+                            className="w-full max-w-8 bg-[#476E66] rounded-t-lg transition-all"
                             style={{ height: `${Math.max(height, 4)}%` }}
                           />
                         </div>
-                        <span className="text-xs text-neutral-500">{d.month}</span>
+                        <span className="text-[10px] text-neutral-500">{d.month}</span>
                       </div>
                     );
                   })}
                 </div>
               ) : (
-                <div className="h-full flex items-center justify-center text-neutral-500">
+                <div className="h-full flex items-center justify-center text-neutral-500 text-xs">
                   No revenue data available
                 </div>
               )}
@@ -610,33 +646,42 @@ export default function DashboardPage() {
           </div>
 
           {/* Payment Aging Report */}
-          <div className="bg-white rounded-2xl p-6 border border-neutral-100">
-            <div className="flex items-center gap-3 mb-6">
-              <Clock className="w-5 h-5 text-neutral-700" />
-              <h3 className="text-lg font-semibold text-neutral-900">Payment Aging Report</h3>
+          <div className="bg-white rounded-lg p-3" style={{ boxShadow: 'var(--shadow-card)' }}>
+            <div className="flex items-center gap-1.5 mb-2">
+              <Clock className="w-3.5 h-3.5 text-neutral-700" />
+              <h3 className="text-xs font-semibold text-neutral-900">Payment Aging Report</h3>
             </div>
-            <div className="space-y-4">
+            <div className="space-y-3">
               {agingData.map((d, i) => {
                 const maxAmount = Math.max(...agingData.map(a => a.amount), 1);
                 const width = (d.amount / maxAmount) * 100;
-                const colors = ['bg-emerald-500', 'bg-yellow-500', 'bg-orange-500', 'bg-red-500'];
+                // Subtle brand-aligned color progression: brand color → amber → darker tones
+                const colors = [
+                  '#476E66',  // 0-30 days: Brand color (good)
+                  '#8B7355',  // 31-60 days: Warm neutral brown
+                  '#6B5B4F',  // 61-90 days: Darker brown
+                  '#4A4A4A'   // 90+ days: Dark neutral (attention needed)
+                ];
                 return (
-                  <div key={d.range} className="space-y-1">
-                    <div className="flex items-center justify-between text-sm">
+                  <div key={d.range} className="space-y-0.5">
+                    <div className="flex items-center justify-between text-xs">
                       <span className="text-neutral-700 font-medium">{d.range} days</span>
                       <span className="text-neutral-900 font-semibold">{formatCurrency(d.amount)} ({d.count})</span>
                     </div>
-                    <div className="h-3 bg-neutral-100 rounded-full overflow-hidden">
+                    <div className="h-2.5 bg-neutral-100 rounded-full overflow-hidden">
                       <div 
-                        className={`h-full ${colors[i]} rounded-full transition-all`}
-                        style={{ width: `${Math.max(width, 2)}%` }}
+                        className="h-full rounded-full transition-all"
+                        style={{ 
+                          width: `${Math.max(width, 2)}%`,
+                          backgroundColor: colors[i]
+                        }}
                       />
                     </div>
                   </div>
                 );
               })}
               {agingData.every(d => d.amount === 0) && (
-                <div className="text-center text-neutral-500 py-4">No outstanding invoices</div>
+                <div className="text-center text-neutral-500 py-3 text-xs">No outstanding invoices</div>
               )}
             </div>
           </div>
@@ -644,22 +689,22 @@ export default function DashboardPage() {
       )}
 
       {/* Recent Activity */}
-      <div className="bg-white rounded-2xl p-6 border border-neutral-100">
-        <h3 className="text-lg font-semibold text-neutral-900 mb-4">Recent Activity</h3>
+      <div className="bg-white rounded-lg p-3" style={{ boxShadow: 'var(--shadow-card)' }}>
+        <h3 className="text-xs font-semibold text-neutral-900 mb-2">Recent Activity</h3>
         {activities.length === 0 ? (
-          <p className="text-neutral-500 text-center py-8">No recent activity</p>
+          <p className="text-neutral-500 text-center py-6 text-xs">No recent activity</p>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {activities.map((activity) => (
-              <div key={activity.id} className="flex items-center gap-4 p-3 bg-neutral-50 rounded-xl">
-                <div className="w-10 h-10 rounded-xl bg-[#476E66]/20 flex items-center justify-center">
-                  <Clock className="w-5 h-5 text-neutral-600" />
+              <div key={activity.id} className="flex items-center gap-2 p-2 bg-neutral-50 rounded-lg">
+                <div className="w-7 h-7 rounded-lg bg-[#476E66]/20 flex items-center justify-center flex-shrink-0">
+                  <Clock className="w-3 h-3 text-neutral-600" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-neutral-900">{activity.description}</p>
-                  {activity.meta && <p className="text-xs text-neutral-500 truncate">{activity.meta}</p>}
+                  <p className="text-xs font-medium text-neutral-900">{activity.description}</p>
+                  {activity.meta && <p className="text-[10px] text-neutral-500 truncate">{activity.meta}</p>}
                 </div>
-                <span className="text-xs text-neutral-400">{formatDate(activity.date)}</span>
+                <span className="text-[10px] text-neutral-400 flex-shrink-0">{formatDate(activity.date)}</span>
               </div>
             ))}
           </div>
@@ -716,88 +761,108 @@ export default function DashboardPage() {
       {/* Log Time Modal */}
       {showTimeModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-4 sm:p-6 w-full max-w-md shadow-xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-neutral-900">Log Time</h3>
-              <button onClick={() => setShowTimeModal(false)} className="p-1 hover:bg-neutral-100 rounded-lg">
-                <X className="w-5 h-5 text-neutral-500" />
+          <div className="bg-white rounded-xl w-full max-w-md max-h-[92vh] overflow-hidden flex flex-col" style={{ boxShadow: 'var(--shadow-elevated)' }}>
+            {/* Fixed Header */}
+            <div className="flex items-center justify-between px-4 sm:px-5 py-3 sm:py-4 border-b border-neutral-100 flex-shrink-0">
+              <h3 className="text-base sm:text-lg font-semibold text-neutral-900">Log Time</h3>
+              <button onClick={() => setShowTimeModal(false)} className="p-1.5 hover:bg-neutral-100 rounded-lg transition-colors">
+                <X className="w-4 h-4 text-neutral-500" />
               </button>
             </div>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1">Project</label>
-                <select 
-                  value={timeEntry.project_id} 
-                  onChange={(e) => setTimeEntry({ ...timeEntry, project_id: e.target.value })}
-                  className="w-full px-3 py-2.5 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-base"
-                >
-                  <option value="">No Project</option>
-                  {projects.map((p) => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </select>
-              </div>
-              {timeEntry.project_id && projectTasks.length > 0 && (
+
+            {/* Scrollable Content */}
+            <div className="overflow-y-auto flex-1 px-4 sm:px-5 py-4">
+              <div className="space-y-3">
                 <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-1">Task</label>
+                  <label className="block text-xs font-medium text-neutral-700 mb-1.5">Project</label>
                   <select 
-                    value={timeEntry.task_id} 
-                    onChange={(e) => setTimeEntry({ ...timeEntry, task_id: e.target.value })}
-                    className="w-full px-3 py-2.5 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-base"
+                    value={timeEntry.project_id} 
+                    onChange={(e) => setTimeEntry({ ...timeEntry, project_id: e.target.value })}
+                    className="w-full h-11 px-3 py-2 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-[#476E66] focus:border-transparent text-sm"
                   >
-                    <option value="">No Task</option>
-                    {projectTasks.map((t) => (
-                      <option key={t.id} value={t.id}>{t.name}</option>
+                    <option value="">No Project</option>
+                    {projects.map((p) => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
                     ))}
                   </select>
                 </div>
-              )}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-1">Hours *</label>
-                  <input 
-                    type="number" 
-                    step="0.25"
-                    value={timeEntry.hours} 
-                    onChange={(e) => { setTimeEntry({ ...timeEntry, hours: e.target.value }); setTimeErrors(prev => ({ ...prev, hours: '' })); }}
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${timeErrors.hours ? 'border-red-300' : 'border-neutral-200'}`}
-                    placeholder="1.5"
-                  />
-                  {timeErrors.hours && <p className="mt-1 text-sm text-red-600">{timeErrors.hours}</p>}
+
+                {timeEntry.project_id && projectTasks.length > 0 && (
+                  <div>
+                    <label className="block text-xs font-medium text-neutral-700 mb-1.5">Task</label>
+                    <select 
+                      value={timeEntry.task_id} 
+                      onChange={(e) => setTimeEntry({ ...timeEntry, task_id: e.target.value })}
+                      className="w-full h-11 px-3 py-2 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-[#476E66] focus:border-transparent text-sm"
+                    >
+                      <option value="">No Task</option>
+                      {projectTasks.map((t) => (
+                        <option key={t.id} value={t.id}>{t.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-neutral-700 mb-1.5">Hours *</label>
+                    <input 
+                      type="number" 
+                      step="0.25"
+                      value={timeEntry.hours} 
+                      onChange={(e) => { setTimeEntry({ ...timeEntry, hours: e.target.value }); setTimeErrors(prev => ({ ...prev, hours: '' })); }}
+                      className={`w-full h-11 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#476E66] focus:border-transparent text-sm ${timeErrors.hours ? 'border-red-300' : 'border-neutral-200'}`}
+                      placeholder="1.5"
+                    />
+                    {timeErrors.hours && <p className="mt-1 text-xs text-red-600">{timeErrors.hours}</p>}
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-neutral-700 mb-1.5">Date *</label>
+                    <input 
+                      type="date" 
+                      value={timeEntry.date} 
+                      onChange={(e) => { setTimeEntry({ ...timeEntry, date: e.target.value }); setTimeErrors(prev => ({ ...prev, date: '' })); }}
+                      className={`w-full h-11 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#476E66] focus:border-transparent text-sm ${timeErrors.date ? 'border-red-300' : 'border-neutral-200'}`}
+                    />
+                    {timeErrors.date && <p className="mt-1 text-xs text-red-600">{timeErrors.date}</p>}
+                  </div>
                 </div>
+
                 <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-1">Date *</label>
-                  <input 
-                    type="date" 
-                    value={timeEntry.date} 
-                    onChange={(e) => { setTimeEntry({ ...timeEntry, date: e.target.value }); setTimeErrors(prev => ({ ...prev, date: '' })); }}
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${timeErrors.date ? 'border-red-300' : 'border-neutral-200'}`}
+                  <label className="block text-xs font-medium text-neutral-700 mb-1.5">
+                    Description {timeEntry.description && <span className="text-neutral-400">({timeEntry.description.length}/500)</span>}
+                  </label>
+                  <textarea 
+                    value={timeEntry.description} 
+                    onChange={(e) => { 
+                      setTimeEntry({ ...timeEntry, description: e.target.value }); 
+                      setTimeErrors(prev => ({ ...prev, description: '' })); 
+                    }}
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#476E66] focus:border-transparent text-sm ${timeErrors.description ? 'border-red-300' : 'border-neutral-200'}`}
+                    rows={3}
+                    placeholder="What did you work on?"
+                    maxLength={500}
                   />
-                  {timeErrors.date && <p className="mt-1 text-sm text-red-600">{timeErrors.date}</p>}
+                  {timeErrors.description && <p className="mt-1 text-xs text-red-600">{timeErrors.description}</p>}
                 </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1">Description</label>
-                <textarea 
-                  value={timeEntry.description} 
-                  onChange={(e) => setTimeEntry({ ...timeEntry, description: e.target.value })}
-                  className="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  rows={3}
-                  placeholder="What did you work on?"
-                />
-              </div>
-              <div className="flex justify-end gap-3 pt-2">
-                <button onClick={() => setShowTimeModal(false)} className="px-4 py-2 text-neutral-700 hover:bg-neutral-100 rounded-lg">
-                  Cancel
-                </button>
-                <button 
-                  onClick={handleSaveTime} 
-                  disabled={saving || !timeEntry.hours}
-                  className="px-4 py-2 bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54] disabled:opacity-50"
-                >
-                  {saving ? 'Saving...' : 'Save'}
-                </button>
-              </div>
+            </div>
+
+            {/* Fixed Footer */}
+            <div className="flex items-center justify-end gap-2 px-4 sm:px-5 py-3 border-t border-neutral-100 flex-shrink-0 bg-neutral-50">
+              <button 
+                onClick={() => setShowTimeModal(false)} 
+                className="flex-1 sm:flex-none px-4 py-2 text-sm border border-neutral-200 rounded-lg hover:bg-neutral-100 transition-colors font-medium text-neutral-700"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleSaveTime} 
+                disabled={saving || !timeEntry.hours}
+                className="flex-1 sm:flex-none px-4 py-2 text-sm bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54] disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+              >
+                {saving ? 'Saving...' : 'Save'}
+              </button>
             </div>
           </div>
         </div>

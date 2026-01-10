@@ -214,6 +214,11 @@ export default function TimeExpensePage() {
   const [draftValues, setDraftValues] = useState<{ [key: string]: number }>({});
   const [rejectedEdits, setRejectedEdits] = useState<{ [entryId: string]: number }>({});
   const [savingTimesheet, setSavingTimesheet] = useState(false);
+  const [mobileDayIndex, setMobileDayIndex] = useState(() => {
+    // Start on today's day of the week
+    const today = new Date();
+    return today.getDay();
+  });
 
   // Computed: group saved draft entries by project/task (from timer or copy) - includes rejected entries
   // Uses allDraftEntries for row generation (persists across weeks) but timeEntries for current week values
@@ -461,6 +466,23 @@ export default function TimeExpensePage() {
     setWeekStart(newDate);
   };
 
+  const navigateMobileDay = (direction: number) => {
+    setMobileDayIndex(prev => {
+      const next = prev + direction;
+      if (next < 0) {
+        // Go to previous week
+        navigateWeek(-1);
+        return 6;
+      }
+      if (next > 6) {
+        // Go to next week
+        navigateWeek(1);
+        return 0;
+      }
+      return next;
+    });
+  };
+
   const formatDate = (date: Date) => date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   const formatDateKey = (date: Date) => date.toISOString().split('T')[0];
 
@@ -636,49 +658,50 @@ export default function TimeExpensePage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-3 sm:space-y-4 lg:space-y-6">
+      <div className="flex items-center justify-between gap-2">
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900">Time & Expense</h1>
-          <p className="text-neutral-500">Track your hours and expenses</p>
+          <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-neutral-900">Time & Expense</h1>
+          <p className="text-xs sm:text-sm text-neutral-500 hidden sm:block">Track your hours and expenses</p>
         </div>
         <button
           onClick={() => activeTab === 'timesheet' ? setShowTimeEntryModal(true) : setShowExpenseModal(true)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-[#476E66] text-white rounded-xl hover:bg-[#3A5B54] transition-colors"
+          className="flex items-center gap-1.5 px-3 py-2 bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54] transition-colors text-sm whitespace-nowrap"
         >
           <Plus className="w-4 h-4" />
-          {activeTab === 'timesheet' ? 'Add Row' : 'Add Expense'}
+          <span className="hidden sm:inline">{activeTab === 'timesheet' ? 'Add Row' : 'Add Expense'}</span>
+          <span className="sm:hidden">Add</span>
         </button>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 p-1 bg-neutral-100 rounded-xl w-fit overflow-x-auto">
+      <div className="flex gap-1 p-0.5 sm:p-1 bg-neutral-100 rounded-lg overflow-x-auto">
         <button
           onClick={() => setActiveTab('timesheet')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
             activeTab === 'timesheet' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-600 hover:text-neutral-900'
           }`}
         >
-          <Clock className="w-4 h-4" /> Timesheet
+          <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> <span className="hidden sm:inline">Timesheet</span><span className="sm:hidden">Time</span>
         </button>
         <button
           onClick={() => setActiveTab('expenses')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
             activeTab === 'expenses' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-600 hover:text-neutral-900'
           }`}
         >
-          <Receipt className="w-4 h-4" /> Expenses
+          <Receipt className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> <span className="hidden sm:inline">Expenses</span><span className="sm:hidden">Exp.</span>
         </button>
         {canApprove && (
           <button
             onClick={() => setActiveTab('approvals')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
               activeTab === 'approvals' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-600 hover:text-neutral-900'
             }`}
           >
-            <CheckCircle className="w-4 h-4" /> Approvals
+            <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> <span className="hidden sm:inline">Approvals</span><span className="sm:hidden">Approve</span>
             {(pendingTimeEntries.length + pendingExpenses.length) > 0 && (
-              <span className="ml-1 px-1.5 py-0.5 bg-amber-100 text-amber-700 text-xs rounded-full">
+              <span className="ml-0.5 px-1.5 py-0.5 bg-amber-100 text-amber-700 text-xs rounded-full">
                 {pendingTimeEntries.length + pendingExpenses.length}
               </span>
             )}
@@ -687,28 +710,28 @@ export default function TimeExpensePage() {
         {canApprove && (
           <button
             onClick={() => setActiveTab('approved')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
               activeTab === 'approved' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-600 hover:text-neutral-900'
             }`}
           >
-            <Calendar className="w-4 h-4" /> Approved History
+            <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> <span className="hidden sm:inline">Approved History</span><span className="sm:hidden">History</span>
           </button>
         )}
       </div>
 
-      {/* Timer */}
+      {/* Timer - Mobile Optimized */}
       {activeTab === 'timesheet' && (
-        <div className="bg-white rounded-2xl border border-neutral-100 p-4 mb-6">
-          <div className="flex items-center gap-4 flex-wrap">
-            <div className="flex items-center gap-2">
-              <div className={`text-3xl font-mono font-bold ${timerRunning ? 'text-neutral-600' : 'text-neutral-900'}`}>
+        <div className="bg-white rounded-lg border border-neutral-100 p-3 sm:p-4" style={{ boxShadow: 'var(--shadow-card)' }}>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
+            <div className="flex items-center gap-2 shrink-0">
+              <div className={`text-2xl sm:text-3xl font-mono font-bold ${timerRunning ? 'text-neutral-600' : 'text-neutral-900'}`}>
                 {formatTimer(timerSeconds)}
               </div>
             </div>
             <select
               value={timerProjectId}
               onChange={(e) => { setTimerProjectId(e.target.value); setTimerTaskId(''); }}
-              className="px-3 py-2 border border-neutral-200 rounded-lg text-sm"
+              className="px-2 py-1.5 border border-neutral-200 rounded-lg text-xs sm:text-sm focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none"
               disabled={timerRunning}
             >
               <option value="">No Project</option>
@@ -717,7 +740,7 @@ export default function TimeExpensePage() {
             <select
               value={timerTaskId}
               onChange={(e) => setTimerTaskId(e.target.value)}
-              className="px-3 py-2 border border-neutral-200 rounded-lg text-sm"
+              className="px-2 py-1.5 border border-neutral-200 rounded-lg text-xs sm:text-sm focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none"
               disabled={timerRunning || !timerProjectId}
             >
               <option value="">No Task</option>
@@ -728,75 +751,102 @@ export default function TimeExpensePage() {
               placeholder="What are you working on?"
               value={timerDescription}
               onChange={(e) => setTimerDescription(e.target.value)}
-              className="flex-1 min-w-[200px] px-3 py-2 border border-neutral-200 rounded-lg text-sm"
+              className="flex-1 px-2 py-1.5 border border-neutral-200 rounded-lg text-xs sm:text-sm focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none"
             />
             <div className="flex items-center gap-2">
               {!timerRunning ? (
-                <button onClick={startTimer} className="p-2.5 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600">
-                  <Play className="w-5 h-5" />
+                <button onClick={startTimer} className="p-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors">
+                  <Play className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
               ) : (
-                <button onClick={pauseTimer} className="p-2.5 bg-amber-500 text-white rounded-lg hover:bg-amber-600">
-                  <Pause className="w-5 h-5" />
+                <button onClick={pauseTimer} className="p-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors">
+                  <Pause className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
               )}
-              <button onClick={stopTimer} disabled={timerSeconds === 0 || !timerProjectId} className="p-2.5 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50" title={!timerProjectId ? 'Select a project first' : 'Stop and save'}>
-                <Square className="w-5 h-5" />
+              <button onClick={stopTimer} disabled={timerSeconds === 0 || !timerProjectId} className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50 transition-colors" title={!timerProjectId ? 'Select a project first' : 'Stop and save'}>
+                <Square className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Timesheet */}
+      {/* Timesheet - Mobile Optimized */}
       {activeTab === 'timesheet' && (
-        <div className="space-y-6">
+        <div className="space-y-3 sm:space-y-4 lg:space-y-6">
           {/* Draft Section */}
-          <div className="bg-white rounded-2xl border border-neutral-100 overflow-hidden">
-            <div className="flex items-center justify-between p-4 border-b border-neutral-100">
-              <div className="flex items-center gap-3">
-                <div className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">Draft</div>
-                <span className="text-neutral-500 text-sm">Enter your hours below</span>
+          <div className="bg-white rounded-lg overflow-hidden" style={{ boxShadow: 'var(--shadow-card)' }}>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-2.5 sm:p-3 lg:p-4 border-b border-neutral-100 gap-2">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="px-2 py-0.5 bg-[#476E66]/10 text-[#476E66] rounded-full text-xs font-medium">Draft</div>
+                <span className="text-neutral-500 text-xs sm:text-sm hidden sm:inline">Enter your hours below</span>
               </div>
-              <div className="flex items-center gap-2">
+              {/* Desktop: Week Navigation */}
+              <div className="hidden md:flex items-center gap-1.5 sm:gap-2">
                 <button 
                   type="button" 
                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigateWeek(-1); }}
-                  className="p-2 hover:bg-neutral-200 bg-neutral-100 rounded-lg cursor-pointer transition-colors"
+                  className="p-1.5 hover:bg-neutral-200 bg-neutral-100 rounded-lg cursor-pointer transition-colors"
                 >
-                  <ChevronLeft className="w-5 h-5 text-neutral-700" />
+                  <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 text-neutral-700" />
                 </button>
-                <h3 className="text-lg font-semibold text-neutral-900 select-none min-w-[200px] text-center">
+                <h3 className="text-xs sm:text-sm lg:text-base font-semibold text-neutral-900 select-none text-center">
                   {formatDate(weekDays[0])} - {formatDate(weekDays[6])}, {weekDays[0].getFullYear()}
                 </h3>
                 <button 
                   type="button" 
                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigateWeek(1); }}
-                  className="p-2 hover:bg-neutral-200 bg-neutral-100 rounded-lg cursor-pointer transition-colors"
+                  className="p-1.5 hover:bg-neutral-200 bg-neutral-100 rounded-lg cursor-pointer transition-colors"
                 >
-                  <ChevronRight className="w-5 h-5 text-neutral-700" />
+                  <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-neutral-700" />
+                </button>
+              </div>
+              {/* Mobile: Single Day Navigation */}
+              <div className="flex md:hidden items-center gap-2 w-full justify-between">
+                <button 
+                  type="button" 
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigateMobileDay(-1); }}
+                  className="p-1.5 hover:bg-neutral-200 bg-neutral-100 rounded-lg cursor-pointer transition-colors"
+                >
+                  <ChevronLeft className="w-4 h-4 text-neutral-700" />
+                </button>
+                <div className="text-center">
+                  <div className="text-xs font-medium text-neutral-600">
+                    {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][weekDays[mobileDayIndex].getDay()]}
+                  </div>
+                  <div className="text-base font-semibold text-neutral-900">
+                    {formatDate(weekDays[mobileDayIndex])}
+                  </div>
+                </div>
+                <button 
+                  type="button" 
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigateMobileDay(1); }}
+                  className="p-1.5 hover:bg-neutral-200 bg-neutral-100 rounded-lg cursor-pointer transition-colors"
+                >
+                  <ChevronRight className="w-4 h-4 text-neutral-700" />
                 </button>
               </div>
             </div>
 
-            <div className="overflow-x-auto">
+            {/* Desktop View: Full Week */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-neutral-50 border-b border-neutral-100">
                   <tr>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-neutral-500 uppercase w-64">Project / Task</th>
+                    <th className="text-left px-2 sm:px-3 lg:px-4 py-2 text-xs font-medium text-neutral-600 w-32 sm:w-48 lg:w-64">Project / Task</th>
                     {weekDays.map((day, i) => {
                       const todayStr = new Date().toISOString().split('T')[0];
                       const dateKey = formatDateKey(day);
                       const isFutureDate = dateKey > todayStr;
                       const isToday = dateKey === todayStr;
                       return (
-                        <th key={i} className={`text-center px-2 py-3 text-xs font-medium uppercase w-20 ${isFutureDate ? 'text-neutral-300' : 'text-neutral-500'}`}>
-                          <div>{['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][day.getDay()]}</div>
-                          <div className={`text-lg font-semibold ${isToday ? 'text-blue-600' : isFutureDate ? 'text-neutral-300' : 'text-neutral-900'}`}>{day.getDate()}</div>
+                        <th key={i} className={`text-center px-1 py-2 text-xs font-medium w-14 sm:w-16 lg:w-20 ${isFutureDate ? 'text-neutral-300' : 'text-neutral-600'}`}>
+                          <div className="text-xs">{['S', 'M', 'T', 'W', 'T', 'F', 'S'][day.getDay()]}</div>
+                          <div className={`text-base sm:text-lg font-semibold ${isToday ? 'text-[#476E66]' : isFutureDate ? 'text-neutral-300' : 'text-neutral-900'}`}>{day.getDate()}</div>
                         </th>
                       );
                     })}
-                    <th className="text-center px-4 py-3 text-xs font-medium text-neutral-500 uppercase w-20">Total</th>
+                    <th className="text-center px-2 py-2 text-xs font-medium text-neutral-600 w-14 sm:w-16 lg:w-20">Total</th>
                     <th className="w-12"></th>
                   </tr>
                 </thead>
@@ -808,7 +858,7 @@ export default function TimeExpensePage() {
                           <p className="text-neutral-500">No time entries yet for this week.</p>
                           <button 
                             onClick={() => setShowTimeEntryModal(true)}
-                            className="px-4 py-2 bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54] transition-colors font-medium"
+                            className="px-4 py-2 border border-[#476E66] text-[#476E66] rounded-lg hover:bg-[#476E66]/5 transition-colors font-medium"
                           >
                             + Add Project Row to Enter Time
                           </button>
@@ -911,7 +961,7 @@ export default function TimeExpensePage() {
                               className={`w-full h-10 text-center rounded-lg border-2 outline-none ${
                                 isFutureDate 
                                   ? 'border-neutral-200 bg-neutral-50 text-neutral-400 cursor-not-allowed' 
-                                  : 'border-blue-200 bg-neutral-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent'
+                                  : 'border-neutral-200 bg-neutral-100 focus:ring-2 focus:ring-[#476E66] focus:border-[#476E66]'
                               }`}
                               onChange={(e) => {
                                 const val = parseFloat(e.target.value) || 0;
@@ -946,7 +996,7 @@ export default function TimeExpensePage() {
                   </tr>
                 </tbody>
                 {draftRows.length > 0 && (
-                  <tfoot className="bg-neutral-100 border-t border-blue-200">
+                  <tfoot className="bg-neutral-100 border-t border-neutral-200">
                     <tr>
                       <td className="px-4 py-3 font-semibold text-neutral-900">Draft Total</td>
                       {weekDays.map((day, i) => {
@@ -967,11 +1017,172 @@ export default function TimeExpensePage() {
                 )}
               </table>
             </div>
+
+            {/* Mobile View: Single Day */}
+            <div className="block md:hidden">
+              <table className="w-full">
+                <thead className="bg-neutral-50 border-b border-neutral-100">
+                  <tr>
+                    <th className="text-left px-3 py-2 text-xs font-medium text-neutral-600">Project / Task</th>
+                    <th className="text-center px-3 py-2 text-xs font-medium text-neutral-600 w-24">Hours</th>
+                    <th className="w-12"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-neutral-100">
+                  {draftRows.length === 0 && savedDraftRows.length === 0 && (
+                    <tr>
+                      <td colSpan={3} className="text-center py-8">
+                        <div className="space-y-3">
+                          <p className="text-neutral-500 text-sm">No time entries for {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][weekDays[mobileDayIndex].getDay()]}</p>
+                          <button 
+                            onClick={() => setShowTimeEntryModal(true)}
+                            className="px-4 py-2 border border-[#476E66] text-[#476E66] rounded-lg hover:bg-[#476E66]/5 transition-colors font-medium text-sm"
+                          >
+                            + Add Project Row
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                  {/* Saved draft entries from timer/copy - includes rejected entries */}
+                  {savedDraftRows.map((row) => {
+                    const day = weekDays[mobileDayIndex];
+                    const dateKey = formatDateKey(day);
+                    const entry = row.entries[dateKey];
+                    if (!entry) return null; // Only show rows with entries for this day
+                    const isRejected = entry?.approval_status === 'rejected';
+                    const todayStr = new Date().toISOString().split('T')[0];
+                    const isFutureDate = dateKey > todayStr;
+                    const hasRejected = Object.values(row.entries).some(e => e.approval_status === 'rejected');
+                    return (
+                      <tr key={`saved-${row.id}`} className={hasRejected ? "bg-red-50/30" : "bg-green-50/30"}>
+                        <td className="px-3 py-3">
+                          <div className="font-medium text-sm text-neutral-900">
+                            {row.project?.name || 'Unknown Project'}
+                            {row.task && <span className="text-neutral-600"> / {row.task.name}</span>}
+                          </div>
+                          {hasRejected ? (
+                            <span className="text-xs text-red-600 font-medium">⚠️ Rejected</span>
+                          ) : (
+                            <span className="text-xs text-green-600 font-medium">From Timer</span>
+                          )}
+                        </td>
+                        <td className="px-3 py-3">
+                          <input
+                            type="number"
+                            min="0"
+                            max="24"
+                            step="0.5"
+                            defaultValue={entry?.hours || ''}
+                            disabled={isFutureDate}
+                            className={`w-full h-11 text-center rounded-lg border-2 outline-none text-sm ${
+                              isFutureDate 
+                                ? 'border-neutral-200 bg-neutral-50 text-neutral-400 cursor-not-allowed' 
+                                : isRejected 
+                                  ? 'border-red-300 bg-red-50 focus:ring-2 focus:ring-red-400 focus:border-transparent'
+                                  : 'border-green-300 bg-green-50 focus:ring-2 focus:ring-green-400 focus:border-transparent'
+                            }`}
+                            onChange={(e) => {
+                              const val = parseFloat(e.target.value) || 0;
+                              if (entry) {
+                                setRejectedEdits(prev => ({ ...prev, [entry.id]: val }));
+                              }
+                            }}
+                          />
+                        </td>
+                        <td className="px-2 py-3">
+                          <button 
+                            onClick={async () => {
+                              await api.deleteTimeEntry(entry.id);
+                              await loadData();
+                            }}
+                            className="p-1.5 hover:bg-red-100 text-neutral-400 hover:text-neutral-900 rounded-lg"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {/* Local draft rows */}
+                  {draftRows.map((row) => {
+                    const day = weekDays[mobileDayIndex];
+                    const dateKey = formatDateKey(day);
+                    const draftVal = getDraftValue(row.id, dateKey);
+                    const todayStr = new Date().toISOString().split('T')[0];
+                    const isFutureDate = dateKey > todayStr;
+                    return (
+                      <tr key={row.id} className="hover:bg-neutral-100/50">
+                        <td className="px-3 py-3">
+                          <div className="font-medium text-sm text-neutral-900">
+                            {row.project?.name || 'Unknown Project'}
+                            {row.task && <span className="text-neutral-600"> / {row.task.name}</span>}
+                          </div>
+                        </td>
+                        <td className="px-3 py-3">
+                          <input
+                            type="number"
+                            min="0"
+                            max="24"
+                            step="0.5"
+                            value={draftVal || ''}
+                            placeholder=""
+                            disabled={isFutureDate}
+                            title={isFutureDate ? 'Cannot enter time for future dates' : ''}
+                            className={`w-full h-11 text-center rounded-lg border-2 outline-none text-sm ${
+                              isFutureDate 
+                                ? 'border-neutral-200 bg-neutral-50 text-neutral-400 cursor-not-allowed' 
+                                : 'border-neutral-200 bg-neutral-100 focus:ring-2 focus:ring-[#476E66] focus:border-[#476E66]'
+                            }`}
+                            onChange={(e) => {
+                              const val = parseFloat(e.target.value) || 0;
+                              setDraftValue(row.id, dateKey, val);
+                            }}
+                          />
+                        </td>
+                        <td className="px-2 py-3">
+                          <button 
+                            onClick={() => removeDraftRow(row)}
+                            className="p-1.5 hover:bg-red-100 text-neutral-400 hover:text-neutral-900 rounded-lg"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  <tr>
+                    <td colSpan={3} className="py-3 px-3">
+                      <button 
+                        onClick={() => setShowTimeEntryModal(true)}
+                        className="text-[#476E66] hover:text-[#3A5B54] font-medium text-sm flex items-center gap-1"
+                      >
+                        <span className="text-lg">+</span> Add another project row
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+                {draftRows.length > 0 && (() => {
+                  const day = weekDays[mobileDayIndex];
+                  const dateKey = formatDateKey(day);
+                  const dayTotal = draftRows.reduce((sum, row) => sum + (getDraftValue(row.id, dateKey) || 0), 0);
+                  return dayTotal > 0 ? (
+                    <tfoot className="bg-neutral-100 border-t border-neutral-200">
+                      <tr>
+                        <td className="px-3 py-3 font-semibold text-neutral-900 text-sm">Total for Day</td>
+                        <td className="px-3 py-3 text-center font-bold text-neutral-900 text-base">{dayTotal}h</td>
+                        <td></td>
+                      </tr>
+                    </tfoot>
+                  ) : null;
+                })()}
+              </table>
+            </div>
             
             {/* Submit Button */}
             <div className="p-4 border-t border-neutral-100 flex justify-end gap-3">
               {hasUnsavedDrafts && (
-                <span className="text-sm text-blue-600 self-center flex items-center gap-1">
+                <span className="text-sm text-[#476E66] self-center flex items-center gap-1">
                   <Save className="w-4 h-4" /> Ready to submit
                 </span>
               )}
@@ -1079,78 +1290,146 @@ export default function TimeExpensePage() {
 
       {/* Expenses */}
       {activeTab === 'expenses' && (
-        <div className="bg-white rounded-2xl border border-neutral-100 overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-neutral-50 border-b border-neutral-100">
-              <tr>
-                <th className="text-left px-6 py-4 text-xs font-medium text-neutral-500 uppercase">Date</th>
-                <th className="text-left px-6 py-4 text-xs font-medium text-neutral-500 uppercase">Description</th>
-                <th className="text-left px-6 py-4 text-xs font-medium text-neutral-500 uppercase">Project</th>
-                <th className="text-left px-6 py-4 text-xs font-medium text-neutral-500 uppercase">Category</th>
-                {canViewFinancials && <th className="text-right px-6 py-4 text-xs font-medium text-neutral-500 uppercase">Amount</th>}
-                <th className="text-left px-6 py-4 text-xs font-medium text-neutral-500 uppercase">Approval</th>
-                <th className="w-24"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-neutral-100">
-              {expenses.length === 0 ? (
+        <div className="bg-white rounded-xl overflow-hidden" style={{ boxShadow: 'var(--shadow-card)' }}>
+          {/* Desktop View */}
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-neutral-50 border-b border-neutral-100">
                 <tr>
-                  <td colSpan={7} className="text-center py-12 text-neutral-500">
-                    <p>No expenses recorded</p>
-                    <button 
-                      onClick={() => setShowExpenseModal(true)}
-                      className="mt-2 text-neutral-500 hover:text-neutral-600 font-medium"
-                    >
-                      Add your first expense
-                    </button>
-                  </td>
+                  <th className="text-left px-3 py-2 text-xs font-medium text-neutral-600">Date</th>
+                  <th className="text-left px-3 py-2 text-xs font-medium text-neutral-600">Description</th>
+                  <th className="text-left px-3 py-2 text-xs font-medium text-neutral-600">Project</th>
+                  <th className="text-left px-3 py-2 text-xs font-medium text-neutral-600">Category</th>
+                  {canViewFinancials && <th className="text-right px-3 py-2 text-xs font-medium text-neutral-600">Amount</th>}
+                  <th className="text-left px-3 py-2 text-xs font-medium text-neutral-600">Status</th>
+                  <th className="w-16"></th>
                 </tr>
-              ) : (
-                expenses.map(expense => (
-                  <tr key={expense.id} className="hover:bg-neutral-50">
-                    <td className="px-6 py-4 text-neutral-600">{expense.date ? new Date(expense.date + 'T00:00:00').toLocaleDateString() : '-'}</td>
-                    <td className="px-6 py-4 font-medium text-neutral-900">{expense.description}</td>
-                    <td className="px-6 py-4 text-neutral-600">{expense.project?.name || '-'}</td>
-                    <td className="px-6 py-4 text-neutral-600">{expense.category || '-'}</td>
-                    {canViewFinancials && <td className="px-6 py-4 text-right font-medium text-neutral-900">{formatCurrency(expense.amount)}</td>}
-                    <td className="px-6 py-4">
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
-                        expense.approval_status === 'approved' ? 'bg-emerald-100 text-emerald-700' :
-                        expense.approval_status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
-                      }`}>
-                        {expense.approval_status || 'pending'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-1">
-                        <button 
-                          onClick={() => { setEditingExpense(expense); setShowExpenseModal(true); }}
-                          className="p-1.5 hover:bg-neutral-100 text-neutral-400 hover:text-neutral-600 rounded-lg"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        <button 
-                          onClick={() => deleteExpense(expense.id)}
-                          className="p-1.5 hover:bg-red-100 text-neutral-400 hover:text-neutral-900 rounded-lg"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
+              </thead>
+              <tbody className="divide-y divide-neutral-50">
+                {expenses.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="text-center py-12 text-neutral-500">
+                      <p className="text-sm">No expenses recorded</p>
+                      <button 
+                        onClick={() => setShowExpenseModal(true)}
+                        className="mt-2 text-[#476E66] hover:text-[#3A5B54] font-medium text-sm"
+                      >
+                        Add your first expense
+                      </button>
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  expenses.map(expense => (
+                    <tr key={expense.id} className="hover:bg-neutral-50/50">
+                      <td className="px-3 py-2.5 text-xs text-neutral-600">{expense.date ? new Date(expense.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '-'}</td>
+                      <td className="px-3 py-2.5 text-sm font-medium text-neutral-900">{expense.description}</td>
+                      <td className="px-3 py-2.5 text-xs text-neutral-600">{expense.project?.name || '-'}</td>
+                      <td className="px-3 py-2.5 text-xs text-neutral-600">{expense.category || '-'}</td>
+                      {canViewFinancials && <td className="px-3 py-2.5 text-right text-sm font-medium text-neutral-900">{formatCurrency(expense.amount)}</td>}
+                      <td className="px-3 py-2.5">
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                          expense.approval_status === 'approved' ? 'bg-[#476E66]/10 text-[#476E66]' :
+                          expense.approval_status === 'rejected' ? 'bg-red-50 text-red-600' : 'bg-amber-50 text-amber-600'
+                        }`}>
+                          {expense.approval_status || 'pending'}
+                        </span>
+                      </td>
+                      <td className="px-2 py-2.5">
+                        <div className="flex items-center gap-1">
+                          <button 
+                            onClick={() => { setEditingExpense(expense); setShowExpenseModal(true); }}
+                            className="p-1.5 hover:bg-neutral-100 text-neutral-400 hover:text-neutral-900 rounded-lg"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button 
+                            onClick={() => deleteExpense(expense.id)}
+                            className="p-1.5 hover:bg-red-100 text-neutral-400 hover:text-neutral-900 rounded-lg"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile View */}
+          <div className="block md:hidden divide-y divide-neutral-50">
+            {expenses.length === 0 ? (
+              <div className="text-center py-12 text-neutral-500">
+                <p className="text-sm">No expenses recorded</p>
+                <button 
+                  onClick={() => setShowExpenseModal(true)}
+                  className="mt-2 text-[#476E66] hover:text-[#3A5B54] font-medium text-sm"
+                >
+                  Add your first expense
+                </button>
+              </div>
+            ) : (
+              expenses.map(expense => (
+                <div key={expense.id} className="p-3 hover:bg-neutral-50/50">
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-sm text-neutral-900 mb-1">{expense.description}</div>
+                      <div className="flex flex-wrap items-center gap-2 text-xs text-neutral-500">
+                        <span>{expense.date ? new Date(expense.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '-'}</span>
+                        {expense.project?.name && (
+                          <>
+                            <span>•</span>
+                            <span>{expense.project.name}</span>
+                          </>
+                        )}
+                        {expense.category && (
+                          <>
+                            <span>•</span>
+                            <span>{expense.category}</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <button 
+                        onClick={() => { setEditingExpense(expense); setShowExpenseModal(true); }}
+                        className="p-1.5 hover:bg-neutral-100 text-neutral-400 hover:text-neutral-900 rounded-lg"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button 
+                        onClick={() => deleteExpense(expense.id)}
+                        className="p-1.5 hover:bg-red-100 text-neutral-400 hover:text-neutral-900 rounded-lg"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    {canViewFinancials && (
+                      <div className="text-sm font-semibold text-neutral-900">{formatCurrency(expense.amount)}</div>
+                    )}
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                      expense.approval_status === 'approved' ? 'bg-[#476E66]/10 text-[#476E66]' :
+                      expense.approval_status === 'rejected' ? 'bg-red-50 text-red-600' : 'bg-amber-50 text-amber-600'
+                    }`}>
+                      {expense.approval_status || 'pending'}
+                    </span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </div>
       )}
 
       {/* Approvals Tab */}
       {activeTab === 'approvals' && canApprove && (
-        <div className="space-y-6">
+        <div className="space-y-3 sm:space-y-4">
           {/* Date Range Picker */}
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-neutral-900">Pending Approvals</h2>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+            <h2 className="text-base sm:text-lg font-semibold text-neutral-900">Pending Approvals</h2>
             <DateRangePicker
               startDate={dateRange.startDate}
               endDate={dateRange.endDate}
@@ -1159,12 +1438,12 @@ export default function TimeExpensePage() {
           </div>
 
           {/* Pending Time Entries - Grouped by Project */}
-          <div className="bg-white rounded-2xl border border-neutral-100 overflow-hidden">
-            <div className="px-6 py-4 border-b border-neutral-100 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-neutral-900">Pending Time Entries</h3>
+          <div className="bg-white rounded-xl overflow-hidden" style={{ boxShadow: 'var(--shadow-card)' }}>
+            <div className="px-3 sm:px-4 py-3 border-b border-neutral-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+              <h3 className="text-sm sm:text-base font-semibold text-neutral-900">Pending Time Entries</h3>
               {selectedTimeEntries.size > 0 && (
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-neutral-500">{selectedTimeEntries.size} selected</span>
+                  <span className="text-xs sm:text-sm text-neutral-500">{selectedTimeEntries.size} selected</span>
                   <button
                     onClick={async () => {
                       for (const id of selectedTimeEntries) {
@@ -1173,7 +1452,7 @@ export default function TimeExpensePage() {
                       setSelectedTimeEntries(new Set());
                       loadData();
                     }}
-                    className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm font-medium"
+                    className="px-3 py-1.5 bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54] text-xs sm:text-sm font-medium"
                   >
                     Approve
                   </button>
@@ -1185,7 +1464,7 @@ export default function TimeExpensePage() {
                       setSelectedTimeEntries(new Set());
                       loadData();
                     }}
-                    className="px-4 py-2 bg-neutral-200 text-neutral-700 rounded-lg hover:bg-neutral-300 text-sm font-medium"
+                    className="px-3 py-1.5 bg-neutral-200 text-neutral-700 rounded-lg hover:bg-neutral-300 text-xs sm:text-sm font-medium"
                   >
                     Reject
                   </button>
@@ -1193,7 +1472,7 @@ export default function TimeExpensePage() {
               )}
             </div>
             {filteredPendingTimeEntries.length === 0 ? (
-              <div className="p-8 text-center text-neutral-500">No pending time entries for this period</div>
+              <div className="p-8 text-center text-neutral-500 text-sm">No pending time entries for this period</div>
             ) : (
               <div className="divide-y divide-neutral-100">
                 {/* Group by project */}
@@ -1215,8 +1494,8 @@ export default function TimeExpensePage() {
                   return (
                     <div key={projectId}>
                       {/* Project Header */}
-                      <div className="bg-neutral-50 px-6 py-3 flex items-center justify-between">
-                        <div className="flex items-center gap-3">
+                      <div className="bg-neutral-50 px-3 sm:px-4 py-2.5 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
                           <input
                             type="checkbox"
                             checked={allSelected}
@@ -1232,56 +1511,92 @@ export default function TimeExpensePage() {
                               });
                               setSelectedTimeEntries(newSelected);
                             }}
-                            className="w-4 h-4 rounded border-neutral-300 text-emerald-600 focus:ring-emerald-500"
+                            className="w-3.5 h-3.5 rounded border-neutral-300 text-[#476E66] focus:ring-[#476E66]"
                           />
-                          <span className="font-semibold text-neutral-900">{group.name}</span>
-                          <span className="text-sm text-neutral-500">({group.entries.length})</span>
+                          <span className="font-semibold text-sm text-neutral-900">{group.name}</span>
+                          <span className="text-xs text-neutral-500">({group.entries.length})</span>
                         </div>
-                        <div className="text-sm">
+                        <div className="text-xs sm:text-sm">
                           <span className="text-neutral-500">Total: </span>
-                          <span className="font-medium text-neutral-900">{totalHours.toFixed(2)}h</span>
+                          <span className="font-medium text-neutral-900">{totalHours.toFixed(1)}h</span>
                         </div>
                       </div>
-                      {/* Entries Table */}
-                      <table className="w-full">
-                        <thead className="bg-white border-b border-neutral-100">
-                          <tr>
-                            <th className="w-10 px-6 py-2"></th>
-                            <th className="text-left px-4 py-2 text-xs font-medium text-neutral-500 uppercase">Period</th>
-                            <th className="text-left px-4 py-2 text-xs font-medium text-neutral-500 uppercase">Submitted By</th>
-                            <th className="text-left px-4 py-2 text-xs font-medium text-neutral-500 uppercase">Task</th>
-                            <th className="text-right px-4 py-2 text-xs font-medium text-neutral-500 uppercase">Total Hours</th>
-                            <th className="text-right px-6 py-2 text-xs font-medium text-neutral-500 uppercase">Pending Hours</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-neutral-50">
-                          {group.entries.map(entry => (
-                            <tr key={entry.id} className={`hover:bg-neutral-50 ${selectedTimeEntries.has(entry.id) ? 'bg-emerald-50' : ''}`}>
-                              <td className="px-6 py-3">
-                                <input
-                                  type="checkbox"
-                                  checked={selectedTimeEntries.has(entry.id)}
-                                  onChange={(e) => {
-                                    const newSelected = new Set(selectedTimeEntries);
-                                    if (e.target.checked) {
-                                      newSelected.add(entry.id);
-                                    } else {
-                                      newSelected.delete(entry.id);
-                                    }
-                                    setSelectedTimeEntries(newSelected);
-                                  }}
-                                  className="w-4 h-4 rounded border-neutral-300 text-emerald-600 focus:ring-emerald-500"
-                                />
-                              </td>
-                              <td className="px-4 py-3 text-neutral-600">{entry.date ? new Date(entry.date + 'T00:00:00').toLocaleDateString() : '-'}</td>
-                              <td className="px-4 py-3 font-medium text-neutral-900">{entry.user?.full_name || entry.user?.email || '-'}</td>
-                              <td className="px-4 py-3 text-neutral-600">{entry.task?.name || entry.description || '-'}</td>
-                              <td className="px-4 py-3 text-right font-medium text-neutral-900">{Number(entry.hours).toFixed(2)}</td>
-                              <td className="px-6 py-3 text-right font-medium text-emerald-600">{Number(entry.hours).toFixed(2)}</td>
+                      {/* Entries - Mobile Cards */}
+                      <div className="block md:hidden divide-y divide-neutral-50">
+                        {group.entries.map(entry => (
+                          <div key={entry.id} className={`p-3 ${selectedTimeEntries.has(entry.id) ? 'bg-[#476E66]/5' : ''}`}>
+                            <div className="flex items-start gap-2">
+                              <input
+                                type="checkbox"
+                                checked={selectedTimeEntries.has(entry.id)}
+                                onChange={(e) => {
+                                  const newSelected = new Set(selectedTimeEntries);
+                                  if (e.target.checked) {
+                                    newSelected.add(entry.id);
+                                  } else {
+                                    newSelected.delete(entry.id);
+                                  }
+                                  setSelectedTimeEntries(newSelected);
+                                }}
+                                className="w-3.5 h-3.5 mt-0.5 rounded border-neutral-300 text-[#476E66] focus:ring-[#476E66]"
+                              />
+                              <div className="flex-1 min-w-0">
+                                <div className="font-medium text-sm text-neutral-900 mb-1">
+                                  {entry.user?.full_name || entry.user?.email || '-'}
+                                </div>
+                                <div className="text-xs text-neutral-600 mb-1">
+                                  {entry.task?.name || entry.description || '-'}
+                                </div>
+                                <div className="flex items-center gap-2 text-xs text-neutral-500">
+                                  <span>{entry.date ? new Date(entry.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '-'}</span>
+                                  <span>•</span>
+                                  <span className="font-medium text-[#476E66]">{Number(entry.hours).toFixed(1)}h</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      {/* Entries Table - Desktop */}
+                      <div className="hidden md:block overflow-x-auto">
+                        <table className="w-full">
+                          <thead className="bg-white border-b border-neutral-100">
+                            <tr>
+                              <th className="w-10 px-3 py-2"></th>
+                              <th className="text-left px-2 py-2 text-xs font-medium text-neutral-600">Date</th>
+                              <th className="text-left px-2 py-2 text-xs font-medium text-neutral-600">Submitted By</th>
+                              <th className="text-left px-2 py-2 text-xs font-medium text-neutral-600">Task</th>
+                              <th className="text-right px-2 py-2 text-xs font-medium text-neutral-600">Hours</th>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                          </thead>
+                          <tbody className="divide-y divide-neutral-50">
+                            {group.entries.map(entry => (
+                              <tr key={entry.id} className={`hover:bg-neutral-50/50 ${selectedTimeEntries.has(entry.id) ? 'bg-[#476E66]/5' : ''}`}>
+                                <td className="px-3 py-2.5">
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedTimeEntries.has(entry.id)}
+                                    onChange={(e) => {
+                                      const newSelected = new Set(selectedTimeEntries);
+                                      if (e.target.checked) {
+                                        newSelected.add(entry.id);
+                                      } else {
+                                        newSelected.delete(entry.id);
+                                      }
+                                      setSelectedTimeEntries(newSelected);
+                                    }}
+                                    className="w-3.5 h-3.5 rounded border-neutral-300 text-[#476E66] focus:ring-[#476E66]"
+                                  />
+                                </td>
+                                <td className="px-2 py-2.5 text-xs text-neutral-600">{entry.date ? new Date(entry.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '-'}</td>
+                                <td className="px-2 py-2.5 text-sm font-medium text-neutral-900">{entry.user?.full_name || entry.user?.email || '-'}</td>
+                                <td className="px-2 py-2.5 text-xs text-neutral-600">{entry.task?.name || entry.description || '-'}</td>
+                                <td className="px-2 py-2.5 text-right text-sm font-medium text-[#476E66]">{Number(entry.hours).toFixed(1)}h</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
                   );
                 })}
@@ -1290,12 +1605,12 @@ export default function TimeExpensePage() {
           </div>
 
           {/* Pending Expenses - Grouped by Project */}
-          <div className="bg-white rounded-2xl border border-neutral-100 overflow-hidden">
-            <div className="px-6 py-4 border-b border-neutral-100 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-neutral-900">Pending Expenses</h3>
+          <div className="bg-white rounded-xl overflow-hidden" style={{ boxShadow: 'var(--shadow-card)' }}>
+            <div className="px-3 sm:px-4 py-3 border-b border-neutral-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+              <h3 className="text-sm sm:text-base font-semibold text-neutral-900">Pending Expenses</h3>
               {selectedExpenses.size > 0 && (
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-neutral-500">{selectedExpenses.size} selected</span>
+                  <span className="text-xs sm:text-sm text-neutral-500">{selectedExpenses.size} selected</span>
                   <button
                     onClick={async () => {
                       for (const id of selectedExpenses) {
@@ -1304,7 +1619,7 @@ export default function TimeExpensePage() {
                       setSelectedExpenses(new Set());
                       loadData();
                     }}
-                    className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm font-medium"
+                    className="px-3 py-1.5 bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54] text-xs sm:text-sm font-medium"
                   >
                     Approve
                   </button>
@@ -1316,7 +1631,7 @@ export default function TimeExpensePage() {
                       setSelectedExpenses(new Set());
                       loadData();
                     }}
-                    className="px-4 py-2 bg-neutral-200 text-neutral-700 rounded-lg hover:bg-neutral-300 text-sm font-medium"
+                    className="px-3 py-1.5 bg-neutral-200 text-neutral-700 rounded-lg hover:bg-neutral-300 text-xs sm:text-sm font-medium"
                   >
                     Reject
                   </button>
@@ -1324,7 +1639,7 @@ export default function TimeExpensePage() {
               )}
             </div>
             {filteredPendingExpenses.length === 0 ? (
-              <div className="p-8 text-center text-neutral-500">No pending expenses for this period</div>
+              <div className="p-8 text-center text-neutral-500 text-sm">No pending expenses for this period</div>
             ) : (
               <div className="divide-y divide-neutral-100">
                 {Object.entries(
@@ -1361,71 +1676,124 @@ export default function TimeExpensePage() {
                               });
                               setSelectedExpenses(newSelected);
                             }}
-                            className="w-4 h-4 rounded border-neutral-300 text-emerald-600 focus:ring-emerald-500"
+                            className="w-3.5 h-3.5 rounded border-neutral-300 text-[#476E66] focus:ring-[#476E66]"
                           />
-                          <span className="font-semibold text-neutral-900">{group.name}</span>
-                          <span className="text-sm text-neutral-500">({group.expenses.length})</span>
+                          <span className="font-semibold text-sm text-neutral-900">{group.name}</span>
+                          <span className="text-xs text-neutral-500">({group.expenses.length})</span>
                         </div>
-                        <div className="text-sm">
+                        <div className="text-xs sm:text-sm">
                           <span className="text-neutral-500">Total: </span>
                           <span className="font-medium text-neutral-900">{formatCurrency(totalAmount)}</span>
                         </div>
                       </div>
-                      <table className="w-full">
-                        <thead className="bg-white border-b border-neutral-100">
-                          <tr>
-                            <th className="w-10 px-6 py-2"></th>
-                            <th className="text-left px-4 py-2 text-xs font-medium text-neutral-500 uppercase">Date</th>
-                            <th className="text-left px-4 py-2 text-xs font-medium text-neutral-500 uppercase">Submitted By</th>
-                            <th className="text-left px-4 py-2 text-xs font-medium text-neutral-500 uppercase">Description</th>
-                            <th className="text-left px-4 py-2 text-xs font-medium text-neutral-500 uppercase">Category</th>
-                            <th className="text-center px-4 py-2 text-xs font-medium text-neutral-500 uppercase">Receipt</th>
-                            <th className="text-right px-6 py-2 text-xs font-medium text-neutral-500 uppercase">Amount</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-neutral-50">
-                          {group.expenses.map(expense => (
-                            <tr key={expense.id} className={`hover:bg-neutral-50 ${selectedExpenses.has(expense.id) ? 'bg-emerald-50' : ''}`}>
-                              <td className="px-6 py-3">
-                                <input
-                                  type="checkbox"
-                                  checked={selectedExpenses.has(expense.id)}
-                                  onChange={(e) => {
-                                    const newSelected = new Set(selectedExpenses);
-                                    if (e.target.checked) {
-                                      newSelected.add(expense.id);
-                                    } else {
-                                      newSelected.delete(expense.id);
-                                    }
-                                    setSelectedExpenses(newSelected);
-                                  }}
-                                  className="w-4 h-4 rounded border-neutral-300 text-emerald-600 focus:ring-emerald-500"
-                                />
-                              </td>
-                              <td className="px-4 py-3 text-neutral-600">{expense.date ? new Date(expense.date + 'T00:00:00').toLocaleDateString() : '-'}</td>
-                              <td className="px-4 py-3 font-medium text-neutral-900">{expense.user?.full_name || expense.user?.email || '-'}</td>
-                              <td className="px-4 py-3 text-neutral-600">{expense.description}</td>
-                              <td className="px-4 py-3 text-neutral-600">{expense.category || '-'}</td>
-                              <td className="px-4 py-3 text-center">
-                                {expense.receipt_url ? (
-                                  <a
-                                    href={expense.receipt_url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 text-blue-600 rounded-lg text-xs font-medium hover:bg-blue-100 transition-colors"
-                                  >
-                                    <Paperclip className="w-3 h-3" />
-                                    View
-                                  </a>
-                                ) : (
-                                  <span className="text-neutral-400 text-xs">-</span>
-                                )}
-                              </td>
-                              <td className="px-6 py-3 text-right font-medium text-emerald-600">{formatCurrency(expense.amount)}</td>
+                      {/* Mobile Cards */}
+                      <div className="block md:hidden divide-y divide-neutral-50">
+                        {group.expenses.map(expense => (
+                          <div key={expense.id} className={`p-3 ${selectedExpenses.has(expense.id) ? 'bg-[#476E66]/5' : ''}`}>
+                            <div className="flex items-start gap-2">
+                              <input
+                                type="checkbox"
+                                checked={selectedExpenses.has(expense.id)}
+                                onChange={(e) => {
+                                  const newSelected = new Set(selectedExpenses);
+                                  if (e.target.checked) {
+                                    newSelected.add(expense.id);
+                                  } else {
+                                    newSelected.delete(expense.id);
+                                  }
+                                  setSelectedExpenses(newSelected);
+                                }}
+                                className="w-3.5 h-3.5 mt-0.5 rounded border-neutral-300 text-[#476E66] focus:ring-[#476E66]"
+                              />
+                              <div className="flex-1 min-w-0">
+                                <div className="font-medium text-sm text-neutral-900 mb-1">{expense.description}</div>
+                                <div className="text-xs text-neutral-600 mb-1">{expense.user?.full_name || expense.user?.email || '-'}</div>
+                                <div className="flex flex-wrap items-center gap-2 text-xs text-neutral-500 mb-2">
+                                  <span>{expense.date ? new Date(expense.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '-'}</span>
+                                  {expense.category && (
+                                    <>
+                                      <span>•</span>
+                                      <span>{expense.category}</span>
+                                    </>
+                                  )}
+                                </div>
+                                <div className="flex items-center justify-between">
+                                  <div className="text-sm font-semibold text-[#476E66]">{formatCurrency(expense.amount)}</div>
+                                  {expense.receipt_url && (
+                                    <a
+                                      href={expense.receipt_url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#476E66]/10 text-[#476E66] rounded text-xs font-medium"
+                                    >
+                                      <Paperclip className="w-3 h-3" />
+                                      Receipt
+                                    </a>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      {/* Desktop Table */}
+                      <div className="hidden md:block overflow-x-auto">
+                        <table className="w-full">
+                          <thead className="bg-white border-b border-neutral-100">
+                            <tr>
+                              <th className="w-10 px-3 py-2"></th>
+                              <th className="text-left px-2 py-2 text-xs font-medium text-neutral-600">Date</th>
+                              <th className="text-left px-2 py-2 text-xs font-medium text-neutral-600">By</th>
+                              <th className="text-left px-2 py-2 text-xs font-medium text-neutral-600">Description</th>
+                              <th className="text-left px-2 py-2 text-xs font-medium text-neutral-600">Category</th>
+                              <th className="text-center px-2 py-2 text-xs font-medium text-neutral-600">Receipt</th>
+                              <th className="text-right px-3 py-2 text-xs font-medium text-neutral-600">Amount</th>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                          </thead>
+                          <tbody className="divide-y divide-neutral-50">
+                            {group.expenses.map(expense => (
+                              <tr key={expense.id} className={`hover:bg-neutral-50/50 ${selectedExpenses.has(expense.id) ? 'bg-[#476E66]/5' : ''}`}>
+                                <td className="px-3 py-2.5">
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedExpenses.has(expense.id)}
+                                    onChange={(e) => {
+                                      const newSelected = new Set(selectedExpenses);
+                                      if (e.target.checked) {
+                                        newSelected.add(expense.id);
+                                      } else {
+                                        newSelected.delete(expense.id);
+                                      }
+                                      setSelectedExpenses(newSelected);
+                                    }}
+                                    className="w-3.5 h-3.5 rounded border-neutral-300 text-[#476E66] focus:ring-[#476E66]"
+                                  />
+                                </td>
+                                <td className="px-2 py-2.5 text-xs text-neutral-600">{expense.date ? new Date(expense.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '-'}</td>
+                                <td className="px-2 py-2.5 text-sm font-medium text-neutral-900">{expense.user?.full_name || expense.user?.email || '-'}</td>
+                                <td className="px-2 py-2.5 text-xs text-neutral-600">{expense.description}</td>
+                                <td className="px-2 py-2.5 text-xs text-neutral-600">{expense.category || '-'}</td>
+                                <td className="px-2 py-2.5 text-center">
+                                  {expense.receipt_url ? (
+                                    <a
+                                      href={expense.receipt_url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#476E66]/10 text-[#476E66] rounded text-xs font-medium hover:bg-[#476E66]/20"
+                                    >
+                                      <Paperclip className="w-3 h-3" />
+                                      View
+                                    </a>
+                                  ) : (
+                                    <span className="text-neutral-400 text-xs">-</span>
+                                  )}
+                                </td>
+                                <td className="px-3 py-2.5 text-right text-sm font-semibold text-[#476E66]">{formatCurrency(expense.amount)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
                   );
                 })}
@@ -1437,10 +1805,10 @@ export default function TimeExpensePage() {
 
       {/* Approved History Tab */}
       {activeTab === 'approved' && canApprove && (
-        <div className="space-y-6">
+        <div className="space-y-3 sm:space-y-4">
           {/* Date Range Picker */}
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-neutral-900">Approved History</h2>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+            <h2 className="text-base sm:text-lg font-semibold text-neutral-900">Approved History</h2>
             <DateRangePicker
               startDate={dateRange.startDate}
               endDate={dateRange.endDate}
@@ -1449,15 +1817,15 @@ export default function TimeExpensePage() {
           </div>
 
           {/* Approved Time Entries - Grouped by Project then User */}
-          <div className="bg-white rounded-2xl border border-neutral-100 overflow-hidden">
-            <div className="px-6 py-4 border-b border-neutral-100">
-              <h3 className="text-lg font-semibold text-neutral-900">Approved Time Entries</h3>
-              <p className="text-sm text-neutral-500 mt-1">
-                Total: {approvedTimeEntries.reduce((sum, e) => sum + Number(e.hours), 0).toFixed(2)} hours
+          <div className="bg-white rounded-xl overflow-hidden" style={{ boxShadow: 'var(--shadow-card)' }}>
+            <div className="px-3 sm:px-4 py-3 border-b border-neutral-100">
+              <h3 className="text-sm sm:text-base font-semibold text-neutral-900">Approved Time Entries</h3>
+              <p className="text-xs sm:text-sm text-neutral-500 mt-0.5">
+                Total: {approvedTimeEntries.reduce((sum, e) => sum + Number(e.hours), 0).toFixed(1)} hours
               </p>
             </div>
             {approvedTimeEntries.length === 0 ? (
-              <div className="p-8 text-center text-neutral-500">No approved time entries for this period</div>
+              <div className="p-8 text-center text-neutral-500 text-sm">No approved time entries for this period</div>
             ) : (
               <div className="divide-y divide-neutral-100">
                 {/* Group by project */}
@@ -1535,15 +1903,15 @@ export default function TimeExpensePage() {
           </div>
 
           {/* Approved Expenses - Grouped by Project then User */}
-          <div className="bg-white rounded-2xl border border-neutral-100 overflow-hidden">
-            <div className="px-6 py-4 border-b border-neutral-100">
-              <h3 className="text-lg font-semibold text-neutral-900">Approved Expenses</h3>
-              <p className="text-sm text-neutral-500 mt-1">
+          <div className="bg-white rounded-xl overflow-hidden" style={{ boxShadow: 'var(--shadow-card)' }}>
+            <div className="px-3 sm:px-4 py-3 border-b border-neutral-100">
+              <h3 className="text-sm sm:text-base font-semibold text-neutral-900">Approved Expenses</h3>
+              <p className="text-xs sm:text-sm text-neutral-500 mt-0.5">
                 Total: {formatCurrency(approvedExpenses.reduce((sum, e) => sum + Number(e.amount), 0))}
               </p>
             </div>
             {approvedExpenses.length === 0 ? (
-              <div className="p-8 text-center text-neutral-500">No approved expenses for this period</div>
+              <div className="p-8 text-center text-neutral-500 text-sm">No approved expenses for this period</div>
             ) : (
               <div className="divide-y divide-neutral-100">
                 {Object.entries(
@@ -1568,9 +1936,9 @@ export default function TimeExpensePage() {
                   
                   return (
                     <div key={projectId}>
-                      <div className="bg-neutral-50 px-6 py-3 flex items-center justify-between">
-                        <span className="font-semibold text-neutral-900">{project.name}</span>
-                        <div className="text-sm">
+                      <div className="bg-neutral-50 px-3 sm:px-4 py-2.5 flex items-center justify-between">
+                        <span className="font-semibold text-sm text-neutral-900">{project.name}</span>
+                        <div className="text-xs sm:text-sm">
                           <span className="text-neutral-500">Total: </span>
                           <span className="font-medium text-neutral-900">{formatCurrency(projectTotal)}</span>
                         </div>
@@ -1578,31 +1946,54 @@ export default function TimeExpensePage() {
                       {Object.entries(project.users).map(([userId, user]) => {
                         const userTotal = user.expenses.reduce((sum, e) => sum + Number(e.amount), 0);
                         return (
-                          <div key={userId} className="border-l-4 border-emerald-200 ml-4">
-                            <div className="bg-emerald-50/50 px-6 py-2 flex items-center justify-between">
-                              <span className="font-medium text-neutral-800">{user.name}</span>
-                              <span className="text-sm font-medium text-emerald-600">{formatCurrency(userTotal)}</span>
+                          <div key={userId} className="border-l-2 border-[#476E66]/20 ml-2 sm:ml-4">
+                            <div className="bg-[#476E66]/5 px-3 sm:px-4 py-2 flex items-center justify-between">
+                              <span className="font-medium text-sm text-neutral-900">{user.name}</span>
+                              <span className="text-xs sm:text-sm font-medium text-[#476E66]">{formatCurrency(userTotal)}</span>
                             </div>
-                            <table className="w-full">
-                              <thead className="bg-white border-b border-neutral-100">
-                                <tr>
-                                  <th className="text-left px-6 py-2 text-xs font-medium text-neutral-500 uppercase">Date</th>
-                                  <th className="text-left px-4 py-2 text-xs font-medium text-neutral-500 uppercase">Description</th>
-                                  <th className="text-left px-4 py-2 text-xs font-medium text-neutral-500 uppercase">Category</th>
-                                  <th className="text-right px-6 py-2 text-xs font-medium text-neutral-500 uppercase">Amount</th>
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y divide-neutral-50">
-                                {user.expenses.map(expense => (
-                                  <tr key={expense.id} className="hover:bg-neutral-50">
-                                    <td className="px-6 py-3 text-neutral-600">{expense.date ? new Date(expense.date + 'T00:00:00').toLocaleDateString() : '-'}</td>
-                                    <td className="px-4 py-3 text-neutral-600">{expense.description}</td>
-                                    <td className="px-4 py-3 text-neutral-600">{expense.category || '-'}</td>
-                                    <td className="px-6 py-3 text-right font-medium text-emerald-600">{formatCurrency(expense.amount)}</td>
+                            {/* Mobile Cards */}
+                            <div className="block md:hidden divide-y divide-neutral-50">
+                              {user.expenses.map(expense => (
+                                <div key={expense.id} className="p-3">
+                                  <div className="font-medium text-sm text-neutral-900 mb-1">{expense.description}</div>
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2 text-xs text-neutral-500">
+                                      <span>{expense.date ? new Date(expense.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '-'}</span>
+                                      {expense.category && (
+                                        <>
+                                          <span>•</span>
+                                          <span>{expense.category}</span>
+                                        </>
+                                      )}
+                                    </div>
+                                    <div className="text-sm font-semibold text-[#476E66]">{formatCurrency(expense.amount)}</div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                            {/* Desktop Table */}
+                            <div className="hidden md:block overflow-x-auto">
+                              <table className="w-full">
+                                <thead className="bg-white border-b border-neutral-100">
+                                  <tr>
+                                    <th className="text-left px-2 py-2 text-xs font-medium text-neutral-600">Date</th>
+                                    <th className="text-left px-2 py-2 text-xs font-medium text-neutral-600">Description</th>
+                                    <th className="text-left px-2 py-2 text-xs font-medium text-neutral-600">Category</th>
+                                    <th className="text-right px-3 py-2 text-xs font-medium text-neutral-600">Amount</th>
                                   </tr>
-                                ))}
-                              </tbody>
-                            </table>
+                                </thead>
+                                <tbody className="divide-y divide-neutral-50">
+                                  {user.expenses.map(expense => (
+                                    <tr key={expense.id} className="hover:bg-neutral-50/50">
+                                      <td className="px-2 py-2.5 text-xs text-neutral-600">{expense.date ? new Date(expense.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '-'}</td>
+                                      <td className="px-2 py-2.5 text-sm text-neutral-900">{expense.description}</td>
+                                      <td className="px-2 py-2.5 text-xs text-neutral-600">{expense.category || '-'}</td>
+                                      <td className="px-3 py-2.5 text-right text-sm font-semibold text-[#476E66]">{formatCurrency(expense.amount)}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
                           </div>
                         );
                       })}
@@ -1692,7 +2083,7 @@ function AddTimeRowModal({ projects, tasks: initialTasks, existingDraftRows, exi
             <select 
               value={projectId} 
               onChange={(e) => { setProjectId(e.target.value); setTaskId(''); }} 
-              className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-[#476E66] focus:border-transparent outline-none"
             >
               <option value="">Select a project</option>
               {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -1703,7 +2094,7 @@ function AddTimeRowModal({ projects, tasks: initialTasks, existingDraftRows, exi
             <select 
               value={taskId} 
               onChange={(e) => setTaskId(e.target.value)} 
-              className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-[#476E66] focus:border-transparent outline-none"
               disabled={!projectId || loadingTasks}
             >
               <option value="">{loadingTasks ? 'Loading tasks...' : 'No specific task'}</option>
@@ -1813,28 +2204,28 @@ function ExpenseModal({ expense, projects, companyId, userId, onClose, onSave }:
           {error && <div className="p-3 bg-neutral-100 border border-red-200 text-red-700 rounded-lg text-sm">{error}</div>}
           <div>
             <label className="block text-sm font-medium text-neutral-700 mb-1.5">Description *</label>
-            <input type="text" value={description} onChange={(e) => setDescription(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" required />
+            <input type="text" value={description} onChange={(e) => setDescription(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-[#476E66] focus:border-transparent outline-none" required />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-neutral-700 mb-1.5">Amount *</label>
-              <input type="number" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" required />
+              <input type="number" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-[#476E66] focus:border-transparent outline-none" required />
             </div>
             <div>
               <label className="block text-sm font-medium text-neutral-700 mb-1.5">Date *</label>
-              <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" required />
+              <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-[#476E66] focus:border-transparent outline-none" required />
             </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-neutral-700 mb-1.5">Project</label>
-            <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none">
+            <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-[#476E66] focus:border-transparent outline-none">
               <option value="">No project</option>
               {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
           </div>
           <div>
             <label className="block text-sm font-medium text-neutral-700 mb-1.5">Category</label>
-            <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none">
+            <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-[#476E66] focus:border-transparent outline-none">
               <option value="">Select category</option>
               <option value="Travel">Travel</option>
               <option value="Meals">Meals</option>
@@ -1844,7 +2235,7 @@ function ExpenseModal({ expense, projects, companyId, userId, onClose, onSave }:
             </select>
           </div>
           <div className="flex items-center gap-2">
-            <input type="checkbox" id="billable" checked={billable} onChange={(e) => setBillable(e.target.checked)} className="rounded border-neutral-300 text-neutral-500 focus:ring-primary-500" />
+            <input type="checkbox" id="billable" checked={billable} onChange={(e) => setBillable(e.target.checked)} className="rounded border-neutral-300 text-neutral-500 focus:ring-[#476E66]" />
             <label htmlFor="billable" className="text-sm text-neutral-700">Billable to client</label>
           </div>
           <div>

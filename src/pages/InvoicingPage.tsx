@@ -174,9 +174,9 @@ export default function InvoicingPage() {
   const getStatusColor = (status?: string) => {
     switch (status) {
       case 'draft': return 'bg-neutral-100 text-neutral-700';
-      case 'sent': return 'bg-blue-100 text-blue-700';
-      case 'paid': return 'bg-emerald-100 text-emerald-700';
-      case 'overdue': return 'bg-red-100 text-red-700';
+      case 'sent': return 'bg-amber-50 text-amber-600';
+      case 'paid': return 'bg-[#476E66]/10 text-[#476E66]';
+      case 'overdue': return 'bg-red-50 text-red-600';
       default: return 'bg-neutral-100 text-neutral-700';
     }
   };
@@ -388,100 +388,102 @@ export default function InvoicingPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3 sm:space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900">Invoicing</h1>
-          <p className="text-neutral-500">Manage invoices and payments</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-neutral-900">Invoicing</h1>
+          <p className="text-neutral-500 text-xs sm:text-sm">Manage invoices and payments</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-2 sm:gap-3">
           <button
             onClick={handleExportCSV}
-            className="flex items-center gap-2 px-4 py-2.5 border border-neutral-200 bg-white text-neutral-700 rounded-xl hover:bg-neutral-50 transition-colors"
+            className="hidden sm:flex items-center gap-2 px-4 py-2.5 border border-neutral-200 bg-white text-neutral-700 rounded-xl hover:bg-neutral-50 transition-colors"
           >
             <Download className="w-4 h-4" />
             Export CSV
           </button>
           <button
             onClick={() => setShowMakePaymentModal(true)}
-            className="flex items-center gap-2 px-4 py-2.5 border border-neutral-200 bg-white text-neutral-700 rounded-xl hover:bg-neutral-50 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-2 border border-neutral-200 bg-white text-neutral-700 rounded-lg hover:bg-neutral-50 transition-colors text-sm"
           >
-            <DollarSign className="w-4 h-4" />
-            Log Payment
+            <DollarSign className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Log Payment</span>
+            <span className="sm:hidden">Log</span>
           </button>
           <button
             onClick={() => setShowInvoiceModal(true)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-[#476E66] text-white rounded-xl hover:bg-[#3A5B54] transition-colors"
+            className="flex items-center gap-1.5 px-3 py-2 bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54] transition-colors text-sm"
           >
-            <Plus className="w-4 h-4" />
-            Create Invoice
+            <Plus className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Create Invoice</span>
+            <span className="sm:hidden">Create</span>
           </button>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white rounded-2xl p-6 border border-neutral-100">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center">
-              <Clock className="w-5 h-5 text-neutral-700" />
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+        <div className="bg-white rounded-lg p-2" style={{ boxShadow: 'var(--shadow-card)' }}>
+          <div className="flex items-center gap-1.5 mb-1">
+            <div className="w-7 h-7 rounded-lg bg-[#476E66]/10 flex items-center justify-center flex-shrink-0">
+              <Clock className="w-3.5 h-3.5 text-[#476E66]" />
             </div>
-            <span className="text-neutral-500 text-sm">Work-in-Progress</span>
+            <span className="text-neutral-600 text-xs font-medium leading-tight">Work-in-Progress</span>
           </div>
-          <p className="text-3xl font-bold text-neutral-900">{formatCurrency(stats.wip)}</p>
-          <p className="text-sm text-neutral-500 mt-1">{stats.drafts} draft invoices</p>
+          <p className="text-base font-semibold text-neutral-900">{formatCurrency(stats.wip)}</p>
+          <p className="text-xs text-neutral-400">{stats.drafts} draft invoices</p>
         </div>
 
-        <div className="bg-white rounded-2xl p-6 border border-neutral-100">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center">
-              <FileText className="w-5 h-5 text-neutral-700" />
+        <div className="bg-white rounded-lg p-2" style={{ boxShadow: 'var(--shadow-card)' }}>
+          <div className="flex items-center gap-1.5 mb-1">
+            <div className="w-7 h-7 rounded-lg bg-[#476E66]/10 flex items-center justify-center flex-shrink-0">
+              <FileText className="w-3.5 h-3.5 text-[#476E66]" />
             </div>
-            <span className="text-neutral-500 text-sm">Drafts</span>
+            <span className="text-neutral-600 text-xs font-medium">Drafts</span>
           </div>
-          <p className="text-3xl font-bold text-neutral-900">{formatCurrency(stats.wip)}</p>
-          <p className="text-sm text-neutral-500 mt-1">{stats.drafts} invoices</p>
+          <p className="text-base font-semibold text-neutral-900">{formatCurrency(stats.wip)}</p>
+          <p className="text-xs text-neutral-400">{stats.drafts} invoices</p>
         </div>
 
-        <div className="bg-white rounded-2xl p-6 border border-neutral-100">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center">
-              <DollarSign className="w-5 h-5 text-neutral-700" />
+        <div className="bg-white rounded-lg p-2" style={{ boxShadow: 'var(--shadow-card)' }}>
+          <div className="flex items-center gap-1.5 mb-1">
+            <div className="w-7 h-7 rounded-lg bg-[#476E66]/10 flex items-center justify-center flex-shrink-0">
+              <DollarSign className="w-3.5 h-3.5 text-[#476E66]" />
             </div>
-            <span className="text-neutral-500 text-sm">A/R Aging</span>
+            <span className="text-neutral-600 text-xs font-medium">A/R Aging</span>
           </div>
-          <p className="text-3xl font-bold text-neutral-900">{formatCurrency(stats.arAging)}</p>
-          <p className="text-sm text-neutral-500 mt-1">Overdue balance</p>
+          <p className="text-base font-semibold text-neutral-900">{formatCurrency(stats.arAging)}</p>
+          <p className="text-xs text-neutral-400">Overdue balance</p>
         </div>
 
-        <div className="bg-white rounded-2xl p-6 border border-neutral-100">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center">
-              <Repeat className="w-5 h-5 text-purple-700" />
+        <div className="bg-white rounded-lg p-2" style={{ boxShadow: 'var(--shadow-card)' }}>
+          <div className="flex items-center gap-1.5 mb-1">
+            <div className="w-7 h-7 rounded-lg bg-[#476E66]/10 flex items-center justify-center flex-shrink-0">
+              <Repeat className="w-3.5 h-3.5 text-[#476E66]" />
             </div>
-            <span className="text-neutral-500 text-sm">Recurring</span>
+            <span className="text-neutral-600 text-xs font-medium">Recurring</span>
           </div>
-          <p className="text-3xl font-bold text-neutral-900">{recurringInvoices.filter(r => r.is_active).length}</p>
-          <p className="text-sm text-neutral-500 mt-1">Active schedules</p>
+          <p className="text-base font-semibold text-neutral-900">{recurringInvoices.filter(r => r.is_active).length}</p>
+          <p className="text-xs text-neutral-400">Active schedules</p>
         </div>
       </div>
 
       {/* Search and filters */}
-      <div className="flex items-center gap-4 flex-wrap">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+      <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400" />
           <input
             type="text"
             placeholder="Search invoices..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+            className="w-full pl-9 pr-3 py-2 rounded-lg border border-neutral-200 focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none text-sm"
           />
         </div>
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="px-4 py-2.5 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary-500"
+          className="px-3 py-2 border border-neutral-200 rounded-lg focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none text-sm"
         >
           <option value="all">All Status</option>
           <option value="draft">Draft</option>
@@ -489,46 +491,46 @@ export default function InvoicingPage() {
           <option value="paid">Paid</option>
           <option value="overdue">Overdue</option>
         </select>
-        <div className="flex items-center gap-1 p-1 bg-neutral-100 rounded-lg">
+        <div className="flex items-center gap-0.5 p-0.5 bg-neutral-100 rounded-lg">
           <button
             onClick={() => setViewMode('list')}
-            className={`p-2 rounded-md transition-colors ${viewMode === 'list' ? 'bg-white shadow-sm' : 'hover:bg-neutral-200'}`}
+            className={`p-1.5 rounded-md transition-colors ${viewMode === 'list' ? 'bg-white shadow-sm' : 'hover:bg-neutral-200'}`}
             title="List View"
           >
-            <List className="w-4 h-4" />
+            <List className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={() => setViewMode('client')}
-            className={`p-2 rounded-md transition-colors ${viewMode === 'client' ? 'bg-white shadow-sm' : 'hover:bg-neutral-200'}`}
+            className={`p-1.5 rounded-md transition-colors ${viewMode === 'client' ? 'bg-white shadow-sm' : 'hover:bg-neutral-200'}`}
             title="Client View"
           >
-            <LayoutGrid className="w-4 h-4" />
+            <LayoutGrid className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>
 
       {/* Invoices Table */}
       {viewMode === 'list' ? (
-        <div className="bg-white rounded-2xl border border-neutral-100 overflow-hidden">
+        <div className="bg-white rounded-lg overflow-hidden" style={{ boxShadow: 'var(--shadow-card)' }}>
           <table className="w-full">
             <thead className="bg-neutral-50 border-b border-neutral-100">
               <tr>
-                <th className="w-12 px-4 py-4">
+                <th className="w-8 px-2 py-2">
                   <input
                     type="checkbox"
                     checked={filteredInvoices.length > 0 && selectedInvoices.size === filteredInvoices.length}
                     onChange={toggleSelectAll}
                     onClick={(e) => e.stopPropagation()}
-                    className="w-4 h-4 rounded border-neutral-300 text-blue-600 focus:ring-blue-500"
+                    className="w-3.5 h-3.5 rounded border-neutral-300 text-[#476E66] focus:ring-[#476E66]"
                   />
                 </th>
-                <th className="text-left px-6 py-4 text-xs font-medium text-neutral-500 uppercase tracking-wider">Invoice</th>
-                <th className="text-left px-6 py-4 text-xs font-medium text-neutral-500 uppercase tracking-wider">Client</th>
-                <th className="text-left px-6 py-4 text-xs font-medium text-neutral-500 uppercase tracking-wider">Project</th>
-                <th className="text-right px-6 py-4 text-xs font-medium text-neutral-500 uppercase tracking-wider">Amount</th>
-                <th className="text-left px-6 py-4 text-xs font-medium text-neutral-500 uppercase tracking-wider">Status</th>
-                <th className="text-left px-6 py-4 text-xs font-medium text-neutral-500 uppercase tracking-wider">Due Date</th>
-                <th className="w-12">
+                <th className="text-left px-2 py-2 text-xs font-medium text-neutral-600">Invoice</th>
+                <th className="text-left px-2 py-2 text-xs font-medium text-neutral-600">Client</th>
+                <th className="text-left px-2 py-2 text-xs font-medium text-neutral-600 hidden sm:table-cell">Project</th>
+                <th className="text-right px-2 py-2 text-xs font-medium text-neutral-600">Amount</th>
+                <th className="text-left px-2 py-2 text-xs font-medium text-neutral-600 hidden md:table-cell">Status</th>
+                <th className="text-left px-2 py-2 text-xs font-medium text-neutral-600 hidden md:table-cell">Due Date</th>
+                <th className="w-8">
                   {selectedInvoices.size > 0 && (
                     <button
                       onClick={handleBatchDelete}
@@ -536,56 +538,56 @@ export default function InvoicingPage() {
                       className="p-1 text-red-600 hover:bg-red-50 rounded"
                       title={`Delete ${selectedInvoices.size} selected`}
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   )}
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-neutral-100">
+            <tbody className="divide-y divide-neutral-50">
               {filteredInvoices.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="text-center py-12 text-neutral-500">No invoices found</td>
+                  <td colSpan={8} className="text-center py-12 text-neutral-500 text-sm">No invoices found</td>
                 </tr>
               ) : (
                 filteredInvoices.map((invoice) => (
-                  <tr key={invoice.id} className={`hover:bg-neutral-50 transition-colors cursor-pointer ${selectedInvoices.has(invoice.id) ? 'bg-blue-50' : ''}`} onClick={() => setViewingInvoice(invoice)}>
-                    <td className="px-4 py-4" onClick={(e) => e.stopPropagation()}>
+                  <tr key={invoice.id} className={`hover:bg-neutral-50/50 transition-colors cursor-pointer ${selectedInvoices.has(invoice.id) ? 'bg-[#476E66]/5' : ''}`} onClick={() => setViewingInvoice(invoice)}>
+                    <td className="px-2 py-2" onClick={(e) => e.stopPropagation()}>
                       <input
                         type="checkbox"
                         checked={selectedInvoices.has(invoice.id)}
                         onChange={() => toggleInvoiceSelection(invoice.id)}
-                        className="w-4 h-4 rounded border-neutral-300 text-blue-600 focus:ring-blue-500"
+                        className="w-3.5 h-3.5 rounded border-neutral-300 text-[#476E66] focus:ring-[#476E66]"
                       />
                     </td>
-                    <td className="px-6 py-4">
-                      <p className="font-medium text-neutral-900">{invoice.invoice_number}</p>
-                      <p className="text-sm text-neutral-500">{new Date(invoice.created_at || '').toLocaleDateString()}</p>
+                    <td className="px-2 py-2">
+                      <p className="text-sm font-medium text-neutral-900">{invoice.invoice_number}</p>
+                      <p className="text-xs text-neutral-500">{new Date(invoice.created_at || '').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</p>
                     </td>
-                    <td className="px-6 py-4 text-neutral-600">{invoice.client?.name || '-'}</td>
-                    <td className="px-6 py-4 text-neutral-600">{invoice.project?.name || '-'}</td>
-                    <td className="px-6 py-4 text-right font-medium text-neutral-900">{formatCurrency(invoice.total)}</td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(invoice.status)}`}>
+                    <td className="px-2 py-2 text-sm text-neutral-600">{invoice.client?.name || '-'}</td>
+                    <td className="px-2 py-2 text-sm text-neutral-600 hidden sm:table-cell">{invoice.project?.name || '-'}</td>
+                    <td className="px-2 py-2 text-right text-sm font-medium text-neutral-900">{formatCurrency(invoice.total)}</td>
+                    <td className="px-2 py-2 hidden md:table-cell">
+                      <div className="flex items-center gap-1.5">
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(invoice.status)}`}>
                           {invoice.status || 'draft'}
                         </span>
                         {recurringInvoices.some(r => r.template_invoice_id === invoice.id && r.is_active) && (
-                          <span className="flex items-center gap-1 px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs">
+                          <span className="flex items-center gap-1 px-1.5 py-0.5 bg-[#476E66]/10 text-[#476E66] rounded text-xs">
                             <Repeat className="w-3 h-3" /> Recurring
                           </span>
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-neutral-600">
-                      {invoice.due_date ? new Date(invoice.due_date).toLocaleDateString() : '-'}
+                    <td className="px-2 py-2 text-xs text-neutral-600 hidden md:table-cell">
+                      {invoice.due_date ? new Date(invoice.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '-'}
                     </td>
-                    <td className="px-6 py-4 relative">
+                    <td className="px-1 py-2 relative">
                       <button 
                         onClick={(e) => { e.stopPropagation(); setActiveMenu(activeMenu === invoice.id ? null : invoice.id); }}
                         className="p-1 hover:bg-neutral-100 rounded"
                       >
-                        <MoreHorizontal className="w-4 h-4 text-neutral-400" />
+                        <MoreHorizontal className="w-3.5 h-3.5 text-neutral-400" />
                       </button>
                       {activeMenu === invoice.id && (
                         <div ref={menuRef} className="absolute right-0 mt-1 w-52 bg-white rounded-xl shadow-lg border border-neutral-100 py-1 z-20">
@@ -1030,26 +1032,35 @@ function InvoiceModal({ clients, projects, companyId, onClose, onSave }: { clien
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
   };
 
+  const formatCurrencyCompact = (amount: number) => {
+    // Remove decimals if the amount is a whole number
+    if (amount % 1 === 0) {
+      return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount);
+    }
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+  };
+
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl w-full max-w-2xl p-6 mx-4 max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold text-neutral-900">Create Invoice</h2>
-          <button onClick={onClose} className="p-2 hover:bg-neutral-100 rounded-lg"><X className="w-5 h-5" /></button>
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl w-full max-w-2xl max-h-[92vh] overflow-hidden flex flex-col" style={{ boxShadow: 'var(--shadow-elevated)' }}>
+        <div className="flex items-center justify-between px-4 sm:px-5 py-3 sm:py-4 border-b border-neutral-100 flex-shrink-0">
+          <h2 className="text-base sm:text-lg font-semibold text-neutral-900">Create Invoice</h2>
+          <button onClick={onClose} className="p-1.5 hover:bg-neutral-100 rounded-lg transition-colors"><X className="w-4 h-4" /></button>
         </div>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form id="invoice-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-4 sm:px-5 py-4 space-y-3">
           {/* Calculator Type Selection */}
           <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-2">Invoice Type</label>
+            <label className="block text-xs font-medium text-neutral-600 mb-1.5">Invoice Type</label>
             <div className="grid grid-cols-2 gap-2">
               {CALCULATOR_OPTIONS.filter(c => enabledCalculators.includes(c.id)).map((calc) => (
                 <label
                   key={calc.id}
-                  className={`p-3 border rounded-xl cursor-pointer transition-colors ${
+                  className={`p-2.5 border rounded-lg cursor-pointer transition-colors ${
                     calculatorType === calc.id 
-                      ? 'border-neutral-500 bg-[#476E66]/10' 
+                      ? 'border-[#476E66] bg-[#476E66]/5 text-[#476E66]' 
                       : 'border-neutral-200 hover:border-neutral-300'
                   }`}
+                  style={calculatorType !== calc.id ? { boxShadow: 'var(--shadow-sm)' } : undefined}
                 >
                   <input
                     type="radio"
@@ -1059,26 +1070,26 @@ function InvoiceModal({ clients, projects, companyId, onClose, onSave }: { clien
                     onChange={() => setCalculatorType(calc.id)}
                     className="sr-only"
                   />
-                  <p className="font-medium text-sm text-neutral-900">{calc.name}</p>
-                  <p className="text-xs text-neutral-500">{calc.description}</p>
+                  <p className={`font-medium text-sm ${calculatorType === calc.id ? 'text-[#476E66]' : 'text-neutral-900'}`}>{calc.name}</p>
+                  <p className={`text-xs ${calculatorType === calc.id ? 'text-[#476E66]/70' : 'text-neutral-500'}`}>{calc.description}</p>
                 </label>
               ))}
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1.5">Client *</label>
-            <select value={clientId} onChange={(e) => setClientId(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" required>
+            <label className="block text-xs font-medium text-neutral-600 mb-1.5">Client *</label>
+            <select value={clientId} onChange={(e) => setClientId(e.target.value)} className="w-full h-11 px-3 py-2 rounded-lg border border-neutral-200 focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none text-sm" required>
               <option value="">Select a client</option>
               {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1.5">Project {(calculatorType === 'milestone' || calculatorType === 'percentage') && '*'}</label>
+            <label className="block text-xs font-medium text-neutral-600 mb-1.5">Project {(calculatorType === 'milestone' || calculatorType === 'percentage') && '*'}</label>
             <select 
               value={projectId} 
               onChange={(e) => { setProjectId(e.target.value); setSelectedTasks(new Map()); }}
-              className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              className="w-full h-11 px-3 py-2 rounded-lg border border-neutral-200 focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none text-sm"
               required={calculatorType === 'milestone' || calculatorType === 'percentage'}
             >
               <option value="">Select a project</option>
@@ -1089,29 +1100,31 @@ function InvoiceModal({ clients, projects, companyId, onClose, onSave }: { clien
           {/* Task Selection for Milestone/Percentage billing */}
           {(calculatorType === 'milestone' || calculatorType === 'percentage') && projectId && (
             <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-2">
+              <label className="block text-xs font-medium text-neutral-600 mb-1.5">
                 Select Tasks to Bill {calculatorType === 'milestone' ? '(Full Budget)' : '(By Percentage)'}
               </label>
               {loadingTasks ? (
-                <div className="text-center py-4 text-neutral-500">Loading tasks...</div>
+                <div className="text-center py-4 text-neutral-500 text-sm">Loading tasks...</div>
               ) : tasks.length === 0 ? (
-                <div className="text-center py-4 text-neutral-500">No tasks found for this project</div>
+                <div className="text-center py-4 text-neutral-500 text-sm">No tasks found for this project</div>
               ) : (
-                <div className="border border-neutral-200 rounded-xl overflow-hidden">
-                  <table className="w-full text-sm">
-                    <thead className="bg-neutral-50 border-b">
+                <div className="rounded-lg overflow-hidden overflow-x-auto" style={{ boxShadow: 'var(--shadow-card)' }}>
+                  <table className="w-full text-sm min-w-[500px]">
+                    <thead className="bg-neutral-50 border-b border-neutral-100">
                       <tr>
-                        <th className="text-left px-3 py-2 font-medium text-neutral-600">Task</th>
-                        <th className="text-right px-3 py-2 font-medium text-neutral-600">Budget</th>
-                        <th className="text-right px-3 py-2 font-medium text-neutral-600">Billed</th>
-                        <th className="text-right px-3 py-2 font-medium text-neutral-600">Remaining</th>
+                        <th className="text-left px-1.5 py-1.5 text-xs font-medium text-neutral-600">Task</th>
+                        <th className="text-right px-1.5 py-1.5 text-xs font-medium text-neutral-600 w-20">Budget</th>
+                        <th className="text-right px-1.5 py-1.5 text-xs font-medium text-neutral-600 w-20">Billed</th>
+                        <th className="text-right px-1.5 py-1.5 text-xs font-medium text-neutral-600 w-24">Remain</th>
                         {calculatorType === 'percentage' && (
-                          <th className="text-center px-3 py-2 font-medium text-neutral-600">% to Bill</th>
+                          <th className="text-center px-1.5 py-1.5 text-xs font-medium text-neutral-600 w-12">%</th>
                         )}
-                        <th className="text-center px-3 py-2 font-medium text-neutral-600">Select</th>
+                        <th className="text-center px-1.5 py-1.5 text-xs font-medium text-neutral-600 w-8">
+                          <input type="checkbox" className="w-3.5 h-3.5 rounded border-neutral-300" disabled />
+                        </th>
                       </tr>
                     </thead>
-                    <tbody>
+                    <tbody className="divide-y divide-neutral-50">
                       {tasks.map(task => {
                         const totalBudget = task.total_budget || task.estimated_fees || 0;
                         const billedPct = task.billed_percentage || 0;
@@ -1122,21 +1135,23 @@ function InvoiceModal({ clients, projects, companyId, onClose, onSave }: { clien
                         const isFullyBilled = remainingPct <= 0;
 
                         return (
-                          <tr key={task.id} className={`border-b ${isFullyBilled ? 'bg-neutral-50 opacity-50' : ''}`}>
-                            <td className="px-3 py-2">
-                              <p className="font-medium">{task.name}</p>
+                          <tr key={task.id} className={`${isFullyBilled ? 'bg-neutral-50 opacity-50' : isSelected ? 'bg-[#476E66]/5' : 'hover:bg-neutral-50/50'}`}>
+                            <td className="px-1.5 py-1.5">
+                              <p className="text-xs font-medium text-neutral-900 leading-tight">{task.name}</p>
                               {billedPct > 0 && (
-                                <p className="text-xs text-neutral-500">{billedPct}% already billed</p>
+                                <p className="text-xs text-neutral-500 mt-0.5">{billedPct}% billed</p>
                               )}
                             </td>
-                            <td className="px-3 py-2 text-right">{formatCurrency(totalBudget)}</td>
-                            <td className="px-3 py-2 text-right text-neutral-500">{formatCurrency(task.billed_amount || 0)}</td>
-                            <td className="px-3 py-2 text-right font-medium text-neutral-900">
-                              {formatCurrency(remainingAmt)}
-                              <span className="text-xs text-neutral-400 ml-1">({remainingPct}%)</span>
+                            <td className="px-1.5 py-1.5 text-right text-xs whitespace-nowrap">{formatCurrencyCompact(totalBudget)}</td>
+                            <td className="px-1.5 py-1.5 text-right text-xs text-neutral-500 whitespace-nowrap">{formatCurrencyCompact(task.billed_amount || 0)}</td>
+                            <td className="px-1.5 py-1.5 text-right">
+                              <div className="flex items-center justify-end gap-0.5">
+                                <span className="text-xs font-medium text-neutral-900 whitespace-nowrap">{formatCurrencyCompact(remainingAmt)}</span>
+                                <span className="text-xs text-neutral-400">({remainingPct}%)</span>
+                              </div>
                             </td>
                             {calculatorType === 'percentage' && (
-                              <td className="px-3 py-2 text-center">
+                              <td className="px-1.5 py-1.5 text-center">
                                 {isSelected && !isFullyBilled && (
                                   <input
                                     type="number"
@@ -1144,18 +1159,18 @@ function InvoiceModal({ clients, projects, companyId, onClose, onSave }: { clien
                                     max={remainingPct}
                                     value={selection?.percentageToBill || 10}
                                     onChange={(e) => updateTaskPercentage(task.id, Math.min(parseFloat(e.target.value) || 0, remainingPct))}
-                                    className="w-16 px-2 py-1 border border-neutral-200 rounded text-center text-sm"
+                                    className="w-12 h-7 px-1 py-1 border border-neutral-200 rounded text-center text-xs focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none"
                                   />
                                 )}
                               </td>
                             )}
-                            <td className="px-3 py-2 text-center">
+                            <td className="px-1.5 py-1.5 text-center">
                               <input
                                 type="checkbox"
                                 checked={isSelected}
                                 disabled={isFullyBilled}
                                 onChange={() => toggleTaskSelection(task.id, calculatorType as 'milestone' | 'percentage')}
-                                className="w-4 h-4 text-neutral-500 rounded border-neutral-300"
+                                className="w-3.5 h-3.5 text-[#476E66] rounded border-neutral-300 focus:ring-[#476E66]"
                               />
                             </td>
                           </tr>
@@ -1170,14 +1185,14 @@ function InvoiceModal({ clients, projects, companyId, onClose, onSave }: { clien
 
           {/* Manual amount input for non-task-based billing */}
           {calculatorType !== 'milestone' && calculatorType !== 'percentage' && (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1.5">Subtotal *</label>
-                <input type="number" step="0.01" value={subtotal} onChange={(e) => setSubtotal(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" required />
+                <label className="block text-xs font-medium text-neutral-600 mb-1.5">Subtotal *</label>
+                <input type="number" step="0.01" value={subtotal} onChange={(e) => setSubtotal(e.target.value)} className="w-full h-11 px-3 py-2 rounded-lg border border-neutral-200 focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none text-sm" required />
               </div>
               <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1.5">Tax</label>
-                <input type="number" step="0.01" value={taxAmount} onChange={(e) => setTaxAmount(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
+                <label className="block text-xs font-medium text-neutral-600 mb-1.5">Tax</label>
+                <input type="number" step="0.01" value={taxAmount} onChange={(e) => setTaxAmount(e.target.value)} className="w-full h-11 px-3 py-2 rounded-lg border border-neutral-200 focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none text-sm" />
               </div>
             </div>
           )}
@@ -1185,24 +1200,24 @@ function InvoiceModal({ clients, projects, companyId, onClose, onSave }: { clien
           {/* Tax for task-based billing */}
           {(calculatorType === 'milestone' || calculatorType === 'percentage') && (
             <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-1.5">Tax Amount</label>
-              <input type="number" step="0.01" value={taxAmount} onChange={(e) => setTaxAmount(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
+              <label className="block text-xs font-medium text-neutral-600 mb-1.5">Tax Amount</label>
+              <input type="number" step="0.01" value={taxAmount} onChange={(e) => setTaxAmount(e.target.value)} className="w-full h-11 px-3 py-2 rounded-lg border border-neutral-200 focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none text-sm" />
             </div>
           )}
 
           <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1.5">Due Date</label>
-            <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
+            <label className="block text-xs font-medium text-neutral-600 mb-1.5">Due Date</label>
+            <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="w-full h-11 px-3 py-2 rounded-lg border border-neutral-200 focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none text-sm" />
           </div>
 
           {/* PDF Template Selection */}
           {pdfTemplates.length > 0 && (
             <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-1.5">PDF Template</label>
+              <label className="block text-xs font-medium text-neutral-600 mb-1.5">PDF Template</label>
               <select 
                 value={pdfTemplateId} 
                 onChange={(e) => setPdfTemplateId(e.target.value)} 
-                className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                className="w-full h-11 px-3 py-2 rounded-lg border border-neutral-200 focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none text-sm"
               >
                 <option value="">Use default template</option>
                 {pdfTemplates.map(t => (
@@ -1215,26 +1230,26 @@ function InvoiceModal({ clients, projects, companyId, onClose, onSave }: { clien
           )}
 
           {/* Recurring Invoice Option */}
-          <div className="border border-neutral-200 rounded-xl p-4">
-            <label className="flex items-center gap-3 cursor-pointer">
+          <div className="rounded-lg p-2.5 bg-neutral-50" style={{ boxShadow: 'var(--shadow-sm)' }}>
+            <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
                 checked={isRecurring}
                 onChange={(e) => setIsRecurring(e.target.checked)}
-                className="w-4 h-4 rounded border-neutral-300 text-[#476E66] focus:ring-[#476E66]"
+                className="w-3.5 h-3.5 rounded border-neutral-300 text-[#476E66] focus:ring-[#476E66]"
               />
-              <div className="flex items-center gap-2">
-                <Repeat className="w-4 h-4 text-neutral-500" />
-                <span className="text-sm font-medium text-neutral-700">Make this a recurring invoice</span>
+              <div className="flex items-center gap-1.5">
+                <Repeat className="w-3.5 h-3.5 text-neutral-500" />
+                <span className="text-sm font-medium text-neutral-900">Make this a recurring invoice</span>
               </div>
             </label>
             {isRecurring && (
-              <div className="mt-3 pl-7">
-                <label className="block text-sm text-neutral-600 mb-1">Frequency</label>
+              <div className="mt-2 pl-5">
+                <label className="block text-xs font-medium text-neutral-600 mb-1">Frequency</label>
                 <select
                   value={recurringFrequency}
                   onChange={(e) => setRecurringFrequency(e.target.value as typeof recurringFrequency)}
-                  className="w-full px-3 py-2 rounded-lg border border-neutral-200 text-sm focus:ring-2 focus:ring-[#476E66] focus:border-transparent outline-none"
+                  className="w-full h-10 px-3 py-2 rounded-lg border border-neutral-200 text-sm focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none"
                 >
                   <option value="weekly">Weekly</option>
                   <option value="bi-weekly">Bi-weekly</option>
@@ -1242,34 +1257,34 @@ function InvoiceModal({ clients, projects, companyId, onClose, onSave }: { clien
                   <option value="quarterly">Quarterly</option>
                   <option value="yearly">Yearly</option>
                 </select>
-                <p className="text-xs text-neutral-500 mt-1">
+                <p className="text-xs text-neutral-500 mt-1 leading-relaxed">
                   A new invoice will be automatically created based on this schedule.
                 </p>
               </div>
             )}
           </div>
 
-          <div className="p-4 bg-neutral-50 rounded-xl">
-            <div className="flex justify-between py-1 text-sm">
-              <span className="text-neutral-600">Subtotal</span>
-              <span>{formatCurrency(calculatedSubtotal)}</span>
+          <div className="p-3 bg-[#476E66] text-white rounded-lg space-y-1.5">
+            <div className="flex justify-between text-xs text-white/70">
+              <span>Subtotal</span>
+              <span className="text-white">{formatCurrencyCompact(calculatedSubtotal)}</span>
             </div>
-            <div className="flex justify-between py-1 text-sm">
-              <span className="text-neutral-600">Tax</span>
-              <span>{formatCurrency(parseFloat(taxAmount) || 0)}</span>
+            <div className="flex justify-between text-xs text-white/70">
+              <span>Tax</span>
+              <span className="text-white">{formatCurrencyCompact(parseFloat(taxAmount) || 0)}</span>
             </div>
-            <div className="flex justify-between text-lg font-semibold border-t border-neutral-200 pt-2 mt-2">
+            <div className="flex justify-between text-base font-semibold border-t border-white/20 pt-1.5 mt-1.5">
               <span>Total</span>
-              <span>{formatCurrency(total)}</span>
+              <span>{formatCurrencyCompact(total)}</span>
             </div>
-          </div>
-          <div className="flex gap-3 pt-4">
-            <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors">Cancel</button>
-            <button type="submit" disabled={saving} className="flex-1 px-4 py-2.5 bg-[#476E66] text-white rounded-xl hover:bg-[#3A5B54] transition-colors disabled:opacity-50">
-              {saving ? 'Creating...' : 'Create Invoice'}
-            </button>
           </div>
         </form>
+        <div className="flex items-center justify-end gap-2 px-4 sm:px-5 py-3 border-t border-neutral-100 flex-shrink-0 bg-neutral-50">
+          <button type="button" onClick={onClose} className="flex-1 sm:flex-none px-4 py-2 text-sm border border-neutral-200 rounded-lg hover:bg-white transition-colors font-medium">Cancel</button>
+          <button type="submit" form="invoice-form" disabled={saving} className="flex-1 sm:flex-none px-6 py-2 text-sm bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54] transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed">
+            {saving ? 'Creating...' : 'Create Invoice'}
+          </button>
+        </div>
       </div>
     </div>
   );

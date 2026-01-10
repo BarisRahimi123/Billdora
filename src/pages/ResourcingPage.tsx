@@ -79,70 +79,70 @@ export default function ResourcingPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3 lg:space-y-4">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900">Team</h1>
-          <p className="text-neutral-500 text-sm mt-1">Manage staff members and their assignments</p>
+          <h1 className="text-base sm:text-lg font-bold text-neutral-900">Team</h1>
+          <p className="text-neutral-500 text-xs sm:text-sm mt-0.5">Manage staff members and their assignments</p>
         </div>
         <div className="flex gap-2">
           <button
             onClick={() => setShowInviteModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-white border border-neutral-200 text-neutral-700 rounded-xl hover:bg-neutral-50 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-neutral-200 text-neutral-700 rounded-lg hover:bg-neutral-50 transition-colors text-sm font-medium"
           >
-            <Send className="w-4 h-4" />
-            Invite
+            <Send className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Invite</span>
           </button>
           <button
             onClick={() => { setEditingStaff(null); setShowModal(true); }}
-            className="flex items-center gap-2 px-4 py-2 bg-[#476E66] text-white rounded-xl hover:bg-[#3A5B54] transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54] transition-colors text-sm font-medium"
           >
-            <Plus className="w-4 h-4" />
-            Add Staff
+            <Plus className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Add Staff</span>
           </button>
         </div>
       </div>
 
       {/* Staff Selector Bar */}
-      <div className="bg-white rounded-xl border border-neutral-200 p-4">
-        <div className="flex items-center gap-4">
+      <div className="bg-white rounded-lg border border-neutral-200 p-2.5" style={{ boxShadow: 'var(--shadow-card)' }}>
+        <div className="flex items-center gap-2.5">
           <div className="flex items-center gap-2">
             <input
               type="text"
               placeholder="Search..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-40 px-3 py-1.5 text-sm rounded-lg bg-neutral-50 border border-neutral-200 focus:outline-none focus:ring-2 focus:ring-[#476E66]/20"
+              className="w-28 sm:w-36 h-8 px-2.5 py-1.5 text-sm rounded-lg bg-neutral-50 border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66]"
             />
             <label className="flex items-center gap-1.5 text-xs text-neutral-500 cursor-pointer whitespace-nowrap">
               <input
                 type="checkbox"
                 checked={showInactive}
                 onChange={(e) => setShowInactive(e.target.checked)}
-                className="w-3 h-3 rounded"
+                className="w-3.5 h-3.5 rounded text-[#476E66] focus:ring-[#476E66]"
               />
-              Inactive
+              <span className="hidden sm:inline">Inactive</span>
             </label>
           </div>
-          <div className="h-6 w-px bg-neutral-200" />
+          <div className="h-5 w-px bg-neutral-200" />
           <div className="flex-1 overflow-x-auto">
-            <div className="flex gap-2">
+            <div className="flex gap-1.5">
               {filteredStaff.map((member) => (
                 <button
                   key={member.id}
                   onClick={() => { setSelectedStaff(member); setActiveTab('activity'); }}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap ${
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg transition-colors whitespace-nowrap text-sm ${
                     selectedStaff?.id === member.id 
-                      ? 'bg-[#476E66] text-white' 
+                      ? 'bg-[#476E66]/10 text-[#476E66] ring-1 ring-[#476E66]' 
                       : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
                   }`}
                 >
                   {member.avatar_url ? (
-                    <img src={member.avatar_url} alt="" className="w-6 h-6 rounded-full object-cover" />
+                    <img src={member.avatar_url} alt="" className="w-5 h-5 rounded-full object-cover" />
                   ) : (
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${
-                      selectedStaff?.id === member.id ? 'bg-white/20 text-white' : 'bg-[#476E66]/10 text-[#476E66]'
+                    <div className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-medium ${
+                      selectedStaff?.id === member.id ? 'bg-[#476E66]/20 text-[#476E66]' : 'bg-[#476E66]/10 text-[#476E66]'
                     }`}>
                       {member.full_name?.charAt(0) || '?'}
                     </div>
@@ -150,7 +150,7 @@ export default function ResourcingPage() {
                   <span className="text-sm font-medium">{member.full_name?.split(' ')[0] || 'Staff'}</span>
                   {member.is_active === false && (
                     <span className={`px-1 py-0.5 text-[10px] rounded ${
-                      selectedStaff?.id === member.id ? 'bg-white/20' : 'bg-neutral-200'
+                      selectedStaff?.id === member.id ? 'bg-[#476E66]/20 text-[#476E66]' : 'bg-neutral-200'
                     }`}>Off</span>
                   )}
                 </button>
@@ -164,33 +164,33 @@ export default function ResourcingPage() {
       </div>
 
       {/* Staff Details */}
-      <div className="bg-white rounded-xl border border-neutral-200 flex flex-col min-h-[calc(100vh-280px)]">
+      <div className="bg-white rounded-lg border border-neutral-200 flex flex-col min-h-[calc(100vh-300px)]" style={{ boxShadow: 'var(--shadow-card)' }}>
           {selectedStaff ? (
             <>
               {/* Tab Bar */}
-              <div className="border-b border-neutral-200">
-                <div className="flex items-center gap-1 px-4 pt-3">
+              <div className="border-b border-neutral-100">
+                <div className="flex items-center gap-0.5 px-2 pt-1.5 overflow-x-auto scrollbar-hide">
                   {tabs.map((tab) => (
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id)}
-                      className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors ${
+                      className={`flex items-center gap-1 px-2.5 py-2 text-xs font-medium rounded-t-lg transition-colors whitespace-nowrap ${
                         activeTab === tab.id
-                          ? 'bg-[#476E66]/10 text-neutral-900-700 border border-neutral-200 border-b-white -mb-px'
+                          ? 'bg-[#476E66]/10 text-[#476E66] border border-neutral-200 border-b-white -mb-px'
                           : 'text-neutral-500 hover:text-neutral-700 hover:bg-neutral-50'
                       }`}
                     >
-                      {tab.icon}
-                      {tab.label}
+                      <span className="w-3.5 h-3.5">{tab.icon}</span>
+                      <span className="hidden lg:inline">{tab.label}</span>
                     </button>
                   ))}
                 </div>
               </div>
 
               {/* Tab Content */}
-              <div className="flex-1 overflow-y-auto p-6">
-                <div className="mb-4">
-                  <h2 className="text-lg font-semibold text-neutral-900">{selectedStaff.full_name}</h2>
+              <div className="flex-1 overflow-y-auto p-3 sm:p-4">
+                <div className="mb-2.5">
+                  <h2 className="text-sm sm:text-base font-semibold text-neutral-900">{selectedStaff.full_name}</h2>
                 </div>
                 
                 {activeTab === 'activity' && <ActivityTab staff={selectedStaff} companyId={profile?.company_id || ''} />}
@@ -979,54 +979,54 @@ function ActivityTab({ staff, companyId }: { staff: UserProfile; companyId: stri
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <button className="px-3 py-1.5 text-sm bg-[#476E66] text-white rounded-lg">Add Activity</button>
-          <button className="px-3 py-1.5 text-sm border border-neutral-300 rounded-lg">Bulk Actions</button>
-          <label className="flex items-center gap-2 ml-4 text-sm text-neutral-600 cursor-pointer">
+    <div className="space-y-3">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
+        <div className="flex items-center gap-2 flex-wrap">
+          <button className="px-3 py-2 text-sm bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54] transition-colors font-medium">Add Activity</button>
+          <button className="px-3 py-2 text-sm border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors font-medium">Bulk Actions</button>
+          <label className="flex items-center gap-2 text-sm text-neutral-600 cursor-pointer">
             <input
               type="checkbox"
               checked={showCompleted}
               onChange={(e) => setShowCompleted(e.target.checked)}
-              className="w-4 h-4 rounded border-neutral-300 text-neutral-500"
+              className="w-3.5 h-3.5 rounded border-neutral-300 text-[#476E66] focus:ring-[#476E66]"
             />
-            Show completed
+            <span className="text-xs sm:text-sm">Show completed</span>
           </label>
         </div>
-        <button className="px-3 py-1.5 text-sm border border-neutral-300 rounded-lg">Export</button>
+        <button className="px-3 py-2 text-sm border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors font-medium hidden sm:block">Export</button>
       </div>
 
-      <div className="border border-neutral-200 rounded-lg overflow-hidden">
+      <div className="rounded-lg overflow-hidden overflow-x-auto" style={{ boxShadow: 'var(--shadow-card)' }}>
         <table className="w-full">
-          <thead className="bg-neutral-50">
+          <thead className="bg-neutral-50 border-b border-neutral-100">
             <tr>
-              <th className="text-left px-4 py-3 text-sm font-medium text-neutral-600">Due Date</th>
-              <th className="text-left px-4 py-3 text-sm font-medium text-neutral-600">Assigned To</th>
-              <th className="text-left px-4 py-3 text-sm font-medium text-neutral-600">Project</th>
-              <th className="text-left px-4 py-3 text-sm font-medium text-neutral-600">Description</th>
+              <th className="text-left px-3 py-2 text-xs font-medium text-neutral-600">Due Date</th>
+              <th className="text-left px-3 py-2 text-xs font-medium text-neutral-600">Assigned To</th>
+              <th className="text-left px-3 py-2 text-xs font-medium text-neutral-600">Project</th>
+              <th className="hidden md:table-cell text-left px-3 py-2 text-xs font-medium text-neutral-600">Description</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-neutral-100">
+          <tbody className="divide-y divide-neutral-50">
             {filteredTasks.map((task) => (
-              <tr key={task.id} className="hover:bg-neutral-50">
-                <td className="px-4 py-3">
+              <tr key={task.id} className="hover:bg-neutral-50/50">
+                <td className="px-3 py-2.5">
                   <div className="flex items-center gap-2">
-                    <input type="checkbox" className="w-4 h-4 rounded border-neutral-300" />
-                    <span className="text-sm text-neutral-600">{task.due_date ? new Date(task.due_date).toLocaleDateString() : '-'}</span>
+                    <input type="checkbox" className="w-3.5 h-3.5 rounded border-neutral-300 text-[#476E66] focus:ring-[#476E66]" />
+                    <span className="text-xs text-neutral-600">{task.due_date ? new Date(task.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '-'}</span>
                   </div>
                 </td>
-                <td className="px-4 py-3 text-sm text-neutral-900">{staff.full_name}</td>
-                <td className="px-4 py-3 text-sm text-neutral-600">{task.project?.name || '-'}</td>
-                <td className="px-4 py-3 text-sm text-neutral-600 max-w-md truncate">{task.name}</td>
+                <td className="px-3 py-2.5 text-sm text-neutral-900">{staff.full_name}</td>
+                <td className="px-3 py-2.5 text-sm text-neutral-600">{task.project?.name || '-'}</td>
+                <td className="hidden md:table-cell px-3 py-2.5 text-sm text-neutral-600 max-w-md truncate">{task.name}</td>
               </tr>
             ))}
           </tbody>
         </table>
         {filteredTasks.length === 0 && (
-          <div className="text-center py-12 text-neutral-400">
-            <Activity className="w-10 h-10 mx-auto mb-2 opacity-50" />
-            <p>No activity found</p>
+          <div className="text-center py-8 text-neutral-400">
+            <Activity className="w-8 h-8 mx-auto mb-2 opacity-50" />
+            <p className="text-sm">No activity found</p>
           </div>
         )}
       </div>
@@ -1657,19 +1657,19 @@ function StaffModal({ staff, companyId, onClose, onSave }: {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-100">
-          <h2 className="text-lg font-semibold text-neutral-900">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-3">
+      <div className="bg-white rounded-xl w-full max-w-2xl max-h-[92vh] flex flex-col" style={{ boxShadow: 'var(--shadow-elevated)' }}>
+        <div className="flex items-center justify-between px-4 sm:px-5 py-3 border-b border-neutral-100 flex-shrink-0">
+          <h2 className="text-base sm:text-lg font-semibold text-neutral-900">
             {staff ? 'Edit Staff Member' : 'Add Staff Member'}
           </h2>
-          <button onClick={onClose} className="p-2 hover:bg-neutral-100 rounded-lg">
-            <X className="w-5 h-5 text-neutral-500" />
+          <button onClick={onClose} className="p-1.5 hover:bg-neutral-100 rounded-lg transition-colors">
+            <X className="w-4 h-4 text-neutral-500" />
           </button>
         </div>
 
         {/* Section Tabs */}
-        <div className="flex border-b border-neutral-100 px-6">
+        <div className="flex border-b border-neutral-100 px-3 sm:px-4 overflow-x-auto scrollbar-hide flex-shrink-0">
           {[
             { id: 'personal', label: 'Personal Info' },
             { id: 'employment', label: 'Employment' },
@@ -1679,9 +1679,9 @@ function StaffModal({ staff, companyId, onClose, onSave }: {
               key={section.id}
               type="button"
               onClick={() => setActiveSection(section.id as any)}
-              className={`px-4 py-3 text-sm font-medium border-b-2 -mb-px transition-colors ${
+              className={`px-3 sm:px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors whitespace-nowrap ${
                 activeSection === section.id
-                  ? 'border-neutral-500 text-neutral-600'
+                  ? 'border-[#476E66] text-[#476E66]'
                   : 'border-transparent text-neutral-500 hover:text-neutral-700'
               }`}
             >
@@ -1690,101 +1690,101 @@ function StaffModal({ staff, companyId, onClose, onSave }: {
           ))}
         </div>
 
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-4 sm:px-5 py-4 space-y-3" style={{ minHeight: 0 }}>
           {error && (
-            <div className="p-3 bg-neutral-100 border border-red-200 rounded-lg text-red-700 text-sm">
+            <div className="p-2.5 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
               {error}
             </div>
           )}
 
           {activeSection === 'personal' && (
             <>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-1.5">Full Name *</label>
+                  <label className="block text-xs font-medium text-neutral-600 mb-1">Full Name *</label>
                   <input
                     type="text"
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                    className="w-full h-11 px-3 py-2 rounded-lg border border-neutral-200 focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none text-sm"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-1.5">Email {!staff && '*'}</label>
+                  <label className="block text-xs font-medium text-neutral-600 mb-1">Email {!staff && '*'}</label>
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     disabled={!!staff}
-                    className={`w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none ${staff ? 'bg-neutral-50 text-neutral-500' : ''}`}
+                    className={`w-full h-11 px-3 py-2 rounded-lg border border-neutral-200 focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none text-sm ${staff ? 'bg-neutral-50 text-neutral-500' : ''}`}
                     required={!staff}
                     placeholder={!staff ? 'user@email.com' : ''}
                   />
-                  {staff && <p className="text-xs text-neutral-400 mt-1">Email cannot be changed</p>}
-                  {!staff && <p className="text-xs text-neutral-400 mt-1">Staff member's email address</p>}
+                  {staff && <p className="text-xs text-neutral-400 mt-0.5">Email cannot be changed</p>}
+                  {!staff && <p className="text-xs text-neutral-400 mt-0.5">Staff member's email address</p>}
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-1.5">Phone</label>
+                  <label className="block text-xs font-medium text-neutral-600 mb-1">Phone</label>
                   <input
                     type="tel"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                    className="w-full h-11 px-3 py-2 rounded-lg border border-neutral-200 focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none text-sm"
                     placeholder="(555) 123-4567"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-1.5">Date of Birth</label>
+                  <label className="block text-xs font-medium text-neutral-600 mb-1">Date of Birth</label>
                   <input
                     type="date"
                     value={dateOfBirth}
                     onChange={(e) => setDateOfBirth(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                    className="w-full h-11 px-3 py-2 rounded-lg border border-neutral-200 focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none text-sm"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1.5">Address</label>
+                <label className="block text-xs font-medium text-neutral-600 mb-1">Address</label>
                 <input
                   type="text"
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                  className="w-full h-11 px-3 py-2 rounded-lg border border-neutral-200 focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none text-sm"
                   placeholder="123 Main Street"
                 />
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-1.5">City</label>
+                  <label className="block text-xs font-medium text-neutral-600 mb-1">City</label>
                   <input
                     type="text"
                     value={city}
                     onChange={(e) => setCity(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                    className="w-full h-11 px-3 py-2 rounded-lg border border-neutral-200 focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none text-sm"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-1.5">State</label>
+                  <label className="block text-xs font-medium text-neutral-600 mb-1">State</label>
                   <input
                     type="text"
                     value={state}
                     onChange={(e) => setState(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                    className="w-full h-11 px-3 py-2 rounded-lg border border-neutral-200 focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none text-sm"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-1.5">Zip Code</label>
+                  <label className="block text-xs font-medium text-neutral-600 mb-1">Zip Code</label>
                   <input
                     type="text"
                     value={zipCode}
                     onChange={(e) => setZipCode(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                    className="w-full h-11 px-3 py-2 rounded-lg border border-neutral-200 focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none text-sm"
                   />
                 </div>
               </div>
@@ -1793,58 +1793,58 @@ function StaffModal({ staff, companyId, onClose, onSave }: {
 
           {activeSection === 'employment' && (
             <>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-1.5">Employee ID</label>
+                  <label className="block text-xs font-medium text-neutral-600 mb-1">Employee ID</label>
                   <input
                     type="text"
                     value={employeeId}
                     onChange={(e) => setEmployeeId(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                    className="w-full h-11 px-3 py-2 rounded-lg border border-neutral-200 focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none text-sm"
                     placeholder="EMP-001"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-1.5">Hire Date</label>
+                  <label className="block text-xs font-medium text-neutral-600 mb-1">Hire Date</label>
                   <input
                     type="date"
                     value={hireDate}
                     onChange={(e) => setHireDate(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                    className="w-full h-11 px-3 py-2 rounded-lg border border-neutral-200 focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none text-sm"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-1.5">Job Title</label>
+                  <label className="block text-xs font-medium text-neutral-600 mb-1">Job Title</label>
                   <input
                     type="text"
                     value={jobTitle}
                     onChange={(e) => setJobTitle(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                    className="w-full h-11 px-3 py-2 rounded-lg border border-neutral-200 focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none text-sm"
                     placeholder="Senior Developer"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-1.5">Department</label>
+                  <label className="block text-xs font-medium text-neutral-600 mb-1">Department</label>
                   <input
                     type="text"
                     value={department}
                     onChange={(e) => setDepartment(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                    className="w-full h-11 px-3 py-2 rounded-lg border border-neutral-200 focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none text-sm"
                     placeholder="Engineering"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-1.5">Role</label>
+                  <label className="block text-xs font-medium text-neutral-600 mb-1">Role</label>
                   <select
                     value={role}
                     onChange={(e) => setRole(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                    className="w-full h-11 px-3 py-2 rounded-lg border border-neutral-200 focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none text-sm"
                   >
                     <option value="admin">Admin</option>
                     <option value="manager">Manager</option>
@@ -1853,11 +1853,11 @@ function StaffModal({ staff, companyId, onClose, onSave }: {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-1.5">Employment Type</label>
+                  <label className="block text-xs font-medium text-neutral-600 mb-1">Employment Type</label>
                   <select
                     value={employmentType}
                     onChange={(e) => setEmploymentType(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                    className="w-full h-11 px-3 py-2 rounded-lg border border-neutral-200 focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none text-sm"
                   >
                     <option value="full-time">Full-time</option>
                     <option value="part-time">Part-time</option>
@@ -1867,59 +1867,59 @@ function StaffModal({ staff, companyId, onClose, onSave }: {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-1.5">Reports To</label>
+                  <label className="block text-xs font-medium text-neutral-600 mb-1">Reports To</label>
                   <input
                     type="text"
                     value={reportsTo}
                     onChange={(e) => setReportsTo(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                    className="w-full h-11 px-3 py-2 rounded-lg border border-neutral-200 focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none text-sm"
                     placeholder="Manager Name"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-1.5">Work Location</label>
+                  <label className="block text-xs font-medium text-neutral-600 mb-1">Work Location</label>
                   <input
                     type="text"
                     value={workLocation}
                     onChange={(e) => setWorkLocation(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                    className="w-full h-11 px-3 py-2 rounded-lg border border-neutral-200 focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none text-sm"
                     placeholder="Remote / Office"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-1.5">Hourly Rate ($)</label>
+                  <label className="block text-xs font-medium text-neutral-600 mb-1">Hourly Rate ($)</label>
                   <input
                     type="number"
                     step="0.01"
                     value={hourlyRate}
                     onChange={(e) => setHourlyRate(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                    className="w-full h-11 px-3 py-2 rounded-lg border border-neutral-200 focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none text-sm"
                     placeholder="0.00"
                   />
                 </div>
-                <div className="flex items-end gap-6 pb-2">
+                <div className="flex items-end gap-4 pb-1.5">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={isBillable}
                       onChange={(e) => setIsBillable(e.target.checked)}
-                      className="w-4 h-4 rounded border-neutral-300 text-neutral-500 focus:ring-primary-500"
+                      className="w-3.5 h-3.5 rounded border-neutral-300 text-[#476E66] focus:ring-[#476E66]"
                     />
-                    <span className="text-sm text-neutral-700">Billable</span>
+                    <span className="text-xs sm:text-sm text-neutral-700">Billable</span>
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={isActive}
                       onChange={(e) => setIsActive(e.target.checked)}
-                      className="w-4 h-4 rounded border-neutral-300 text-neutral-500 focus:ring-primary-500"
+                      className="w-3.5 h-3.5 rounded border-neutral-300 text-[#476E66] focus:ring-[#476E66]"
                     />
-                    <span className="text-sm text-neutral-700">Active</span>
+                    <span className="text-xs sm:text-sm text-neutral-700">Active</span>
                   </label>
                 </div>
               </div>
@@ -1928,26 +1928,26 @@ function StaffModal({ staff, companyId, onClose, onSave }: {
 
           {activeSection === 'emergency' && (
             <>
-              <p className="text-sm text-neutral-500 mb-4">
+              <p className="text-xs text-neutral-500 mb-2">
                 Provide emergency contact information for this staff member.
               </p>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-1.5">Contact Name</label>
+                  <label className="block text-xs font-medium text-neutral-600 mb-1">Contact Name</label>
                   <input
                     type="text"
                     value={emergencyContactName}
                     onChange={(e) => setEmergencyContactName(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                    className="w-full h-11 px-3 py-2 rounded-lg border border-neutral-200 focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none text-sm"
                     placeholder="John Doe"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-1.5">Relationship</label>
+                  <label className="block text-xs font-medium text-neutral-600 mb-1">Relationship</label>
                   <select
                     value={emergencyContactRelationship}
                     onChange={(e) => setEmergencyContactRelationship(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                    className="w-full h-11 px-3 py-2 rounded-lg border border-neutral-200 focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none text-sm"
                   >
                     <option value="">Select...</option>
                     <option value="Spouse">Spouse</option>
@@ -1961,24 +1961,24 @@ function StaffModal({ staff, companyId, onClose, onSave }: {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-1.5">Phone</label>
+                  <label className="block text-xs font-medium text-neutral-600 mb-1">Phone</label>
                   <input
                     type="tel"
                     value={emergencyContactPhone}
                     onChange={(e) => setEmergencyContactPhone(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                    className="w-full h-11 px-3 py-2 rounded-lg border border-neutral-200 focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none text-sm"
                     placeholder="(555) 123-4567"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-1.5">Email</label>
+                  <label className="block text-xs font-medium text-neutral-600 mb-1">Email</label>
                   <input
                     type="email"
                     value={emergencyContactEmail}
                     onChange={(e) => setEmergencyContactEmail(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                    className="w-full h-11 px-3 py-2 rounded-lg border border-neutral-200 focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none text-sm"
                     placeholder="contact@email.com"
                   />
                 </div>
@@ -1987,18 +1987,18 @@ function StaffModal({ staff, companyId, onClose, onSave }: {
           )}
         </form>
 
-        <div className="flex justify-end gap-3 px-6 py-4 border-t border-neutral-100">
+        <div className="flex items-center justify-end gap-2 px-4 sm:px-5 py-3 border-t border-neutral-100 flex-shrink-0 bg-neutral-50">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-neutral-700 hover:bg-neutral-100 rounded-xl transition-colors"
+            className="flex-1 sm:flex-none px-4 py-2 text-sm border border-neutral-200 rounded-lg hover:bg-white transition-colors font-medium"
           >
             Cancel
           </button>
           <button
             onClick={handleSubmit}
             disabled={saving || !fullName || (!staff && !email)}
-            className="px-4 py-2 bg-[#476E66] text-white rounded-xl hover:bg-black transition-colors disabled:opacity-50"
+            className="flex-1 sm:flex-none px-6 py-2 text-sm bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54] transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {saving ? 'Saving...' : staff ? 'Save Changes' : 'Add Staff'}
           </button>

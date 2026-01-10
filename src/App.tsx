@@ -62,18 +62,18 @@ function AppRoutes() {
       <Route path="/portal/:token" element={<ClientPortalPage />} />
       
       <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-        <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path="/sales" element={<SalesPage />} />
-        <Route path="/projects" element={<ProjectsPage />} />
-        <Route path="/projects/:projectId" element={<ProjectsPage />} />
-        <Route path="/time-expense" element={<TimeExpensePage />} />
-        <Route path="/invoicing" element={<InvoicingPage />} />
-        <Route path="/resourcing" element={<ResourcingPage />} />
-        <Route path="/analytics" element={<AnalyticsPage />} />
-        <Route path="/reports" element={<ReportsPage />} />
-        <Route path="/company-expenses" element={<CompanyExpensesPage />} />
-        <Route path="/notifications" element={<NotificationsPage />} />
-        <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/dashboard" element={<ErrorBoundary><DashboardPage /></ErrorBoundary>} />
+        <Route path="/sales" element={<ErrorBoundary><SalesPage /></ErrorBoundary>} />
+        <Route path="/projects" element={<ErrorBoundary><ProjectsPage /></ErrorBoundary>} />
+        <Route path="/projects/:projectId" element={<ErrorBoundary><ProjectsPage /></ErrorBoundary>} />
+        <Route path="/time-expense" element={<ErrorBoundary><TimeExpensePage /></ErrorBoundary>} />
+        <Route path="/invoicing" element={<ErrorBoundary><InvoicingPage /></ErrorBoundary>} />
+        <Route path="/resourcing" element={<ErrorBoundary><ResourcingPage /></ErrorBoundary>} />
+        <Route path="/analytics" element={<ErrorBoundary><AnalyticsPage /></ErrorBoundary>} />
+        <Route path="/reports" element={<ErrorBoundary><ReportsPage /></ErrorBoundary>} />
+        <Route path="/company-expenses" element={<ErrorBoundary><CompanyExpensesPage /></ErrorBoundary>} />
+        <Route path="/notifications" element={<ErrorBoundary><NotificationsPage /></ErrorBoundary>} />
+        <Route path="/settings" element={<ErrorBoundary><SettingsPage /></ErrorBoundary>} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

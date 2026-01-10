@@ -195,82 +195,78 @@ export default function CompanyExpensesPage() {
 
   return (
     <div className="min-h-screen bg-neutral-50">
-      <header className="bg-white border-b border-neutral-200 sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
-          <div className="flex items-center gap-4">
-            <button onClick={() => navigate(-1)} className="text-neutral-500 hover:text-neutral-900"><X className="w-5 h-5" /></button>
-            <h1 className="text-xl font-semibold text-neutral-900">Company Expenses</h1>
-          </div>
+      <header className="bg-white border-b border-neutral-100 sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-3 flex items-center gap-2 h-12">
+          <button onClick={() => navigate(-1)} className="text-neutral-500 hover:text-neutral-900"><X className="w-5 h-5" /></button>
+          <h1 className="text-base font-semibold text-neutral-900">Company Expenses</h1>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-3 py-2">
         {/* Summary */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white rounded-2xl border border-neutral-100 p-6">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center"><TrendingDown className="w-5 h-5 text-red-600" /></div>
-              <span className="text-sm text-neutral-500">Monthly</span>
+        <div className="grid grid-cols-3 gap-1.5 mb-2">
+          <div className="bg-white rounded-md p-1.5" style={{ boxShadow: 'var(--shadow-card)' }}>
+            <div className="flex items-center gap-1 mb-0.5">
+              <div className="w-5 h-5 bg-[#476E66]/10 rounded flex items-center justify-center"><TrendingDown className="w-2.5 h-2.5 text-[#476E66]" /></div>
+              <span className="text-[9px] font-medium text-neutral-500">Monthly</span>
             </div>
-            <p className="text-2xl font-bold text-neutral-900">{formatCurrency(totalMonthly)}</p>
+            <p className="text-xs font-bold text-neutral-900">{formatCurrency(totalMonthly)}</p>
           </div>
-          <div className="bg-white rounded-2xl border border-neutral-100 p-6">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center"><DollarSign className="w-5 h-5 text-orange-600" /></div>
-              <span className="text-sm text-neutral-500">Yearly</span>
+          <div className="bg-white rounded-md p-1.5" style={{ boxShadow: 'var(--shadow-card)' }}>
+            <div className="flex items-center gap-1 mb-0.5">
+              <div className="w-5 h-5 bg-[#476E66]/10 rounded flex items-center justify-center"><DollarSign className="w-2.5 h-2.5 text-[#476E66]" /></div>
+              <span className="text-[9px] font-medium text-neutral-500">Yearly</span>
             </div>
-            <p className="text-2xl font-bold text-neutral-900">{formatCurrency(totalMonthly * 12)}</p>
+            <p className="text-xs font-bold text-neutral-900">{formatCurrency(totalMonthly * 12)}</p>
           </div>
-          <div className="bg-white rounded-2xl border border-neutral-100 p-6">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center"><FileText className="w-5 h-5 text-blue-600" /></div>
-              <span className="text-sm text-neutral-500">Active</span>
+          <div className="bg-white rounded-md p-1.5" style={{ boxShadow: 'var(--shadow-card)' }}>
+            <div className="flex items-center gap-1 mb-0.5">
+              <div className="w-5 h-5 bg-[#476E66]/10 rounded flex items-center justify-center"><FileText className="w-2.5 h-2.5 text-[#476E66]" /></div>
+              <span className="text-[9px] font-medium text-neutral-500">Active</span>
             </div>
-            <p className="text-2xl font-bold text-neutral-900">{activeExpenses.length}</p>
+            <p className="text-xs font-bold text-neutral-900">{activeExpenses.length}</p>
           </div>
         </div>
 
         {/* Categories */}
-        <div className="space-y-4">
+        <div className="space-y-1.5">
           {expensesByCategory.map(cat => {
             const Icon = cat.icon;
             const isExpanded = expandedCategories.has(cat.value);
             const isAdding = addingTo === cat.value;
 
             return (
-              <div key={cat.value} className="bg-white rounded-2xl border border-neutral-100 overflow-hidden">
-                <div onClick={() => toggleCategory(cat.value)} className="px-6 py-4 flex items-center justify-between cursor-pointer hover:bg-neutral-50">
-                  <div className="flex items-center gap-3">
-                    {isExpanded ? <ChevronDown className="w-5 h-5 text-neutral-400" /> : <ChevronRight className="w-5 h-5 text-neutral-400" />}
-                    <div className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center"><Icon className="w-5 h-5 text-neutral-600" /></div>
-                    <div>
-                      <p className="font-medium text-neutral-900">{cat.label}</p>
-                      <p className="text-sm text-neutral-500">{cat.expenses.length} items{cat.total > 0 && ` • ${formatCurrency(cat.total)}/mo`}</p>
+              <div key={cat.value} className="bg-white rounded-md overflow-hidden" style={{ boxShadow: 'var(--shadow-card)' }}>
+                <div onClick={() => toggleCategory(cat.value)} className="px-2.5 py-1.5 flex items-center justify-between cursor-pointer hover:bg-neutral-50/50 transition-colors">
+                  <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                    {isExpanded ? <ChevronDown className="w-3 h-3 text-neutral-400 flex-shrink-0" /> : <ChevronRight className="w-3 h-3 text-neutral-400 flex-shrink-0" />}
+                    <div className="w-6 h-6 rounded bg-[#476E66]/10 flex items-center justify-center flex-shrink-0"><Icon className="w-3 h-3 text-[#476E66]" /></div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-medium text-neutral-900 truncate leading-tight">{cat.label}</p>
+                      <p className="text-[9px] text-neutral-500 leading-tight">{cat.expenses.length} items{cat.total > 0 && ` • ${formatCurrency(cat.total)}/mo`}</p>
                     </div>
                   </div>
                 </div>
 
                 {isExpanded && (
-                  <div className="border-t border-neutral-100">
-                    <table className="w-full">
+                  <div className="border-t border-neutral-100 overflow-x-auto">
+                    <table className="w-full min-w-[450px]">
                       <thead className="bg-neutral-50 border-b border-neutral-100">
                         <tr>
-                          <th className="text-left px-6 py-3 text-xs font-medium text-neutral-500 uppercase">Expense</th>
-                          <th className="text-left px-6 py-3 text-xs font-medium text-neutral-500 uppercase">Amount</th>
-                          <th className="text-left px-6 py-3 text-xs font-medium text-neutral-500 uppercase">Frequency</th>
-                          <th className="text-left px-6 py-3 text-xs font-medium text-neutral-500 uppercase">Monthly</th>
-                          <th className="w-16"></th>
+                          <th className="text-left px-2.5 py-1 text-[9px] font-medium text-neutral-600 uppercase">Expense</th>
+                          <th className="text-left px-2 py-1 text-[9px] font-medium text-neutral-600 uppercase">Amount</th>
+                          <th className="text-left px-2 py-1 text-[9px] font-medium text-neutral-600 uppercase">Frequency</th>
+                          <th className="w-8"></th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-neutral-100">
+                      <tbody className="divide-y divide-neutral-50">
                         {cat.expenses.map(exp => (
-                          <tr key={exp.id} className="hover:bg-neutral-50">
-                            <td className="px-6 py-4 font-medium text-neutral-900">{exp.name}</td>
-                            <td className="px-6 py-4 text-neutral-900">{formatCurrency(exp.amount)}</td>
-                            <td className="px-6 py-4"><span className="px-2 py-1 bg-neutral-100 rounded-full text-xs capitalize">{exp.frequency}</span></td>
-                            <td className="px-6 py-4 text-neutral-600">{formatCurrency(companyExpensesApi.getMonthlyAmount(exp))}</td>
-                            <td className="px-6 py-4">
-                              <button onClick={() => handleDelete(exp.id)} className="text-neutral-400 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
+                          <tr key={exp.id} className="hover:bg-neutral-50/50">
+                            <td className="px-2.5 py-1.5 text-xs font-medium text-neutral-900">{exp.name}</td>
+                            <td className="px-2 py-1.5 text-xs text-neutral-900">{formatCurrency(exp.amount)}</td>
+                            <td className="px-2 py-1.5"><span className="px-1.5 py-0.5 bg-neutral-100 rounded text-[9px] capitalize">{exp.frequency}</span></td>
+                            <td className="px-2 py-1.5">
+                              <button onClick={() => handleDelete(exp.id)} className="text-neutral-400 hover:text-red-500 transition-colors"><Trash2 className="w-3 h-3" /></button>
                             </td>
                           </tr>
                         ))}
@@ -278,68 +274,67 @@ export default function CompanyExpensesPage() {
                         {/* Inline Add Row */}
                         {isAdding ? (
                           <tr className="bg-neutral-50/50">
-                            <td className="px-6 py-3">
+                            <td className="px-2.5 py-1.5">
                               {isCustomMode ? (
-                                <div className="flex gap-2">
+                                <div className="flex gap-1">
                                   <input
                                     type="text"
                                     placeholder="Type name..."
                                     autoFocus
                                     value={newExpense.name}
                                     onChange={(e) => setNewExpense({...newExpense, name: e.target.value})}
-                                    className="flex-1 px-3 py-2 border border-neutral-200 rounded-lg text-sm"
+                                    className="flex-1 px-1.5 py-0.5 border border-neutral-200 rounded text-[11px] focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66]"
                                   />
                                   <button
                                     onClick={() => { setIsCustomMode(false); setNewExpense({...newExpense, name: ''}); }}
-                                    className="text-xs text-neutral-500 hover:text-neutral-700"
+                                    className="text-[9px] text-neutral-500 hover:text-neutral-700 px-1"
                                   >List</button>
                                 </div>
                               ) : (
                                 <select
                                   value={newExpense.name}
                                   onChange={(e) => handlePresetSelect(e.target.value, cat.value)}
-                                  className="w-full px-3 py-2 border border-neutral-200 rounded-lg text-sm bg-white"
+                                  className="w-full px-1.5 py-0.5 border border-neutral-200 rounded text-[11px] bg-white focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66]"
                                 >
-                                  <option value="">Select or type custom...</option>
+                                  <option value="">Select...</option>
                                   {PRESET_EXPENSES[cat.value]?.map(p => <option key={p.name} value={p.name}>{p.name}</option>)}
-                                  <option value="__custom__">+ Custom name...</option>
+                                  <option value="__custom__">+ Custom...</option>
                                 </select>
                               )}
                             </td>
-                            <td className="px-6 py-3">
+                            <td className="px-2 py-1.5">
                               <input
                                 type="number"
                                 placeholder="$0"
                                 value={newExpense.amount}
                                 onChange={(e) => setNewExpense({...newExpense, amount: e.target.value})}
-                                className="w-24 px-3 py-2 border border-neutral-200 rounded-lg text-sm"
+                                className="w-14 px-1.5 py-0.5 border border-neutral-200 rounded text-[11px] focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66]"
                               />
                             </td>
-                            <td className="px-6 py-3">
+                            <td className="px-2 py-1.5">
                               <select
                                 value={newExpense.frequency}
                                 onChange={(e) => setNewExpense({...newExpense, frequency: e.target.value})}
-                                className="px-3 py-2 border border-neutral-200 rounded-lg text-sm bg-white"
+                                className="px-1.5 py-0.5 border border-neutral-200 rounded text-[11px] bg-white focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66]"
                               >
                                 <option value="monthly">Monthly</option>
                                 <option value="yearly">Yearly</option>
                                 <option value="weekly">Weekly</option>
-                                <option value="one-time">One-time</option>
+                                <option value="one-time">Once</option>
                               </select>
                             </td>
-                            <td className="px-6 py-3 text-neutral-400">—</td>
-                            <td className="px-6 py-3">
-                              <div className="flex gap-1">
-                                <button onClick={() => saveNew(cat.value)} disabled={!newExpense.name || !newExpense.amount} className="p-1.5 bg-[#476E66] text-white rounded-lg disabled:opacity-50"><Check className="w-4 h-4" /></button>
-                                <button onClick={() => setAddingTo(null)} className="p-1.5 text-neutral-400 hover:text-neutral-600"><X className="w-4 h-4" /></button>
+                            <td className="px-2 py-1.5">
+                              <div className="flex gap-0.5">
+                                <button onClick={() => saveNew(cat.value)} disabled={!newExpense.name || !newExpense.amount} className="p-0.5 bg-[#476E66] text-white rounded disabled:opacity-50 hover:bg-[#3A5B54] transition-colors"><Check className="w-2.5 h-2.5" /></button>
+                                <button onClick={() => setAddingTo(null)} className="p-0.5 text-neutral-400 hover:text-neutral-600 transition-colors"><X className="w-2.5 h-2.5" /></button>
                               </div>
                             </td>
                           </tr>
                         ) : (
                           <tr>
-                            <td colSpan={5} className="px-6 py-3">
-                              <button onClick={() => startAdding(cat.value)} className="flex items-center gap-2 text-sm text-[#476E66] hover:text-[#3a5b54]">
-                                <Plus className="w-4 h-4" /> Add expense
+                            <td colSpan={4} className="px-2.5 py-1.5">
+                              <button onClick={() => startAdding(cat.value)} className="flex items-center gap-1 text-[11px] text-[#476E66] hover:text-[#3a5b54] transition-colors font-medium">
+                                <Plus className="w-3 h-3" /> Add expense
                               </button>
                             </td>
                           </tr>

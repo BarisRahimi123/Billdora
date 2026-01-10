@@ -3,6 +3,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { usePermissions } from '../contexts/PermissionsContext';
 import { api, Project, Task, Client, TimeEntry, Invoice, Expense, ProjectTeamMember, settingsApi, FieldValue, StatusCode, CostCenter } from '../lib/api';
+import { TEAM_MEMBERS_BATCH_LIMIT } from '../lib/constants';
 import { supabase } from '../lib/supabase';
 import { 
   Plus, Search, Filter, Download, ChevronLeft, ArrowLeft, Copy,
@@ -122,15 +123,30 @@ export default function ProjectsPage() {
     try {
       const projectsData = await api.getProjects(profile.company_id);
       setProjects(projectsData || []);
-      // Load team members for projects in parallel
+      // Load team members for first batch of projects in parallel (avoids N+1 query problem)
+      // Note: This is a frontend optimization. Ideally, backend should include team_members in project response
       const teamsMap: Record<string, {id: string; full_name?: string; avatar_url?: string}[]> = {};
-      const teamPromises = (projectsData || []).slice(0, 10).map(p => 
+      const projectsToLoadTeams = (projectsData || []).slice(0, TEAM_MEMBERS_BATCH_LIMIT);
+      
+      if (projectsToLoadTeams.length > 0) {
+        const teamPromises = projectsToLoadTeams.map(p => 
         api.getProjectTeamMembers(p.id)
-          .then(team => ({ projectId: p.id, team: (team || []).map(m => ({ id: m.staff_member_id, full_name: m.profile?.full_name, avatar_url: m.profile?.avatar_url })) }))
-          .catch(() => ({ projectId: p.id, team: [] }))
+            .then(team => ({ 
+              projectId: p.id, 
+              team: (team || []).map(m => ({ 
+                id: m.staff_member_id, 
+                full_name: m.profile?.full_name, 
+                avatar_url: m.profile?.avatar_url 
+              })) 
+            }))
+            .catch(err => {
+              console.warn(`Failed to load team for project ${p.id}:`, err);
+              return { projectId: p.id, team: [] };
+            })
       );
       const teams = await Promise.all(teamPromises);
       teams.forEach(({ projectId, team }) => { teamsMap[projectId] = team; });
+      }
       setProjectTeamsMap(teamsMap);
     } catch (error) {
       console.error('Failed to load projects:', error);
@@ -262,26 +278,26 @@ export default function ProjectsPage() {
     const stats = calculateProjectStats();
     
     return (
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center gap-4">
-          <button onClick={() => navigate('/projects')} className="p-2 hover:bg-neutral-100 rounded-lg">
-            <ArrowLeft className="w-5 h-5" />
+      <div className="space-y-3 sm:space-y-4">
+        {/* Header - Compact for mobile */}
+        <div className="flex items-center gap-2 sm:gap-3">
+          <button onClick={() => navigate('/projects')} className="p-1.5 sm:p-2 hover:bg-neutral-100 rounded-lg flex-shrink-0">
+            <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
-          <div className="flex-1">
-            <h1 className="text-2xl font-bold text-neutral-900">{selectedProject.name}</h1>
-            <p className="text-neutral-500">{selectedProject.client?.name || clients.find(c => c.id === selectedProject.client_id)?.name || 'No client'}</p>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-lg sm:text-xl font-bold text-neutral-900 truncate">{selectedProject.name}</h1>
+            <p className="text-xs sm:text-sm text-neutral-500 truncate">{selectedProject.client?.name || clients.find(c => c.id === selectedProject.client_id)?.name || 'No client'}</p>
           </div>
           {canEdit('projects') && (
-            <div className="relative">
+            <div className="relative flex-shrink-0">
               <button 
                 onClick={() => setShowProjectActionsMenu(!showProjectActionsMenu)}
-                className="p-2 border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors"
+                className="p-1.5 sm:p-2 border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors"
               >
-                <MoreVertical className="w-5 h-5 text-neutral-600" />
+                <MoreVertical className="w-4 h-4 sm:w-5 sm:h-5 text-neutral-600" />
               </button>
               {showProjectActionsMenu && (
-                <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl border border-neutral-200 shadow-lg z-20 py-2">
+                <div className="absolute right-0 top-full mt-1 w-36 bg-white rounded-lg py-1 z-20" style={{ boxShadow: 'var(--shadow-dropdown)' }}>
                   <button 
                     onClick={async () => {
                       const newProject = await api.createProject({
@@ -309,11 +325,11 @@ export default function ProjectsPage() {
                       }
                       setShowProjectActionsMenu(false);
                     }}
-                    className="flex items-center gap-2 w-full px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-50"
+                    className="flex items-center gap-1.5 w-full px-3 py-1.5 text-xs text-neutral-700 hover:bg-neutral-50"
                   >
-                    <Copy className="w-4 h-4" /> Duplicate
+                    <Copy className="w-3.5 h-3.5" /> Duplicate
                   </button>
-                  <hr className="my-2 border-neutral-100" />
+                  <hr className="my-1 border-neutral-100" />
                   <button 
                     onClick={async () => {
                       if (!confirm('Are you sure you want to delete this project? This will also delete all associated tasks, time entries, and invoices. This action cannot be undone.')) return;
@@ -327,70 +343,22 @@ export default function ProjectsPage() {
                       }
                       setShowProjectActionsMenu(false);
                     }}
-                    className="flex items-center gap-2 w-full px-4 py-2 text-sm text-neutral-900 hover:bg-neutral-100"
+                    className="flex items-center gap-1.5 w-full px-3 py-1.5 text-xs text-neutral-900 hover:bg-neutral-100"
                   >
-                    <Trash2 className="w-4 h-4" /> Delete
+                    <Trash2 className="w-3.5 h-3.5" /> Delete
                   </button>
                 </div>
               )}
             </div>
           )}
-          <span className={`px-3 py-1.5 rounded-full text-sm font-medium ${getStatusColor(selectedProject.status)}`}>
+          <span className={`px-2 py-1 sm:px-2.5 sm:py-1 rounded-full text-xs font-medium whitespace-nowrap flex-shrink-0 ${getStatusColor(selectedProject.status)}`}>
             {selectedProject.status || 'active'}
           </span>
         </div>
 
-        {/* Quick Stats - Responsive grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
-          <div className="bg-white rounded-xl border border-neutral-100 p-3 sm:p-4">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
-                <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs sm:text-sm text-neutral-500">Hours</p>
-                <p className="text-base sm:text-xl font-bold text-neutral-900">{stats.totalHours}h</p>
-              </div>
-            </div>
-          </div>
-          {canViewFinancials && <div className="bg-white rounded-xl border border-neutral-100 p-3 sm:p-4">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-emerald-100 flex items-center justify-center flex-shrink-0">
-                <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-neutral-900" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs sm:text-sm text-neutral-500">Budget</p>
-                <p className="text-base sm:text-xl font-bold text-neutral-900 truncate">{formatCurrency(selectedProject.budget)}</p>
-              </div>
-            </div>
-          </div>}
-          <div className="bg-white rounded-xl border border-neutral-100 p-3 sm:p-4">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0">
-                <CheckSquare className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs sm:text-sm text-neutral-500">Tasks</p>
-                <p className="text-base sm:text-xl font-bold text-neutral-900">{tasks.filter(t => t.status === 'completed').length}/{tasks.length}</p>
-              </div>
-            </div>
-          </div>
-          {canViewFinancials && <div className="bg-white rounded-xl border border-neutral-100 p-3 sm:p-4">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
-                <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-neutral-900" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs sm:text-sm text-neutral-500">Invoiced</p>
-                <p className="text-base sm:text-xl font-bold text-neutral-900 truncate">{formatCurrency(stats.totalInvoiced)}</p>
-              </div>
-            </div>
-          </div>}
-        </div>
-
-        {/* Tabs - Horizontally scrollable on mobile */}
+        {/* Tabs - Compact horizontally scrollable on mobile */}
         <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-          <div className="flex gap-1 p-1 bg-neutral-100 rounded-xl w-max sm:w-fit">
+          <div className="flex gap-0.5 sm:gap-1 p-0.5 sm:p-1 bg-neutral-100 rounded-lg sm:rounded-xl w-max sm:w-fit">
             {(['vitals', 'client', 'details', 'tasks', 'financials', 'billing'] as DetailTab[]).filter(tab => {
               if (!canViewFinancials && (tab === 'financials' || tab === 'billing')) return false;
               return true;
@@ -398,7 +366,7 @@ export default function ProjectsPage() {
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition-colors capitalize whitespace-nowrap min-h-[44px] ${
+                className={`px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-md sm:rounded-lg text-xs sm:text-sm font-medium transition-colors capitalize whitespace-nowrap ${
                   activeTab === tab ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-600 hover:text-neutral-900'
                 }`}
               >
@@ -408,8 +376,72 @@ export default function ProjectsPage() {
           </div>
         </div>
 
+        {/* Quick Stats - Only show on Vitals tab */}
+        {activeTab === 'vitals' && (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+            {/* Hours Card */}
+            <div className="bg-white rounded-lg p-3" style={{ boxShadow: 'var(--shadow-card)' }}>
+              <div className="flex items-center gap-2 mb-1.5">
+                <div className="w-8 h-8 rounded-full bg-[#476E66]/10 flex items-center justify-center flex-shrink-0">
+                  <Clock className="w-4 h-4 text-[#476E66]" />
+                </div>
+              </div>
+              <p className="text-xs text-neutral-500 mb-0.5">Total Hours</p>
+              <p className="text-lg font-bold text-neutral-900">{stats.totalHours}<span className="text-xs text-neutral-400 font-normal">h</span></p>
+            </div>
+
+            {/* Budget Card */}
+            {canViewFinancials && (
+              <div className="bg-white rounded-lg p-3" style={{ boxShadow: 'var(--shadow-card)' }}>
+                <div className="flex items-center gap-2 mb-1.5">
+                  <div className="w-8 h-8 rounded-full bg-[#476E66]/10 flex items-center justify-center flex-shrink-0">
+                    <DollarSign className="w-4 h-4 text-[#476E66]" />
+                  </div>
+                </div>
+                <p className="text-xs text-neutral-500 mb-0.5">Project Budget</p>
+                <p className="text-lg font-bold text-neutral-900 truncate">{formatCurrency(selectedProject.budget)}</p>
+              </div>
+            )}
+
+            {/* Tasks Card */}
+            <div className="bg-white rounded-lg p-3" style={{ boxShadow: 'var(--shadow-card)' }}>
+              <div className="flex items-center gap-2 mb-1.5">
+                <div className="w-8 h-8 rounded-full bg-[#476E66]/10 flex items-center justify-center flex-shrink-0">
+                  <CheckSquare className="w-4 h-4 text-[#476E66]" />
+                </div>
+              </div>
+              <p className="text-xs text-neutral-500 mb-0.5">Tasks Completed</p>
+              <p className="text-lg font-bold text-neutral-900">
+                {tasks.filter(t => t.status === 'completed').length}
+                <span className="text-xs text-neutral-400 font-normal">/{tasks.length}</span>
+              </p>
+              {tasks.length > 0 && (
+                <div className="mt-1.5 w-full h-1 bg-neutral-100 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-[#476E66] rounded-full transition-all duration-300"
+                    style={{ width: `${(tasks.filter(t => t.status === 'completed').length / tasks.length) * 100}%` }}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Invoiced Card */}
+            {canViewFinancials && (
+              <div className="bg-white rounded-lg p-3" style={{ boxShadow: 'var(--shadow-card)' }}>
+                <div className="flex items-center gap-2 mb-1.5">
+                  <div className="w-8 h-8 rounded-full bg-[#476E66]/10 flex items-center justify-center flex-shrink-0">
+                    <FileText className="w-4 h-4 text-[#476E66]" />
+                  </div>
+                </div>
+                <p className="text-xs text-neutral-500 mb-0.5">Amount Invoiced</p>
+                <p className="text-lg font-bold text-neutral-900 truncate">{formatCurrency(stats.totalInvoiced)}</p>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Tab Content */}
-        <div className="bg-white rounded-2xl border border-neutral-100 p-6">
+        <div className="bg-white rounded-xl p-3 sm:p-4" style={{ boxShadow: 'var(--shadow-card)' }}>
           {activeTab === 'vitals' && (
             <ProjectVitalsTab 
               project={selectedProject}
@@ -505,82 +537,95 @@ export default function ProjectsPage() {
           )}
 
           {activeTab === 'financials' && (
-            <div className="space-y-6">
-              <h3 className="text-lg font-semibold text-neutral-900">Financial Summary</h3>
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                <div className="p-4 bg-neutral-50 rounded-xl">
-                  <p className="text-sm text-neutral-500 mb-1">Budget</p>
-                  <p className="text-2xl font-bold text-neutral-900">{formatCurrency(selectedProject.budget)}</p>
+            <div className="space-y-3 sm:space-y-4">
+              {/* Financial Summary KPIs - Compact & Modern */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
+                <div className="p-3 bg-white rounded-lg" style={{ boxShadow: 'var(--shadow-card)' }}>
+                  <p className="text-xs font-medium text-neutral-500 mb-1">Budget</p>
+                  <p className="text-lg font-semibold text-neutral-900">{formatCurrency(selectedProject.budget)}</p>
                 </div>
-                <div className="p-4 bg-neutral-50 rounded-xl">
-                  <p className="text-sm text-neutral-500 mb-1">Labor Cost</p>
-                  <p className="text-2xl font-bold text-neutral-900">{formatCurrency(stats.billableHours * 150)}</p>
-                  <p className="text-xs text-neutral-400">{stats.billableHours}h @ $150/hr</p>
+                <div className="p-3 bg-white rounded-lg" style={{ boxShadow: 'var(--shadow-card)' }}>
+                  <p className="text-xs font-medium text-neutral-500 mb-1">Labor Cost</p>
+                  <p className="text-lg font-semibold text-neutral-900">{formatCurrency(stats.billableHours * 150)}</p>
+                  <p className="text-xs text-neutral-400 mt-0.5">{stats.billableHours}h @ $150/hr</p>
                 </div>
-                <div className="p-4 bg-neutral-100 rounded-xl">
-                  <p className="text-sm text-orange-600 mb-1">Expenses</p>
-                  <p className="text-2xl font-bold text-orange-700">{formatCurrency(expenses.reduce((sum, e) => sum + (e.amount || 0), 0))}</p>
-                  <p className="text-xs text-orange-400">{expenses.length} expense{expenses.length !== 1 ? 's' : ''}</p>
+                <div className="p-3 bg-white rounded-lg" style={{ boxShadow: 'var(--shadow-card)' }}>
+                  <p className="text-xs font-medium text-neutral-500 mb-1">Expenses</p>
+                  <p className="text-lg font-semibold text-neutral-900">{formatCurrency(expenses.reduce((sum, e) => sum + (e.amount || 0), 0))}</p>
+                  <p className="text-xs text-neutral-400 mt-0.5">{expenses.length} expense{expenses.length !== 1 ? 's' : ''}</p>
                 </div>
-                <div className="p-4 bg-neutral-50 rounded-xl">
-                  <p className="text-sm text-neutral-500 mb-1">Invoiced</p>
-                  <p className="text-2xl font-bold text-blue-600">{formatCurrency(stats.totalInvoiced)}</p>
+                <div className="p-3 bg-white rounded-lg" style={{ boxShadow: 'var(--shadow-card)' }}>
+                  <p className="text-xs font-medium text-neutral-500 mb-1">Invoiced</p>
+                  <p className="text-lg font-semibold text-[#476E66]">{formatCurrency(stats.totalInvoiced)}</p>
                 </div>
-                <div className="p-4 bg-neutral-50 rounded-xl">
-                  <p className="text-sm text-neutral-500 mb-1">Collected</p>
-                  <p className="text-2xl font-bold text-neutral-900">{formatCurrency(stats.billedAmount)}</p>
+                <div className="p-3 bg-white rounded-lg col-span-2 sm:col-span-1" style={{ boxShadow: 'var(--shadow-card)' }}>
+                  <p className="text-xs font-medium text-neutral-500 mb-1">Collected</p>
+                  <p className="text-lg font-semibold text-neutral-900">{formatCurrency(stats.billedAmount)}</p>
                 </div>
               </div>
               
+              {/* Time Entries - Compact List */}
               <div>
-                <h4 className="text-md font-medium text-neutral-900 mb-3">Time Entries</h4>
+                <h4 className="text-sm font-semibold text-neutral-900 mb-2">Time Entries</h4>
                 {timeEntries.length === 0 ? (
-                  <p className="text-neutral-500 text-center py-8">No time entries for this project</p>
+                  <p className="text-xs text-neutral-400 text-center py-4">No time entries for this project</p>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="bg-white rounded-lg overflow-hidden" style={{ boxShadow: 'var(--shadow-card)' }}>
+                    <div className="divide-y divide-neutral-50">
                     {timeEntries.slice(0, 5).map(entry => (
-                      <div key={entry.id} className="flex items-center justify-between p-3 bg-neutral-50 rounded-lg">
-                        <div>
-                          <p className="font-medium text-neutral-900">{entry.description || 'Time entry'}</p>
-                          <p className="text-sm text-neutral-500">{new Date(entry.date).toLocaleDateString()}</p>
+                        <div key={entry.id} className="flex items-center justify-between p-2.5 hover:bg-neutral-50/50 transition-colors">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium text-neutral-900 truncate" style={{ fontSize: '13px' }}>{entry.description || 'Time entry'}</p>
+                            <p className="text-xs text-neutral-400">{new Date(entry.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</p>
                         </div>
-                        <div className="text-right">
-                          <p className="font-medium text-neutral-900">{entry.hours}h</p>
-                          <p className="text-sm text-neutral-500">{entry.billable ? 'Billable' : 'Non-billable'}</p>
+                          <div className="text-right flex-shrink-0 ml-3">
+                            <p className="text-sm font-semibold text-neutral-900">{entry.hours}h</p>
+                            <span className={`text-xs ${entry.billable ? 'text-[#476E66]' : 'text-neutral-400'}`}>
+                              {entry.billable ? 'Billable' : 'Non-billable'}
+                            </span>
                         </div>
                       </div>
                     ))}
+                    </div>
                     {timeEntries.length > 5 && (
-                      <p className="text-sm text-neutral-500 text-center">+ {timeEntries.length - 5} more entries</p>
+                      <div className="px-3 py-2 bg-neutral-50 border-t border-neutral-100 text-center">
+                        <p className="text-xs text-neutral-500">+ {timeEntries.length - 5} more entries</p>
+                      </div>
                     )}
                   </div>
                 )}
               </div>
               
-              {/* Expenses Section */}
+              {/* Expenses - Compact List */}
               <div>
-                <h4 className="text-md font-medium text-neutral-900 mb-3">Expenses</h4>
+                <h4 className="text-sm font-semibold text-neutral-900 mb-2">Expenses</h4>
                 {expenses.length === 0 ? (
-                  <p className="text-neutral-500 text-center py-8">No expenses for this project</p>
+                  <p className="text-xs text-neutral-400 text-center py-4">No expenses for this project</p>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="bg-white rounded-lg overflow-hidden" style={{ boxShadow: 'var(--shadow-card)' }}>
+                    <div className="divide-y divide-neutral-50">
                     {expenses.slice(0, 5).map(expense => (
-                      <div key={expense.id} className="flex items-center justify-between p-3 bg-neutral-50 rounded-lg">
-                        <div>
-                          <p className="font-medium text-neutral-900">{expense.description || 'Expense'}</p>
-                          <p className="text-sm text-neutral-500">
-                            {new Date(expense.date).toLocaleDateString()}
-                            {expense.category && <span className="ml-2">• {expense.category}</span>}
+                        <div key={expense.id} className="flex items-center justify-between p-2.5 hover:bg-neutral-50/50 transition-colors">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium text-neutral-900 truncate" style={{ fontSize: '13px' }}>{expense.description || 'Expense'}</p>
+                            <p className="text-xs text-neutral-400">
+                              {new Date(expense.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                              {expense.category && <span className="ml-1.5">• {expense.category}</span>}
                           </p>
                         </div>
-                        <div className="text-right">
-                          <p className="font-medium text-neutral-900">{formatCurrency(expense.amount)}</p>
-                          <p className="text-sm text-neutral-500">{expense.billable ? 'Billable' : 'Non-billable'}</p>
+                          <div className="text-right flex-shrink-0 ml-3">
+                            <p className="text-sm font-semibold text-neutral-900">{formatCurrency(expense.amount)}</p>
+                            <span className={`text-xs ${expense.billable ? 'text-[#476E66]' : 'text-neutral-400'}`}>
+                              {expense.billable ? 'Billable' : 'Non-billable'}
+                            </span>
                         </div>
                       </div>
                     ))}
+                    </div>
                     {expenses.length > 5 && (
-                      <p className="text-sm text-neutral-500 text-center">+ {expenses.length - 5} more expenses</p>
+                      <div className="px-3 py-2 bg-neutral-50 border-t border-neutral-100 text-center">
+                        <p className="text-xs text-neutral-500">+ {expenses.length - 5} more expenses</p>
+                      </div>
                     )}
                   </div>
                 )}
@@ -589,7 +634,7 @@ export default function ProjectsPage() {
           )}
 
           {activeTab === 'billing' && (
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               {viewingBillingInvoice ? (
                 <InlineBillingInvoiceView
                   invoice={viewingBillingInvoice}
@@ -608,38 +653,38 @@ export default function ProjectsPage() {
               ) : (
                 <>
                   <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-neutral-900">Billing History</h3>
+                    <h3 className="text-base sm:text-lg font-semibold text-neutral-900">Billing History</h3>
                     <button 
                       onClick={() => setShowInvoiceModal(true)}
-                      className="flex items-center gap-2 px-3 py-1.5 bg-[#476E66] text-white text-sm rounded-lg hover:bg-[#3A5B54]"
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 bg-[#476E66] text-white text-xs sm:text-sm rounded-lg hover:bg-[#3A5B54]"
                     >
-                      <Plus className="w-4 h-4" /> Create Invoice
+                      <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> <span className="hidden sm:inline">Create Invoice</span><span className="sm:hidden">New</span>
                     </button>
                   </div>
                   {invoices.length === 0 ? (
-                    <div className="text-center py-12">
-                      <FileText className="w-12 h-12 text-neutral-300 mx-auto mb-3" />
-                      <p className="text-neutral-500">No invoices yet</p>
-                      <p className="text-sm text-neutral-400 mt-1">Create an invoice to bill for this project</p>
+                    <div className="text-center py-8 sm:py-12">
+                      <FileText className="w-10 h-10 sm:w-12 sm:h-12 text-neutral-300 mx-auto mb-2 sm:mb-3" />
+                      <p className="text-sm text-neutral-500">No invoices yet</p>
+                      <p className="text-xs text-neutral-400 mt-1">Create an invoice to bill for this project</p>
                     </div>
                   ) : (
                     <div className="space-y-2">
                       {invoices.map(invoice => (
                         <div 
                           key={invoice.id} 
-                          className="flex items-center justify-between p-4 bg-neutral-50 rounded-xl cursor-pointer hover:bg-neutral-100 transition-colors"
+                          className="flex items-center justify-between p-3 sm:p-4 bg-neutral-50 rounded-xl cursor-pointer hover:bg-neutral-100 transition-colors"
                           onClick={() => setViewingBillingInvoice(invoice)}
                         >
-                          <div>
-                            <p className="font-medium text-neutral-900">{invoice.invoice_number}</p>
-                            <p className="text-sm text-neutral-500">{new Date(invoice.created_at || '').toLocaleDateString()}</p>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium text-neutral-900">{invoice.invoice_number}</p>
+                            <p className="text-xs text-neutral-500">{new Date(invoice.created_at || '').toLocaleDateString()}</p>
                           </div>
-                          <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
                             <div className="text-right">
-                              <p className="font-medium text-neutral-900">{formatCurrency(invoice.total)}</p>
-                              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                                invoice.status === 'paid' ? 'bg-emerald-100 text-emerald-700' :
-                                invoice.status === 'sent' ? 'bg-blue-100 text-blue-700' : 'bg-neutral-100 text-neutral-700'
+                              <p className="text-sm font-medium text-neutral-900">{formatCurrency(invoice.total)}</p>
+                              <span className={`px-1.5 py-0.5 rounded-full text-xs font-medium ${
+                                invoice.status === 'paid' ? 'bg-emerald-50 text-emerald-700' :
+                                invoice.status === 'sent' ? 'bg-blue-50 text-blue-700' : 'bg-neutral-100 text-neutral-700'
                               }`}>
                                 {invoice.status || 'draft'}
                               </span>
@@ -657,7 +702,7 @@ export default function ProjectsPage() {
                                   }
                                 }
                               }}
-                              className="p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                              className="p-1 sm:p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors hidden sm:block"
                               title="Delete invoice"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -754,25 +799,26 @@ export default function ProjectsPage() {
 
   // Projects List View
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-neutral-900">Projects</h1>
-          <p className="text-neutral-500">Manage your projects and deliverables</p>
+    <div className="space-y-4 sm:space-y-5">
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-neutral-900">Projects</h1>
+          <p className="text-xs sm:text-sm text-neutral-500 hidden sm:block">Manage your projects and deliverables</p>
         </div>
         {canCreate('projects') && (
           <button
             onClick={() => { setEditingProject(null); setShowProjectModal(true); }}
-            className="flex items-center gap-2 px-4 py-2.5 bg-[#476E66] text-white rounded-xl hover:bg-[#3A5B54] transition-colors"
+            className="flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 bg-[#476E66] text-white text-sm rounded-lg hover:bg-[#3A5B54] transition-colors flex-shrink-0"
           >
             <Plus className="w-4 h-4" />
-            Add Project
+            <span className="hidden sm:inline">Add Project</span>
+            <span className="sm:hidden">New</span>
           </button>
         )}
       </div>
 
       {/* Search and filters */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
           <input
@@ -780,27 +826,27 @@ export default function ProjectsPage() {
             placeholder="Search projects..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+            className="w-full pl-9 pr-3 py-2 text-sm rounded-lg border border-neutral-200 focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none"
           />
         </div>
-        <div className="flex items-center gap-2 ml-auto">
-          <div className="flex items-center gap-1 p-1 bg-neutral-100 rounded-lg">
+        <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-0.5 p-0.5 bg-neutral-100 rounded-md">
             <button
               onClick={() => setViewMode('list')}
-              className={`p-2 rounded-md transition-colors ${viewMode === 'list' ? 'bg-white shadow-sm' : 'hover:bg-neutral-200'}`}
+              className={`p-1.5 rounded-sm transition-colors ${viewMode === 'list' ? 'bg-white shadow-sm' : 'hover:bg-neutral-200'}`}
               title="List View"
             >
               <List className="w-4 h-4" />
             </button>
             <button
               onClick={() => setViewMode('client')}
-              className={`p-2 rounded-md transition-colors ${viewMode === 'client' ? 'bg-white shadow-sm' : 'hover:bg-neutral-200'}`}
+              className={`p-1.5 rounded-sm transition-colors ${viewMode === 'client' ? 'bg-white shadow-sm' : 'hover:bg-neutral-200'}`}
               title="Client View"
             >
               <LayoutGrid className="w-4 h-4" />
             </button>
           </div>
-          <button className="flex items-center gap-2 px-4 py-2.5 border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors">
+          <button className="hidden sm:flex items-center gap-1.5 px-3 py-2 text-sm border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors">
             <Filter className="w-4 h-4" />
             Filters
           </button>
@@ -900,11 +946,99 @@ export default function ProjectsPage() {
 
       {/* Projects Table */}
       {viewMode === 'list' ? (
-        <div className="bg-white rounded-2xl border border-neutral-100 overflow-hidden">
-          <table className="w-full">
+        <div className="bg-white rounded-xl overflow-visible" style={{ boxShadow: 'var(--shadow-card)' }}>
+          {/* Mobile Card View */}
+          <div className="block lg:hidden divide-y divide-neutral-100 overflow-visible">
+            {filteredProjects.map((project) => {
+              const catInfo = getCategoryInfo(project.category);
+              const clientName = project.client?.name || clients.find(c => c.id === project.client_id)?.name || '-';
+              
+              return (
+                <div 
+                  key={project.id}
+                  className={`p-3 cursor-pointer active:bg-neutral-50 transition-colors overflow-visible ${selectedProjects.has(project.id) ? 'bg-[#476E66]/5' : ''}`}
+                  onClick={() => navigate(`/projects/${project.id}`)}
+                >
+                  <div className="flex items-start gap-3">
+                    {/* Checkbox */}
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selectedProjects.has(project.id)}
+                        onChange={(e) => {
+                          const newSelected = new Set(selectedProjects);
+                          if (e.target.checked) newSelected.add(project.id);
+                          else newSelected.delete(project.id);
+                          setSelectedProjects(newSelected);
+                        }}
+                        className="w-4 h-4 rounded border-neutral-300 text-[#476E66] focus:ring-[#476E66] mt-0.5"
+                      />
+                    </div>
+                    
+                    {/* Category Icon */}
+                    <div className={`w-9 h-9 rounded-full ${catInfo.color} flex items-center justify-center text-white font-bold text-xs flex-shrink-0`}>
+                      {catInfo.value}
+                    </div>
+                    
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-medium text-sm text-neutral-900 truncate">{project.name}</h3>
+                      <p className="text-xs text-neutral-500 truncate mt-0.5">{clientName}</p>
+                      
+                      {/* Meta Info */}
+                      <div className="flex items-center gap-2 mt-2 flex-wrap">
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(project.status)}`}>
+                          {project.status || 'active'}
+                        </span>
+                        {canViewFinancials && project.budget > 0 && (
+                          <span className="text-xs text-neutral-600">{formatCurrency(project.budget)}</span>
+                        )}
+                        {project.start_date && (
+                          <span className="text-xs text-neutral-500">{new Date(project.start_date).toLocaleDateString()}</span>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* Actions */}
+                    <div className="relative" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        onClick={() => setRowMenuOpen(rowMenuOpen === project.id ? null : project.id)}
+                        className="p-1 hover:bg-neutral-100 rounded flex-shrink-0"
+                      >
+                        <MoreVertical className="w-4 h-4 text-neutral-500" />
+                      </button>
+                      
+                      {/* Dropdown Menu */}
+                      {rowMenuOpen === project.id && (
+                        <div className="absolute right-0 top-full mt-1 w-40 bg-white rounded-lg py-1 z-20" style={{ boxShadow: 'var(--shadow-dropdown)' }} onClick={(e) => e.stopPropagation()}>
+                          <button
+                            onClick={() => { navigate(`/projects/${project.id}`); setRowMenuOpen(null); }}
+                            className="flex items-center gap-2 w-full px-3 py-2 text-xs text-neutral-700 hover:bg-neutral-50 text-left"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" /> View Details
+                          </button>
+                          {canEdit('projects') && (
+                            <button
+                              onClick={() => { setEditingProject(project); setShowProjectModal(true); setRowMenuOpen(null); }}
+                              className="flex items-center gap-2 w-full px-3 py-2 text-xs text-neutral-700 hover:bg-neutral-50 text-left"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" /> Edit
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          
+          {/* Desktop Table View */}
+          <table className="w-full hidden lg:table">
             <thead className="bg-neutral-50 border-b border-neutral-100">
               <tr>
-                <th className="w-12 px-4 py-4">
+                <th className="w-10 px-3 py-3">
                   <input
                     type="checkbox"
                     checked={selectedProjects.size === filteredProjects.length && filteredProjects.length > 0}
@@ -915,18 +1049,18 @@ export default function ProjectsPage() {
                         setSelectedProjects(new Set());
                       }
                     }}
-                    className="w-4 h-4 rounded border-neutral-300 text-neutral-500"
+                    className="w-4 h-4 rounded border-neutral-300 text-[#476E66] focus:ring-[#476E66]"
                   />
                 </th>
-                {visibleColumns.includes('project') && <th className="text-left px-6 py-4 text-xs font-medium text-neutral-500 uppercase tracking-wider">Project</th>}
-                {visibleColumns.includes('client') && <th className="text-left px-6 py-4 text-xs font-medium text-neutral-500 uppercase tracking-wider">Client</th>}
-                {visibleColumns.includes('team') && <th className="text-left px-6 py-4 text-xs font-medium text-neutral-500 uppercase tracking-wider">Team</th>}
-                {visibleColumns.includes('budget') && canViewFinancials && <th className="text-left px-6 py-4 text-xs font-medium text-neutral-500 uppercase tracking-wider">Budget</th>}
-                {visibleColumns.includes('status') && <th className="text-left px-6 py-4 text-xs font-medium text-neutral-500 uppercase tracking-wider">Status</th>}
-                {visibleColumns.includes('category') && <th className="text-left px-6 py-4 text-xs font-medium text-neutral-500 uppercase tracking-wider">Category</th>}
-                {visibleColumns.includes('start_date') && <th className="text-left px-6 py-4 text-xs font-medium text-neutral-500 uppercase tracking-wider">Start Date</th>}
-                {visibleColumns.includes('end_date') && <th className="text-left px-6 py-4 text-xs font-medium text-neutral-500 uppercase tracking-wider">End Date</th>}
-                <th className="w-20 text-right px-6 py-4 text-xs font-medium text-neutral-500 uppercase tracking-wider">Actions</th>
+                {visibleColumns.includes('project') && <th className="text-left px-4 py-3 text-xs font-medium text-neutral-500 uppercase tracking-wider">Project</th>}
+                {visibleColumns.includes('client') && <th className="text-left px-4 py-3 text-xs font-medium text-neutral-500 uppercase tracking-wider">Client</th>}
+                {visibleColumns.includes('team') && <th className="text-left px-4 py-3 text-xs font-medium text-neutral-500 uppercase tracking-wider">Team</th>}
+                {visibleColumns.includes('budget') && canViewFinancials && <th className="text-left px-4 py-3 text-xs font-medium text-neutral-500 uppercase tracking-wider">Budget</th>}
+                {visibleColumns.includes('status') && <th className="text-left px-4 py-3 text-xs font-medium text-neutral-500 uppercase tracking-wider">Status</th>}
+                {visibleColumns.includes('category') && <th className="text-left px-4 py-3 text-xs font-medium text-neutral-500 uppercase tracking-wider">Category</th>}
+                {visibleColumns.includes('start_date') && <th className="text-left px-4 py-3 text-xs font-medium text-neutral-500 uppercase tracking-wider">Start Date</th>}
+                {visibleColumns.includes('end_date') && <th className="text-left px-4 py-3 text-xs font-medium text-neutral-500 uppercase tracking-wider">End Date</th>}
+                <th className="w-16 text-right px-4 py-3 text-xs font-medium text-neutral-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100">
@@ -935,10 +1069,10 @@ export default function ProjectsPage() {
                 return (
                   <tr 
                     key={project.id} 
-                    className={`hover:bg-neutral-50 transition-colors cursor-pointer ${selectedProjects.has(project.id) ? 'bg-[#476E66]/10' : ''}`}
+                    className={`hover:bg-neutral-50 transition-colors cursor-pointer ${selectedProjects.has(project.id) ? 'bg-[#476E66]/5' : ''}`}
                     onClick={() => navigate(`/projects/${project.id}`)}
                   >
-                    <td className="px-4 py-4" onClick={(e) => e.stopPropagation()}>
+                    <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
                       <input
                         type="checkbox"
                         checked={selectedProjects.has(project.id)}
@@ -951,92 +1085,92 @@ export default function ProjectsPage() {
                           }
                           setSelectedProjects(newSelected);
                         }}
-                        className="w-4 h-4 rounded border-neutral-300 text-neutral-500"
+                        className="w-4 h-4 rounded border-neutral-300 text-[#476E66] focus:ring-[#476E66]"
                       />
                     </td>
                     {visibleColumns.includes('project') && (
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-10 h-10 rounded-full ${catInfo.color} flex items-center justify-center text-white font-bold text-sm`}>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2.5">
+                          <div className={`w-8 h-8 rounded-full ${catInfo.color} flex items-center justify-center text-white font-bold text-xs flex-shrink-0`}>
                             {catInfo.value}
                           </div>
-                          <div>
-                            <p className="font-medium text-neutral-900">{project.name}</p>
-                            <p className="text-sm text-neutral-500">{project.description || 'No description'}</p>
+                          <div className="min-w-0">
+                            <p className="font-medium text-sm text-neutral-900 truncate">{project.name}</p>
+                            <p className="text-xs text-neutral-500 truncate">{project.description || 'No description'}</p>
                           </div>
                         </div>
                       </td>
                     )}
                     {visibleColumns.includes('client') && (
-                      <td className="px-6 py-4 text-neutral-600">
+                      <td className="px-4 py-3 text-sm text-neutral-600">
                         {project.client?.name || clients.find(c => c.id === project.client_id)?.name || '-'}
                       </td>
                     )}
                     {visibleColumns.includes('team') && (
-                      <td className="px-6 py-4">
-                        <div className="flex -space-x-2">
-                          {(projectTeamsMap[project.id] || []).slice(0, 4).map((member, idx) => (
+                      <td className="px-4 py-3">
+                        <div className="flex -space-x-1.5">
+                          {(projectTeamsMap[project.id] || []).slice(0, 3).map((member, idx) => (
                             member.avatar_url ? (
-                              <img key={idx} src={member.avatar_url} alt="" className="w-7 h-7 rounded-full border-2 border-white object-cover" title={member.full_name} />
+                              <img key={idx} src={member.avatar_url} alt="" className="w-6 h-6 rounded-full border-2 border-white object-cover" title={member.full_name} />
                             ) : (
-                              <div key={idx} className="w-7 h-7 rounded-full border-2 border-white bg-[#476E66]/20 flex items-center justify-center text-xs font-medium text-neutral-900-700" title={member.full_name}>
+                              <div key={idx} className="w-6 h-6 rounded-full border-2 border-white bg-[#476E66]/20 flex items-center justify-center text-xs font-medium text-[#476E66]" title={member.full_name}>
                                 {member.full_name?.charAt(0) || '?'}
                               </div>
                             )
                           ))}
-                          {(projectTeamsMap[project.id]?.length || 0) > 4 && (
-                            <div className="w-7 h-7 rounded-full border-2 border-white bg-neutral-100 flex items-center justify-center text-xs font-medium text-neutral-600">
-                              +{(projectTeamsMap[project.id]?.length || 0) - 4}
+                          {(projectTeamsMap[project.id]?.length || 0) > 3 && (
+                            <div className="w-6 h-6 rounded-full border-2 border-white bg-neutral-100 flex items-center justify-center text-xs font-medium text-neutral-600">
+                              +{(projectTeamsMap[project.id]?.length || 0) - 3}
                             </div>
                           )}
-                          {!projectTeamsMap[project.id]?.length && <span className="text-neutral-400 text-sm">-</span>}
+                          {!projectTeamsMap[project.id]?.length && <span className="text-neutral-400 text-xs">-</span>}
                         </div>
                       </td>
                     )}
-                    {visibleColumns.includes('budget') && canViewFinancials && <td className="px-6 py-4 font-medium text-neutral-900">{formatCurrency(project.budget)}</td>}
+                    {visibleColumns.includes('budget') && canViewFinancials && <td className="px-4 py-3 font-semibold text-sm text-neutral-900">{formatCurrency(project.budget)}</td>}
                     {visibleColumns.includes('status') && (
-                      <td className="px-6 py-4">
-                        <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(project.status)}`}>
+                      <td className="px-4 py-3">
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(project.status)}`}>
                           {project.status || 'active'}
                         </span>
                       </td>
                     )}
                     {visibleColumns.includes('category') && (
-                      <td className="px-6 py-4">
-                        <span className="text-sm text-neutral-600">{catInfo.label}</span>
+                      <td className="px-4 py-3">
+                        <span className="text-xs text-neutral-600">{catInfo.label}</span>
                       </td>
                     )}
                     {visibleColumns.includes('start_date') && (
-                      <td className="px-6 py-4 text-sm text-neutral-600">
+                      <td className="px-4 py-3 text-xs text-neutral-600">
                         {project.start_date ? new Date(project.start_date).toLocaleDateString() : '-'}
                       </td>
                     )}
                     {visibleColumns.includes('end_date') && (
-                      <td className="px-6 py-4 text-sm text-neutral-600">
+                      <td className="px-4 py-3 text-xs text-neutral-600">
                         {project.end_date ? new Date(project.end_date).toLocaleDateString() : '-'}
                       </td>
                     )}
-                    <td className="px-6 py-4 text-right relative" onClick={(e) => e.stopPropagation()}>
+                    <td className="px-4 py-3 text-right relative" onClick={(e) => e.stopPropagation()}>
                       <button
                         onClick={() => setRowMenuOpen(rowMenuOpen === project.id ? null : project.id)}
-                        className="p-1.5 hover:bg-neutral-100 rounded-lg"
+                        className="p-1 hover:bg-neutral-100 rounded"
                       >
                         <MoreVertical className="w-4 h-4 text-neutral-500" />
                       </button>
                       {rowMenuOpen === project.id && (
-                        <div className="absolute right-6 top-full mt-1 w-44 bg-white rounded-xl border border-neutral-200 shadow-lg z-20 py-2">
+                        <div className="absolute right-4 top-full mt-1 w-40 bg-white rounded-lg py-1 z-20" style={{ boxShadow: 'var(--shadow-dropdown)' }}>
                           <button
                             onClick={() => { navigate(`/projects/${project.id}`); setRowMenuOpen(null); }}
-                            className="flex items-center gap-2 w-full px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-50"
+                            className="flex items-center gap-1.5 w-full px-3 py-1.5 text-xs text-neutral-700 hover:bg-neutral-50"
                           >
-                            <ExternalLink className="w-4 h-4" /> View Details
+                            <ExternalLink className="w-3.5 h-3.5" /> View Details
                           </button>
                           {canEdit('projects') && (
                             <button
                               onClick={() => { setEditingProject(project); setShowProjectModal(true); setRowMenuOpen(null); }}
-                              className="flex items-center gap-2 w-full px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-50"
+                              className="flex items-center gap-1.5 w-full px-3 py-1.5 text-xs text-neutral-700 hover:bg-neutral-50"
                             >
-                              <Edit2 className="w-4 h-4" /> Edit
+                              <Edit2 className="w-3.5 h-3.5" /> Edit
                             </button>
                           )}
                           {canEdit('projects') && (
@@ -1055,14 +1189,14 @@ export default function ProjectsPage() {
                                 }
                                 setRowMenuOpen(null);
                               }}
-                              className="flex items-center gap-2 w-full px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-50"
+                              className="flex items-center gap-1.5 w-full px-3 py-1.5 text-xs text-neutral-700 hover:bg-neutral-50"
                             >
-                              <Copy className="w-4 h-4" /> Duplicate
+                              <Copy className="w-3.5 h-3.5" /> Duplicate
                             </button>
                           )}
                           {canDelete('projects') && (
                             <>
-                              <hr className="my-2 border-neutral-100" />
+                              <hr className="my-1 border-neutral-100" />
                               <button
                                 onClick={async () => {
                                   if (!confirm('Delete this project?')) return;
@@ -1070,9 +1204,9 @@ export default function ProjectsPage() {
                                   loadData();
                                   setRowMenuOpen(null);
                                 }}
-                                className="flex items-center gap-2 w-full px-4 py-2 text-sm text-neutral-900 hover:bg-neutral-100"
+                                className="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-neutral-900 hover:bg-neutral-100"
                               >
-                                <Trash2 className="w-4 h-4" /> Delete
+                                <Trash2 className="w-3.5 h-3.5" /> Delete
                               </button>
                             </>
                           )}
@@ -1372,79 +1506,190 @@ function TaskModal({ task, projectId, companyId, teamMembers, companyProfiles, o
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl w-full max-w-lg p-6 mx-4 max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold text-neutral-900">{task ? 'Edit Task' : 'Create Task'}</h2>
-          <button onClick={onClose} className="p-2 hover:bg-neutral-100 rounded-lg"><X className="w-5 h-5" /></button>
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl w-full max-w-lg max-h-[92vh] overflow-hidden flex flex-col" style={{ boxShadow: 'var(--shadow-elevated)' }}>
+        {/* Fixed Header */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-100 flex-shrink-0">
+          <h2 className="text-base font-semibold text-neutral-900">{task ? 'Edit Task' : 'Create Task'}</h2>
+          <button onClick={onClose} className="p-1.5 hover:bg-neutral-100 rounded-lg transition-colors">
+            <X className="w-4 h-4" />
+          </button>
         </div>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {error && <div className="p-3 bg-neutral-100 border border-red-200 text-red-700 rounded-lg text-sm">{error}</div>}
+
+        {/* Scrollable Content */}
+        <div className="overflow-y-auto flex-1">
+          <form onSubmit={handleSubmit} id="task-form" className="px-4 py-3 space-y-2.5">
+            {error && (
+              <div className="p-2 bg-red-50 border border-red-200 text-red-700 rounded-lg text-xs">
+                {error}
+              </div>
+            )}
+
+            {/* Task Name */}
           <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1.5">Task Name *</label>
-            <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" required placeholder="e.g. Design homepage mockup" />
+              <label className="block text-xs font-medium text-neutral-600 mb-1">
+                Task Name *
+              </label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full h-10 px-3 text-sm border border-neutral-300 rounded-lg focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none"
+                required
+                placeholder="e.g. Design homepage mockup"
+              />
           </div>
+
+            {/* Description */}
           <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1.5">Description</label>
-            <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none resize-none" placeholder="Task details..." />
+              <label className="block text-xs font-medium text-neutral-600 mb-1">
+                Description
+              </label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={2}
+                className="w-full px-3 py-2 text-sm border border-neutral-300 rounded-lg focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none resize-none"
+                placeholder="Task details..."
+              />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+
+            {/* Status & Priority */}
+            <div className="grid grid-cols-2 gap-2.5">
             <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-1.5">Status</label>
-              <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none">
+                <label className="block text-xs font-medium text-neutral-600 mb-1">
+                  Status
+                </label>
+                <select
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value)}
+                  className="w-full h-10 px-3 text-sm border border-neutral-300 rounded-lg focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none bg-white"
+                >
                 <option value="not_started">Not Started</option>
                 <option value="in_progress">In Progress</option>
                 <option value="completed">Completed</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-1.5">Priority</label>
-              <select value={priority} onChange={(e) => setPriority(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none">
+                <label className="block text-xs font-medium text-neutral-600 mb-1">
+                  Priority
+                </label>
+                <select
+                  value={priority}
+                  onChange={(e) => setPriority(e.target.value)}
+                  className="w-full h-10 px-3 text-sm border border-neutral-300 rounded-lg focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none bg-white"
+                >
                 <option value="low">Low</option>
                 <option value="medium">Medium</option>
                 <option value="high">High</option>
               </select>
             </div>
           </div>
+
+            {/* Assignee */}
           <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1.5">Assignee</label>
-            <select value={assignedTo} onChange={(e) => setAssignedTo(e.target.value)} disabled={!canViewFinancials} className={`w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none ${!canViewFinancials ? 'bg-neutral-100 cursor-not-allowed opacity-60' : ''}`}>
+              <label className="block text-xs font-medium text-neutral-600 mb-1">
+                Assignee
+              </label>
+              <select
+                value={assignedTo}
+                onChange={(e) => setAssignedTo(e.target.value)}
+                disabled={!canViewFinancials}
+                className={`w-full h-10 px-3 text-sm border border-neutral-300 rounded-lg focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none ${
+                  !canViewFinancials ? 'bg-neutral-100 cursor-not-allowed opacity-60' : 'bg-white'
+                }`}
+              >
               <option value="">Unassigned</option>
-              {companyProfiles.map(p => (
-                <option key={p.id} value={p.id}>{p.full_name || 'Unknown'}</option>
+                {companyProfiles.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.full_name || 'Unknown'}
+                  </option>
               ))}
             </select>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+
+            {/* Start Date & Due Date */}
+            <div className="grid grid-cols-2 gap-2.5">
             <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-1.5">Start Date</label>
-              <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
+                <label className="block text-xs font-medium text-neutral-600 mb-1">
+                  Start Date
+                </label>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="w-full h-10 px-3 text-sm border border-neutral-300 rounded-lg focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none"
+                />
             </div>
             <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-1.5">Due Date</label>
-              <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
+                <label className="block text-xs font-medium text-neutral-600 mb-1">
+                  Due Date
+                </label>
+                <input
+                  type="date"
+                  value={dueDate}
+                  onChange={(e) => setDueDate(e.target.value)}
+                  className="w-full h-10 px-3 text-sm border border-neutral-300 rounded-lg focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none"
+                />
             </div>
           </div>
+
+            {/* Time & Budget */}
           {canViewFinancials && (
-            <div className="border-t border-neutral-100 pt-4 mt-4">
-              <h4 className="text-sm font-semibold text-neutral-900 mb-3">Time & Budget</h4>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="border-t border-neutral-100 pt-2.5 mt-2">
+                <h4 className="text-xs font-semibold text-neutral-900 mb-2">
+                  Time & Budget
+                </h4>
+                <div className="space-y-2">
                 <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-1.5">Estimated Hours</label>
-                  <input type="number" step="0.5" value={estimatedHours} onChange={(e) => setEstimatedHours(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" placeholder="0" />
+                    <label className="block text-xs font-medium text-neutral-600 mb-1">
+                      Estimated Hours
+                    </label>
+                    <input
+                      type="number"
+                      step="0.5"
+                      value={estimatedHours}
+                      onChange={(e) => setEstimatedHours(e.target.value)}
+                      className="w-full h-10 px-3 text-sm border border-neutral-300 rounded-lg focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none"
+                      placeholder="0"
+                    />
+                </div>
+                  <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                      <label className="block text-xs font-medium text-neutral-600 mb-1">
+                        Est. Fees ($)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={estimatedFees}
+                        onChange={(e) => setEstimatedFees(e.target.value)}
+                        className="w-full h-10 px-3 text-sm border border-neutral-300 rounded-lg focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none"
+                        placeholder="0.00"
+                      />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-1.5">Estimated Fees ($)</label>
-                  <input type="number" step="0.01" value={estimatedFees} onChange={(e) => setEstimatedFees(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" placeholder="0.00" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-1.5">Actual Fees ($)</label>
-                  <input type="number" step="0.01" value={actualFees} onChange={(e) => setActualFees(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" placeholder="0.00" />
+                      <label className="block text-xs font-medium text-neutral-600 mb-1">
+                        Actual Fees ($)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={actualFees}
+                        onChange={(e) => setActualFees(e.target.value)}
+                        className="w-full h-10 px-3 text-sm border border-neutral-300 rounded-lg focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none"
+                        placeholder="0.00"
+                      />
+                    </div>
                 </div>
               </div>
             </div>
           )}
-          <div className="flex gap-3 pt-4">
+          </form>
+        </div>
+
+        {/* Fixed Footer */}
+        <div className="flex items-center gap-2 px-4 py-2.5 border-t border-neutral-100 bg-neutral-50 flex-shrink-0">
             {task && onDelete && (
               <button
                 type="button"
@@ -1453,17 +1698,28 @@ function TaskModal({ task, projectId, companyId, teamMembers, companyProfiles, o
                     onDelete(task.id);
                   }
                 }}
-                className="px-4 py-2.5 border border-red-200 text-red-600 rounded-xl hover:bg-red-50 transition-colors flex items-center gap-2"
+              className="px-3 py-1.5 border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition-colors text-xs font-medium flex items-center gap-1.5"
               >
-                <Trash2 className="w-4 h-4" /> Delete
+              <Trash2 className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Delete</span>
               </button>
             )}
-            <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors">Cancel</button>
-            <button type="submit" disabled={saving} className="flex-1 px-4 py-2.5 bg-[#476E66] text-white rounded-xl hover:bg-[#3A5B54] transition-colors disabled:opacity-50">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 px-3 py-1.5 border border-neutral-200 bg-white rounded-lg hover:bg-neutral-50 transition-colors text-xs font-medium"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            form="task-form"
+            disabled={saving}
+            className="flex-1 px-3 py-1.5 bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54] transition-colors disabled:opacity-50 text-xs font-medium"
+          >
               {saving ? 'Saving...' : task ? 'Update Task' : 'Create Task'}
             </button>
           </div>
-        </form>
       </div>
     </div>
   );
@@ -1509,41 +1765,41 @@ function ProjectVitalsTab({ project, clients, onSave, canViewFinancials, formatC
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-5">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-neutral-900">Project Details</h3>
+        <h3 className="text-base sm:text-lg font-semibold text-neutral-900">Project Details</h3>
         {editing ? (
           <div className="flex items-center gap-2">
-            <button onClick={() => setEditing(false)} className="px-3 py-1.5 text-sm text-neutral-600 hover:bg-neutral-100 rounded-lg">Cancel</button>
-            <button onClick={handleSave} disabled={saving} className="px-3 py-1.5 text-sm bg-black text-white rounded-lg hover:bg-[#3A5B54] disabled:opacity-50">
+            <button onClick={() => setEditing(false)} className="px-2.5 py-1.5 text-xs sm:text-sm text-neutral-600 hover:bg-neutral-100 rounded-lg">Cancel</button>
+            <button onClick={handleSave} disabled={saving} className="px-2.5 py-1.5 text-xs sm:text-sm bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54] disabled:opacity-50">
               {saving ? 'Saving...' : 'Save'}
             </button>
           </div>
         ) : (
-          <button onClick={startEdit} className="flex items-center gap-2 px-3 py-1.5 text-sm text-neutral-600 hover:bg-neutral-100 rounded-lg">
-            <Edit2 className="w-4 h-4" /> Edit
+          <button onClick={startEdit} className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs sm:text-sm text-neutral-600 hover:bg-neutral-100 rounded-lg">
+            <Edit2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Edit
           </button>
         )}
       </div>
 
       {editing ? (
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm text-neutral-600 mb-1">Project Name</label>
+              <label className="block text-xs font-medium text-neutral-600 mb-1.5">Project Name</label>
               <input 
                 type="text" 
                 value={editData.name || ''} 
                 onChange={(e) => setEditData({...editData, name: e.target.value})} 
-                className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent" 
+                className="w-full px-3 py-2 text-sm border border-neutral-300 rounded-lg focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none transition-colors" 
               />
             </div>
             <div>
-              <label className="block text-sm text-neutral-600 mb-1">Client</label>
+              <label className="block text-xs font-medium text-neutral-600 mb-1.5">Client</label>
               <select 
                 value={editData.client_id || ''} 
                 onChange={(e) => setEditData({...editData, client_id: e.target.value})} 
-                className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+                className="w-full px-3 py-2 text-sm border border-neutral-300 rounded-lg focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none transition-colors bg-white"
               >
                 <option value="">Select client...</option>
                 {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -1551,50 +1807,32 @@ function ProjectVitalsTab({ project, clients, onSave, canViewFinancials, formatC
             </div>
           </div>
           <div>
-            <label className="block text-sm text-neutral-600 mb-1">Description</label>
+            <label className="block text-xs font-medium text-neutral-600 mb-1.5">Description</label>
             <textarea 
               value={editData.description || ''} 
               onChange={(e) => setEditData({...editData, description: e.target.value})} 
               rows={3}
-              className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent" 
+              className="w-full px-3 py-2 text-sm border border-neutral-300 rounded-lg focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none transition-colors resize-none" 
             />
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 gap-3">
             {canViewFinancials && (
               <div>
-                <label className="block text-sm text-neutral-600 mb-1">Budget</label>
+                <label className="block text-xs font-medium text-neutral-600 mb-1.5">Budget</label>
                 <input 
                   type="number" 
                   value={editData.budget || ''} 
                   onChange={(e) => setEditData({...editData, budget: parseFloat(e.target.value) || 0})} 
-                  className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent" 
+                  className="w-full px-3 py-2 text-sm border border-neutral-300 rounded-lg focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none transition-colors" 
                 />
               </div>
             )}
             <div>
-              <label className="block text-sm text-neutral-600 mb-1">Start Date</label>
-              <input 
-                type="date" 
-                value={editData.start_date || ''} 
-                onChange={(e) => setEditData({...editData, start_date: e.target.value})} 
-                className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent" 
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-neutral-600 mb-1">End Date</label>
-              <input 
-                type="date" 
-                value={editData.end_date || ''} 
-                onChange={(e) => setEditData({...editData, end_date: e.target.value})} 
-                className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent" 
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-neutral-600 mb-1">Status</label>
+              <label className="block text-xs font-medium text-neutral-600 mb-1.5">Status</label>
               <select 
                 value={editData.status || 'active'} 
                 onChange={(e) => setEditData({...editData, status: e.target.value})} 
-                className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+                className="w-full px-3 py-2 text-sm border border-neutral-300 rounded-lg focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none transition-colors bg-white"
               >
                 <option value="active">Active</option>
                 <option value="on_hold">On Hold</option>
@@ -1603,40 +1841,60 @@ function ProjectVitalsTab({ project, clients, onSave, canViewFinancials, formatC
               </select>
             </div>
           </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-neutral-600 mb-1.5">Start Date</label>
+              <input 
+                type="date" 
+                value={editData.start_date || ''} 
+                onChange={(e) => setEditData({...editData, start_date: e.target.value})} 
+                className="w-full px-3 py-2 text-sm border border-neutral-300 rounded-lg focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none transition-colors" 
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-neutral-600 mb-1.5">End Date</label>
+              <input 
+                type="date" 
+                value={editData.end_date || ''} 
+                onChange={(e) => setEditData({...editData, end_date: e.target.value})} 
+                className="w-full px-3 py-2 text-sm border border-neutral-300 rounded-lg focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none transition-colors" 
+              />
+            </div>
+          </div>
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 gap-4">
             {canViewFinancials && <div>
-              <p className="text-sm text-neutral-500 mb-1">Budget</p>
-              <p className="text-xl font-semibold text-neutral-900">{formatCurrency(project.budget)}</p>
+              <p className="text-xs text-neutral-500 mb-1">Budget</p>
+              <p className="text-lg sm:text-xl font-semibold text-neutral-900">{formatCurrency(project.budget)}</p>
             </div>}
             <div>
-              <p className="text-sm text-neutral-500 mb-1">Start Date</p>
-              <p className="text-xl font-semibold text-neutral-900">
+              <p className="text-xs text-neutral-500 mb-1">Start Date</p>
+              <p className="text-lg sm:text-xl font-semibold text-neutral-900">
                 {project.start_date ? new Date(project.start_date).toLocaleDateString() : '-'}
               </p>
             </div>
             <div>
-              <p className="text-sm text-neutral-500 mb-1">End Date</p>
-              <p className="text-xl font-semibold text-neutral-900">
+              <p className="text-xs text-neutral-500 mb-1">End Date</p>
+              <p className="text-lg sm:text-xl font-semibold text-neutral-900">
                 {project.end_date ? new Date(project.end_date).toLocaleDateString() : '-'}
               </p>
             </div>
             <div>
-              <p className="text-sm text-neutral-500 mb-1">Status</p>
-              <p className="text-xl font-semibold text-neutral-900 capitalize">{project.status || 'active'}</p>
+              <p className="text-xs text-neutral-500 mb-1">Status</p>
+              <p className="text-lg sm:text-xl font-semibold text-neutral-900 capitalize">{project.status || 'active'}</p>
             </div>
           </div>
           {project.description && (
             <div>
-              <p className="text-sm text-neutral-500 mb-1">Description</p>
-              <p className="text-neutral-700">{project.description}</p>
+              <p className="text-xs text-neutral-500 mb-1">Description</p>
+              <p className="text-sm text-neutral-700">{project.description}</p>
             </div>
           )}
           <div>
-            <p className="text-sm text-neutral-500 mb-1">Client</p>
-            <p className="text-neutral-700">{project.client?.name || clients.find(c => c.id === project.client_id)?.name || 'Not assigned'}</p>
+            <p className="text-xs text-neutral-500 mb-1">Client</p>
+            <p className="text-sm text-neutral-700">{project.client?.name || clients.find(c => c.id === project.client_id)?.name || 'Not assigned'}</p>
           </div>
         </>
       )}
@@ -1697,24 +1955,24 @@ function ClientTabContent({ client, onClientUpdate, canViewFinancials = true, is
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header with Edit Menu */}
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-neutral-900">Client Information</h3>
+        <h3 className="text-sm font-semibold text-neutral-900">Client Information</h3>
         {canViewFinancials && (editing ? (
           <div className="flex items-center gap-2">
-            <button onClick={() => setEditing(false)} className="px-3 py-1.5 text-sm text-neutral-600 hover:bg-neutral-100 rounded-lg">Cancel</button>
-            <button onClick={saveEdit} disabled={saving} className="px-3 py-1.5 text-sm bg-black text-white rounded-lg hover:bg-[#3A5B54] disabled:opacity-50">{saving ? 'Saving...' : 'Save'}</button>
+            <button onClick={() => setEditing(false)} className="px-2.5 py-1.5 text-xs text-neutral-600 hover:bg-neutral-100 rounded-lg transition-colors">Cancel</button>
+            <button onClick={saveEdit} disabled={saving} className="px-2.5 py-1.5 text-xs bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54] disabled:opacity-50 transition-colors">{saving ? 'Saving...' : 'Save'}</button>
           </div>
         ) : (
           <div className="relative">
-            <button onClick={() => setOpenMenu(!openMenu)} className="p-2 hover:bg-neutral-100 rounded-lg">
-              <MoreVertical className="w-5 h-5 text-neutral-500" />
+            <button onClick={() => setOpenMenu(!openMenu)} className="p-1.5 hover:bg-neutral-100 rounded-lg transition-colors">
+              <MoreVertical className="w-4 h-4 text-neutral-500" />
             </button>
             {openMenu && (
-              <div className="absolute right-0 top-full mt-1 w-32 bg-white rounded-lg shadow-lg border border-neutral-100 py-1 z-10">
-                <button onClick={() => { startEdit(); setOpenMenu(false); }} className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50">
-                  <Edit2 className="w-4 h-4" /> Edit
+              <div className="absolute right-0 top-full mt-1 w-28 bg-white rounded-lg py-1 z-10" style={{ boxShadow: 'var(--shadow-dropdown)' }}>
+                <button onClick={() => { startEdit(); setOpenMenu(false); }} className="w-full flex items-center gap-2 px-3 py-2 text-left text-xs text-neutral-700 hover:bg-neutral-50 transition-colors">
+                  <Edit2 className="w-3.5 h-3.5" /> Edit
                 </button>
               </div>
             )}
@@ -1723,70 +1981,70 @@ function ClientTabContent({ client, onClientUpdate, canViewFinancials = true, is
       </div>
 
       {/* Company Information */}
-      <div className="border border-neutral-200 rounded-xl p-5">
-        <h4 className="text-md font-semibold text-neutral-900 mb-4">Company Information</h4>
+      <div className="bg-white rounded-xl p-4" style={{ boxShadow: 'var(--shadow-card)' }}>
+        <h4 className="text-sm font-semibold text-neutral-900 mb-3">Company Information</h4>
         {editing ? (
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm text-neutral-600 mb-1">Company Name</label>
-                <input type="text" value={editData.name || ''} onChange={(e) => setEditData({...editData, name: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent" />
+                <label className="block text-xs font-medium text-neutral-600 mb-1.5">Company Name</label>
+                <input type="text" value={editData.name || ''} onChange={(e) => setEditData({...editData, name: e.target.value})} className="w-full px-3 py-2 text-sm border border-neutral-300 rounded-lg focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none" />
               </div>
               <div>
-                <label className="block text-sm text-neutral-600 mb-1">Website</label>
-                <input type="text" value={editData.website || ''} onChange={(e) => setEditData({...editData, website: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent" />
+                <label className="block text-xs font-medium text-neutral-600 mb-1.5">Website</label>
+                <input type="text" value={editData.website || ''} onChange={(e) => setEditData({...editData, website: e.target.value})} className="w-full px-3 py-2 text-sm border border-neutral-300 rounded-lg focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none" />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm text-neutral-600 mb-1">Email</label>
-                <input type="email" value={editData.email || ''} onChange={(e) => setEditData({...editData, email: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent" />
+                <label className="block text-xs font-medium text-neutral-600 mb-1.5">Email</label>
+                <input type="email" value={editData.email || ''} onChange={(e) => setEditData({...editData, email: e.target.value})} className="w-full px-3 py-2 text-sm border border-neutral-300 rounded-lg focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none" />
               </div>
               <div>
-                <label className="block text-sm text-neutral-600 mb-1">Phone</label>
-                <input type="tel" value={editData.phone || ''} onChange={(e) => setEditData({...editData, phone: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent" />
+                <label className="block text-xs font-medium text-neutral-600 mb-1.5">Phone</label>
+                <input type="tel" value={editData.phone || ''} onChange={(e) => setEditData({...editData, phone: e.target.value})} className="w-full px-3 py-2 text-sm border border-neutral-300 rounded-lg focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none" />
               </div>
             </div>
             <div>
-              <label className="block text-sm text-neutral-600 mb-1">Address</label>
-              <input type="text" value={editData.address || ''} onChange={(e) => setEditData({...editData, address: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent" />
+              <label className="block text-xs font-medium text-neutral-600 mb-1.5">Address</label>
+              <input type="text" value={editData.address || ''} onChange={(e) => setEditData({...editData, address: e.target.value})} className="w-full px-3 py-2 text-sm border border-neutral-300 rounded-lg focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none" />
             </div>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-3 gap-3">
               <div>
-                <label className="block text-sm text-neutral-600 mb-1">City</label>
-                <input type="text" value={editData.city || ''} onChange={(e) => setEditData({...editData, city: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent" />
+                <label className="block text-xs font-medium text-neutral-600 mb-1.5">City</label>
+                <input type="text" value={editData.city || ''} onChange={(e) => setEditData({...editData, city: e.target.value})} className="w-full px-3 py-2 text-sm border border-neutral-300 rounded-lg focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none" />
               </div>
               <div>
-                <label className="block text-sm text-neutral-600 mb-1">State</label>
-                <input type="text" value={editData.state || ''} onChange={(e) => setEditData({...editData, state: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent" />
+                <label className="block text-xs font-medium text-neutral-600 mb-1.5">State</label>
+                <input type="text" value={editData.state || ''} onChange={(e) => setEditData({...editData, state: e.target.value})} className="w-full px-3 py-2 text-sm border border-neutral-300 rounded-lg focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none" />
               </div>
               <div>
-                <label className="block text-sm text-neutral-600 mb-1">ZIP</label>
-                <input type="text" value={editData.zip || ''} onChange={(e) => setEditData({...editData, zip: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent" />
+                <label className="block text-xs font-medium text-neutral-600 mb-1.5">ZIP</label>
+                <input type="text" value={editData.zip || ''} onChange={(e) => setEditData({...editData, zip: e.target.value})} className="w-full px-3 py-2 text-sm border border-neutral-300 rounded-lg focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none" />
               </div>
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <p className="text-sm text-neutral-500">Company Name</p>
-              <p className="font-medium text-neutral-900">{client.name || '-'}</p>
+              <p className="text-xs text-neutral-500 mb-1">Company Name</p>
+              <p className="text-sm text-neutral-900">{client.name || '-'}</p>
             </div>
             <div>
-              <p className="text-sm text-neutral-500">Website</p>
-              <p className="font-medium text-neutral-900">{client.website ? <a href={client.website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{client.website}</a> : '-'}</p>
+              <p className="text-xs text-neutral-500 mb-1">Website</p>
+              <p className="text-sm text-neutral-900 truncate">{client.website ? <a href={client.website} target="_blank" rel="noopener noreferrer" className="text-[#476E66] hover:underline">{client.website}</a> : '-'}</p>
             </div>
             <div>
-              <p className="text-sm text-neutral-500">Email</p>
-              <p className="font-medium text-neutral-900">{client.email || '-'}</p>
+              <p className="text-xs text-neutral-500 mb-1">Email</p>
+              <p className="text-sm text-neutral-900 truncate">{client.email || '-'}</p>
             </div>
             <div>
-              <p className="text-sm text-neutral-500">Phone</p>
-              <p className="font-medium text-neutral-900">{client.phone || '-'}</p>
+              <p className="text-xs text-neutral-500 mb-1">Phone</p>
+              <p className="text-sm text-neutral-900">{client.phone || '-'}</p>
             </div>
-            <div className="col-span-2">
-              <p className="text-sm text-neutral-500">Address</p>
-              <p className="font-medium text-neutral-900">
+            <div className="col-span-full">
+              <p className="text-xs text-neutral-500 mb-1">Address</p>
+              <p className="text-sm text-neutral-900">
                 {client.address ? `${client.address}${client.city ? `, ${client.city}` : ''}${client.state ? `, ${client.state}` : ''} ${client.zip || ''}`.trim() : '-'}
               </p>
             </div>
@@ -1796,87 +2054,87 @@ function ClientTabContent({ client, onClientUpdate, canViewFinancials = true, is
 
       {/* Contacts Section - Clean Layout (Admin only) */}
       {isAdmin && (
-      <div className="border border-neutral-200 rounded-xl p-5">
-        <h3 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-4">Contacts</h3>
+      <div className="bg-white rounded-xl p-4" style={{ boxShadow: 'var(--shadow-card)' }}>
+        <h4 className="text-sm font-semibold text-neutral-900 mb-3">Contacts</h4>
         {editing ? (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="space-y-4 sm:grid sm:grid-cols-2 sm:gap-4 sm:space-y-0">
             {/* Primary Contact Edit */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 mb-3">
-                <User className="w-4 h-4 text-neutral-400" />
-                <span className="text-sm font-medium text-neutral-700">Primary Contact</span>
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <User className="w-3.5 h-3.5 text-neutral-500" />
+                <span className="text-xs font-semibold text-neutral-700">Primary Contact</span>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2.5">
                 <div>
-                  <label className="block text-sm text-neutral-600 mb-1">Name</label>
-                  <input type="text" value={editData.primary_contact_name || ''} onChange={(e) => setEditData({...editData, primary_contact_name: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent" />
+                  <label className="block text-xs font-medium text-neutral-600 mb-1.5">Name</label>
+                  <input type="text" value={editData.primary_contact_name || ''} onChange={(e) => setEditData({...editData, primary_contact_name: e.target.value})} className="w-full px-3 py-2 text-sm border border-neutral-300 rounded-lg focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none" />
                 </div>
                 <div>
-                  <label className="block text-sm text-neutral-600 mb-1">Title</label>
-                  <input type="text" value={editData.primary_contact_title || ''} onChange={(e) => setEditData({...editData, primary_contact_title: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent" />
+                  <label className="block text-xs font-medium text-neutral-600 mb-1.5">Title</label>
+                  <input type="text" value={editData.primary_contact_title || ''} onChange={(e) => setEditData({...editData, primary_contact_title: e.target.value})} className="w-full px-3 py-2 text-sm border border-neutral-300 rounded-lg focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none" />
                 </div>
                 <div>
-                  <label className="block text-sm text-neutral-600 mb-1">Email</label>
-                  <input type="email" value={editData.primary_contact_email || ''} onChange={(e) => setEditData({...editData, primary_contact_email: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent" />
+                  <label className="block text-xs font-medium text-neutral-600 mb-1.5">Email</label>
+                  <input type="email" value={editData.primary_contact_email || ''} onChange={(e) => setEditData({...editData, primary_contact_email: e.target.value})} className="w-full px-3 py-2 text-sm border border-neutral-300 rounded-lg focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none" />
                 </div>
                 <div>
-                  <label className="block text-sm text-neutral-600 mb-1">Phone</label>
-                  <input type="tel" value={editData.primary_contact_phone || ''} onChange={(e) => setEditData({...editData, primary_contact_phone: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent" />
+                  <label className="block text-xs font-medium text-neutral-600 mb-1.5">Phone</label>
+                  <input type="tel" value={editData.primary_contact_phone || ''} onChange={(e) => setEditData({...editData, primary_contact_phone: e.target.value})} className="w-full px-3 py-2 text-sm border border-neutral-300 rounded-lg focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none" />
                 </div>
               </div>
             </div>
             {/* Billing Contact Edit */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 mb-3">
-                <User className="w-4 h-4 text-neutral-400" />
-                <span className="text-sm font-medium text-neutral-700">Billing Contact</span>
+            <div className="space-y-3 pt-3 sm:pt-0 border-t sm:border-t-0 sm:border-l sm:pl-4 border-neutral-100">
+              <div className="flex items-center gap-2">
+                <User className="w-3.5 h-3.5 text-neutral-500" />
+                <span className="text-xs font-semibold text-neutral-700">Billing Contact</span>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2.5">
                 <div>
-                  <label className="block text-sm text-neutral-600 mb-1">Name</label>
-                  <input type="text" value={editData.billing_contact_name || ''} onChange={(e) => setEditData({...editData, billing_contact_name: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent" />
+                  <label className="block text-xs font-medium text-neutral-600 mb-1.5">Name</label>
+                  <input type="text" value={editData.billing_contact_name || ''} onChange={(e) => setEditData({...editData, billing_contact_name: e.target.value})} className="w-full px-3 py-2 text-sm border border-neutral-300 rounded-lg focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none" />
                 </div>
                 <div>
-                  <label className="block text-sm text-neutral-600 mb-1">Title</label>
-                  <input type="text" value={editData.billing_contact_title || ''} onChange={(e) => setEditData({...editData, billing_contact_title: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent" />
+                  <label className="block text-xs font-medium text-neutral-600 mb-1.5">Title</label>
+                  <input type="text" value={editData.billing_contact_title || ''} onChange={(e) => setEditData({...editData, billing_contact_title: e.target.value})} className="w-full px-3 py-2 text-sm border border-neutral-300 rounded-lg focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none" />
                 </div>
                 <div>
-                  <label className="block text-sm text-neutral-600 mb-1">Email</label>
-                  <input type="email" value={editData.billing_contact_email || ''} onChange={(e) => setEditData({...editData, billing_contact_email: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent" />
+                  <label className="block text-xs font-medium text-neutral-600 mb-1.5">Email</label>
+                  <input type="email" value={editData.billing_contact_email || ''} onChange={(e) => setEditData({...editData, billing_contact_email: e.target.value})} className="w-full px-3 py-2 text-sm border border-neutral-300 rounded-lg focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none" />
                 </div>
                 <div>
-                  <label className="block text-sm text-neutral-600 mb-1">Phone</label>
-                  <input type="tel" value={editData.billing_contact_phone || ''} onChange={(e) => setEditData({...editData, billing_contact_phone: e.target.value})} className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent" />
+                  <label className="block text-xs font-medium text-neutral-600 mb-1.5">Phone</label>
+                  <input type="tel" value={editData.billing_contact_phone || ''} onChange={(e) => setEditData({...editData, billing_contact_phone: e.target.value})} className="w-full px-3 py-2 text-sm border border-neutral-300 rounded-lg focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none" />
                 </div>
               </div>
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="space-y-4 sm:grid sm:grid-cols-2 sm:gap-4 sm:space-y-0">
             {/* Primary Contact View */}
             <div>
-              <div className="flex items-center gap-2 mb-3">
-                <User className="w-4 h-4 text-neutral-400" />
-                <span className="text-sm font-medium text-neutral-700">Primary Contact</span>
+              <div className="flex items-center gap-2 mb-2">
+                <User className="w-3.5 h-3.5 text-neutral-500" />
+                <span className="text-xs font-semibold text-neutral-700">Primary Contact</span>
               </div>
-              <div className="space-y-2 pl-6">
-                <p className="font-medium text-neutral-900">{client.primary_contact_name || '-'}</p>
-                {client.primary_contact_title && <p className="text-sm text-neutral-500">{client.primary_contact_title}</p>}
-                <p className="text-sm text-neutral-600">{client.primary_contact_email || '-'}</p>
-                <p className="text-sm text-neutral-600">{client.primary_contact_phone || '-'}</p>
+              <div className="space-y-1.5 pl-5">
+                <p className="text-sm text-neutral-900">{client.primary_contact_name || '-'}</p>
+                {client.primary_contact_title && <p className="text-xs text-neutral-500">{client.primary_contact_title}</p>}
+                <p className="text-xs text-neutral-600">{client.primary_contact_email || '-'}</p>
+                <p className="text-xs text-neutral-600">{client.primary_contact_phone || '-'}</p>
               </div>
             </div>
             {/* Billing Contact View */}
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <User className="w-4 h-4 text-neutral-400" />
-                <span className="text-sm font-medium text-neutral-700">Billing Contact</span>
+            <div className="pt-3 sm:pt-0 border-t sm:border-t-0 sm:border-l sm:pl-4 border-neutral-100">
+              <div className="flex items-center gap-2 mb-2">
+                <User className="w-3.5 h-3.5 text-neutral-500" />
+                <span className="text-xs font-semibold text-neutral-700">Billing Contact</span>
               </div>
-              <div className="space-y-2 pl-6">
-                <p className="font-medium text-neutral-900">{client.billing_contact_name || '-'}</p>
-                {client.billing_contact_title && <p className="text-sm text-neutral-500">{client.billing_contact_title}</p>}
-                <p className="text-sm text-neutral-600">{client.billing_contact_email || '-'}</p>
-                <p className="text-sm text-neutral-600">{client.billing_contact_phone || '-'}</p>
+              <div className="space-y-1.5 pl-5">
+                <p className="text-sm text-neutral-900">{client.billing_contact_name || '-'}</p>
+                {client.billing_contact_title && <p className="text-xs text-neutral-500">{client.billing_contact_title}</p>}
+                <p className="text-xs text-neutral-600">{client.billing_contact_email || '-'}</p>
+                <p className="text-xs text-neutral-600">{client.billing_contact_phone || '-'}</p>
               </div>
             </div>
           </div>
@@ -2005,15 +2263,15 @@ function TasksTabContent({ tasks, timeEntries = [], projectId, companyId, onTask
   ];
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 sm:space-y-4">
       {/* Sub-tabs */}
-      <div className="flex items-center border-b border-neutral-200">
+      <div className="flex items-center border-b border-neutral-200 overflow-x-auto">
         {subTabs.map(tab => (
           <button
             key={tab.key}
             onClick={() => setSubTab(tab.key)}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-              subTab === tab.key ? 'border-neutral-500 text-neutral-600' : 'border-transparent text-neutral-500 hover:text-neutral-700'
+            className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+              subTab === tab.key ? 'border-[#476E66] text-[#476E66]' : 'border-transparent text-neutral-500 hover:text-neutral-700'
             }`}
           >
             {tab.label}
@@ -2021,50 +2279,50 @@ function TasksTabContent({ tasks, timeEntries = [], projectId, companyId, onTask
         ))}
       </div>
 
-      {/* Overview Sub-tab - Simplified with consistent colors */}
+      {/* Overview Sub-tab - Consistent Design System */}
       {subTab === 'overview' && (
-        <div className="space-y-6">
-          {/* Stats Row - Single line, consistent neutral/brand colors */}
-          <div className="flex items-center gap-6 p-4 bg-neutral-50 rounded-xl">
-            <div className="flex items-center gap-3">
-              <span className="text-sm text-neutral-500">Total:</span>
-              <span className="text-xl font-bold text-neutral-900">{taskStats.total}</span>
+        <div className="space-y-3 sm:space-y-4">
+          {/* Stats Card - 4 stats on top, progress bar below */}
+          <div className="p-3 bg-neutral-50 rounded-lg space-y-3" style={{ boxShadow: 'var(--shadow-card)' }}>
+            {/* Stats Row - Reordered: To Do, In Progress, Done, Total */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-medium text-neutral-500">To Do:</span>
+                <span className="text-base font-semibold text-neutral-900">{taskStats.notStarted}</span>
             </div>
-            <div className="w-px h-8 bg-neutral-200" />
-            <div className="flex items-center gap-3">
-              <span className="text-sm text-neutral-500">Done:</span>
-              <span className="text-xl font-bold text-[#476E66]">{taskStats.completed}</span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-medium text-neutral-500">In Progress:</span>
+                <span className="text-base font-semibold text-neutral-900">{taskStats.inProgress}</span>
             </div>
-            <div className="w-px h-8 bg-neutral-200" />
-            <div className="flex items-center gap-3">
-              <span className="text-sm text-neutral-500">In Progress:</span>
-              <span className="text-xl font-bold text-neutral-700">{taskStats.inProgress}</span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-medium text-neutral-500">Done:</span>
+                <span className="text-base font-semibold text-[#476E66]">{taskStats.completed}</span>
             </div>
-            <div className="w-px h-8 bg-neutral-200" />
-            <div className="flex items-center gap-3">
-              <span className="text-sm text-neutral-500">To Do:</span>
-              <span className="text-xl font-bold text-neutral-500">{taskStats.notStarted}</span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-medium text-neutral-500">Total:</span>
+                <span className="text-base font-semibold text-neutral-900">{taskStats.total}</span>
             </div>
-            <div className="flex-1" />
-            <div className="flex items-center gap-3">
-              <span className="text-sm text-neutral-500">Progress:</span>
-              <div className="w-32 h-2 bg-neutral-200 rounded-full overflow-hidden">
+            </div>
+            {/* Progress Bar - Full width below */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium text-neutral-500">Progress:</span>
+              <div className="flex-1 h-2 bg-neutral-200 rounded-full overflow-hidden">
                 <div className="h-full bg-[#476E66] rounded-full transition-all" style={{ width: `${taskStats.total > 0 ? (taskStats.completed / taskStats.total) * 100 : 0}%` }} />
               </div>
-              <span className="text-sm font-medium text-neutral-700">{taskStats.total > 0 ? Math.round((taskStats.completed / taskStats.total) * 100) : 0}%</span>
+              <span className="text-xs font-semibold text-neutral-900">{taskStats.total > 0 ? Math.round((taskStats.completed / taskStats.total) * 100) : 0}%</span>
             </div>
           </div>
           
           {/* Tasks List with completion toggle */}
-          <div className="bg-white border border-neutral-200 rounded-lg overflow-hidden">
-            <div className="px-4 py-3 bg-neutral-50 border-b border-neutral-200 flex items-center justify-between">
-              <span className="font-medium text-neutral-900">Tasks</span>
-              <button onClick={onAddTask} className="text-sm text-[#476E66] hover:text-[#3A5B54] font-medium flex items-center gap-1">
-                <Plus className="w-4 h-4" /> Add Task
+          <div className="bg-white rounded-lg overflow-hidden" style={{ boxShadow: 'var(--shadow-card)' }}>
+            <div className="px-3 sm:px-4 py-2.5 bg-neutral-50 border-b border-neutral-100 flex items-center justify-between">
+              <span className="text-sm font-semibold text-neutral-900">Tasks</span>
+              <button onClick={onAddTask} className="text-xs text-[#476E66] hover:text-[#3A5B54] font-medium flex items-center gap-1 transition-colors">
+                <Plus className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Add Task</span><span className="sm:hidden">Add</span>
               </button>
             </div>
             {filteredTasks.length === 0 ? (
-              <div className="px-4 py-8 text-center text-neutral-500">No tasks yet. Click "Add Task" to create one.</div>
+              <div className="px-4 py-6 text-center text-sm text-neutral-500">No tasks yet. Click "Add Task" to create one.</div>
             ) : (
               <div className="divide-y divide-neutral-100">
                 {filteredTasks.map(task => {
@@ -2074,7 +2332,53 @@ function TasksTabContent({ tasks, timeEntries = [], projectId, companyId, onTask
                   const isExpanded = expandedTasks.has(task.id);
                   return (
                     <div key={task.id}>
-                      <div className={`flex items-center gap-4 px-4 py-3 hover:bg-neutral-50 ${isCompleted ? 'opacity-60' : ''}`}>
+                      {/* Mobile Layout */}
+                      <div className={`block sm:hidden p-3 ${isCompleted ? 'opacity-60' : ''}`}>
+                        <div className="flex items-start gap-2.5">
+                          <button
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              try {
+                                await api.updateTask(task.id, { 
+                                  status: isCompleted ? 'not_started' : 'completed',
+                                  completion_percentage: isCompleted ? 0 : 100
+                                });
+                                onTasksChange();
+                              } catch (err) { console.error(err); }
+                            }}
+                            className="flex items-center justify-center w-5 h-5 rounded-full border-2 transition-all mt-0.5 flex-shrink-0"
+                            style={{
+                              borderColor: isCompleted ? '#476E66' : '#d1d5db',
+                              backgroundColor: isCompleted ? '#476E66' : 'transparent'
+                            }}
+                          >
+                            {isCompleted && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
+                          </button>
+                          <div className="flex-1 min-w-0" onClick={() => onEditTask(task)}>
+                            <p className={`text-sm font-medium leading-5 ${isCompleted ? 'line-through text-neutral-400' : 'text-neutral-900'}`} style={{ fontSize: '14px', fontWeight: '500', lineHeight: '20px' }}>{task.name}</p>
+                            <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                                task.status === 'completed' ? 'bg-[#476E66]/10 text-[#476E66]' :
+                                task.status === 'in_progress' ? 'bg-neutral-100 text-neutral-700' :
+                                'bg-neutral-100 text-neutral-500'
+                              }`}>
+                                {task.status === 'completed' ? 'Done' : task.status === 'in_progress' ? 'In Progress' : 'To Do'}
+                              </span>
+                              {taskTimeEntries.length > 0 && (
+                                <span className="text-xs text-neutral-500 flex items-center gap-0.5">
+                                  <Clock className="w-3 h-3" /> {taskTimeEntries.length}
+                                </span>
+                              )}
+                              {assignee && (
+                                <span className="text-xs text-neutral-500 truncate max-w-[100px]">{assignee.full_name}</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Desktop Layout */}
+                      <div className={`hidden sm:flex items-center gap-3 px-4 py-3 hover:bg-neutral-50 transition-colors ${isCompleted ? 'opacity-60' : ''}`}>
                         {/* Completion Toggle */}
                         <button
                           onClick={async (e) => {
@@ -2098,26 +2402,26 @@ function TasksTabContent({ tasks, timeEntries = [], projectId, companyId, onTask
                         
                         {/* Task Info */}
                         <div className="flex-1 min-w-0 cursor-pointer" onClick={() => onEditTask(task)}>
-                          <p className={`font-medium ${isCompleted ? 'line-through text-neutral-400' : 'text-neutral-900'}`}>{task.name}</p>
-                          {task.description && <p className="text-sm text-neutral-500 line-clamp-1">{task.description}</p>}
+                          <p className={`text-sm font-medium leading-5 ${isCompleted ? 'line-through text-neutral-400' : 'text-neutral-900'}`} style={{ fontSize: '14px', fontWeight: '500', lineHeight: '20px' }}>{task.name}</p>
+                          {task.description && <p className="text-xs text-neutral-500 line-clamp-1">{task.description}</p>}
                         </div>
                         
                         {/* Time Entries Badge */}
                         {taskTimeEntries.length > 0 && (
                           <button
                             onClick={(e) => { e.stopPropagation(); toggleExpand(task.id); }}
-                            className="flex items-center gap-1 px-2 py-1 bg-neutral-100 hover:bg-neutral-200 rounded text-xs text-neutral-600"
+                            className="flex items-center gap-1 px-2 py-0.5 bg-neutral-100 hover:bg-neutral-200 rounded text-xs text-neutral-600 transition-colors"
                             title="View work logs"
                           >
                             <Clock className="w-3 h-3" />
-                            {taskTimeEntries.length} {taskTimeEntries.length === 1 ? 'log' : 'logs'}
+                            {taskTimeEntries.length}
                           </button>
                         )}
                         
                         {/* Status Badge */}
-                        <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                           task.status === 'completed' ? 'bg-[#476E66]/10 text-[#476E66]' :
-                          task.status === 'in_progress' ? 'bg-neutral-200 text-neutral-700' :
+                          task.status === 'in_progress' ? 'bg-neutral-100 text-neutral-700' :
                           'bg-neutral-100 text-neutral-500'
                         }`}>
                           {task.status === 'completed' ? 'Done' : task.status === 'in_progress' ? 'In Progress' : 'To Do'}
@@ -2125,22 +2429,22 @@ function TasksTabContent({ tasks, timeEntries = [], projectId, companyId, onTask
                         
                         {/* Assignee */}
                         {assignee ? (
-                          <div className="flex items-center gap-2 w-32">
+                          <div className="flex items-center gap-1.5 w-32">
                             {assignee.avatar_url ? (
-                              <img src={assignee.avatar_url} alt="" className="w-6 h-6 rounded-full" />
+                              <img src={assignee.avatar_url} alt="" className="w-5 h-5 rounded-full" />
                             ) : (
-                              <div className="w-6 h-6 rounded-full bg-[#476E66]/20 flex items-center justify-center text-xs font-medium text-[#476E66]">
+                              <div className="w-5 h-5 rounded-full bg-[#476E66]/20 flex items-center justify-center text-xs font-medium text-[#476E66]">
                                 {assignee.full_name?.charAt(0) || '?'}
                               </div>
                             )}
-                            <span className="text-sm text-neutral-600 truncate">{assignee.full_name}</span>
+                            <span className="text-xs text-neutral-600 truncate">{assignee.full_name}</span>
                           </div>
                         ) : (
-                          <span className="text-sm text-neutral-400 w-32">Unassigned</span>
+                          <span className="text-xs text-neutral-400 w-32">Unassigned</span>
                         )}
                         
                         {/* Hours */}
-                        <span className="text-sm text-neutral-500 w-16 text-right">
+                        <span className="text-xs font-medium text-neutral-600 w-16 text-right">
                           {task.estimated_hours ? `${task.estimated_hours}h` : '-'}
                         </span>
                         
@@ -2150,15 +2454,15 @@ function TasksTabContent({ tasks, timeEntries = [], projectId, companyId, onTask
                       
                       {/* Expanded Time Entries */}
                       {isExpanded && taskTimeEntries.length > 0 && (
-                        <div className="bg-neutral-50 border-t border-neutral-100 px-4 py-3 ml-9">
-                          <p className="text-xs font-medium text-neutral-500 mb-2">Work Logs</p>
-                          <div className="space-y-2">
+                        <div className="bg-neutral-50 border-t border-neutral-100 px-4 py-2.5 ml-9">
+                          <p className="text-xs font-semibold text-neutral-700 mb-2">Work Logs</p>
+                          <div className="space-y-1.5">
                             {taskTimeEntries.map(entry => (
-                              <div key={entry.id} className="flex items-start gap-3 text-sm">
-                                <span className="text-neutral-400 w-20 flex-shrink-0">{new Date(entry.date).toLocaleDateString()}</span>
-                                <span className="text-neutral-600 font-medium w-12 flex-shrink-0">{entry.hours}h</span>
+                              <div key={entry.id} className="flex items-start gap-2.5 text-xs">
+                                <span className="text-neutral-500 w-20 flex-shrink-0">{new Date(entry.date).toLocaleDateString()}</span>
+                                <span className="text-neutral-900 font-semibold w-10 flex-shrink-0">{entry.hours}h</span>
                                 <span className="text-neutral-700 flex-1">{entry.description || 'No description'}</span>
-                                <span className="text-neutral-400 text-xs">{entry.user?.full_name || 'Unknown'}</span>
+                                <span className="text-neutral-500">{entry.user?.full_name || 'Unknown'}</span>
                               </div>
                             ))}
                           </div>
@@ -2180,7 +2484,7 @@ function TasksTabContent({ tasks, timeEntries = [], projectId, companyId, onTask
           <div className="divide-y divide-neutral-100">
             {tasks.filter(t => t.due_date).sort((a, b) => new Date(a.due_date!).getTime() - new Date(b.due_date!).getTime()).map(task => (
               <div key={task.id} className="px-4 py-3 flex items-center justify-between">
-                <div><p className="font-medium text-neutral-900">{task.name}</p><p className="text-sm text-neutral-500">{task.estimated_hours || 0}h estimated</p></div>
+                <div><p className="text-sm font-medium text-neutral-900 leading-5" style={{ fontSize: '14px', fontWeight: '500', lineHeight: '20px' }}>{task.name}</p><p className="text-xs text-neutral-500">{task.estimated_hours || 0}h estimated</p></div>
                 <div className="text-right">
                   <p className={`font-medium ${new Date(task.due_date!) < new Date() && task.status !== 'completed' ? 'text-neutral-900' : 'text-neutral-900'}`}>{new Date(task.due_date!).toLocaleDateString()}</p>
                   <span className={`text-xs px-2 py-0.5 rounded-full ${task.status === 'completed' ? 'bg-emerald-100 text-emerald-700' : task.status === 'in_progress' ? 'bg-blue-100 text-blue-700' : 'bg-neutral-100 text-neutral-600'}`}>{task.status?.replace('_', ' ')}</span>
@@ -2217,7 +2521,7 @@ function TasksTabContent({ tasks, timeEntries = [], projectId, companyId, onTask
           {tasks.map(task => (
             <div key={task.id} className="bg-white border border-neutral-200 rounded-lg overflow-hidden">
               <div className="px-4 py-3 bg-neutral-50 border-b border-neutral-200 flex items-center justify-between">
-                <span className="font-medium">{task.name}</span>
+                <span className="text-sm font-medium text-neutral-900 leading-5" style={{ fontSize: '14px', fontWeight: '500', lineHeight: '20px' }}>{task.name}</span>
                 <span className={`text-xs px-2 py-0.5 rounded-full ${task.status === 'completed' ? 'bg-emerald-100 text-emerald-700' : task.status === 'in_progress' ? 'bg-blue-100 text-blue-700' : 'bg-neutral-100 text-neutral-600'}`}>{task.status?.replace('_', ' ')}</span>
               </div>
               <div className="p-4">
@@ -2233,56 +2537,59 @@ function TasksTabContent({ tasks, timeEntries = [], projectId, companyId, onTask
         </div>
       )}
 
-      {/* Editor Sub-tab - Simplified */}
+      {/* Editor Sub-tab - Optimized & Modern with Horizontal Scroll */}
       {subTab === 'editor' && (<>
-      {/* Toolbar - Simplified */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-3">
-          <button onClick={onAddTask} className="flex items-center gap-1 px-4 py-2 bg-[#476E66] text-white text-sm font-medium rounded-lg hover:bg-[#3A5B54]">
-            <Plus className="w-4 h-4" /> Add Task
+      {/* Compact Toolbar */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <button onClick={onAddTask} className="flex items-center gap-1 px-3 py-1.5 bg-[#476E66] text-white text-xs font-medium rounded-lg hover:bg-[#3A5B54] transition-colors">
+            <Plus className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Add Task</span><span className="sm:hidden">Add</span>
           </button>
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-            <input type="text" placeholder="Search tasks..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9 pr-4 py-2 w-40 lg:w-56 text-sm border border-neutral-200 rounded-lg focus:ring-2 focus:ring-[#476E66] focus:border-transparent outline-none" />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400" />
+            <input type="text" placeholder="Search..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-8 pr-3 py-1.5 w-32 sm:w-40 text-xs border border-neutral-200 rounded-lg focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none" />
           </div>
-          <label className="flex items-center gap-2 text-sm text-neutral-600 cursor-pointer whitespace-nowrap">
-            <input type="checkbox" checked={hideCompleted} onChange={(e) => setHideCompleted(e.target.checked)} className="w-4 h-4 rounded border-neutral-300 text-[#476E66] focus:ring-[#476E66]" />
-            Hide Completed
+          <label className="hidden sm:flex items-center gap-1.5 text-xs text-neutral-600 cursor-pointer whitespace-nowrap">
+            <input type="checkbox" checked={hideCompleted} onChange={(e) => setHideCompleted(e.target.checked)} className="w-3.5 h-3.5 rounded border-neutral-300 text-[#476E66] focus:ring-[#476E66]" />
+            Hide Done
           </label>
         </div>
         <select
           value={assigneeFilter}
           onChange={(e) => setAssigneeFilter(e.target.value)}
-          className="px-3 py-2 text-sm border border-neutral-200 rounded-lg bg-white focus:ring-2 focus:ring-[#476E66] focus:border-transparent outline-none"
+          className="px-2.5 py-1.5 text-xs border border-neutral-200 rounded-lg bg-white focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none"
         >
-          <option value="all">All Assignees</option>
+          <option value="all">All</option>
           <option value="unassigned">Unassigned</option>
           {filteredTeamMembers.map(m => <option key={m.id} value={m.id}>{m.full_name}</option>)}
         </select>
       </div>
 
-      {/* Task Table - Simplified columns */}
-      <div className="border border-neutral-200 rounded-lg overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-neutral-50 border-b border-neutral-200">
+      {/* Scroll hint for mobile */}
+      <p className="text-xs text-neutral-400 sm:hidden">← Swipe to see more columns →</p>
+
+      {/* Task Table - Compact & Modern with Horizontal Scroll */}
+      <div className="bg-white rounded-lg overflow-x-auto" style={{ boxShadow: 'var(--shadow-card)' }}>
+        <table className="w-full min-w-[600px]">
+          <thead className="bg-neutral-50 border-b border-neutral-100">
             <tr>
-              <th className="w-[44px] px-3"></th>
-              <th className="text-left px-4 py-3 font-medium text-neutral-600">Task</th>
-              <th className="text-left px-4 py-3 font-medium text-neutral-600 w-[100px]">Status</th>
-              <th className="text-left px-4 py-3 font-medium text-neutral-600 w-[150px]">Assignee</th>
-              <th className="text-right px-4 py-3 font-medium text-neutral-600 w-[80px]">Hours</th>
-              <th className="text-left px-4 py-3 font-medium text-neutral-600 w-[120px]">Due Date</th>
-              <th className="w-[50px]"></th>
+              <th className="w-10 px-2"></th>
+              <th className="text-left px-3 py-2 text-xs font-medium text-neutral-500 min-w-[180px]">Task</th>
+              <th className="text-left px-3 py-2 text-xs font-medium text-neutral-500 w-24">Status</th>
+              <th className="text-left px-3 py-2 text-xs font-medium text-neutral-500 w-28">Assignee</th>
+              <th className="text-right px-3 py-2 text-xs font-medium text-neutral-500 w-16">Hours</th>
+              <th className="text-left px-3 py-2 text-xs font-medium text-neutral-500 w-24">Due Date</th>
+              <th className="w-8"></th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-neutral-100">
+          <tbody className="divide-y divide-neutral-50">
             {filteredTasks.map((task) => {
               const assignee = teamMembers.find(m => m.id === task.assigned_to);
               const isCompleted = task.status === 'completed';
               return (
-                <tr key={task.id} className={`hover:bg-neutral-50 ${isCompleted ? 'opacity-60' : ''}`}>
+                <tr key={task.id} className={`hover:bg-neutral-50/50 transition-colors ${isCompleted ? 'opacity-60' : ''}`}>
                   {/* Completion Toggle */}
-                  <td className="px-3 py-3">
+                  <td className="px-2 py-2">
                     <button
                       onClick={async (e) => {
                         e.stopPropagation();
@@ -2294,7 +2601,7 @@ function TasksTabContent({ tasks, timeEntries = [], projectId, companyId, onTask
                           onTasksChange();
                         } catch (err) { console.error(err); }
                       }}
-                      className="flex items-center justify-center w-5 h-5 rounded-full border-2 transition-all hover:scale-110"
+                      className="flex items-center justify-center w-5 h-5 rounded-full border-2 transition-all hover:scale-110 flex-shrink-0"
                       style={{
                         borderColor: isCompleted ? '#476E66' : '#d1d5db',
                         backgroundColor: isCompleted ? '#476E66' : 'transparent'
@@ -2304,12 +2611,11 @@ function TasksTabContent({ tasks, timeEntries = [], projectId, companyId, onTask
                     </button>
                   </td>
                   {/* Task Name */}
-                  <td className="px-4 py-3 cursor-pointer" onClick={() => onEditTask(task)}>
-                    <span className={`font-medium ${isCompleted ? 'line-through text-neutral-400' : 'text-neutral-900'}`}>{task.name}</span>
-                    {task.description && <p className="text-xs text-neutral-500 line-clamp-1 mt-0.5">{task.description}</p>}
+                  <td className="px-3 py-2 cursor-pointer" onClick={() => onEditTask(task)}>
+                    <p className={`font-medium leading-5 ${isCompleted ? 'line-through text-neutral-400' : 'text-neutral-900'}`} style={{ fontSize: '13px', fontWeight: '500', lineHeight: '18px' }}>{task.name}</p>
                   </td>
                   {/* Status */}
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-2">
                     <select
                       value={task.status || 'not_started'}
                       onClick={(e) => e.stopPropagation()}
@@ -2323,9 +2629,9 @@ function TasksTabContent({ tasks, timeEntries = [], projectId, companyId, onTask
                           onTasksChange();
                         } catch (err) { console.error(err); }
                       }}
-                      className={`px-2 py-1 text-xs font-medium rounded-full border-0 cursor-pointer ${
+                      className={`px-2 py-0.5 text-xs font-medium rounded-full border-0 cursor-pointer ${
                         task.status === 'completed' ? 'bg-[#476E66]/10 text-[#476E66]' :
-                        task.status === 'in_progress' ? 'bg-neutral-200 text-neutral-700' :
+                        task.status === 'in_progress' ? 'bg-neutral-100 text-neutral-700' :
                         'bg-neutral-100 text-neutral-500'
                       }`}
                     >
@@ -2335,7 +2641,7 @@ function TasksTabContent({ tasks, timeEntries = [], projectId, companyId, onTask
                     </select>
                   </td>
                   {/* Assignee */}
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-2">
                     <select
                       value={task.assigned_to || ''}
                       onClick={(e) => e.stopPropagation()}
@@ -2345,14 +2651,14 @@ function TasksTabContent({ tasks, timeEntries = [], projectId, companyId, onTask
                           onTasksChange();
                         } catch (err) { console.error(err); }
                       }}
-                      className="w-full px-2 py-1 text-sm border border-neutral-200 rounded bg-white cursor-pointer focus:ring-1 focus:ring-[#476E66] outline-none"
+                      className="w-full px-2 py-1 text-xs border border-neutral-200 rounded-lg bg-white cursor-pointer focus:ring-1 focus:ring-[#476E66] outline-none"
                     >
-                      <option value="">Unassigned</option>
+                      <option value="">—</option>
                       {teamMembers.map(m => <option key={m.id} value={m.id}>{m.full_name}</option>)}
                     </select>
                   </td>
                   {/* Hours */}
-                  <td className="px-4 py-3 text-right">
+                  <td className="px-3 py-2 text-right">
                     {editingCell?.taskId === task.id && editingCell?.field === 'hours' ? (
                       <input
                         type="number"
@@ -2360,55 +2666,55 @@ function TasksTabContent({ tasks, timeEntries = [], projectId, companyId, onTask
                         onChange={(e) => handleEditChange(task.id, 'hours', e.target.value)}
                         onBlur={() => saveEdit(task.id, 'hours')}
                         onKeyDown={(e) => e.key === 'Enter' && saveEdit(task.id, 'hours')}
-                        className="w-16 px-2 py-1 text-right text-sm border border-neutral-300 rounded outline-none"
+                        className="w-14 px-2 py-0.5 text-right text-xs border border-neutral-300 rounded-lg outline-none focus:ring-1 focus:ring-[#476E66]"
                         autoFocus
                         onClick={(e) => e.stopPropagation()}
                       />
                     ) : (
                       <span 
                         onClick={(e) => { e.stopPropagation(); startEditing(task.id, 'hours', task.estimated_hours?.toString() || '0'); }}
-                        className="cursor-pointer hover:bg-neutral-100 px-2 py-1 rounded inline-block text-neutral-600"
+                        className="cursor-pointer hover:bg-neutral-100 px-2 py-0.5 rounded-lg inline-block text-xs text-neutral-600"
                       >
                         {task.estimated_hours ? `${task.estimated_hours}h` : '-'}
                       </span>
                     )}
                   </td>
                   {/* Due Date */}
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-2">
                     {editingCell?.taskId === task.id && editingCell?.field === 'due_date' ? (
                       <input
                         type="date"
                         value={editValues[task.id]?.due_date ?? task.due_date?.split('T')[0] ?? ''}
                         onChange={(e) => handleEditChange(task.id, 'due_date', e.target.value)}
                         onBlur={() => saveEdit(task.id, 'due_date')}
-                        className="px-2 py-1 text-sm border border-neutral-300 rounded outline-none"
+                        className="px-2 py-0.5 text-xs border border-neutral-300 rounded-lg outline-none focus:ring-1 focus:ring-[#476E66]"
                         autoFocus
                         onClick={(e) => e.stopPropagation()}
                       />
                     ) : (
                       <span 
                         onClick={(e) => { e.stopPropagation(); startEditing(task.id, 'due_date', task.due_date?.split('T')[0] || ''); }}
-                        className="cursor-pointer hover:bg-neutral-100 px-2 py-1 rounded inline-block text-neutral-600"
+                        className="cursor-pointer hover:bg-neutral-100 px-2 py-0.5 rounded-lg inline-block text-xs text-neutral-600 whitespace-nowrap"
                       >
-                        {task.due_date ? new Date(task.due_date).toLocaleDateString() : '-'}
+                        {task.due_date ? new Date(task.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '-'}
                       </span>
                     )}
                   </td>
                   {/* Actions */}
-                  <td className="px-2 py-3 relative">
+                  <td className="px-1 py-2 relative">
                     <button
                       onClick={(e) => { e.stopPropagation(); setMenuOpen(menuOpen === task.id ? null : task.id); }}
-                      className="p-1.5 hover:bg-neutral-100 rounded"
+                      className="p-1 hover:bg-neutral-100 rounded transition-colors"
                     >
                       <MoreVertical className="w-4 h-4 text-neutral-400" />
                     </button>
                     {menuOpen === task.id && (
-                      <div className="absolute right-0 top-full mt-1 bg-white border border-neutral-200 rounded-lg shadow-lg py-1 z-10 min-w-[120px]">
-                        <button onClick={() => { onEditTask(task); setMenuOpen(null); }} className="w-full px-3 py-2 text-left text-sm hover:bg-neutral-50 flex items-center gap-2">
-                          <Edit2 className="w-3.5 h-3.5" /> Edit
+                      <div className="absolute right-0 top-full mt-1 bg-white rounded-lg py-1 z-20 min-w-[100px]" style={{ boxShadow: 'var(--shadow-dropdown)' }}>
+                        <button onClick={() => { onEditTask(task); setMenuOpen(null); }} className="w-full px-3 py-1.5 text-left text-xs hover:bg-neutral-50 flex items-center gap-1.5 transition-colors">
+                          <Edit2 className="w-3 h-3" /> Edit
                         </button>
-                        <button onClick={() => handleDeleteTask(task.id)} className="w-full px-3 py-2 text-left text-sm hover:bg-neutral-50 text-red-600 flex items-center gap-2">
-                          <Trash2 className="w-3.5 h-3.5" /> Delete
+                        <button onClick={() => handleDeleteTask(task.id)} className="w-full px-3 py-1.5 text-left text-xs hover:bg-neutral-50 text-red-600 flex items-center gap-1.5 transition-colors">
+                          <Trash2 className="w-3 h-3" /> Delete
                         </button>
                       </div>
                     )}
@@ -2417,16 +2723,17 @@ function TasksTabContent({ tasks, timeEntries = [], projectId, companyId, onTask
               );
             })}
             {/* Quick Add Row */}
-            <tr className="bg-neutral-50/50">
-              <td className="px-3 py-2"><Plus className="w-4 h-4 text-neutral-400" /></td>
-              <td className="px-4 py-2" colSpan={6}>
+            <tr className="bg-neutral-50/30">
+              <td className="px-2 py-2"><Plus className="w-4 h-4 text-neutral-300" /></td>
+              <td className="px-3 py-2" colSpan={6}>
                 <input 
                   type="text" 
-                  placeholder="Type task name and press Enter..." 
+                  placeholder="Add new task..." 
                   value={quickAddName} 
                   onChange={(e) => setQuickAddName(e.target.value)} 
                   onKeyDown={(e) => e.key === 'Enter' && handleQuickAdd()} 
-                  className="w-full px-2 py-1 text-sm bg-transparent border-none outline-none placeholder:text-neutral-400" 
+                  className="w-full text-xs bg-transparent border-none outline-none placeholder:text-neutral-400" 
+                  style={{ fontSize: '13px' }}
                 />
               </td>
             </tr>
@@ -2434,9 +2741,9 @@ function TasksTabContent({ tasks, timeEntries = [], projectId, companyId, onTask
         </table>
       </div>
       {filteredTasks.length === 0 && !quickAddName && (
-        <div className="text-center py-8 text-neutral-500">
-          <p>No tasks yet.</p>
-          <button onClick={onAddTask} className="text-[#476E66] hover:text-[#3A5B54] font-medium mt-1">Create your first task</button>
+        <div className="text-center py-6 text-neutral-500">
+          <p className="text-sm">No tasks yet.</p>
+          <button onClick={onAddTask} className="text-[#476E66] hover:text-[#3A5B54] text-sm font-medium mt-1">Create your first task</button>
         </div>
       )}
       </>)}
@@ -2473,7 +2780,7 @@ function TaskTableRow({ task, editingCell, editValues, onStartEditing, onEditCha
       <td className="px-4 py-2">
         <div className="flex items-center gap-2">
           <ChevronRight className="w-4 h-4 text-neutral-300" />
-          <span className={`font-medium ${isCompleted ? 'line-through text-neutral-400' : 'text-neutral-900'}`}>{task.name}</span>
+          <span className={`text-sm font-medium leading-5 ${isCompleted ? 'line-through text-neutral-400' : 'text-neutral-900'}`} style={{ fontSize: '14px', fontWeight: '500', lineHeight: '20px' }}>{task.name}</span>
         </div>
       </td>
       {canViewFinancials && (
@@ -2900,23 +3207,23 @@ function ProjectInvoiceModal({ project, tasks, timeEntries, expenses, companyId,
   // Success state
   if (createdInvoiceId) {
     return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-2xl w-full max-w-md p-6 mx-4 text-center">
-          <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4">
-            <Check className="w-8 h-8 text-neutral-900" />
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-xl w-full max-w-sm p-5 text-center">
+          <div className="w-14 h-14 rounded-full bg-emerald-50 flex items-center justify-center mx-auto mb-3">
+            <Check className="w-7 h-7 text-emerald-600" />
           </div>
-          <h2 className="text-xl font-semibold text-neutral-900 mb-2">Invoice Created!</h2>
-          <p className="text-neutral-500 mb-6">Your invoice for {formatCurrency(total)} has been created as a draft.</p>
-          <div className="flex gap-3">
+          <h2 className="text-lg font-semibold text-neutral-900 mb-1.5">Invoice Created!</h2>
+          <p className="text-sm text-neutral-500 mb-5">Your invoice for {formatCurrency(total)} has been created as a draft.</p>
+          <div className="flex gap-2">
             <button
               onClick={() => onSave(createdInvoiceId)}
-              className="flex-1 px-4 py-2.5 border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors"
+              className="flex-1 px-4 py-2 text-sm border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors"
             >
               Stay Here
             </button>
             <button
               onClick={() => navigate('/invoicing')}
-              className="flex-1 px-4 py-2.5 bg-[#476E66] text-white rounded-xl hover:bg-[#3A5B54] transition-colors flex items-center justify-center gap-2"
+              className="flex-1 px-4 py-2 text-sm bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54] transition-colors flex items-center justify-center gap-1.5 font-medium"
             >
               <ExternalLink className="w-4 h-4" /> View Invoice
             </button>
@@ -2927,95 +3234,104 @@ function ProjectInvoiceModal({ project, tasks, timeEntries, expenses, companyId,
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl w-full max-w-2xl p-6 mx-4 max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-xl font-semibold text-neutral-900">Create Invoice</h2>
-            <p className="text-sm text-neutral-500">{project.name}</p>
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl w-full max-w-2xl max-h-[92vh] overflow-hidden flex flex-col">
+        {/* Header - Fixed */}
+        <div className="flex items-center justify-between px-4 sm:px-5 py-3 sm:py-4 border-b border-neutral-100 flex-shrink-0">
+          <div className="min-w-0 flex-1">
+            <h2 className="text-lg sm:text-xl font-semibold text-neutral-900">Create Invoice</h2>
+            <p className="text-xs sm:text-sm text-neutral-500 truncate">{project.name}</p>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-neutral-100 rounded-lg">
+          <button onClick={onClose} className="p-1.5 hover:bg-neutral-100 rounded-lg flex-shrink-0 ml-2">
             <X className="w-5 h-5" />
           </button>
         </div>
 
+        {/* Scrollable Content */}
+        <div className="overflow-y-auto flex-1 px-4 sm:px-5 py-4">
         {error && (
-          <div className="p-3 bg-neutral-100 border border-red-200 text-red-700 rounded-lg text-sm mb-4">{error}</div>
+            <div className="p-2.5 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm mb-4">{error}</div>
         )}
 
-        <div className="space-y-6">
-          {/* Billing Type Selector */}
+          <div className="space-y-3">
+          {/* Billing Type Selector - Compact & Modern */}
           <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-2">Billing Method</label>
+            <label className="block text-xs font-medium text-neutral-600 mb-2">Billing Method</label>
             <div className="grid grid-cols-3 gap-2">
               <button
                 type="button"
                 onClick={() => { setBillingType('items'); setSelectedTasks(new Set()); }}
-                className={`p-3 border rounded-xl text-left transition-colors ${
-                  billingType === 'items' ? 'border-neutral-500 bg-[#476E66]/10' : 'border-neutral-200 hover:border-neutral-300'
+                className={`p-2 rounded-lg text-left transition-all border ${
+                  billingType === 'items' 
+                    ? 'bg-[#476E66]/10 border-[#476E66]' 
+                    : 'bg-white border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50'
                 }`}
               >
-                <p className="font-medium text-sm text-neutral-900">By Items</p>
-                <p className="text-xs text-neutral-500">Select specific items</p>
+                <p className={`font-medium text-xs ${billingType === 'items' ? 'text-[#476E66]' : 'text-neutral-900'}`}>By Items</p>
+                <p className="text-xs text-neutral-500 mt-0.5">Select specific items</p>
               </button>
               <button
                 type="button"
                 onClick={() => { setBillingType('milestone'); setSelectedTasks(new Set()); }}
-                className={`p-3 border rounded-xl text-left transition-colors ${
-                  billingType === 'milestone' ? 'border-neutral-500 bg-[#476E66]/10' : 'border-neutral-200 hover:border-neutral-300'
+                className={`p-2 rounded-lg text-left transition-all border ${
+                  billingType === 'milestone' 
+                    ? 'bg-[#476E66]/10 border-[#476E66]' 
+                    : 'bg-white border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50'
                 }`}
               >
-                <p className="font-medium text-sm text-neutral-900">By Milestone</p>
-                <p className="text-xs text-neutral-500">Bill full remaining</p>
+                <p className={`font-medium text-xs ${billingType === 'milestone' ? 'text-[#476E66]' : 'text-neutral-900'}`}>By Milestone</p>
+                <p className="text-xs text-neutral-500 mt-0.5">Bill full remaining</p>
               </button>
               <button
                 type="button"
                 onClick={() => { setBillingType('percentage'); setSelectedTasks(new Set()); }}
-                className={`p-3 border rounded-xl text-left transition-colors ${
-                  billingType === 'percentage' ? 'border-neutral-500 bg-[#476E66]/10' : 'border-neutral-200 hover:border-neutral-300'
+                className={`p-2 rounded-lg text-left transition-all border ${
+                  billingType === 'percentage' 
+                    ? 'bg-[#476E66]/10 border-[#476E66]' 
+                    : 'bg-white border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50'
                 }`}
               >
-                <p className="font-medium text-sm text-neutral-900">By Percentage</p>
-                <p className="text-xs text-neutral-500">Bill % of budget</p>
+                <p className={`font-medium text-xs ${billingType === 'percentage' ? 'text-[#476E66]' : 'text-neutral-900'}`}>By Percentage</p>
+                <p className="text-xs text-neutral-500 mt-0.5">Bill % of budget</p>
               </button>
             </div>
           </div>
 
-          {/* Allocated Project Fees */}
+          {/* Allocated Project Fees - Modern Card */}
           {billingType === 'items' && project.budget && project.budget > 0 && (
-            <div className="border border-neutral-200 rounded-xl p-4">
-              <label className="flex items-center gap-3 cursor-pointer">
+            <div className="bg-white rounded-lg p-3" style={{ boxShadow: 'var(--shadow-card)' }}>
+              <label className="flex items-center gap-2.5 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={includeAllocatedFees}
                   onChange={(e) => setIncludeAllocatedFees(e.target.checked)}
-                  className="w-5 h-5 rounded border-neutral-300 text-neutral-500 focus:ring-primary-500"
+                  className="w-4 h-4 rounded border-neutral-300 text-[#476E66] focus:ring-[#476E66] flex-shrink-0"
                 />
-                <div className="flex-1">
-                  <p className="font-medium text-neutral-900">Project Budget (Fixed Fee)</p>
-                  <p className="text-sm text-neutral-500">Allocated project budget</p>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-sm text-neutral-900">Project Budget (Fixed Fee)</p>
+                  <p className="text-xs text-neutral-400">Allocated project budget</p>
                 </div>
-                <span className="font-semibold text-neutral-900">{formatCurrency(project.budget)}</span>
+                <span className="font-semibold text-sm text-neutral-900 flex-shrink-0">{formatCurrency(project.budget)}</span>
               </label>
             </div>
           )}
 
-          {/* Tasks - Different display based on billing type */}
+          {/* Tasks - Modern Card Design */}
           {tasks.length > 0 && (
-            <div className="border border-neutral-200 rounded-xl overflow-hidden">
-              <div className="flex items-center justify-between px-4 py-3 bg-neutral-50 border-b border-neutral-200">
-                <div className="flex items-center gap-3">
+            <div className="bg-white rounded-lg overflow-hidden" style={{ boxShadow: 'var(--shadow-card)' }}>
+              <div className="flex items-center justify-between px-3 py-2.5 bg-neutral-50">
+                <div className="flex items-center gap-2.5">
                   <input
                     type="checkbox"
                     checked={selectedTasks.size === tasks.length && tasks.length > 0}
                     onChange={selectAllTasks}
-                    className="w-4 h-4 rounded border-neutral-300 text-neutral-500 focus:ring-primary-500"
+                    className="w-4 h-4 rounded border-neutral-300 text-[#476E66] focus:ring-[#476E66]"
                   />
-                  <span className="font-medium text-neutral-900">Tasks ({tasks.length})</span>
+                  <span className="font-semibold text-sm text-neutral-900">Tasks ({tasks.length})</span>
                 </div>
-                <span className="text-sm text-neutral-500">{formatCurrency(taskFeesTotal)} selected</span>
+                <span className="text-xs font-medium text-neutral-500">{formatCurrency(taskFeesTotal)} selected</span>
               </div>
-              <div className="divide-y divide-neutral-100 max-h-64 overflow-y-auto">
+              <div className="divide-y divide-neutral-50 max-h-60 overflow-y-auto">
                 {tasks.map(task => {
                   const totalBudget = task.total_budget || task.estimated_fees || 0;
                   const billedPct = task.billed_percentage || 0;
@@ -3027,37 +3343,37 @@ function ProjectInvoiceModal({ project, tasks, timeEntries, expenses, companyId,
                   return (
                     <label 
                       key={task.id} 
-                      className={`flex items-center gap-3 px-4 py-3 cursor-pointer ${isFullyBilled ? 'bg-neutral-50 opacity-50' : 'hover:bg-neutral-50'}`}
+                      className={`flex items-center gap-2.5 px-3 py-2 cursor-pointer transition-colors ${isFullyBilled ? 'bg-neutral-50 opacity-50' : 'hover:bg-neutral-50/50'}`}
                     >
                       <input
                         type="checkbox"
                         checked={isSelected}
                         disabled={isFullyBilled}
                         onChange={() => toggleTask(task.id)}
-                        className="w-4 h-4 rounded border-neutral-300 text-neutral-500 focus:ring-primary-500"
+                        className="w-4 h-4 rounded border-neutral-300 text-[#476E66] focus:ring-[#476E66] flex-shrink-0"
                       />
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-neutral-900 truncate">{task.name}</p>
+                        <p className="text-sm font-medium text-neutral-900 truncate leading-5" style={{ fontSize: '14px', fontWeight: '500', lineHeight: '20px' }}>{task.name}</p>
                         <p className="text-xs text-neutral-500">
                           {task.estimated_hours || 0}h estimated
                           {billedPct > 0 && (
-                            <span className="ml-2 text-neutral-900">• {billedPct}% billed</span>
+                            <span className="ml-1.5">• {billedPct}% billed</span>
                           )}
                         </p>
                       </div>
                       
                       {/* Show different info based on billing type */}
                       {billingType === 'items' ? (
-                        <div className="text-right">
-                          <span className="font-medium text-neutral-700">{formatCurrency(remainingAmt)}</span>
+                        <div className="text-right flex-shrink-0">
+                          <span className="font-semibold text-sm text-neutral-900">{formatCurrency(remainingAmt)}</span>
                           {billedPct > 0 && (
-                            <p className="text-xs text-neutral-500">{remainingPct}% remaining</p>
+                            <p className="text-xs text-neutral-500">{remainingPct}% left</p>
                           )}
                         </div>
                       ) : billingType === 'milestone' ? (
-                        <div className="text-right">
-                          <p className="font-medium text-neutral-700">{formatCurrency(remainingAmt)}</p>
-                          <p className="text-xs text-neutral-500">{remainingPct}% remaining</p>
+                        <div className="text-right flex-shrink-0">
+                          <p className="font-semibold text-sm text-neutral-900">{formatCurrency(remainingAmt)}</p>
+                          <p className="text-xs text-neutral-500">{remainingPct}% left</p>
                         </div>
                       ) : (
                         <div className="flex items-center gap-3">
@@ -3126,8 +3442,8 @@ function ProjectInvoiceModal({ project, tasks, timeEntries, expenses, companyId,
 
           {/* Unbilled Time Entries */}
           {unbilledTimeEntries.length > 0 && (
-            <div className="border border-neutral-200 rounded-xl overflow-hidden">
-              <div className="flex items-center justify-between px-4 py-3 bg-neutral-50 border-b border-neutral-200">
+            <div className="bg-white rounded-lg overflow-hidden" style={{ boxShadow: 'var(--shadow-card)' }}>
+              <div className="flex items-center justify-between px-3 py-2.5 bg-neutral-50">
                 <div className="flex items-center gap-3">
                   <input
                     type="checkbox"
@@ -3135,28 +3451,17 @@ function ProjectInvoiceModal({ project, tasks, timeEntries, expenses, companyId,
                     onChange={selectAllTimeEntries}
                     className="w-4 h-4 rounded border-neutral-300 text-neutral-500 focus:ring-primary-500"
                   />
-                  <span className="font-medium text-neutral-900">Time Entries ({unbilledTimeEntries.length})</span>
+                  <span className="font-semibold text-sm text-neutral-900">Time Entries ({unbilledTimeEntries.length})</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={(e) => { e.stopPropagation(); navigate('/settings'); }}
-                    className="flex items-center gap-1 text-xs text-neutral-500 hover:text-neutral-600 hover:underline"
-                    title="Manage your default hourly rate in Settings"
-                  >
-                    <Info className="w-3 h-3" />
-                    <span>Rate: ${defaultHourlyRate}/hr</span>
-                    <Settings className="w-3 h-3" />
-                  </button>
-                  <span className="text-sm text-neutral-500">{formatCurrency(timeEntriesTotal)} selected</span>
+                <span className="text-xs font-medium text-neutral-500">{formatCurrency(timeEntriesTotal)} selected</span>
                 </div>
-              </div>
-              <div className="divide-y divide-neutral-100 max-h-48 overflow-y-auto">
+              <div className="divide-y divide-neutral-50 max-h-48 overflow-y-auto">
                 {unbilledTimeEntries.map(entry => {
                   const rate = getEntryRate(entry);
                   const entryTotal = getEntryTotal(entry);
                   const rateSource = entry.hourly_rate ? 'entry' : 'default';
                   return (
-                    <label key={entry.id} className="flex items-center gap-3 px-4 py-3 hover:bg-neutral-50 cursor-pointer">
+                    <label key={entry.id} className="flex items-center gap-2.5 px-3 py-2 hover:bg-neutral-50/50 cursor-pointer transition-colors">
                       <input
                         type="checkbox"
                         checked={selectedTimeEntries.has(entry.id)}
@@ -3180,22 +3485,22 @@ function ProjectInvoiceModal({ project, tasks, timeEntries, expenses, companyId,
 
           {/* Unbilled Expenses */}
           {unbilledExpenses.length > 0 && (
-            <div className="border border-neutral-200 rounded-xl overflow-hidden">
-              <div className="flex items-center justify-between px-4 py-3 bg-neutral-50 border-b border-neutral-200">
-                <div className="flex items-center gap-3">
+            <div className="bg-white rounded-lg overflow-hidden" style={{ boxShadow: 'var(--shadow-card)' }}>
+              <div className="flex items-center justify-between px-3 py-2.5 bg-neutral-50">
+                <div className="flex items-center gap-2.5">
                   <input
                     type="checkbox"
                     checked={selectedExpenses.size === unbilledExpenses.length && unbilledExpenses.length > 0}
                     onChange={selectAllExpenses}
-                    className="w-4 h-4 rounded border-neutral-300 text-neutral-500 focus:ring-primary-500"
+                    className="w-4 h-4 rounded border-neutral-300 text-[#476E66] focus:ring-[#476E66]"
                   />
-                  <span className="font-medium text-neutral-900">Expenses ({unbilledExpenses.length})</span>
+                  <span className="font-semibold text-sm text-neutral-900">Expenses ({unbilledExpenses.length})</span>
                 </div>
-                <span className="text-sm text-neutral-500">{formatCurrency(expensesTotal)} selected</span>
+                <span className="text-xs font-medium text-neutral-500">{formatCurrency(expensesTotal)} selected</span>
               </div>
-              <div className="divide-y divide-neutral-100 max-h-48 overflow-y-auto">
+              <div className="divide-y divide-neutral-50 max-h-48 overflow-y-auto">
                 {unbilledExpenses.map(expense => (
-                  <label key={expense.id} className="flex items-center gap-3 px-4 py-3 hover:bg-neutral-50 cursor-pointer">
+                  <label key={expense.id} className="flex items-center gap-2.5 px-3 py-2 hover:bg-neutral-50/50 cursor-pointer transition-colors">
                     <input
                       type="checkbox"
                       checked={selectedExpenses.has(expense.id)}
@@ -3216,31 +3521,32 @@ function ProjectInvoiceModal({ project, tasks, timeEntries, expenses, companyId,
             </div>
           )}
 
-          {/* Custom Amount */}
-          <div className="border border-neutral-200 rounded-xl p-4">
-            <label className="block text-sm font-medium text-neutral-700 mb-2">Additional Amount (Optional)</label>
+          {/* Custom Amount & Due Date - Equal Width Grid */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-neutral-600 mb-1.5">Additional Amount</label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500">$</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 text-xs">$</span>
               <input
                 type="number"
                 step="0.01"
                 value={customAmount}
                 onChange={(e) => setCustomAmount(e.target.value)}
                 placeholder="0.00"
-                className="w-full pl-8 pr-4 py-2.5 rounded-lg border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                  className="w-full h-[38px] pl-7 pr-3 text-sm rounded-lg border border-neutral-200 focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none"
               />
             </div>
           </div>
 
-          {/* Due Date */}
           <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-2">Due Date</label>
+              <label className="block text-xs font-medium text-neutral-600 mb-1.5">Due Date</label>
             <input
               type="date"
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                className="w-full h-[38px] px-3 text-sm rounded-lg border border-neutral-200 focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none"
             />
+            </div>
           </div>
 
           {/* Billing Summary for Percentage Type */}
@@ -3274,38 +3580,42 @@ function ProjectInvoiceModal({ project, tasks, timeEntries, expenses, companyId,
               </div>
             </div>
           )}
+          </div>
+        </div>
 
+        {/* Footer - Fixed */}
+        <div className="border-t border-neutral-100 px-4 sm:px-5 py-3 sm:py-4 flex-shrink-0">
           {/* Total Summary */}
-          <div className="bg-[#476E66] text-white rounded-xl p-4 space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-neutral-400">Subtotal</span>
-              <span>{formatCurrency(subtotal)}</span>
+          <div className="bg-[#476E66] text-white rounded-lg p-3 space-y-1.5 mb-3">
+            <div className="flex justify-between text-xs">
+              <span className="text-white/70">Subtotal</span>
+              <span className="font-medium">{formatCurrency(subtotal)}</span>
             </div>
             {taxAmount > 0 && (
-              <div className="flex justify-between text-sm">
-                <span className="text-neutral-400">Tax</span>
-                <span>{formatCurrency(taxAmount)}</span>
+              <div className="flex justify-between text-xs">
+                <span className="text-white/70">Tax</span>
+                <span className="font-medium">{formatCurrency(taxAmount)}</span>
               </div>
             )}
-            <div className="flex justify-between text-xl font-bold pt-2 border-t border-neutral-700">
+            <div className="flex justify-between text-lg font-bold pt-1.5 border-t border-white/20">
               <span>Total</span>
               <span>{formatCurrency(total)}</span>
             </div>
           </div>
 
           {/* Actions */}
-          <div className="flex gap-3 pt-2">
+          <div className="flex gap-2">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2.5 border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors"
+              className="flex-1 px-4 py-2 text-sm border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors"
             >
               Cancel
             </button>
             <button
               onClick={handleSubmit}
               disabled={saving || total <= 0}
-              className="flex-1 px-4 py-2.5 bg-[#476E66] text-white rounded-xl hover:bg-[#3A5B54] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-4 py-2 text-sm bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54] transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
             >
               {saving ? 'Creating...' : 'Create Invoice'}
             </button>
@@ -3690,19 +4000,21 @@ function InlineBillingInvoiceView({
         </div>
       </div>
 
-      {/* Sub Tabs */}
-      <div className="flex gap-1 p-1 bg-neutral-100 rounded-lg w-fit">
+      {/* Sub Tabs - Compact Single Row with Border & Green Active State */}
+      <div className="flex gap-1.5 sm:gap-2 overflow-x-auto pb-1">
         {[
           { id: 'preview', label: 'Preview' },
-          { id: 'detail', label: 'Invoice Detail' },
+          { id: 'detail', label: 'Detail' },
           { id: 'time', label: `Time (${formatCurrency(timeTotal)})` },
-          { id: 'expenses', label: `Expenses (${formatCurrency(expensesTotal)})` },
+          { id: 'expenses', label: `Exp. (${formatCurrency(expensesTotal)})` },
         ].map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveSubTab(tab.id as any)}
-            className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
-              activeSubTab === tab.id ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-600 hover:text-neutral-900'
+            className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-medium transition-all border whitespace-nowrap flex-shrink-0 ${
+              activeSubTab === tab.id 
+                ? 'bg-[#476E66]/10 border-[#476E66] text-[#476E66]' 
+                : 'bg-white border-neutral-200 text-neutral-600 hover:border-neutral-300 hover:text-neutral-900'
             }`}
           >
             {tab.label}
@@ -3712,73 +4024,74 @@ function InlineBillingInvoiceView({
 
       {/* Preview Tab */}
       {activeSubTab === 'preview' && (
-        <div className="bg-neutral-200 rounded-xl p-6">
-          {/* Calculator Controls */}
-          <div className="flex items-center gap-3 mb-6">
-            <select value={calculatorType} onChange={(e) => setCalculatorType(e.target.value)} className="px-4 py-2 rounded-lg border border-neutral-300 bg-white text-sm font-medium">
+        <div className="bg-neutral-200 rounded-xl p-2 sm:p-4">
+          {/* Calculator Controls - Mobile Optimized */}
+          <div className="flex flex-wrap items-center gap-2 mb-3 sm:mb-4">
+            <select value={calculatorType} onChange={(e) => setCalculatorType(e.target.value)} className="px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg border border-neutral-300 bg-white text-xs sm:text-sm font-medium flex-1 min-w-[140px]">
               <option value="time_material">Time & Material</option>
               <option value="fixed_fee">Fixed Fee</option>
               <option value="milestone">Milestone</option>
               <option value="percentage">Percentage</option>
               <option value="summary">Summary Only</option>
             </select>
-            <button className="px-4 py-2 text-sm text-neutral-900 hover:bg-neutral-100 rounded-lg font-medium">Edit</button>
-            <button className="px-4 py-2 bg-white border border-neutral-300 rounded-lg text-sm font-medium hover:bg-neutral-50">Refresh</button>
-            <button className="px-4 py-2 bg-white border border-neutral-300 rounded-lg text-sm font-medium hover:bg-neutral-50">Snapshot</button>
+            <button className="px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm text-neutral-900 hover:bg-neutral-100 rounded-lg font-medium">Edit</button>
+            <button className="px-2 sm:px-3 py-1.5 sm:py-2 bg-white border border-neutral-300 rounded-lg text-xs sm:text-sm font-medium hover:bg-neutral-50">Refresh</button>
+            <button className="hidden sm:inline-flex px-2 sm:px-3 py-1.5 sm:py-2 bg-white border border-neutral-300 rounded-lg text-xs sm:text-sm font-medium hover:bg-neutral-50">Snapshot</button>
           </div>
 
-          {/* Full-width Invoice Preview Card */}
-          <div className="bg-white rounded-xl shadow-lg p-8">
-            {/* Header */}
-            <div className="flex justify-between items-start mb-8">
+          {/* Full-width Invoice Preview Card - Mobile Optimized */}
+          <div className="bg-white rounded-lg sm:rounded-xl shadow-lg p-3 sm:p-5 lg:p-8 overflow-x-auto">
+            {/* Header - Mobile Optimized */}
+            <div className="flex flex-col sm:flex-row justify-between items-start gap-4 sm:gap-0 mb-4 sm:mb-6 lg:mb-8">
               <div>
-                <div className="w-16 h-16 bg-[#476E66] rounded-xl flex items-center justify-center text-white font-bold text-2xl mb-4">P</div>
-                <div className="text-sm text-neutral-600">
-                  <p className="font-semibold text-neutral-900 text-base">Your Company</p>
+                <div className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 bg-[#476E66] rounded-lg sm:rounded-xl flex items-center justify-center text-white font-bold text-xl sm:text-2xl mb-2 sm:mb-3 lg:mb-4">P</div>
+                <div className="text-xs sm:text-sm text-neutral-600">
+                  <p className="font-semibold text-neutral-900 text-sm sm:text-base">Your Company</p>
                   <p>123 Business Ave</p>
                   <p>City, State 12345</p>
                 </div>
               </div>
-              <div className="text-right">
-                <h2 className="text-3xl font-bold text-neutral-900 mb-4">INVOICE</h2>
-                <div className="text-sm space-y-1">
+              <div className="text-left sm:text-right w-full sm:w-auto">
+                <h2 className="text-xl sm:text-2xl font-bold text-neutral-900 mb-2 sm:mb-3">INVOICE</h2>
+                <div className="text-xs sm:text-sm space-y-0.5 sm:space-y-1">
                   <p><span className="text-neutral-500">Invoice Date:</span> {new Date(invoice.created_at || '').toLocaleDateString()}</p>
-                  <p><span className="text-neutral-500">Total Amount:</span> <span className="font-semibold text-lg">{formatCurrency(total)}</span></p>
+                  <p><span className="text-neutral-500">Total Amount:</span> <span className="font-bold text-sm sm:text-base">{formatCurrency(total)}</span></p>
                   <p><span className="text-neutral-500">Number:</span> {invoiceNumber}</p>
                   <p><span className="text-neutral-500">Terms:</span> {terms}</p>
-                  <p><span className="text-neutral-500">Project:</span> {project?.name}</p>
+                  <p className="truncate"><span className="text-neutral-500">Project:</span> {project?.name}</p>
                 </div>
               </div>
             </div>
 
             {/* Bill To */}
-            <div className="mb-8">
-              <p className="text-sm text-neutral-500 mb-1">Bill To:</p>
-              <p className="font-semibold text-lg">{invoice.client?.name || project?.client?.name}</p>
+            <div className="mb-4 sm:mb-6 lg:mb-8">
+              <p className="text-xs sm:text-sm text-neutral-500 mb-1">Bill To:</p>
+              <p className="font-semibold text-base sm:text-lg">{invoice.client?.name || project?.client?.name}</p>
             </div>
 
             {/* Calculator-based Content */}
-            <div className="border-t border-b border-neutral-200 py-6 mb-6">
+            <div className="border-t border-b border-neutral-200 py-3 sm:py-4 lg:py-6 mb-3 sm:mb-4 lg:mb-6">
               {calculatorType === 'summary' ? (
                 /* Summary Only - Just project name and total */
-                <div className="text-center py-8">
-                  <p className="text-xl font-medium text-neutral-700 mb-2">
+                <div className="text-center py-4 sm:py-6 lg:py-8">
+                  <p className="text-base sm:text-lg lg:text-xl font-medium text-neutral-700 mb-2">
                     Professional Services for {project?.name || 'Project'}
                   </p>
-                  <p className="text-neutral-500">Period: {new Date(invoice.created_at || '').toLocaleDateString()}</p>
+                  <p className="text-xs sm:text-sm text-neutral-500">Period: {new Date(invoice.created_at || '').toLocaleDateString()}</p>
                 </div>
               ) : calculatorType === 'milestone' ? (
                 /* Milestone Calculator - Use lineItems with correct prior/current billing */
                 <>
-                  <h4 className="font-semibold text-neutral-900 mb-4 text-lg">Milestone Billing</h4>
-                  <table className="w-full">
+                  <h4 className="font-semibold text-neutral-900 mb-2 sm:mb-3 lg:mb-4 text-sm sm:text-base lg:text-lg">Milestone Billing</h4>
+                  <div className="overflow-x-auto -mx-3 sm:-mx-5 lg:-mx-8 px-3 sm:px-5 lg:px-8">
+                  <table className="w-full min-w-[500px]">
                     <thead>
-                      <tr className="text-left text-neutral-500 text-sm border-b border-neutral-200">
-                        <th className="pb-3 font-medium">Task</th>
-                        <th className="pb-3 font-medium text-center w-24">Prior</th>
-                        <th className="pb-3 font-medium text-center w-24">Current</th>
-                        <th className="pb-3 font-medium text-right w-28">Budget</th>
-                        <th className="pb-3 font-medium text-right w-28">Amount</th>
+                      <tr className="text-left text-neutral-500 text-xs sm:text-sm border-b border-neutral-200">
+                        <th className="pb-2 sm:pb-3 font-medium">Task</th>
+                        <th className="pb-2 sm:pb-3 font-medium text-center w-20 sm:w-24">Prior</th>
+                        <th className="pb-2 sm:pb-3 font-medium text-center w-20 sm:w-24">Current</th>
+                        <th className="pb-2 sm:pb-3 font-medium text-right w-24 sm:w-28">Budget</th>
+                        <th className="pb-2 sm:pb-3 font-medium text-right w-24 sm:w-28">Amount</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-neutral-100">
@@ -3788,43 +4101,44 @@ function InlineBillingInvoiceView({
                         const currentAmt = item.amount;
                         return (
                           <tr key={item.id}>
-                            <td className="py-3">{item.description}</td>
-                            <td className="py-3 text-center">
+                            <td className="py-2 sm:py-3 text-xs sm:text-sm">{item.description}</td>
+                            <td className="py-2 sm:py-3 text-center">
                               <div className="text-xs">
-                                <span className="inline-flex items-center justify-center w-14 h-5 bg-neutral-100 rounded font-medium text-neutral-600">
+                                <span className="inline-flex items-center justify-center w-12 sm:w-14 h-5 bg-neutral-100 rounded font-medium text-neutral-600 text-xs">
                                   {item.priorBilledPct || 0}%
                                 </span>
                                 <p className="text-neutral-500 mt-0.5">{formatCurrency(priorAmt)}</p>
                               </div>
                             </td>
-                            <td className="py-3 text-center">
+                            <td className="py-2 sm:py-3 text-center">
                               <div className="text-xs">
-                                <span className="inline-flex items-center justify-center w-14 h-5 bg-green-100 rounded font-medium text-green-700">
+                                <span className="inline-flex items-center justify-center w-12 sm:w-14 h-5 bg-green-100 rounded font-medium text-green-700 text-xs">
                                   {item.billedPct || 0}%
                                 </span>
                                 <p className="text-green-600 mt-0.5">{formatCurrency(currentAmt)}</p>
                               </div>
                             </td>
-                            <td className="py-3 text-right text-neutral-500">{formatCurrency(budget)}</td>
-                            <td className="py-3 text-right font-medium">{formatCurrency(currentAmt)}</td>
+                            <td className="py-2 sm:py-3 text-right text-neutral-500 text-xs sm:text-sm">{formatCurrency(budget)}</td>
+                            <td className="py-2 sm:py-3 text-right font-medium text-xs sm:text-sm">{formatCurrency(currentAmt)}</td>
                           </tr>
                         );
                       })}
                       {/* Show non-task line items (time entries etc) */}
                       {lineItems.filter(item => !item.taskId).map(item => (
                         <tr key={item.id}>
-                          <td className="py-3">{item.description}</td>
-                          <td className="py-3 text-center text-neutral-400">-</td>
-                          <td className="py-3 text-center text-neutral-400">-</td>
-                          <td className="py-3 text-right text-neutral-400">-</td>
-                          <td className="py-3 text-right font-medium">{formatCurrency(item.amount)}</td>
+                          <td className="py-2 sm:py-3 text-xs sm:text-sm">{item.description}</td>
+                          <td className="py-2 sm:py-3 text-center text-neutral-400 text-xs">-</td>
+                          <td className="py-2 sm:py-3 text-center text-neutral-400 text-xs">-</td>
+                          <td className="py-2 sm:py-3 text-right text-neutral-400 text-xs sm:text-sm">-</td>
+                          <td className="py-2 sm:py-3 text-right font-medium text-xs sm:text-sm">{formatCurrency(item.amount)}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
+                  </div>
                   {/* Billing Summary */}
-                  <div className="mt-4 pt-4 border-t border-neutral-100 bg-blue-50 rounded-lg p-4">
-                    <div className="grid grid-cols-3 gap-4 text-sm">
+                  <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-neutral-100 bg-blue-50 rounded-lg p-3 sm:p-4">
+                    <div className="grid grid-cols-3 gap-2 sm:gap-4 text-xs sm:text-sm">
                       <div>
                         <p className="text-neutral-500 mb-1">Prior Billed</p>
                         <p className="font-medium text-neutral-700">
@@ -3850,15 +4164,16 @@ function InlineBillingInvoiceView({
               ) : calculatorType === 'percentage' ? (
                 /* Percentage Calculator - Use lineItems with correct prior/current billing */
                 <>
-                  <h4 className="font-semibold text-neutral-900 mb-4 text-lg">Percentage Billing</h4>
-                  <table className="w-full">
+                  <h4 className="font-semibold text-neutral-900 mb-2 sm:mb-3 lg:mb-4 text-sm sm:text-base lg:text-lg">Percentage Billing</h4>
+                  <div className="overflow-x-auto -mx-3 sm:-mx-5 lg:-mx-8 px-3 sm:px-5 lg:px-8">
+                  <table className="w-full min-w-[500px]">
                     <thead>
-                      <tr className="text-left text-neutral-500 text-sm border-b border-neutral-200">
-                        <th className="pb-3 font-medium">Task</th>
-                        <th className="pb-3 font-medium text-center w-24">Prior</th>
-                        <th className="pb-3 font-medium text-center w-24">Current</th>
-                        <th className="pb-3 font-medium text-right w-28">Budget</th>
-                        <th className="pb-3 font-medium text-right w-28">Amount</th>
+                      <tr className="text-left text-neutral-500 text-xs sm:text-sm border-b border-neutral-200">
+                        <th className="pb-2 sm:pb-3 font-medium">Task</th>
+                        <th className="pb-2 sm:pb-3 font-medium text-center w-20 sm:w-24">Prior</th>
+                        <th className="pb-2 sm:pb-3 font-medium text-center w-20 sm:w-24">Current</th>
+                        <th className="pb-2 sm:pb-3 font-medium text-right w-24 sm:w-28">Budget</th>
+                        <th className="pb-2 sm:pb-3 font-medium text-right w-24 sm:w-28">Amount</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-neutral-100">
@@ -3868,43 +4183,44 @@ function InlineBillingInvoiceView({
                         const currentAmt = item.amount;
                         return (
                           <tr key={item.id}>
-                            <td className="py-3">{item.description}</td>
-                            <td className="py-3 text-center">
+                            <td className="py-2 sm:py-3 text-xs sm:text-sm">{item.description}</td>
+                            <td className="py-2 sm:py-3 text-center">
                               <div className="text-xs">
-                                <span className="inline-flex items-center justify-center w-14 h-5 bg-neutral-100 rounded font-medium text-neutral-600">
+                                <span className="inline-flex items-center justify-center w-12 sm:w-14 h-5 bg-neutral-100 rounded font-medium text-neutral-600 text-xs">
                                   {item.priorBilledPct || 0}%
                                 </span>
                                 <p className="text-neutral-500 mt-0.5">{formatCurrency(priorAmt)}</p>
                               </div>
                             </td>
-                            <td className="py-3 text-center">
+                            <td className="py-2 sm:py-3 text-center">
                               <div className="text-xs">
-                                <span className="inline-flex items-center justify-center w-14 h-5 bg-green-100 rounded font-medium text-green-700">
+                                <span className="inline-flex items-center justify-center w-12 sm:w-14 h-5 bg-green-100 rounded font-medium text-green-700 text-xs">
                                   {item.billedPct || 0}%
                                 </span>
                                 <p className="text-green-600 mt-0.5">{formatCurrency(currentAmt)}</p>
                               </div>
                             </td>
-                            <td className="py-3 text-right text-neutral-500">{formatCurrency(budget)}</td>
-                            <td className="py-3 text-right font-medium">{formatCurrency(currentAmt)}</td>
+                            <td className="py-2 sm:py-3 text-right text-neutral-500 text-xs sm:text-sm">{formatCurrency(budget)}</td>
+                            <td className="py-2 sm:py-3 text-right font-medium text-xs sm:text-sm">{formatCurrency(currentAmt)}</td>
                           </tr>
                         );
                       })}
                       {/* Show non-task line items (time entries etc) */}
                       {lineItems.filter(item => !item.taskId).map(item => (
                         <tr key={item.id}>
-                          <td className="py-3">{item.description}</td>
-                          <td className="py-3 text-center text-neutral-400">-</td>
-                          <td className="py-3 text-center text-neutral-400">-</td>
-                          <td className="py-3 text-right text-neutral-400">-</td>
-                          <td className="py-3 text-right font-medium">{formatCurrency(item.amount)}</td>
+                          <td className="py-2 sm:py-3 text-xs sm:text-sm">{item.description}</td>
+                          <td className="py-2 sm:py-3 text-center text-neutral-400 text-xs">-</td>
+                          <td className="py-2 sm:py-3 text-center text-neutral-400 text-xs">-</td>
+                          <td className="py-2 sm:py-3 text-right text-neutral-400 text-xs sm:text-sm">-</td>
+                          <td className="py-2 sm:py-3 text-right font-medium text-xs sm:text-sm">{formatCurrency(item.amount)}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
+                  </div>
                   {/* Billing Summary */}
-                  <div className="mt-4 pt-4 border-t border-neutral-100 bg-blue-50 rounded-lg p-4">
-                    <div className="grid grid-cols-3 gap-4 text-sm">
+                  <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-neutral-100 bg-blue-50 rounded-lg p-3 sm:p-4">
+                    <div className="grid grid-cols-3 gap-2 sm:gap-4 text-xs sm:text-sm">
                       <div>
                         <p className="text-neutral-500 mb-1">Prior Billed</p>
                         <p className="font-medium text-neutral-700">
@@ -3930,31 +4246,33 @@ function InlineBillingInvoiceView({
               ) : calculatorType === 'time_material' ? (
                 /* Time & Material - Detailed breakdown with hours */
                 <>
-                  <h4 className="font-semibold text-neutral-900 mb-4 text-lg">Time & Material Details</h4>
-                  <table className="w-full">
+                  <h4 className="font-semibold text-neutral-900 mb-2 sm:mb-3 lg:mb-4 text-sm sm:text-base lg:text-lg">Time & Material Details</h4>
+                  <div className="overflow-x-auto -mx-3 sm:-mx-5 lg:-mx-8 px-3 sm:px-5 lg:px-8">
+                  <table className="w-full min-w-[450px]">
                     <thead>
-                      <tr className="text-left text-neutral-500 text-sm border-b border-neutral-200">
-                        <th className="pb-3 font-medium">Description</th>
-                        <th className="pb-3 font-medium text-center w-24">Hours</th>
-                        <th className="pb-3 font-medium text-right w-32">Rate</th>
-                        <th className="pb-3 font-medium text-right w-32">Amount</th>
+                      <tr className="text-left text-neutral-500 text-xs sm:text-sm border-b border-neutral-200">
+                        <th className="pb-2 sm:pb-3 font-medium">Description</th>
+                        <th className="pb-2 sm:pb-3 font-medium text-center w-20 sm:w-24">Hours</th>
+                        <th className="pb-2 sm:pb-3 font-medium text-right w-24 sm:w-32">Rate</th>
+                        <th className="pb-2 sm:pb-3 font-medium text-right w-24 sm:w-32">Amount</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-neutral-100">
                       {lineItems.map(item => (
                         <tr key={item.id}>
-                          <td className="py-3">{item.description || 'Service'}</td>
-                          <td className="py-3 text-center">{item.quantity}{item.unit === 'hr' ? 'h' : ''}</td>
-                          <td className="py-3 text-right">{formatCurrency(item.rate)}{item.unit === 'hr' ? '/hr' : '/unit'}</td>
-                          <td className="py-3 text-right font-medium">{formatCurrency(item.amount)}</td>
+                          <td className="py-2 sm:py-3 text-xs sm:text-sm">{item.description || 'Service'}</td>
+                          <td className="py-2 sm:py-3 text-center text-xs sm:text-sm">{item.quantity}{item.unit === 'hr' ? 'h' : ''}</td>
+                          <td className="py-2 sm:py-3 text-right text-xs sm:text-sm">{formatCurrency(item.rate)}{item.unit === 'hr' ? '/hr' : '/unit'}</td>
+                          <td className="py-2 sm:py-3 text-right font-medium text-xs sm:text-sm">{formatCurrency(item.amount)}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
+                  </div>
                   {timeEntries.length > 0 && (
-                    <div className="mt-6 pt-4 border-t border-neutral-100">
-                      <p className="text-sm text-neutral-500 mb-2 font-medium">Time Entries Included:</p>
-                      <div className="text-sm text-neutral-600 space-y-1 max-h-32 overflow-y-auto">
+                    <div className="mt-3 sm:mt-4 lg:mt-6 pt-3 sm:pt-4 border-t border-neutral-100">
+                      <p className="text-xs sm:text-sm text-neutral-500 mb-2 font-medium">Time Entries Included:</p>
+                      <div className="text-xs sm:text-sm text-neutral-600 space-y-1 max-h-32 overflow-y-auto">
                         {timeEntries.map((entry) => (
                           <p key={entry.id} className="flex justify-between">
                             <span>• {entry.description || 'Time entry'} ({new Date(entry.date).toLocaleDateString()})</span>
@@ -3968,52 +4286,54 @@ function InlineBillingInvoiceView({
               ) : (
                 /* Fixed Fee - Simple line items without hourly breakdown */
                 <>
-                  <h4 className="font-semibold text-neutral-900 mb-4 text-lg">Fixed Fee Invoice</h4>
-                  <table className="w-full">
+                  <h4 className="font-semibold text-neutral-900 mb-2 sm:mb-3 lg:mb-4 text-sm sm:text-base lg:text-lg">Fixed Fee Invoice</h4>
+                  <div className="overflow-x-auto -mx-3 sm:-mx-5 lg:-mx-8 px-3 sm:px-5 lg:px-8">
+                  <table className="w-full min-w-[300px]">
                     <thead>
-                      <tr className="text-left text-neutral-500 text-sm border-b border-neutral-200">
-                        <th className="pb-3 font-medium">Description</th>
-                        <th className="pb-3 font-medium text-right w-40">Amount</th>
+                      <tr className="text-left text-neutral-500 text-xs sm:text-sm border-b border-neutral-200">
+                        <th className="pb-2 sm:pb-3 font-medium">Description</th>
+                        <th className="pb-2 sm:pb-3 font-medium text-right w-32 sm:w-40">Amount</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-neutral-100">
                       {lineItems.map(item => (
                         <tr key={item.id}>
-                          <td className="py-3">{item.description || 'Service'}</td>
-                          <td className="py-3 text-right font-medium">{formatCurrency(item.amount)}</td>
+                          <td className="py-2 sm:py-3 text-xs sm:text-sm">{item.description || 'Service'}</td>
+                          <td className="py-2 sm:py-3 text-right font-medium text-xs sm:text-sm">{formatCurrency(item.amount)}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
+                  </div>
                 </>
               )}
             </div>
 
-            {/* Totals Section */}
+            {/* Totals Section - Mobile Optimized */}
             <div className="flex justify-end">
-              <div className="w-72">
-                <div className="flex justify-between py-2 text-neutral-600">
+              <div className="w-full sm:w-80 lg:w-72">
+                <div className="flex justify-between py-1.5 sm:py-2 text-neutral-600 text-xs sm:text-sm">
                   <span>Subtotal</span>
                   <span>{formatCurrency(subtotal)}</span>
                 </div>
                 {taxAmount > 0 && (
-                  <div className="flex justify-between py-2 text-neutral-600">
+                  <div className="flex justify-between py-1.5 sm:py-2 text-neutral-600 text-xs sm:text-sm">
                     <span>Tax</span>
                     <span>{formatCurrency(taxAmount)}</span>
                   </div>
                 )}
-                <div className="flex justify-between py-3 text-xl font-bold border-t border-neutral-300 mt-2">
+                <div className="flex justify-between py-2 sm:py-2.5 text-sm sm:text-base font-bold border-t-2 border-neutral-900 mt-1.5 sm:mt-2">
                   <span>Total</span>
                   <span>{formatCurrency(total)}</span>
                 </div>
               </div>
             </div>
 
-            {/* Expenses Section if billable */}
+            {/* Expenses Section if billable - Mobile Optimized */}
             {expenses.filter(e => e.billable).length > 0 && calculatorType !== 'summary' && (
-              <div className="mt-6 pt-6 border-t border-neutral-200">
-                <h4 className="font-semibold text-neutral-900 mb-3">Billable Expenses</h4>
-                <div className="text-sm space-y-2">
+              <div className="mt-3 sm:mt-4 lg:mt-6 pt-3 sm:pt-4 lg:pt-6 border-t border-neutral-200">
+                <h4 className="font-semibold text-neutral-900 mb-2 sm:mb-3 text-sm sm:text-base">Billable Expenses</h4>
+                <div className="text-xs sm:text-sm space-y-2">
                   {expenses.filter(e => e.billable).map(exp => (
                     <div key={exp.id} className="flex justify-between">
                       <span>{exp.description} - {exp.category || 'Expense'}</span>
@@ -4027,47 +4347,64 @@ function InlineBillingInvoiceView({
         </div>
       )}
 
-      {/* Detail Tab */}
+      {/* Detail Tab - Vertical Mobile Optimized */}
       {activeSubTab === 'detail' && (
-        <div className="flex gap-6">
-          {/* Main Content - Line Items */}
-          <div className="flex-1 space-y-4">
-            <div className="flex items-start justify-between">
-              <div className="text-sm">
-                <p className="font-medium text-neutral-600">{invoice.client?.name || project?.client?.name}</p>
-              </div>
-              <div className="text-right">
-                <p className="text-3xl font-bold text-neutral-900">{formatCurrency(total)}</p>
-              </div>
+        <div className="space-y-2.5">
+          {/* Client & Total Header - Compact */}
+          <div className="flex items-center justify-between px-1">
+            <p className="text-xs font-medium text-neutral-600">{invoice.client?.name || project?.client?.name}</p>
+            <p className="text-sm font-bold text-neutral-900">{formatCurrency(total)}</p>
             </div>
 
-            {/* Line Items Table */}
-            <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
+          {/* Line Items Table - Extra Compact to Fit Mobile */}
+          <div className="bg-white rounded-lg overflow-hidden" style={{ boxShadow: 'var(--shadow-card)' }}>
+            <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-neutral-50 border-b border-neutral-200">
+                <thead className="bg-neutral-50 border-b border-neutral-100">
                   <tr>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase">Description</th>
-                    <th className="text-center px-4 py-3 text-xs font-semibold text-neutral-600 uppercase w-20">Qty</th>
-                    <th className="text-right px-4 py-3 text-xs font-semibold text-neutral-600 uppercase w-28">Rate</th>
-                    <th className="text-right px-4 py-3 text-xs font-semibold text-neutral-600 uppercase w-28">Amount</th>
-                    <th className="w-10"></th>
+                    <th className="text-left px-1.5 py-1.5 text-xs font-medium text-neutral-600">Description</th>
+                    <th className="text-center px-1 py-1.5 text-xs font-medium text-neutral-600 w-11">Qty</th>
+                    <th className="text-right px-1 py-1.5 text-xs font-medium text-neutral-600 w-12">Rate</th>
+                    <th className="text-right px-1 py-1.5 text-xs font-medium text-neutral-600 w-16">Amt</th>
+                    <th className="w-6"></th>
                   </tr>
                 </thead>
                 <tbody>
                   {lineItems.map(item => (
-                    <tr key={item.id} className="border-b border-neutral-100">
-                      <td className="px-4 py-2">
-                        <input type="text" value={item.description} onChange={(e) => updateLineItem(item.id, 'description', e.target.value)} className="w-full px-2 py-1 border border-neutral-200 rounded focus:ring-2 focus:ring-primary-500 outline-none text-sm" />
+                    <tr key={item.id} className="border-b border-neutral-50 last:border-0">
+                      <td className="px-1.5 py-1">
+                        <input 
+                          type="text" 
+                          value={item.description} 
+                          onChange={(e) => updateLineItem(item.id, 'description', e.target.value)} 
+                          className="w-full px-1 py-0.5 border border-neutral-200 rounded text-xs focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none" 
+                        />
                       </td>
-                      <td className="px-4 py-2">
-                        <input type="number" value={item.quantity} onChange={(e) => updateLineItem(item.id, 'quantity', parseFloat(e.target.value) || 0)} className="w-full px-2 py-1 border border-neutral-200 rounded text-center focus:ring-2 focus:ring-primary-500 outline-none text-sm" />
+                      <td className="px-1 py-1">
+                        <input 
+                          type="number" 
+                          value={item.quantity} 
+                          onChange={(e) => updateLineItem(item.id, 'quantity', parseFloat(e.target.value) || 0)} 
+                          className="w-full px-1 py-0.5 border border-neutral-200 rounded text-center text-xs focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none" 
+                        />
                       </td>
-                      <td className="px-4 py-2">
-                        <input type="number" step="0.01" value={item.rate} onChange={(e) => updateLineItem(item.id, 'rate', parseFloat(e.target.value) || 0)} className="w-full px-2 py-1 border border-neutral-200 rounded text-right focus:ring-2 focus:ring-primary-500 outline-none text-sm" />
+                      <td className="px-1 py-1">
+                        <input 
+                          type="number" 
+                          step="0.01" 
+                          value={item.rate} 
+                          onChange={(e) => updateLineItem(item.id, 'rate', parseFloat(e.target.value) || 0)} 
+                          className="w-full px-1 py-0.5 border border-neutral-200 rounded text-right text-xs focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none" 
+                        />
                       </td>
-                      <td className="px-4 py-2 text-right font-medium text-sm">{formatCurrency(item.amount)}</td>
-                      <td className="px-2 py-2">
-                        <button onClick={() => removeLineItem(item.id)} className="p-1 text-neutral-400 hover:text-neutral-700"><Trash2 className="w-4 h-4" /></button>
+                      <td className="px-1 py-1 text-right font-medium text-xs">{formatCurrency(item.amount)}</td>
+                      <td className="px-0.5 py-1">
+                        <button 
+                          onClick={() => removeLineItem(item.id)} 
+                          className="p-0.5 text-neutral-400 hover:text-red-600 transition-colors"
+                        >
+                          <Trash2 className="w-2.5 h-2.5" />
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -4075,53 +4412,66 @@ function InlineBillingInvoiceView({
               </table>
             </div>
 
-            <button onClick={addLineItem} className="flex items-center gap-2 px-3 py-1.5 bg-[#476E66] text-white text-sm rounded-lg hover:bg-[#3A5B54]">
-              <Plus className="w-4 h-4" /> Add Line Item
+            {/* Add Line Item Button - Inside table card */}
+            <div className="px-2 py-2 border-t border-neutral-100 bg-neutral-50">
+              <button 
+                onClick={addLineItem} 
+                className="flex items-center gap-1 px-2 py-1 text-xs text-[#476E66] hover:bg-[#476E66]/5 rounded transition-colors"
+              >
+                <Plus className="w-3 h-3" /> Add Line Item
             </button>
+            </div>
 
-            {/* Totals */}
-            <div className="flex justify-end">
-              <div className="w-64 text-sm">
-                <div className="flex justify-between py-2 border-t border-neutral-200">
+            {/* Totals - Inside table card */}
+            <div className="px-2 py-2 border-t border-neutral-100">
+              <div className="flex justify-between py-1 text-xs">
                   <span className="text-neutral-600">Subtotal</span>
                   <span className="font-medium">{formatCurrency(subtotal)}</span>
                 </div>
-                <div className="flex justify-between py-2 text-lg font-bold border-t border-neutral-300">
+              <div className="flex justify-between py-1 text-sm font-bold border-t-2 border-neutral-900 mt-1">
                   <span>Total</span>
                   <span>{formatCurrency(total)}</span>
-                </div>
               </div>
             </div>
           </div>
 
-          {/* Right Sidebar - Invoice Details */}
-          <div className="w-72 shrink-0 space-y-4">
-            {/* Invoice Number */}
-            <div className="bg-neutral-50 rounded-xl p-4 space-y-3">
+          {/* Invoice Details - Compact Grid Layout */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            {/* Invoice Info Card */}
+            <div className="bg-white rounded-lg p-2.5 space-y-1.5" style={{ boxShadow: 'var(--shadow-card)' }}>
               <div>
-                <label className="block text-xs font-medium text-neutral-500 mb-1">Invoice #</label>
-                <input type="text" value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} className="w-full px-3 py-2 border border-neutral-200 rounded-lg text-sm bg-white" />
+                <label className="block text-xs font-medium text-neutral-600 mb-0.5">Invoice #</label>
+                <input 
+                  type="text" 
+                  value={invoiceNumber} 
+                  onChange={(e) => setInvoiceNumber(e.target.value)} 
+                  className="w-full px-2 py-1 border border-neutral-200 rounded text-xs bg-white focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none" 
+                />
               </div>
 
-              {/* Period / Date Range */}
               <div>
-                <label className="block text-xs font-medium text-neutral-500 mb-1">Period</label>
-                <select className="w-full px-3 py-2 border border-neutral-200 rounded-lg text-sm bg-white">
+                <label className="block text-xs font-medium text-neutral-600 mb-0.5">Period</label>
+                <select className="w-full px-2 py-1 border border-neutral-200 rounded text-xs bg-white focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none">
                   <option value="current">Current Invoice</option>
-                  {/* Show other project invoices for navigation */}
                 </select>
               </div>
 
-              {/* PO Number */}
               <div>
-                <label className="block text-xs font-medium text-neutral-500 mb-1">PO Number</label>
-                <input type="text" placeholder="Enter PO #" className="w-full px-3 py-2 border border-neutral-200 rounded-lg text-sm bg-white" />
+                <label className="block text-xs font-medium text-neutral-600 mb-0.5">PO Number</label>
+                <input 
+                  type="text" 
+                  placeholder="Enter PO #" 
+                  className="w-full px-2 py-1 border border-neutral-200 rounded text-xs bg-white focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none" 
+                />
               </div>
 
-              {/* Terms */}
               <div>
-                <label className="block text-xs font-medium text-neutral-500 mb-1">Terms</label>
-                <select value={terms} onChange={(e) => setTerms(e.target.value)} className="w-full px-3 py-2 border border-neutral-200 rounded-lg text-sm bg-white">
+                <label className="block text-xs font-medium text-neutral-600 mb-0.5">Terms</label>
+                <select 
+                  value={terms} 
+                  onChange={(e) => setTerms(e.target.value)} 
+                  className="w-full px-2 py-1 border border-neutral-200 rounded text-xs bg-white focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none"
+                >
                   <option value="Due on Receipt">Due on Receipt</option>
                   <option value="Net 15">Net 15</option>
                   <option value="Net 30">Net 30</option>
@@ -4133,82 +4483,82 @@ function InlineBillingInvoiceView({
               </div>
             </div>
 
-            {/* Status Section */}
-            <div className="bg-neutral-50 rounded-xl p-4 space-y-3">
+            {/* Status & Dates Card */}
+            <div className="bg-white rounded-lg p-2.5 space-y-1.5" style={{ boxShadow: 'var(--shadow-card)' }}>
               <div>
-                <label className="block text-xs font-medium text-neutral-500 mb-1">Status</label>
-                <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full px-3 py-2 border border-neutral-200 rounded-lg text-sm bg-white">
+                <label className="block text-xs font-medium text-neutral-600 mb-0.5">Status</label>
+                <select 
+                  value={status} 
+                  onChange={(e) => setStatus(e.target.value)} 
+                  className="w-full px-2 py-1 border border-neutral-200 rounded text-xs bg-white focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none"
+                >
                   <option value="draft">Draft</option>
                   <option value="sent">Sent</option>
                   <option value="paid">Paid</option>
                 </select>
               </div>
 
-              {/* Sent Date - triggers due date calculation */}
               <div>
-                <label className="block text-xs font-medium text-neutral-500 mb-1">Sent Date</label>
+                <label className="block text-xs font-medium text-neutral-600 mb-0.5">Sent Date</label>
                 <input 
                   type="date" 
                   value={sentDate} 
                   onChange={(e) => setSentDate(e.target.value)} 
-                  className="w-full px-3 py-2 border border-neutral-200 rounded-lg text-sm bg-white" 
+                  className="w-full px-2 py-1 border border-neutral-200 rounded text-xs bg-white focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none" 
                 />
-                <p className="text-xs text-neutral-400 mt-1">Due date calculated from sent date + terms</p>
               </div>
 
-              {/* Status Timeline */}
-              <div className="space-y-2 pt-2">
-                <div className="flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${invoice.created_at ? 'bg-neutral-1000' : 'bg-neutral-300'}`}></div>
-                    <span className="text-neutral-600">Drafted</span>
+              <div>
+                <label className="block text-xs font-medium text-neutral-600 mb-0.5">Due Date</label>
+                <input 
+                  type="date" 
+                  value={dueDate} 
+                  onChange={(e) => setDueDate(e.target.value)} 
+                  className="w-full px-2 py-1 border border-neutral-200 rounded text-xs bg-white focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none" 
+                />
                   </div>
-                  <span className="text-neutral-500">{invoice.created_at ? new Date(invoice.created_at).toLocaleDateString() : '-'}</span>
-                </div>
-                <div className="flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${sentDate ? 'bg-neutral-1000' : 'bg-neutral-300'}`}></div>
-                    <span className="text-neutral-600">Sent</span>
-                  </div>
-                  <span className="text-neutral-500">{sentDate ? new Date(sentDate).toLocaleDateString() : '-'}</span>
-                </div>
-                <div className="flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${dueDate ? 'bg-neutral-1000' : 'bg-neutral-300'}`}></div>
-                    <span className="text-neutral-600">Due</span>
-                  </div>
-                  <span className="text-neutral-500">{dueDate ? new Date(dueDate).toLocaleDateString() : '-'}</span>
-                </div>
-                <div className="flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${status === 'paid' ? 'bg-neutral-1000' : 'bg-neutral-300'}`}></div>
-                    <span className="text-neutral-600">Paid</span>
-                  </div>
-                  <span className="text-neutral-500">{status === 'paid' ? new Date().toLocaleDateString() : '-'}</span>
-                </div>
-              </div>
 
-              {/* Due Date - Auto-calculated but can be overridden */}
-              <div className="pt-2">
-                <label className="block text-xs font-medium text-neutral-500 mb-1">Due Date</label>
-                <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="w-full px-3 py-2 border border-neutral-200 rounded-lg text-sm bg-white" />
+              {/* Status Timeline - Ultra Compact */}
+              <div className="space-y-1 pt-1.5 border-t border-neutral-100">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1">
+                    <div className={`w-1 h-1 rounded-full ${invoice.created_at ? 'bg-[#476E66]' : 'bg-neutral-300'}`}></div>
+                    <span className="text-xs text-neutral-600">Draft</span>
+                </div>
+                  <span className="text-xs text-neutral-400">{invoice.created_at ? new Date(invoice.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '-'}</span>
+                  </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1">
+                    <div className={`w-1 h-1 rounded-full ${sentDate ? 'bg-[#476E66]' : 'bg-neutral-300'}`}></div>
+                    <span className="text-xs text-neutral-600">Sent</span>
+                </div>
+                  <span className="text-xs text-neutral-400">{sentDate ? new Date(sentDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '-'}</span>
+                  </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1">
+                    <div className={`w-1 h-1 rounded-full ${status === 'paid' ? 'bg-emerald-500' : 'bg-neutral-300'}`}></div>
+                    <span className="text-xs text-neutral-600">Paid</span>
+                </div>
+                  <span className="text-xs text-neutral-400">{status === 'paid' ? new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '-'}</span>
+                  </div>
+                </div>
               </div>
             </div>
 
-            {/* Payment Options */}
-            <div className="bg-neutral-50 rounded-xl p-4 space-y-3">
-              <label className="block text-xs font-medium text-neutral-500">Payment Options</label>
-              <div className="space-y-2">
-                <label className="flex items-center gap-2 text-sm cursor-pointer">
-                  <input type="checkbox" defaultChecked className="w-4 h-4 rounded border-neutral-300 text-neutral-500" />
-                  <span>Bank Transfer</span>
+          {/* Payment Options & Save - Full Width */}
+          <div className="bg-white rounded-lg p-2.5 space-y-2" style={{ boxShadow: 'var(--shadow-card)' }}>
+            <label className="block text-xs font-medium text-neutral-600">Payment Options</label>
+            <div className="flex flex-wrap gap-3">
+              <label className="flex items-center gap-1.5 text-xs cursor-pointer">
+                <input type="checkbox" defaultChecked className="w-3 h-3 rounded border-neutral-300 text-[#476E66] focus:ring-1 focus:ring-[#476E66]" />
+                <span>Bank</span>
                 </label>
-                <label className="flex items-center gap-2 text-sm cursor-pointer">
-                  <input type="checkbox" className="w-4 h-4 rounded border-neutral-300 text-neutral-500" />
-                  <span>Credit Card</span>
+              <label className="flex items-center gap-1.5 text-xs cursor-pointer">
+                <input type="checkbox" className="w-3 h-3 rounded border-neutral-300 text-[#476E66] focus:ring-1 focus:ring-[#476E66]" />
+                <span>Card</span>
                 </label>
-                <label className="flex items-center gap-2 text-sm cursor-pointer">
-                  <input type="checkbox" className="w-4 h-4 rounded border-neutral-300 text-neutral-500" />
+              <label className="flex items-center gap-1.5 text-xs cursor-pointer">
+                <input type="checkbox" className="w-3 h-3 rounded border-neutral-300 text-[#476E66] focus:ring-1 focus:ring-[#476E66]" />
                   <span>Check</span>
                 </label>
               </div>
@@ -4218,88 +4568,106 @@ function InlineBillingInvoiceView({
             <button
               onClick={handleSave}
               disabled={saving}
-              className="w-full py-2.5 bg-[#476E66] text-white rounded-lg font-medium hover:bg-[#3A5B54] disabled:opacity-50 transition-colors"
+            className="w-full py-1.5 bg-[#476E66] text-white rounded-lg text-xs font-medium hover:bg-[#3A5B54] disabled:opacity-50 transition-colors"
+            style={{ boxShadow: 'var(--shadow-sm)' }}
             >
               {saving ? 'Saving...' : 'Save Changes'}
             </button>
-          </div>
         </div>
       )}
 
-      {/* Time Tab */}
+      {/* Time Tab - Compact & Modern */}
       {activeSubTab === 'time' && (
-        <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
+        <div className="bg-white rounded-lg overflow-hidden" style={{ boxShadow: 'var(--shadow-card)' }}>
+          <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-neutral-50 border-b border-neutral-200">
-              <tr>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase">Date</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase">Description</th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-neutral-600 uppercase">Hours</th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-neutral-600 uppercase">Amount</th>
+              <thead className="bg-neutral-50 border-b border-neutral-100">
+                <tr>
+                  <th className="text-left px-2 py-1.5 text-xs font-medium text-neutral-600">Date</th>
+                  <th className="text-left px-2 py-1.5 text-xs font-medium text-neutral-600">Description</th>
+                  <th className="text-right px-2 py-1.5 text-xs font-medium text-neutral-600 w-14">Hours</th>
+                  <th className="text-right px-2 py-1.5 text-xs font-medium text-neutral-600 w-16">Amount</th>
               </tr>
             </thead>
             <tbody>
               {timeEntries.length === 0 ? (
-                <tr><td colSpan={4} className="px-4 py-8 text-center text-neutral-500">No time entries</td></tr>
+                  <tr>
+                    <td colSpan={4} className="px-2 py-8 text-center text-neutral-400 text-xs">
+                      No time entries
+                    </td>
+                  </tr>
               ) : (
                 timeEntries.map(entry => (
-                  <tr key={entry.id} className="border-b border-neutral-100">
-                    <td className="px-4 py-3 text-sm">{new Date(entry.date).toLocaleDateString()}</td>
-                    <td className="px-4 py-3 text-sm">{entry.description || '-'}</td>
-                    <td className="px-4 py-3 text-sm text-right">{Number(entry.hours).toFixed(2)}</td>
-                    <td className="px-4 py-3 text-sm text-right">{formatCurrency(Number(entry.hours) * 150)}</td>
+                    <tr key={entry.id} className="border-b border-neutral-50 last:border-0">
+                      <td className="px-2 py-2 text-xs">
+                        {new Date(entry.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </td>
+                      <td className="px-2 py-2 text-xs">{entry.description || '-'}</td>
+                      <td className="px-2 py-2 text-xs text-right font-medium">{Number(entry.hours).toFixed(1)}h</td>
+                      <td className="px-2 py-2 text-xs text-right font-medium">{formatCurrency(Number(entry.hours) * 150)}</td>
                   </tr>
                 ))
               )}
             </tbody>
             {timeEntries.length > 0 && (
-              <tfoot className="bg-neutral-50">
-                <tr>
-                  <td colSpan={2} className="px-4 py-3 font-semibold">Total</td>
-                  <td className="px-4 py-3 text-right font-semibold">{timeEntries.reduce((sum, e) => sum + Number(e.hours), 0).toFixed(2)}</td>
-                  <td className="px-4 py-3 text-right font-semibold">{formatCurrency(timeTotal)}</td>
+                <tfoot className="bg-neutral-50 border-t-2 border-neutral-200">
+                  <tr>
+                    <td colSpan={2} className="px-2 py-2 font-semibold text-xs">Total</td>
+                    <td className="px-2 py-2 text-right font-semibold text-xs">
+                      {timeEntries.reduce((sum, e) => sum + Number(e.hours), 0).toFixed(1)}h
+                    </td>
+                    <td className="px-2 py-2 text-right font-semibold text-xs">{formatCurrency(timeTotal)}</td>
                 </tr>
               </tfoot>
             )}
           </table>
+          </div>
         </div>
       )}
 
-      {/* Expenses Tab */}
+      {/* Expenses Tab - Compact & Modern */}
       {activeSubTab === 'expenses' && (
-        <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
+        <div className="bg-white rounded-lg overflow-hidden" style={{ boxShadow: 'var(--shadow-card)' }}>
+          <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-neutral-50 border-b border-neutral-200">
-              <tr>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase">Date</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase">Description</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase">Category</th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-neutral-600 uppercase">Amount</th>
+              <thead className="bg-neutral-50 border-b border-neutral-100">
+                <tr>
+                  <th className="text-left px-2 py-1.5 text-xs font-medium text-neutral-600">Date</th>
+                  <th className="text-left px-2 py-1.5 text-xs font-medium text-neutral-600">Description</th>
+                  <th className="text-left px-2 py-1.5 text-xs font-medium text-neutral-600 w-20">Category</th>
+                  <th className="text-right px-2 py-1.5 text-xs font-medium text-neutral-600 w-16">Amount</th>
               </tr>
             </thead>
             <tbody>
               {expenses.filter(e => e.billable).length === 0 ? (
-                <tr><td colSpan={4} className="px-4 py-8 text-center text-neutral-500">No billable expenses</td></tr>
+                  <tr>
+                    <td colSpan={4} className="px-2 py-8 text-center text-neutral-400 text-xs">
+                      No billable expenses
+                    </td>
+                  </tr>
               ) : (
                 expenses.filter(e => e.billable).map(expense => (
-                  <tr key={expense.id} className="border-b border-neutral-100">
-                    <td className="px-4 py-3 text-sm">{new Date(expense.date).toLocaleDateString()}</td>
-                    <td className="px-4 py-3 text-sm">{expense.description || '-'}</td>
-                    <td className="px-4 py-3 text-sm">{expense.category || '-'}</td>
-                    <td className="px-4 py-3 text-sm text-right">{formatCurrency(expense.amount)}</td>
+                    <tr key={expense.id} className="border-b border-neutral-50 last:border-0">
+                      <td className="px-2 py-2 text-xs">
+                        {new Date(expense.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </td>
+                      <td className="px-2 py-2 text-xs">{expense.description || '-'}</td>
+                      <td className="px-2 py-2 text-xs">{expense.category || '-'}</td>
+                      <td className="px-2 py-2 text-xs text-right font-medium">{formatCurrency(expense.amount)}</td>
                   </tr>
                 ))
               )}
             </tbody>
             {expenses.filter(e => e.billable).length > 0 && (
-              <tfoot className="bg-neutral-50">
+                <tfoot className="bg-neutral-50 border-t-2 border-neutral-200">
                 <tr>
-                  <td colSpan={3} className="px-4 py-3 font-semibold">Total</td>
-                  <td className="px-4 py-3 text-right font-semibold">{formatCurrency(expensesTotal)}</td>
+                    <td colSpan={3} className="px-2 py-2 font-semibold text-xs">Total</td>
+                    <td className="px-2 py-2 text-right font-semibold text-xs">{formatCurrency(expensesTotal)}</td>
                 </tr>
               </tfoot>
             )}
           </table>
+          </div>
         </div>
       )}
     </div>
@@ -4363,13 +4731,13 @@ function ProjectDetailsTab({
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-5">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-neutral-900">Project Details</h3>
+        <h3 className="text-base sm:text-lg font-semibold text-neutral-900">Project Details</h3>
         <button
           onClick={handleSave}
           disabled={saving}
-          className="px-4 py-2 bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54] disabled:opacity-50"
+          className="px-3 py-1.5 text-xs sm:text-sm bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54] disabled:opacity-50"
         >
           {saving ? 'Saving...' : 'Save Changes'}
         </button>
@@ -4377,23 +4745,23 @@ function ProjectDetailsTab({
 
       {/* Project Name - Read Only */}
       <div>
-        <label className="block text-sm font-medium text-neutral-700 mb-1">Project Name</label>
+        <label className="block text-xs font-medium text-neutral-700 mb-1.5">Project Name</label>
         <input
           type="text"
           value={project.name}
           disabled
-          className="w-full px-3 py-2 border border-neutral-200 rounded-lg bg-neutral-50 text-neutral-600"
+          className="w-full px-3 py-2 text-sm border border-neutral-200 rounded-lg bg-neutral-50 text-neutral-600"
         />
       </div>
 
       {/* Status & Category */}
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-sm font-medium text-neutral-700 mb-1">Project Status</label>
+          <label className="block text-xs font-medium text-neutral-700 mb-1.5">Project Status</label>
           <select
             value={formData.status}
             onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-            className="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-[#476E66] outline-none bg-white"
+            className="w-full px-3 py-2 text-sm border border-neutral-200 rounded-lg focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none bg-white"
           >
             {STATUS_OPTIONS.map(opt => (
               <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -4401,11 +4769,11 @@ function ProjectDetailsTab({
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-neutral-700 mb-1">Category</label>
+          <label className="block text-xs font-medium text-neutral-700 mb-1.5">Category</label>
           <select
             value={formData.category}
             onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-            className="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-[#476E66] outline-none bg-white"
+            className="w-full px-3 py-2 text-sm border border-neutral-200 rounded-lg focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none bg-white"
           >
             {PROJECT_CATEGORIES.map(cat => (
               <option key={cat.value} value={cat.value}>{cat.label}</option>
@@ -4415,35 +4783,35 @@ function ProjectDetailsTab({
       </div>
 
       {/* Dates */}
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-sm font-medium text-neutral-700 mb-1">Start Date</label>
+          <label className="block text-xs font-medium text-neutral-700 mb-1.5">Start Date</label>
           <input
             type="date"
             value={formData.start_date}
             onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
-            className="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-[#476E66] outline-none"
+            className="w-full px-3 py-2 text-sm border border-neutral-200 rounded-lg focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-neutral-700 mb-1">Due Date</label>
+          <label className="block text-xs font-medium text-neutral-700 mb-1.5">Due Date</label>
           <input
             type="date"
             value={formData.due_date}
             onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
-            className="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-[#476E66] outline-none"
+            className="w-full px-3 py-2 text-sm border border-neutral-200 rounded-lg focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none"
           />
         </div>
       </div>
 
       {/* Notes */}
       <div>
-        <label className="block text-sm font-medium text-neutral-700 mb-1">Notes</label>
+        <label className="block text-xs font-medium text-neutral-700 mb-1.5">Notes</label>
         <textarea
           value={formData.status_notes}
           onChange={(e) => setFormData({ ...formData, status_notes: e.target.value })}
           rows={3}
-          className="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-[#476E66] outline-none resize-none"
+          className="w-full px-3 py-2 text-sm border border-neutral-200 rounded-lg focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none resize-none"
           placeholder="Add any notes about this project..."
         />
       </div>

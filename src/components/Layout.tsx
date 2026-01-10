@@ -3,6 +3,8 @@ import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { usePermissions } from '../contexts/PermissionsContext';
 import { api, Project, Client, Invoice, Task, notificationsApi, Notification as AppNotification } from '../lib/api';
+import { DEFAULT_HOURLY_RATE, MIN_TIMER_SAVE_SECONDS, NOTIFICATIONS_LIMIT, SEARCH_RESULTS_PER_TYPE, SEARCH_DEBOUNCE_MS } from '../lib/constants';
+import { useDebounce } from '../hooks/useDebounce';
 import { 
   LayoutDashboard, Users, FolderKanban, Clock, FileText, Calendar, BarChart3, Settings, LogOut,
   Search, Bell, ChevronDown, X, Play, Pause, Square, Menu, PieChart, ArrowLeft, Wallet
@@ -39,6 +41,7 @@ export default function Layout() {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearchQuery = useDebounce(searchQuery, SEARCH_DEBOUNCE_MS);
   const searchRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
@@ -83,7 +86,7 @@ export default function Layout() {
     if (!profile?.company_id) return;
     try {
       const [notifs, count] = await Promise.all([
-        notificationsApi.getNotifications(profile.company_id, profile?.id, 10),
+        notificationsApi.getNotifications(profile.company_id, profile?.id, NOTIFICATIONS_LIMIT),
         notificationsApi.getUnreadCount(profile.company_id, profile?.id)
       ]);
       setNotifications(notifs);
@@ -117,8 +120,15 @@ export default function Layout() {
       timerInterval.current = setInterval(() => setTimerSeconds(s => s + 1), 1000);
     } else if (timerInterval.current) {
       clearInterval(timerInterval.current);
+      timerInterval.current = null;
     }
-    return () => { if (timerInterval.current) clearInterval(timerInterval.current); };
+    // Cleanup function to prevent memory leaks
+    return () => { 
+      if (timerInterval.current) {
+        clearInterval(timerInterval.current); 
+        timerInterval.current = null;
+      }
+    };
   }, [timerRunning]);
 
   // Load tasks when project changes
@@ -183,27 +193,27 @@ export default function Layout() {
     setSearchCache(null);
   }, [profile?.company_id, location.pathname]);
 
-  // Search locally from cache (instant, no network requests)
+  // Search locally from cache (instant, no network requests) - using debounced query
   const filteredSearchResults = useMemo(() => {
-    if (!searchQuery.trim() || !searchCache) return [];
+    if (!debouncedSearchQuery.trim() || !searchCache) return [];
     
-    const query = searchQuery.toLowerCase();
+    const query = debouncedSearchQuery.toLowerCase();
     const results: SearchResult[] = [];
 
-    searchCache.projects.filter(p => p.name.toLowerCase().includes(query)).slice(0, 3).forEach(p => {
+    searchCache.projects.filter(p => p.name.toLowerCase().includes(query)).slice(0, SEARCH_RESULTS_PER_TYPE).forEach(p => {
       results.push({ id: p.id, type: 'project', title: p.name, subtitle: p.client?.name, path: `/projects/${p.id}` });
     });
 
-    searchCache.clients.filter(c => c.name.toLowerCase().includes(query) || c.display_name?.toLowerCase().includes(query)).slice(0, 3).forEach(c => {
+    searchCache.clients.filter(c => c.name.toLowerCase().includes(query) || c.display_name?.toLowerCase().includes(query)).slice(0, SEARCH_RESULTS_PER_TYPE).forEach(c => {
       results.push({ id: c.id, type: 'client', title: c.name, subtitle: c.email, path: '/sales' });
     });
 
-    searchCache.invoices.filter(i => i.invoice_number?.toLowerCase().includes(query) || i.client?.name?.toLowerCase().includes(query)).slice(0, 3).forEach(i => {
+    searchCache.invoices.filter(i => i.invoice_number?.toLowerCase().includes(query) || i.client?.name?.toLowerCase().includes(query)).slice(0, SEARCH_RESULTS_PER_TYPE).forEach(i => {
       results.push({ id: i.id, type: 'invoice', title: i.invoice_number || 'Invoice', subtitle: i.client?.name, path: '/invoicing' });
     });
 
     return results;
-  }, [searchQuery, searchCache]);
+  }, [debouncedSearchQuery, searchCache]);
 
   const formatTimer = (seconds: number) => {
     const h = Math.floor(seconds / 3600);
@@ -216,7 +226,7 @@ export default function Layout() {
   const pauseTimer = () => setTimerRunning(false);
   const stopTimer = async () => {
     setTimerRunning(false);
-    if (timerSeconds >= 60 && profile?.company_id) {
+    if (timerSeconds >= MIN_TIMER_SAVE_SECONDS && profile?.company_id) {
       const hours = Math.round((timerSeconds / 3600) * 4) / 4;
       try {
         await api.createTimeEntry({
@@ -228,7 +238,7 @@ export default function Layout() {
           description: timerDescription,
           date: new Date().toISOString().split('T')[0],
           billable: true,
-          hourly_rate: profile.hourly_rate || 150,
+          hourly_rate: profile.hourly_rate || DEFAULT_HOURLY_RATE,
           approval_status: 'draft',
         });
       } catch (error) {
@@ -254,7 +264,7 @@ export default function Layout() {
         description: timerDescription,
         date: new Date().toISOString().split('T')[0],
         billable: true,
-        hourly_rate: profile.hourly_rate || 150,
+        hourly_rate: profile.hourly_rate || DEFAULT_HOURLY_RATE,
         approval_status: 'draft',
       });
       setManualHours('');
@@ -282,11 +292,11 @@ export default function Layout() {
   };
 
   return (
-    <div className="min-h-screen flex" style={{ backgroundColor: '#F5F5F3' }}>
+    <div className="min-h-screen flex" style={{ backgroundColor: 'var(--bg-page)' }}>
       {/* Mobile Overlay */}
       {sidebarOpen && (
         <div 
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
@@ -301,6 +311,7 @@ export default function Layout() {
         ` } style={{ backgroundColor: '#476E66' }}>
           <div className="p-4 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(255,255,255,0.2)' }}>
             {(sidebarExpanded || sidebarOpen) && <img src="/billdora-logo.png" alt="Billdora" className="h-8" />}
+            {/* Only show toggle button on desktop (lg+) for expand/collapse, on mobile use X to close */}
             <button 
               onClick={() => {
                 if (window.innerWidth >= 1024) {
@@ -309,9 +320,16 @@ export default function Layout() {
                   setSidebarOpen(false);
                 }
               }} 
-              className="p-2 hover:bg-white/20 rounded-lg"
+              className="p-2 hover:bg-white/20 rounded-lg lg:block hidden"
             >
               <Menu className="w-5 h-5" />
+            </button>
+            {/* Mobile close button */}
+            <button 
+              onClick={() => setSidebarOpen(false)} 
+              className="p-2 hover:bg-white/20 rounded-lg lg:hidden"
+            >
+              <X className="w-5 h-5" />
             </button>
           </div>
 
@@ -355,31 +373,36 @@ export default function Layout() {
       {/* Main Content */}
       <div className={`flex-1 ${hideSidebar ? '' : (sidebarExpanded ? 'lg:ml-64' : 'lg:ml-20')} transition-all duration-300`}>
         {/* Header */}
-        <header className="bg-white border-b border-neutral-100 sticky top-0 z-30" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
-          <div className="flex items-center justify-between px-3 lg:px-6 py-2">
-            {/* Mobile menu button */}
-            <button 
-              onClick={() => setSidebarOpen(true)}
-              className="p-2 hover:bg-neutral-100 rounded-lg lg:hidden"
-            >
-              <Menu className="w-5 h-5" />
-            </button>
+        <header className="bg-white sticky top-0 z-30" style={{ paddingTop: 'env(safe-area-inset-top, 0px)', boxShadow: 'var(--shadow-sm)' }}>
+          <div className="flex items-center justify-between px-3 lg:px-5 py-2 lg:py-3">
+            {/* Mobile menu button - Only show when sidebar is hidden (mobile/tablet portrait) */}
+            {!hideSidebar && (
+              <button 
+                onClick={() => setSidebarOpen(true)}
+                className="p-2 hover:bg-neutral-100 rounded-lg lg:hidden"
+              >
+                <Menu className="w-5 h-5" />
+              </button>
+            )}
+            
+            {/* Spacer when no mobile menu button */}
+            {hideSidebar && <div className="w-9 lg:hidden" />}
 
             {/* Search */}
-            <div ref={searchRef} className="relative flex-1 max-w-md mx-4 lg:mx-0 lg:flex-none lg:w-96">
+            <div ref={searchRef} className="relative flex-1 max-w-md mx-2 lg:mx-0 lg:flex-none lg:w-96">
               <button
                 onClick={() => setSearchOpen(true)}
-                className="flex items-center gap-2 w-full px-3 lg:px-4 py-2 lg:py-2.5 text-left bg-neutral-100 hover:bg-neutral-200 rounded-xl text-neutral-500 transition-colors"
+                className="flex items-center gap-2.5 w-full px-3.5 py-2 lg:py-2.5 text-left bg-neutral-100/80 hover:bg-neutral-100 rounded-xl text-neutral-500 transition-colors"
               >
                 <Search className="w-4 h-4" />
                 <span className="text-sm hidden sm:inline">Search projects, clients...</span>
                 <span className="text-sm sm:hidden">Search...</span>
-                <kbd className="ml-auto text-xs bg-neutral-200 px-2 py-0.5 rounded hidden lg:inline">⌘K</kbd>
+                <kbd className="ml-auto text-xs bg-white/80 px-2 py-0.5 rounded-md hidden lg:inline font-medium">⌘K</kbd>
               </button>
 
               {searchOpen && (
-                <div className="absolute top-0 left-0 w-full bg-white rounded-xl shadow-2xl border border-neutral-200 overflow-hidden z-50">
-                  <div className="flex items-center gap-2 px-4 py-3 border-b border-neutral-100">
+                <div className="absolute top-0 left-0 w-full bg-white rounded-2xl overflow-hidden z-50" style={{ boxShadow: 'var(--shadow-dropdown)' }}>
+                  <div className="flex items-center gap-2.5 px-4 py-3.5 border-b border-neutral-100">
                     <Search className="w-4 h-4 text-neutral-400" />
                     <input
                       type="text"
@@ -412,19 +435,19 @@ export default function Layout() {
                         </button>
                       ))}
                     </div>
-                  ) : searchQuery && searchCache && (
+                  ) : debouncedSearchQuery && searchCache && (
                     <div className="p-4 text-center text-neutral-500 text-sm">No results found</div>
                   )}
                 </div>
               )}
             </div>
 
-            <div className="flex items-center gap-2 lg:gap-4">
+            <div className="flex items-center gap-1.5 lg:gap-3">
               {/* Quick Timer Button - hidden on small mobile */}
               {!showTimerWidget && (
                 <button
                   onClick={() => setShowTimerWidget(true)}
-                  className="hidden sm:flex items-center gap-2 px-3 py-2 bg-[#476E66]/10 text-neutral-600 rounded-xl hover:bg-[#3A5B54]/20 transition-colors"
+                  className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 bg-[#476E66]/10 text-neutral-600 rounded-lg hover:bg-[#3A5B54]/20 transition-colors"
                 >
                   <Clock className="w-4 h-4" />
                   <span className="text-sm font-medium hidden md:inline">Timer</span>
@@ -433,7 +456,7 @@ export default function Layout() {
 
               {/* Mini Timer Display */}
               {timerRunning && (
-                <div className="flex items-center gap-2 px-2 lg:px-3 py-2 bg-neutral-100 text-emerald-700 rounded-xl">
+                <div className="flex items-center gap-1.5 px-2 lg:px-2.5 py-1.5 bg-neutral-100 text-emerald-700 rounded-lg">
                   <div className="w-2 h-2 bg-neutral-1000 rounded-full animate-pulse" />
                   <span className="text-xs lg:text-sm font-mono font-medium">{formatTimer(timerSeconds)}</span>
                 </div>
@@ -443,7 +466,7 @@ export default function Layout() {
               <div ref={notificationsRef} className="relative">
                 <button 
                   onClick={() => setNotificationsOpen(!notificationsOpen)}
-                  className="relative p-2 hover:bg-neutral-100 rounded-xl transition-colors"
+                  className="relative p-1.5 hover:bg-neutral-100 rounded-lg transition-colors"
                 >
                   <Bell className="w-5 h-5 text-neutral-600" />
                   {unreadCount > 0 && (
@@ -454,9 +477,9 @@ export default function Layout() {
                 </button>
 
                 {notificationsOpen && (
-                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-lg border border-neutral-100 z-50 overflow-hidden">
-                    <div className="p-3 border-b border-neutral-100 flex items-center justify-between">
-                      <h3 className="font-semibold text-neutral-900">Notifications</h3>
+                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-2xl z-50 overflow-hidden" style={{ boxShadow: 'var(--shadow-dropdown)' }}>
+                    <div className="p-4 border-b border-neutral-100 flex items-center justify-between">
+                      <h3 className="font-semibold text-neutral-900 text-sm">Notifications</h3>
                       {unreadCount > 0 && (
                         <button 
                           onClick={handleMarkAllAsRead}
@@ -506,9 +529,9 @@ export default function Layout() {
               <div ref={userMenuRef} className="relative">
                 <button
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
-                  className="flex items-center gap-2 px-2 lg:px-3 py-2 hover:bg-neutral-100 rounded-xl transition-colors"
+                  className="flex items-center gap-1.5 px-1.5 lg:px-2 py-1 hover:bg-neutral-100 rounded-lg transition-colors"
                 >
-                  <div className="w-8 h-8 rounded-full bg-[#476E66]/20 flex items-center justify-center text-neutral-600 font-medium">
+                  <div className="w-7 h-7 rounded-full bg-[#476E66]/20 flex items-center justify-center text-neutral-600 font-medium text-sm">
                     {profile?.full_name?.charAt(0) || 'U'}
                   </div>
                   {profile?.full_name && <span className="text-sm font-medium text-neutral-700 hidden lg:inline">{profile.full_name}</span>}
@@ -516,10 +539,10 @@ export default function Layout() {
                 </button>
 
                 {userMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-neutral-100 py-2 z-50">
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-2xl py-2 z-50" style={{ boxShadow: 'var(--shadow-dropdown)' }}>
                     <button
                       onClick={() => { navigate('/settings?tab=profile'); setUserMenuOpen(false); }}
-                      className="w-full flex items-center gap-2 px-4 py-2.5 text-left text-neutral-700 hover:bg-neutral-50"
+                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-left text-sm text-neutral-700 hover:bg-neutral-50 transition-colors"
                     >
                       <Users className="w-4 h-4" />
                       My Profile
@@ -527,15 +550,16 @@ export default function Layout() {
                     {isAdmin && (
                     <button
                       onClick={() => { navigate('/settings'); setUserMenuOpen(false); }}
-                      className="w-full flex items-center gap-2 px-4 py-2.5 text-left text-neutral-700 hover:bg-neutral-50"
+                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-left text-sm text-neutral-700 hover:bg-neutral-50 transition-colors"
                     >
                       <Settings className="w-4 h-4" />
                       Settings
                     </button>
                     )}
+                    <div className="my-1 border-t border-neutral-100"></div>
                     <button
                       onClick={() => { signOut(); setUserMenuOpen(false); }}
-                      className="w-full flex items-center gap-2 px-4 py-2.5 text-left text-neutral-900 hover:bg-neutral-100"
+                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-left text-sm text-neutral-700 hover:bg-neutral-50 transition-colors"
                     >
                       <LogOut className="w-4 h-4" />
                       Sign Out
@@ -548,13 +572,13 @@ export default function Layout() {
         </header>
 
         {/* Page Content */}
-        <main className="p-3 lg:p-6">
+        <main className="p-3 lg:p-5">
           <Outlet />
         </main>
 
         {/* Floating Timer Widget */}
         {showTimerWidget && (
-          <div className="fixed bottom-4 right-4 lg:bottom-6 lg:right-6 bg-white rounded-2xl shadow-2xl border border-neutral-200 p-4 w-[calc(100vw-2rem)] sm:w-80 z-50">
+          <div className="fixed bottom-4 right-4 lg:bottom-6 lg:right-6 bg-white rounded-2xl p-5 w-[calc(100vw-2rem)] sm:w-80 z-50" style={{ boxShadow: 'var(--shadow-elevated)' }}>
             <div className="flex items-center justify-between mb-4">
               <h4 className="font-semibold text-neutral-900">Timer</h4>
               <button onClick={() => setShowTimerWidget(false)} className="p-1 hover:bg-neutral-100 rounded">
@@ -632,13 +656,13 @@ export default function Layout() {
                 )}
                 <button
                   onClick={stopTimer}
-                  disabled={timerSeconds < 60}
+                  disabled={timerSeconds < MIN_TIMER_SAVE_SECONDS}
                   className="flex items-center justify-center gap-2 px-4 py-2.5 bg-red-500 text-white rounded-xl hover:bg-red-600 disabled:opacity-50"
                 >
                   <Square className="w-4 h-4" /> Stop
                 </button>
               </div>
-              {timerSeconds > 0 && timerSeconds < 60 && (
+              {timerSeconds > 0 && timerSeconds < MIN_TIMER_SAVE_SECONDS && (
                 <p className="text-xs text-neutral-500 text-center mt-2">Minimum 1 minute to save</p>
               )}
             </div>
