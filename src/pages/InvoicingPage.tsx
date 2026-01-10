@@ -324,9 +324,7 @@ export default function InvoicingPage() {
     <div class="client-name">${client?.name || 'N/A'}</div>
     ${client?.address ? `<div>${client.address}</div>` : ''}
     ${(client?.city || client?.state || client?.zip) ? `<div>${[client?.city, client?.state, client?.zip].filter(Boolean).join(', ')}</div>` : ''}
-    ${client?.email ? `<div>${client.email}</div>` : ''}
     ${client?.phone ? `<div>${client.phone}</div>` : ''}
-    ${client?.website ? `<div>${client.website}</div>` : ''}
   </div>
   
   ${project ? `
@@ -2049,9 +2047,7 @@ function InvoiceDetailView({
     <div class="bill-to-name">${client?.name || 'Client'}</div>
     ${client?.address ? `<div>${client.address}</div>` : ''}
     ${(client?.city || client?.state || client?.zip) ? `<div>${[client?.city, client?.state, client?.zip].filter(Boolean).join(', ')}</div>` : ''}
-    ${client?.email ? `<div>${client.email}</div>` : ''}
     ${client?.phone ? `<div>${client.phone}</div>` : ''}
-    ${client?.website ? `<div>${client.website}</div>` : ''}
   </div>
 
   <div class="calc-type">${calculatorType === 'percentage' ? 'Percentage Billing' : calculatorType === 'milestone' ? 'Milestone Billing' : calculatorType === 'time_material' ? 'Time & Materials' : 'Fixed Fee'}</div>
@@ -2143,7 +2139,7 @@ function InvoiceDetailView({
                     {[invoice.client.city, invoice.client.state, invoice.client.zip].filter(Boolean).join(', ')}
                   </p>
                 )}
-                {invoice.client?.email && <p className="text-neutral-600">{invoice.client.email}</p>}
+                
                 {invoice.client?.phone && <p className="text-neutral-600">{invoice.client.phone}</p>}
                 {invoice.client?.website && <p className="text-neutral-600">{invoice.client.website}</p>}
               </div>

@@ -4073,7 +4073,7 @@ function InlineBillingInvoiceView({
                   {[invoice.client?.city || project?.client?.city, invoice.client?.state || project?.client?.state, invoice.client?.zip || project?.client?.zip].filter(Boolean).join(', ')}
                 </p>
               )}
-              {(invoice.client?.email || project?.client?.email) && <p className="text-neutral-600 text-sm">{invoice.client?.email || project?.client?.email}</p>}
+
               {(invoice.client?.phone || project?.client?.phone) && <p className="text-neutral-600 text-sm">{invoice.client?.phone || project?.client?.phone}</p>}
               {(invoice.client?.website || project?.client?.website) && <p className="text-neutral-600 text-sm">{invoice.client?.website || project?.client?.website}</p>}
             </div>

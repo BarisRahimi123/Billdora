@@ -23,12 +23,24 @@ interface CompanySettings {
   stripe_account_id?: string;
 }
 
+interface Company {
+  name: string;
+  logo_url?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
+  phone?: string;
+  email?: string;
+}
+
 export default function InvoiceViewPage() {
   const { invoiceId } = useParams();
   const [searchParams] = useSearchParams();
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [lineItems, setLineItems] = useState<any[]>([]);
   const [companySettings, setCompanySettings] = useState<CompanySettings | null>(null);
+  const [company, setCompany] = useState<Company | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [processingPayment, setProcessingPayment] = useState(false);
@@ -70,6 +82,21 @@ export default function InvoiceViewPage() {
       }
       
       setInvoice(data[0]);
+
+      // Fetch company info
+      const companyRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/companies?id=eq.${data[0].company_id}&select=name,logo_url,address,city,state,zip,phone,email`,
+        {
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+          }
+        }
+      );
+      const companyData = await companyRes.json();
+      if (companyData && companyData.length > 0) {
+        setCompany(companyData[0]);
+      }
 
       // Fetch company settings to check for Stripe connection
       const settingsRes = await fetch(
@@ -251,9 +278,26 @@ export default function InvoiceViewPage() {
             {/* Header */}
             <div className="flex justify-between items-start mb-8">
               <div>
+                {company?.logo_url && (
+                  <img src={company.logo_url} alt="" className="h-12 w-auto object-contain mb-3" />
+                )}
+                <h2 className="text-xl font-bold text-neutral-900">{company?.name || 'Company'}</h2>
+                {company?.address && <p className="text-sm text-neutral-600">{company.address}</p>}
+                {(company?.city || company?.state || company?.zip) && (
+                  <p className="text-sm text-neutral-600">
+                    {[company.city, company.state, company.zip].filter(Boolean).join(', ')}
+                  </p>
+                )}
+                {company?.phone && <p className="text-sm text-neutral-600">{company.phone}</p>}
+              </div>
+              <div className="text-right">
                 <h1 className="text-3xl font-bold text-neutral-900 mb-1">INVOICE</h1>
                 <p className="text-neutral-500">#{invoice?.invoice_number}</p>
               </div>
+            </div>
+
+            {/* Invoice Dates */}
+            <div className="flex justify-end mb-8">
               <div className="text-right">
                 <p className="text-sm text-neutral-500">Invoice Date</p>
                 <p className="font-medium">{new Date(invoice?.created_at || '').toLocaleDateString()}</p>
@@ -265,7 +309,6 @@ export default function InvoiceViewPage() {
                 )}
               </div>
             </div>
-
             {/* Bill To */}
             <div className="grid grid-cols-2 gap-8 mb-8">
               <div>
@@ -277,7 +320,7 @@ export default function InvoiceViewPage() {
                     {[invoice.client.city, invoice.client.state, invoice.client.zip].filter(Boolean).join(', ')}
                   </p>
                 )}
-                {invoice?.client?.email && <p className="text-neutral-600">{invoice.client.email}</p>}
+                
                 {invoice?.client?.phone && <p className="text-neutral-600">{invoice.client.phone}</p>}
                 {invoice?.client?.website && <p className="text-neutral-600">{invoice.client.website}</p>}
               </div>
