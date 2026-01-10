@@ -24,7 +24,7 @@ interface CompanySettings {
 }
 
 interface Company {
-  name: string;
+  company_name?: string;
   logo_url?: string;
   address?: string;
   city?: string;
@@ -83,9 +83,9 @@ export default function InvoiceViewPage() {
       
       setInvoice(data[0]);
 
-      // Fetch company info
+      // Fetch company info from company_settings
       const companyRes = await fetch(
-        `${SUPABASE_URL}/rest/v1/companies?id=eq.${data[0].company_id}&select=name,logo_url,address,city,state,zip,phone,email`,
+        `${SUPABASE_URL}/rest/v1/company_settings?company_id=eq.${data[0].company_id}&select=company_name,logo_url,address,city,state,zip,phone,email`,
         {
           headers: {
             'apikey': SUPABASE_ANON_KEY,
@@ -281,7 +281,7 @@ export default function InvoiceViewPage() {
                 {company?.logo_url && (
                   <img src={company.logo_url} alt="" className="h-12 w-auto object-contain mb-3" />
                 )}
-                <h2 className="text-xl font-bold text-neutral-900">{company?.name || 'Company'}</h2>
+                <h2 className="text-xl font-bold text-neutral-900">{company?.company_name || 'Company'}</h2>
                 {company?.address && <p className="text-sm text-neutral-600">{company.address}</p>}
                 {(company?.city || company?.state || company?.zip) && (
                   <p className="text-sm text-neutral-600">

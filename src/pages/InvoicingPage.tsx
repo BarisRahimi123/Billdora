@@ -35,7 +35,7 @@ export default function InvoicingPage() {
     const saved = localStorage.getItem('invoicesExpandedClients');
     return saved ? new Set(JSON.parse(saved)) : new Set();
   });
-  const [company, setCompany] = useState<{ name: string; logo_url?: string; address?: string; city?: string; state?: string; zip?: string; phone?: string } | null>(null);
+  const [company, setCompany] = useState<{ company_name?: string; logo_url?: string; address?: string; city?: string; state?: string; zip?: string; phone?: string } | null>(null);
 
   const toggleClientExpanded = (clientName: string) => {
     const newExpanded = new Set(expandedClients);
@@ -145,7 +145,7 @@ export default function InvoicingPage() {
         api.getClients(profile.company_id),
         api.getProjects(profile.company_id),
         recurringInvoicesApi.getAll(profile.company_id),
-        supabase.from('companies').select('name, logo_url, address, city, state, zip, phone').eq('id', profile.company_id).single(),
+        supabase.from('company_settings').select('company_name, logo_url, address, city, state, zip, phone').eq('company_id', profile.company_id).single(),
       ]);
       setInvoices(invoicesData);
       setClients(clientsData);
@@ -1565,7 +1565,7 @@ function InvoiceDetailView({
   clients: Client[];
   projects: Project[];
   companyId: string;
-  company: { name: string; logo_url?: string; address?: string; city?: string; state?: string; zip?: string; phone?: string } | null;
+  company: { company_name?: string; logo_url?: string; address?: string; city?: string; state?: string; zip?: string; phone?: string } | null;
   onClose: () => void; 
   onUpdate: () => void;
   getStatusColor: (status?: string) => string;
@@ -2120,11 +2120,11 @@ function InvoiceDetailView({
                     <img src={company.logo_url} alt="" className="h-16 w-auto object-contain mb-4" />
                   ) : (
                     <div className="w-16 h-16 bg-[#476E66] rounded-xl flex items-center justify-center text-white font-bold text-2xl mb-4">
-                      {company?.name?.charAt(0) || 'C'}
+                      {company?.company_name?.charAt(0) || 'C'}
                     </div>
                   )}
                   <div className="text-sm text-neutral-600">
-                    <p className="font-semibold text-neutral-900 text-base">{company?.name || 'Your Company'}</p>
+                    <p className="font-semibold text-neutral-900 text-base">{company?.company_name || 'Your Company'}</p>
                     {company?.address && <p>{company.address}</p>}
                     {(company?.city || company?.state || company?.zip) && (
                       <p>{[company.city, company.state, company.zip].filter(Boolean).join(', ')}</p>
