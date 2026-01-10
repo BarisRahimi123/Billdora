@@ -583,53 +583,52 @@ export default function QuoteDocumentPage() {
   return (
     <div className="min-h-screen bg-neutral-100">
       {/* Toolbar */}
-      <div className="sticky top-0 z-50 bg-white border-b border-neutral-200 px-2 sm:px-4 lg:px-6 py-2 print:hidden" style={{ paddingTop: 'env(safe-area-inset-top, 8px)' }}>
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-          <div className="flex items-center gap-2 overflow-x-auto">
+      <div className="sticky top-0 z-50 bg-white border-b border-neutral-200 px-4 lg:px-6 py-3 print:hidden">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex items-center gap-2 sm:gap-4 overflow-x-auto">
             <button onClick={() => {
               if (hasUnsavedChanges && !confirm('You have unsaved changes. Are you sure you want to leave?')) return;
               navigate('/sales');
-            }} className="flex items-center gap-1.5 text-neutral-600 hover:text-neutral-900 flex-shrink-0 p-1.5">
-              <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
-              <span className="hidden sm:inline text-sm">Back</span>
+            }} className="flex items-center gap-1 sm:gap-2 text-neutral-600 hover:text-neutral-900 flex-shrink-0">
+              <ArrowLeft className="w-5 h-5" />
+              <span className="hidden sm:inline">Back to Sales</span>
             </button>
-            <div className="h-4 w-px bg-neutral-200 hidden sm:block" />
-            <span className="text-xs sm:text-sm font-medium text-neutral-900 truncate">Proposal Builder</span>
+            <div className="h-6 w-px bg-neutral-200 hidden sm:block" />
+            <span className="text-sm font-medium text-neutral-900">Proposal Builder</span>
           </div>
-          <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto">
+          <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto">
           {hasUnsavedChanges && (
-            <span className="text-xs sm:text-sm text-amber-600 hidden sm:inline">Unsaved</span>
+            <span className="text-sm text-neutral-900">Unsaved changes</span>
           )}
           <button
             onClick={saveChanges}
             disabled={saving}
-            className="flex items-center gap-1 px-2.5 sm:px-3 py-1.5 sm:py-2 bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54] disabled:opacity-50 text-xs sm:text-sm flex-shrink-0"
+            className="flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54] disabled:opacity-50 text-sm flex-shrink-0"
           >
-            <Save className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            <span className="hidden sm:inline">{saving ? 'Saving...' : isNewQuote ? 'Create' : 'Save'}</span>
+            <Save className="w-4 h-4" />
+            <span className="hidden xs:inline">{saving ? 'Saving...' : isNewQuote ? 'Create' : 'Save'}</span>
           </button>
           <button 
             onClick={handleServerPdf} 
             disabled={generatingPdf}
-            className="hidden md:flex items-center gap-1.5 px-3 py-1.5 border border-neutral-200 rounded-lg hover:bg-neutral-50 disabled:opacity-50 text-xs sm:text-sm flex-shrink-0"
+            className="hidden sm:flex items-center gap-2 px-4 py-2 border border-neutral-200 rounded-lg hover:bg-neutral-50 disabled:opacity-50 text-sm flex-shrink-0"
           >
-            <Download className="w-3.5 h-3.5" />
-            {generatingPdf ? 'PDF...' : 'PDF'}
+            <Download className="w-4 h-4" />
+            {generatingPdf ? 'Generating...' : 'Export PDF'}
           </button>
-          <button onClick={handlePrint} className="flex items-center gap-1 px-2 sm:px-3 py-1.5 text-neutral-500 hover:text-neutral-900 text-xs sm:text-sm" title="Preview">
-            <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            <span className="hidden sm:inline">Preview</span>
+          <button onClick={handlePrint} className="flex items-center gap-2 px-3 py-2 text-neutral-500 hover:text-neutral-900 text-sm" title="Preview">
+            Preview
           </button>
           <button 
             onClick={() => setShowSectionSettings(!showSectionSettings)} 
-            className="flex items-center gap-1 px-2 py-1.5 text-neutral-500 hover:text-neutral-900"
-            title="Settings"
+            className="flex items-center gap-2 px-3 py-2 text-neutral-500 hover:text-neutral-900 text-sm"
+            title="Section Settings"
           >
-            <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <Settings className="w-4 h-4" />
           </button>
           {!isNewQuote && (
-            <button onClick={handleSendToCustomer} className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 border border-neutral-900 text-neutral-900 rounded-lg hover:bg-neutral-50 text-xs sm:text-sm flex-shrink-0">
-              <Send className="w-3.5 h-3.5" />
+            <button onClick={handleSendToCustomer} className="hidden md:flex items-center gap-2 px-4 py-2 border border-neutral-900 text-neutral-900 rounded-lg hover:bg-neutral-50 text-sm flex-shrink-0">
+              <Send className="w-4 h-4" />
               Send
             </button>
           )}
@@ -688,12 +687,12 @@ export default function QuoteDocumentPage() {
                 <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-black/80" />
               </div>
 
-              {/* Upload Background Button */}
+              {/* Upload Background Button with onboarding hint */}
               <label className="absolute top-4 right-4 z-20 cursor-pointer print:hidden">
                 <input type="file" accept="image/*" onChange={handleBgUpload} className="hidden" />
                 <div className="flex items-center gap-2 px-3 py-1.5 bg-white/20 backdrop-blur-sm text-white text-sm rounded-lg hover:bg-white/30 transition-colors">
                   <Upload className="w-4 h-4" />
-                  Change Background
+                  {isNewQuote ? '① Upload Background' : 'Change Background'}
                 </div>
               </label>
 
@@ -982,10 +981,14 @@ export default function QuoteDocumentPage() {
                 </div>
               </div>
 
-              {/* Customer Section - Clean Minimal Design */}
-              <div className="px-8 py-4">
-                <h3 className="text-sm font-semibold text-neutral-900 uppercase tracking-wider mb-3">Customer</h3>
-                <div className="border border-neutral-200 rounded-lg p-5">
+              {/* Customer Section - iOS Card Style */}
+              <div className="px-8 py-6">
+                <h3 className="text-sm font-semibold text-neutral-900 uppercase tracking-wider mb-4">Customer</h3>
+                <div className="bg-white rounded-2xl border border-neutral-100 p-5 shadow-sm">
+                  {/* Onboarding hint for new quotes */}
+                  {isNewQuote && !selectedClientId && (
+                    <p className="text-neutral-400 text-sm mb-3 italic">② Select or create a client</p>
+                  )}
                   <div className="mb-4 print:hidden">
                     <div className="flex items-center gap-3">
                       <select
@@ -1061,73 +1064,77 @@ export default function QuoteDocumentPage() {
                       )}
                     </div>
                   )}
-                  {!client && <p className="text-neutral-400 text-sm italic">No client selected</p>}
+                  {!client && !isNewQuote && <p className="text-neutral-400 text-sm italic">No client selected</p>}
                 </div>
               </div>
 
               {/* Line Items - Mobile Card / Desktop Table Layout */}
-              <div className="px-2 sm:px-4 lg:px-8 py-3">
-                <h3 className="text-xs sm:text-sm font-semibold text-neutral-900 uppercase tracking-wider mb-2 sticky top-0 bg-white z-10 py-1.5 -mt-1.5">Line Items</h3>
+              <div className="px-4 sm:px-8 py-6">
+                <div className="flex items-center justify-between mb-4 sticky top-0 bg-white z-10 py-2 -mt-2">
+                  <h3 className="text-sm font-semibold text-neutral-900 uppercase tracking-wider">Line Items</h3>
+                  {isNewQuote && selectedClientId && lineItems.every(item => !item.description.trim()) && (
+                    <span className="text-neutral-400 text-sm italic">③ Add your services</span>
+                  )}
+                </div>
                 
                 {/* Mobile Card Layout */}
-                <div className="block lg:hidden space-y-3">
+                <div className="block lg:hidden space-y-4">
                   {lineItems.map((item, idx) => (
-                    <div key={item.id} className="border border-neutral-200 rounded-lg p-3 bg-white shadow-sm">
-                      <div className="flex justify-between items-start mb-2">
-                        <span className="text-[10px] font-medium text-neutral-400 uppercase tracking-wider">Item {idx + 1}</span>
+                    <div key={item.id} className="bg-white rounded-2xl border border-neutral-100 p-5 shadow-sm">
+                      <div className="flex justify-between items-start mb-3">
+                        <span className="text-xs font-medium text-neutral-400 uppercase">Item {idx + 1}</span>
                         {lineItems.length > 1 && (
                           <button
                             onClick={() => removeLineItem(item.id)}
-                            className="p-1.5 -m-1.5 text-red-500 hover:bg-red-50 rounded print:hidden"
-                            title="Remove item"
+                            className="p-2 -m-2 text-red-500 hover:bg-red-50 rounded-lg print:hidden"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className="w-5 h-5" />
                           </button>
                         )}
                       </div>
                       
-                      <div className="space-y-3">
+                      <div className="space-y-4">
                         <div>
-                          <label className="block text-[10px] text-neutral-500 mb-1">Description</label>
+                          <label className="block text-xs text-neutral-500 mb-1">Description</label>
                           <input
                             type="text"
                             value={item.description}
                             onChange={(e) => updateLineItem(item.id, { description: e.target.value })}
-                            className="w-full px-2.5 py-2 border border-neutral-200 rounded-lg text-neutral-900 text-sm"
+                            className="w-full px-3 py-3 border border-neutral-200 rounded-lg text-neutral-900 text-base"
                             placeholder="Item description..."
                           />
                         </div>
                         
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-2 gap-3">
                           <div>
-                            <label className="block text-[10px] text-neutral-500 mb-1">Unit Price</label>
+                            <label className="block text-xs text-neutral-500 mb-1">Unit Price</label>
                             <input
                               type="number"
                               value={item.unitPrice || ''}
                               onChange={(e) => updateLineItem(item.id, { unitPrice: parseFloat(e.target.value) || 0 })}
-                              className="w-full px-2.5 py-2 border border-neutral-200 rounded-lg text-neutral-900 text-sm"
+                              className="w-full px-3 py-3 border border-neutral-200 rounded-lg text-neutral-900 text-base"
                               placeholder="0.00"
                             />
                           </div>
                           <div>
-                            <label className="block text-[10px] text-neutral-500 mb-1">Quantity</label>
+                            <label className="block text-xs text-neutral-500 mb-1">Quantity</label>
                             <input
                               type="number"
                               value={item.qty || ''}
                               onChange={(e) => updateLineItem(item.id, { qty: parseInt(e.target.value) || 1 })}
-                              className="w-full px-2.5 py-2 border border-neutral-200 rounded-lg text-neutral-900 text-sm"
+                              className="w-full px-3 py-3 border border-neutral-200 rounded-lg text-neutral-900 text-base"
                               min="1"
                             />
                           </div>
                         </div>
                         
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-2 gap-3">
                           <div>
-                            <label className="block text-[10px] text-neutral-500 mb-1">Unit</label>
+                            <label className="block text-xs text-neutral-500 mb-1">Unit</label>
                             <select
                               value={item.unit}
                               onChange={(e) => updateLineItem(item.id, { unit: e.target.value })}
-                              className="w-full px-2.5 py-2 border border-neutral-200 rounded-lg text-neutral-900 text-sm bg-white"
+                              className="w-full px-3 py-3 border border-neutral-200 rounded-lg text-neutral-900 text-base bg-white"
                             >
                               <option value="each">each</option>
                               <option value="hour">hour</option>
@@ -1139,30 +1146,30 @@ export default function QuoteDocumentPage() {
                             </select>
                           </div>
                           <div>
-                            <label className="block text-[10px] text-neutral-500 mb-1">Est. Days</label>
+                            <label className="block text-xs text-neutral-500 mb-1">Est. Days</label>
                             <input
                               type="number"
                               value={item.estimatedDays || ''}
                               onChange={(e) => updateLineItem(item.id, { estimatedDays: parseInt(e.target.value) || 1 })}
-                              className="w-full px-2.5 py-2 border border-neutral-200 rounded-lg text-neutral-900 text-sm"
+                              className="w-full px-3 py-3 border border-neutral-200 rounded-lg text-neutral-900 text-base"
                               min="1"
                             />
                           </div>
                         </div>
                         
                         <div className="flex items-center justify-between pt-2 border-t border-neutral-100">
-                          <label className="flex items-center gap-2">
+                          <label className="flex items-center gap-3 py-2">
                             <input
                               type="checkbox"
                               checked={item.taxed}
                               onChange={(e) => updateLineItem(item.id, { taxed: e.target.checked })}
-                              className="w-4 h-4 rounded border-neutral-300"
+                              className="w-5 h-5 rounded border-neutral-300"
                             />
-                            <span className="text-xs text-neutral-600">Taxable</span>
+                            <span className="text-sm text-neutral-600">Taxable</span>
                           </label>
                           <div className="text-right">
-                            <span className="text-[10px] text-neutral-500">Amount</span>
-                            <p className="text-base sm:text-lg font-semibold text-neutral-900">
+                            <span className="text-xs text-neutral-500">Amount</span>
+                            <p className="text-lg font-semibold text-neutral-900">
                               {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(item.unitPrice * item.qty)}
                             </p>
                           </div>
@@ -1172,20 +1179,20 @@ export default function QuoteDocumentPage() {
                   ))}
                   
                   {/* Mobile Add Buttons */}
-                  <div className="flex flex-wrap gap-2 print:hidden">
+                  <div className="flex flex-wrap gap-3 print:hidden">
                     <button
                       onClick={addLineItem}
-                      className="flex items-center gap-1.5 px-3 py-2 text-xs sm:text-sm text-neutral-600 bg-neutral-50 hover:bg-neutral-100 rounded-lg min-h-[40px]"
+                      className="flex items-center gap-2 px-4 py-3 text-sm text-neutral-600 bg-neutral-50 hover:bg-neutral-100 rounded-xl min-h-[44px]"
                     >
-                      <Plus className="w-4 h-4" />
+                      <Plus className="w-5 h-5" />
                       Add Item
                     </button>
                     {services.length > 0 && (
                       <button
                         onClick={() => setShowServicesModal(true)}
-                        className="flex items-center gap-1.5 px-3 py-2 text-xs sm:text-sm text-neutral-600 bg-neutral-50 hover:bg-neutral-100 rounded-lg min-h-[40px]"
+                        className="flex items-center gap-2 px-4 py-3 text-sm text-neutral-600 bg-neutral-50 hover:bg-neutral-100 rounded-xl min-h-[44px]"
                       >
-                        <Package className="w-4 h-4" />
+                        <Package className="w-5 h-5" />
                         From Services
                       </button>
                     )}
@@ -1193,18 +1200,18 @@ export default function QuoteDocumentPage() {
                 </div>
                 
                 {/* Desktop Table Layout */}
-                <div className="hidden lg:block border border-neutral-200 rounded-lg overflow-hidden">
+                <div className="hidden lg:block bg-white rounded-2xl border border-neutral-100 overflow-hidden shadow-sm">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="bg-neutral-50 border-b border-neutral-200">
-                        <th className="text-left px-5 py-3 font-medium text-neutral-600 text-xs uppercase tracking-wider">Description</th>
-                        <th className="text-right px-4 py-3 font-medium text-neutral-600 text-xs uppercase tracking-wider w-24">Unit Price</th>
-                        <th className="text-center px-4 py-3 font-medium text-neutral-600 text-xs uppercase tracking-wider w-20">Unit</th>
-                        <th className="text-center px-4 py-3 font-medium text-neutral-600 text-xs uppercase tracking-wider w-14">Qty</th>
-                        <th className="text-center px-4 py-3 font-medium text-neutral-600 text-xs uppercase tracking-wider w-14">Tax</th>
-                        <th className="text-center px-3 py-3 font-medium text-neutral-600 text-xs uppercase tracking-wider w-16">Days</th>
-                        <th className="text-center px-3 py-3 font-medium text-neutral-600 text-xs uppercase tracking-wider w-40">Scheduling</th>
-                        <th className="text-right px-5 py-3 font-medium text-neutral-600 text-xs uppercase tracking-wider w-24">Amount</th>
+                      <tr className="bg-neutral-50/70 border-b border-neutral-100">
+                        <th className="text-left px-5 py-3.5 font-semibold text-neutral-500 text-xs uppercase tracking-wider">Description</th>
+                        <th className="text-right px-4 py-3.5 font-semibold text-neutral-500 text-xs uppercase tracking-wider w-24">Unit Price</th>
+                        <th className="text-center px-4 py-3.5 font-semibold text-neutral-500 text-xs uppercase tracking-wider w-20">Unit</th>
+                        <th className="text-center px-4 py-3.5 font-semibold text-neutral-500 text-xs uppercase tracking-wider w-14">Qty</th>
+                        <th className="text-center px-4 py-3.5 font-semibold text-neutral-500 text-xs uppercase tracking-wider w-14">Tax</th>
+                        <th className="text-center px-3 py-3.5 font-semibold text-neutral-500 text-xs uppercase tracking-wider w-16">Days</th>
+                        <th className="text-center px-3 py-3.5 font-semibold text-neutral-500 text-xs uppercase tracking-wider w-40">Scheduling</th>
+                        <th className="text-right px-5 py-3.5 font-semibold text-neutral-500 text-xs uppercase tracking-wider w-24">Amount</th>
                         <th className="w-10 print:hidden"></th>
                       </tr>
                     </thead>
