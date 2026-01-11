@@ -292,7 +292,7 @@ export default function SalesPage() {
     }
   };
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin w-8 h-8 border-2 border-neutral-500 border-t-transparent rounded-full" />
@@ -1828,12 +1828,17 @@ function LeadModal({ lead, companyId, onClose, onSave }: {
   const [estimatedValue, setEstimatedValue] = useState(lead?.estimated_value?.toString() || '');
   const [notes, setNotes] = useState(lead?.notes || '');
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!name.trim()) {
+      setError('Contact name is required');
+      return;
+    }
 
     setSaving(true);
+    setError(null);
     try {
       const data: Partial<Lead> = {
         company_id: companyId,
@@ -1853,8 +1858,9 @@ function LeadModal({ lead, companyId, onClose, onSave }: {
         await leadsApi.createLead(data);
       }
       onSave();
-    } catch (error) {
-      console.error('Failed to save lead:', error);
+    } catch (err: any) {
+      console.error('Failed to save lead:', err);
+      setError(err?.message || 'Failed to save lead. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -1870,6 +1876,9 @@ function LeadModal({ lead, companyId, onClose, onSave }: {
           </button>
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {error && (
+            <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">{error}</div>
+          )}
           <div>
             <label className="block text-sm font-medium text-neutral-700 mb-1.5">Contact Name *</label>
             <input
