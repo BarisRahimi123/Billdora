@@ -2374,6 +2374,21 @@ export const leadsApi = {
     // Update lead status to won
     await supabase.from('leads').update({ status: 'won', updated_at: new Date().toISOString() }).eq('id', lead.id);
     
+    // Link any projects created from this lead's quotes to the new client
+    const { data: leadQuotes } = await supabase
+      .from('quotes')
+      .select('id')
+      .eq('lead_id', lead.id);
+    
+    if (leadQuotes && leadQuotes.length > 0) {
+      const quoteIds = leadQuotes.map(q => q.id);
+      // Update projects that were created from these quotes
+      await supabase
+        .from('projects')
+        .update({ client_id: data.id })
+        .in('quote_id', quoteIds);
+    }
+    
     return data;
   }
 };
