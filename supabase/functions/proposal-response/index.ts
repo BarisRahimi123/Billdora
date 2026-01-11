@@ -111,17 +111,48 @@ Deno.serve(async (req) => {
         );
         const lineItems = await itemsRes.json();
 
-        // Get client
-        const clientRes = await fetch(
-          `${SUPABASE_URL}/rest/v1/clients?id=eq.${quotes[0]?.client_id}&select=*`,
-          {
-            headers: {
-              'apikey': SUPABASE_SERVICE_ROLE_KEY!,
-              'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
+        // Get client or lead
+        let client = null;
+        if (quotes[0]?.client_id) {
+          const clientRes = await fetch(
+            `${SUPABASE_URL}/rest/v1/clients?id=eq.${quotes[0].client_id}&select=*`,
+            {
+              headers: {
+                'apikey': SUPABASE_SERVICE_ROLE_KEY!,
+                'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
+              }
             }
+          );
+          const clients = await clientRes.json();
+          client = clients[0];
+        } else if (quotes[0]?.lead_id) {
+          // Fetch lead data and map to client-like structure
+          const leadRes = await fetch(
+            `${SUPABASE_URL}/rest/v1/leads?id=eq.${quotes[0].lead_id}&select=*`,
+            {
+              headers: {
+                'apikey': SUPABASE_SERVICE_ROLE_KEY!,
+                'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
+              }
+            }
+          );
+          const leads = await leadRes.json();
+          const lead = leads[0];
+          if (lead) {
+            client = {
+              id: lead.id,
+              name: lead.company_name || lead.name,
+              primary_contact_name: lead.name,
+              primary_contact_email: lead.email,
+              email: lead.email,
+              phone: lead.phone,
+              address: lead.address,
+              city: lead.city,
+              state: lead.state,
+              zip: lead.zip
+            };
           }
-        );
-        const clients = await clientRes.json();
+        }
 
         // Get company settings
         const companyRes = await fetch(
@@ -151,7 +182,7 @@ Deno.serve(async (req) => {
           verified: true,
           quote: quotes[0],
           lineItems,
-          client: clients[0],
+          client: client,
           company: company[0],
           tokenId: tokenRecord.id,
           existingResponse: existingResponse[0] || null
