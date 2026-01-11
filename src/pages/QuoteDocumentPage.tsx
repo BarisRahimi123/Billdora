@@ -1034,6 +1034,99 @@ export default function QuoteDocumentPage() {
               />
             </div>
 
+            {/* Send To - Client OR Lead Selection */}
+            <div className="px-6 py-4 border-b border-neutral-100">
+              <label className="block text-sm font-medium text-neutral-700 mb-3">Send To</label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Client Dropdown */}
+                <div className={`transition-opacity ${recipientType === 'lead' ? 'opacity-40' : ''}`}>
+                  <label className="block text-xs font-medium text-neutral-500 uppercase tracking-wider mb-1.5">Client</label>
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={selectedClientId}
+                      onChange={(e) => { 
+                        setSelectedClientId(e.target.value); 
+                        if (e.target.value) {
+                          setSelectedLeadId('');
+                          setSelectedLead(null);
+                        }
+                        setHasUnsavedChanges(true); 
+                      }}
+                      disabled={recipientType === 'lead'}
+                      className={`flex-1 px-3 py-2.5 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-[#476E66] focus:border-transparent outline-none text-sm ${recipientType === 'lead' ? 'bg-neutral-100 cursor-not-allowed' : ''}`}
+                    >
+                      <option value="">Select a client...</option>
+                      {clients.map(c => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => setShowNewClientModal(true)}
+                      disabled={recipientType === 'lead'}
+                      className={`px-3 py-2.5 text-sm border border-neutral-200 rounded-lg ${recipientType === 'lead' ? 'opacity-40 cursor-not-allowed' : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50'}`}
+                    >
+                      <UserPlus className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Lead Dropdown */}
+                <div className={`transition-opacity ${recipientType === 'client' ? 'opacity-40' : ''}`}>
+                  <label className="block text-xs font-medium text-neutral-500 uppercase tracking-wider mb-1.5">Lead</label>
+                  <select
+                    value={selectedLeadId}
+                    onChange={(e) => { 
+                      setSelectedLeadId(e.target.value); 
+                      if (e.target.value) {
+                        setSelectedClientId('');
+                        setClient(null);
+                      }
+                      setHasUnsavedChanges(true); 
+                    }}
+                    disabled={recipientType === 'client'}
+                    className={`w-full px-3 py-2.5 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-[#476E66] focus:border-transparent outline-none text-sm ${recipientType === 'client' ? 'bg-neutral-100 cursor-not-allowed' : ''}`}
+                  >
+                    <option value="">Select a lead...</option>
+                    {leads.map(l => (
+                      <option key={l.id} value={l.id}>{l.name}{l.company_name ? ` (${l.company_name})` : ''}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              {/* Selected recipient indicator */}
+              {recipientType && (
+                <div className="mt-3 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    {recipientType === 'client' && (
+                      <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-700 rounded-full">
+                        ✓ Sending to Client: {client?.name}
+                      </span>
+                    )}
+                    {recipientType === 'lead' && (
+                      <span className="px-2 py-1 text-xs font-medium bg-amber-100 text-amber-700 rounded-full">
+                        ✓ Sending to Lead: {selectedLead?.company_name || selectedLead?.name}
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedClientId('');
+                      setSelectedLeadId('');
+                      setClient(null);
+                      setSelectedLead(null);
+                      setRecipientType(null);
+                      setHasUnsavedChanges(true);
+                    }}
+                    className="text-xs text-neutral-500 hover:text-neutral-700 underline"
+                  >
+                    Clear
+                  </button>
+                </div>
+              )}
+            </div>
+
             {/* Desktop Table Layout */}
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
