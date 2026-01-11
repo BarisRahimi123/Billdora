@@ -1112,15 +1112,19 @@ export default function SalesPage() {
                               <span className="text-xs font-semibold text-amber-700 uppercase">Draft ({draftQuotes.length})</span>
                             </div>
                             {draftQuotes.map(quote => (
-                              <div key={quote.id} className="px-4 py-3 hover:bg-neutral-50 cursor-pointer flex items-center justify-between" onClick={() => navigate(`/quotes/${quote.id}/document`)}>
-                                <div className="flex items-center gap-3 min-w-0">
+                              <div key={quote.id} className="px-4 py-3 hover:bg-neutral-50 cursor-pointer flex items-center justify-between gap-2" onClick={() => navigate(`/quotes/${quote.id}/document`)}>
+                                <div className="flex items-center gap-3 min-w-0 flex-1">
                                   <FileText className="w-4 h-4 text-neutral-400 flex-shrink-0" />
                                   <div className="min-w-0">
                                     <p className="font-medium text-neutral-900 text-sm truncate">{quote.title}</p>
-                                    <p className="text-xs text-neutral-500">{quote.quote_number}</p>
+                                    <p className="text-xs text-neutral-500">{quote.quote_number} • {new Date(quote.created_at || '').toLocaleDateString()}
+                                      {(quote.view_count ?? 0) > 0 && (
+                                        <span className="ml-1"> • <Eye className="w-3 h-3 inline" /> {quote.view_count} view{quote.view_count !== 1 ? 's' : ''} ({new Date(quote.last_viewed_at || '').toLocaleDateString()} {new Date(quote.last_viewed_at || '').toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})})</span>
+                                      )}
+                                    </p>
                                   </div>
                                 </div>
-                                <span className="font-medium text-neutral-900 text-sm">{formatCurrency(quote.total_amount)}</span>
+                                <span className="font-medium text-neutral-900 text-sm flex-shrink-0">{formatCurrency(quote.total_amount)}</span>
                               </div>
                             ))}
                           </div>
@@ -1131,15 +1135,19 @@ export default function SalesPage() {
                               <span className="text-xs font-semibold text-blue-700 uppercase">Sent ({sentQuotes.length})</span>
                             </div>
                             {sentQuotes.map(quote => (
-                              <div key={quote.id} className="px-4 py-3 hover:bg-neutral-50 cursor-pointer flex items-center justify-between" onClick={() => navigate(`/quotes/${quote.id}/document`)}>
-                                <div className="flex items-center gap-3 min-w-0">
+                              <div key={quote.id} className="px-4 py-3 hover:bg-neutral-50 cursor-pointer flex items-center justify-between gap-2" onClick={() => navigate(`/quotes/${quote.id}/document`)}>
+                                <div className="flex items-center gap-3 min-w-0 flex-1">
                                   <FileText className="w-4 h-4 text-blue-400 flex-shrink-0" />
                                   <div className="min-w-0">
                                     <p className="font-medium text-neutral-900 text-sm truncate">{quote.title}</p>
-                                    <p className="text-xs text-neutral-500">{quote.quote_number}</p>
+                                    <p className="text-xs text-neutral-500">{quote.quote_number} • {new Date(quote.created_at || '').toLocaleDateString()}
+                                      {(quote.view_count ?? 0) > 0 && (
+                                        <span className="ml-1"> • <Eye className="w-3 h-3 inline" /> {quote.view_count} view{quote.view_count !== 1 ? 's' : ''} ({new Date(quote.last_viewed_at || '').toLocaleDateString()} {new Date(quote.last_viewed_at || '').toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})})</span>
+                                      )}
+                                    </p>
                                   </div>
                                 </div>
-                                <span className="font-medium text-neutral-900 text-sm">{formatCurrency(quote.total_amount)}</span>
+                                <span className="font-medium text-neutral-900 text-sm flex-shrink-0">{formatCurrency(quote.total_amount)}</span>
                               </div>
                             ))}
                           </div>
@@ -1150,15 +1158,19 @@ export default function SalesPage() {
                               <span className="text-xs font-semibold text-emerald-700 uppercase">Signed ({signedQuotes.length})</span>
                             </div>
                             {signedQuotes.map(quote => (
-                              <div key={quote.id} className="px-4 py-3 hover:bg-neutral-50 cursor-pointer flex items-center justify-between" onClick={() => navigate(`/quotes/${quote.id}/document`)}>
-                                <div className="flex items-center gap-3 min-w-0">
+                              <div key={quote.id} className="px-4 py-3 hover:bg-neutral-50 cursor-pointer flex items-center justify-between gap-2" onClick={() => navigate(`/quotes/${quote.id}/document`)}>
+                                <div className="flex items-center gap-3 min-w-0 flex-1">
                                   <FileText className="w-4 h-4 text-emerald-500 flex-shrink-0" />
                                   <div className="min-w-0">
                                     <p className="font-medium text-neutral-900 text-sm truncate">{quote.title}</p>
-                                    <p className="text-xs text-neutral-500">{quote.quote_number}</p>
+                                    <p className="text-xs text-neutral-500">{quote.quote_number} • {new Date(quote.created_at || '').toLocaleDateString()}
+                                      {(quote.view_count ?? 0) > 0 && (
+                                        <span className="ml-1"> • <Eye className="w-3 h-3 inline" /> {quote.view_count} view{quote.view_count !== 1 ? 's' : ''} ({new Date(quote.last_viewed_at || '').toLocaleDateString()} {new Date(quote.last_viewed_at || '').toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})})</span>
+                                      )}
+                                    </p>
                                   </div>
                                 </div>
-                                <span className="font-medium text-neutral-900 text-sm">{formatCurrency(quote.total_amount)}</span>
+                                <span className="font-medium text-neutral-900 text-sm flex-shrink-0">{formatCurrency(quote.total_amount)}</span>
                               </div>
                             ))}
                           </div>
