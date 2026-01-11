@@ -33,7 +33,7 @@ export default function QuoteDocumentPage() {
   const { quoteId } = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { profile } = useAuth();
+  const { profile, loading: authLoading } = useAuth();
   const { showToast } = useToast();
   const isNewQuote = quoteId === 'new';
   
@@ -233,7 +233,10 @@ export default function QuoteDocumentPage() {
   }, [hasUnsavedChanges]);
 
   async function loadData() {
-    if (!profile?.company_id) return;
+    if (!profile?.company_id) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       // Load clients for dropdown
@@ -646,7 +649,7 @@ export default function QuoteDocumentPage() {
     return new Date(dateStr).toLocaleDateString();
   };
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-neutral-100">
         <div className="animate-spin w-8 h-8 border-2 border-neutral-600 border-t-transparent rounded-full" />
