@@ -208,6 +208,7 @@ export interface Quote {
   id: string;
   company_id: string;
   client_id: string;
+  lead_id?: string;
   project_id?: string;
   quote_number?: string;
   title: string;

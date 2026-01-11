@@ -527,6 +527,7 @@ export default function QuoteDocumentPage() {
         const newQuote = await api.createQuote({
           company_id: profile.company_id,
           client_id: selectedClientId || null,
+          lead_id: selectedLeadId || null,
           title: documentTitle.trim(),
           description: description || '',
           total_amount: total,
@@ -545,6 +546,7 @@ export default function QuoteDocumentPage() {
           title: documentTitle.trim(),
           description: description || '',
           client_id: selectedClientId || null,
+          lead_id: selectedLeadId || null,
           total_amount: total,
           valid_until: validUntil || undefined,
           cover_background_url: coverBgUrl,
