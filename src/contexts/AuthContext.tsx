@@ -166,9 +166,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     );
 
+    // Proactive session refresh every 10 minutes to prevent stale tokens
+    const refreshInterval = setInterval(async () => {
+      if (isMounted) {
+        try {
+          await supabase.auth.refreshSession();
+        } catch (e) {
+          console.warn('Session refresh failed:', e);
+        }
+      }
+    }, 10 * 60 * 1000);
+
+    // Refresh session when tab becomes visible after being hidden
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState === 'visible' && isMounted) {
+        try {
+          const { data, error } = await supabase.auth.refreshSession();
+          if (error || !data.session) {
+            // Session expired, redirect to login
+            setUser(null);
+            setProfile(null);
+          }
+        } catch (e) {
+          console.warn('Session refresh on visibility failed:', e);
+        }
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     return () => {
       isMounted = false;
       clearTimeout(timeout);
+      clearInterval(refreshInterval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       subscription.unsubscribe();
     };
   }, []);

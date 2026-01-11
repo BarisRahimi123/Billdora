@@ -1,4 +1,5 @@
 // API utilities with retry logic and error handling
+import { supabase } from './supabase';
 
 export class ApiError extends Error {
   constructor(
@@ -24,6 +25,20 @@ const defaultRetryConfig: RetryConfig = {
   maxDelay: 10000,
 };
 
+function isAuthError(error: unknown): boolean {
+  if (error instanceof Error) {
+    const message = error.message.toLowerCase();
+    return (
+      message.includes('jwt') ||
+      message.includes('token') ||
+      message.includes('unauthorized') ||
+      message.includes('401') ||
+      message.includes('session')
+    );
+  }
+  return false;
+}
+
 function isRetryableError(error: unknown): boolean {
   if (error instanceof ApiError) return error.retryable;
   if (error instanceof Error) {
@@ -45,18 +60,56 @@ function getDelay(attempt: number, config: RetryConfig): number {
   return Math.min(delay + jitter, config.maxDelay);
 }
 
+// Track if we're currently refreshing to prevent multiple simultaneous refreshes
+let isRefreshing = false;
+let refreshPromise: Promise<boolean> | null = null;
+
+async function refreshSession(): Promise<boolean> {
+  if (isRefreshing && refreshPromise) {
+    return refreshPromise;
+  }
+  
+  isRefreshing = true;
+  refreshPromise = (async () => {
+    try {
+      const { data, error } = await supabase.auth.refreshSession();
+      return !error && !!data.session;
+    } catch {
+      return false;
+    } finally {
+      isRefreshing = false;
+      refreshPromise = null;
+    }
+  })();
+  
+  return refreshPromise;
+}
+
 export async function withRetry<T>(
   fn: () => Promise<T>,
   config: Partial<RetryConfig> = {}
 ): Promise<T> {
   const cfg = { ...defaultRetryConfig, ...config };
   let lastError: unknown;
+  let hasTriedRefresh = false;
 
   for (let attempt = 0; attempt <= cfg.maxRetries; attempt++) {
     try {
       return await fn();
     } catch (error) {
       lastError = error;
+      
+      // On auth errors, try refreshing the session once
+      if (!hasTriedRefresh && isAuthError(error)) {
+        hasTriedRefresh = true;
+        const refreshed = await refreshSession();
+        if (refreshed) {
+          continue; // Retry with new token
+        }
+        // If refresh failed, redirect to login
+        window.location.href = '/login';
+        throw error;
+      }
       
       if (attempt < cfg.maxRetries && isRetryableError(error)) {
         const delay = getDelay(attempt, cfg);
