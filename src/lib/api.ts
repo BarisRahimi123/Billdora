@@ -193,6 +193,7 @@ export interface Invoice {
   total: number;
   due_date?: string;
   sent_date?: string;
+  sent_at?: string;
   paid_at?: string;
   created_at?: string;
   amount_paid?: number;
@@ -200,6 +201,9 @@ export interface Invoice {
   payment_method?: string;
   calculator_type?: string;
   pdf_template_id?: string;
+  public_view_token?: string;
+  view_count?: number;
+  last_viewed_at?: string;
   client?: Client;
   project?: Project;
 }

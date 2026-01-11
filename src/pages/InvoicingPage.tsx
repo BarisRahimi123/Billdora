@@ -212,7 +212,14 @@ export default function InvoicingPage() {
 
   const updateInvoiceStatus = async (invoiceId: string, status: string, paidAt?: string) => {
     try {
-      await api.updateInvoice(invoiceId, { status, paid_at: paidAt });
+      const updates: any = { status, paid_at: paidAt };
+      // When marking as sent, also set sent_at and generate view token
+      if (status === 'sent') {
+        updates.sent_at = new Date().toISOString();
+        updates.sent_date = new Date().toISOString().split('T')[0];
+        updates.public_view_token = crypto.randomUUID();
+      }
+      await api.updateInvoice(invoiceId, updates);
       loadData();
     } catch (error) {
       console.error('Failed to update invoice:', error);
@@ -260,8 +267,14 @@ export default function InvoicingPage() {
         companyName: profile?.full_name || 'Our Company',
         total: invoice.total,
       });
-      // Update status to sent
-      await api.updateInvoice(invoice.id, { status: 'sent' });
+      // Update status to sent with timestamp and generate view token
+      const viewToken = invoice.public_view_token || crypto.randomUUID();
+      await api.updateInvoice(invoice.id, { 
+        status: 'sent', 
+        sent_at: new Date().toISOString(),
+        sent_date: new Date().toISOString().split('T')[0],
+        public_view_token: viewToken
+      });
       showToast(`Invoice sent to ${client.email}`, 'success');
       loadData();
     } catch (error: any) {
@@ -534,6 +547,7 @@ export default function InvoicingPage() {
                 <th className="text-left px-2 py-2 text-xs font-medium text-neutral-600 hidden sm:table-cell">Project</th>
                 <th className="text-right px-2 py-2 text-xs font-medium text-neutral-600">Amount</th>
                 <th className="text-left px-2 py-2 text-xs font-medium text-neutral-600 hidden md:table-cell">Status</th>
+                <th className="text-left px-2 py-2 text-xs font-medium text-neutral-600 hidden lg:table-cell">Views</th>
                 <th className="text-left px-2 py-2 text-xs font-medium text-neutral-600 hidden md:table-cell">Due Date</th>
                 <th className="w-8">
                   {selectedInvoices.size > 0 && (
@@ -583,6 +597,20 @@ export default function InvoicingPage() {
                           </span>
                         )}
                       </div>
+                    </td>
+                    <td className="px-2 py-2 hidden lg:table-cell">
+                      {invoice.view_count ? (
+                        <div className="flex flex-col">
+                          <span className="text-xs font-medium text-neutral-900">{invoice.view_count} view{invoice.view_count !== 1 ? 's' : ''}</span>
+                          {invoice.last_viewed_at && (
+                            <span className="text-[10px] text-neutral-500">
+                              {new Date(invoice.last_viewed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} at {new Date(invoice.last_viewed_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-neutral-400">—</span>
+                      )}
                     </td>
                     <td className="px-2 py-2 text-xs text-neutral-600 hidden md:table-cell">
                       {invoice.due_date ? new Date(invoice.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '-'}

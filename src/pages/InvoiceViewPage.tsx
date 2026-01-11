@@ -83,6 +83,28 @@ export default function InvoiceViewPage() {
       
       setInvoice(data[0]);
 
+      // Track view - increment view count
+      try {
+        await fetch(
+          `${SUPABASE_URL}/rest/v1/invoices?id=eq.${invoiceId}`,
+          {
+            method: 'PATCH',
+            headers: {
+              'apikey': SUPABASE_ANON_KEY,
+              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+              'Content-Type': 'application/json',
+              'Prefer': 'return=minimal'
+            },
+            body: JSON.stringify({
+              view_count: (data[0].view_count || 0) + 1,
+              last_viewed_at: new Date().toISOString()
+            })
+          }
+        );
+      } catch (e) {
+        console.warn('Failed to track view:', e);
+      }
+
       // Fetch company info from company_settings
       const companyRes = await fetch(
         `${SUPABASE_URL}/rest/v1/company_settings?company_id=eq.${data[0].company_id}&select=company_name,logo_url,address,city,state,zip,phone,email`,
