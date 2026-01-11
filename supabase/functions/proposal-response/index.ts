@@ -152,6 +152,15 @@ Deno.serve(async (req) => {
               zip: lead.zip
             };
           }
+        } else if (tokenRecord.client_email) {
+          // Fallback: use email from token if no client/lead linked
+          client = {
+            id: null,
+            name: tokenRecord.client_email.split('@')[0],
+            primary_contact_name: null,
+            primary_contact_email: tokenRecord.client_email,
+            email: tokenRecord.client_email
+          };
         }
 
         // Get company settings
