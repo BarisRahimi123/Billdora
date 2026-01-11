@@ -72,8 +72,10 @@ export default function SalesPage() {
   };
 
   useEffect(() => {
-    loadData();
-  }, [profile?.company_id, location.pathname]);
+    if (!authLoading) {
+      loadData();
+    }
+  }, [profile?.company_id, authLoading]);
 
   // Close dropdown menu on outside click
   useEffect(() => {
