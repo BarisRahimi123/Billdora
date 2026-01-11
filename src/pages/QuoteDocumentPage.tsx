@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Download, Send, Upload, Plus, Trash2, Check, Save, X, Package, UserPlus, Settings, Eye, EyeOff, Image, Users, FileText, Calendar, ClipboardList, ChevronRight } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { api, Quote, Client, QuoteLineItem, CompanySettings, Service } from '../lib/api';
+import { api, Quote, Client, QuoteLineItem, CompanySettings, Service, Lead, leadsApi } from '../lib/api';
 import { useToast } from '../components/Toast';
 
 interface LineItem {
@@ -45,7 +45,10 @@ export default function QuoteDocumentPage() {
 
   const [quote, setQuote] = useState<Quote | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
+  const [leads, setLeads] = useState<Lead[]>([]);
   const [client, setClient] = useState<Client | null>(null);
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [recipientType, setRecipientType] = useState<'client' | 'lead' | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -54,6 +57,7 @@ export default function QuoteDocumentPage() {
   const [projectName, setProjectName] = useState('');
   const [description, setDescription] = useState('');
   const [selectedClientId, setSelectedClientId] = useState('');
+  const [selectedLeadId, setSelectedLeadId] = useState('');
   const [validUntil, setValidUntil] = useState(() => {
     const date = new Date();
     date.setDate(date.getDate() + 30);
@@ -132,11 +136,19 @@ export default function QuoteDocumentPage() {
     { step: 4 as WizardStep, label: 'Preview & Send', icon: <Send className="w-4 h-4" />, complete: false },
   ];
 
-  // Display name for proposal (client or lead fallback)
-  const displayClientName = client?.name || leadCompany || leadName || 'Client';
-  const displayClientEmail = client?.email || leadEmail || '';
-  const displayContactName = client?.primary_contact_name || leadName || '';
-  const displayLeadName = leadName || client?.primary_contact_name || '';
+  // Display name for proposal (based on recipient type selection)
+  const displayClientName = recipientType === 'lead' 
+    ? (selectedLead?.company_name || selectedLead?.name || 'Lead')
+    : (client?.name || 'Client');
+  const displayClientEmail = recipientType === 'lead'
+    ? (selectedLead?.email || '')
+    : (client?.email || '');
+  const displayContactName = recipientType === 'lead'
+    ? (selectedLead?.name || '')
+    : (client?.primary_contact_name || '');
+  const displayLeadName = recipientType === 'lead'
+    ? (selectedLead?.name || '')
+    : (client?.primary_contact_name || '');
 
   // Letter content
   const [letterContent, setLetterContent] = useState('');
@@ -243,6 +255,10 @@ export default function QuoteDocumentPage() {
       const clientsData = await api.getClients(profile.company_id);
       setClients(clientsData);
 
+      // Load leads for dropdown
+      const leadsData = await leadsApi.getLeads(profile.company_id);
+      setLeads(leadsData);
+
       // Load services for "Add from Services"
       const servicesData = await api.getServices(profile.company_id);
       setServices(servicesData.filter(s => s.is_active !== false));
@@ -255,38 +271,14 @@ export default function QuoteDocumentPage() {
         if (settings.default_terms) setTerms(settings.default_terms);
       }
 
-      // If creating from a lead, find matching client or create new one
+      // If creating from a lead URL param, auto-select that lead
       if (isNewQuote && leadId) {
-        // Try to find existing client by email or company name
-        let matchedClient = clientsData.find(c => 
-          (leadEmail && c.email?.toLowerCase() === leadEmail.toLowerCase()) ||
-          (leadCompany && c.name?.toLowerCase() === leadCompany.toLowerCase())
-        );
-        
-        if (matchedClient) {
-          setSelectedClientId(matchedClient.id);
-          setClient(matchedClient);
-        } else if (leadCompany || leadName) {
-          // Auto-create a new client from lead info
-          try {
-            const newClient = await api.createClient({
-              company_id: profile.company_id,
-              name: leadCompany || leadName,
-              email: leadEmail || undefined,
-              primary_contact_name: leadName || undefined,
-              lifecycle_stage: 'prospect',
-            });
-            setClients([...clientsData, newClient]);
-            setSelectedClientId(newClient.id);
-            setClient(newClient);
-          } catch (err) {
-            console.error('Failed to create client from lead:', err);
-          }
-        }
-        
-        // Set document title from lead
-        if (leadCompany || leadName) {
-          setDocumentTitle(`Proposal for ${leadCompany || leadName}`);
+        const foundLead = leadsData.find(l => l.id === leadId);
+        if (foundLead) {
+          setSelectedLeadId(foundLead.id);
+          setSelectedLead(foundLead);
+          setRecipientType('lead');
+          setDocumentTitle(`Proposal for ${foundLead.company_name || foundLead.name}`);
         }
       }
 
@@ -351,10 +343,22 @@ export default function QuoteDocumentPage() {
     if (selectedClientId) {
       const foundClient = clients.find(c => c.id === selectedClientId);
       setClient(foundClient || null);
+      if (foundClient) setRecipientType('client');
     } else {
       setClient(null);
     }
   }, [selectedClientId, clients]);
+
+  // Update lead when selection changes
+  useEffect(() => {
+    if (selectedLeadId) {
+      const foundLead = leads.find(l => l.id === selectedLeadId);
+      setSelectedLead(foundLead || null);
+      if (foundLead) setRecipientType('lead');
+    } else {
+      setSelectedLead(null);
+    }
+  }, [selectedLeadId, leads]);
 
   const subtotal = lineItems.reduce((sum, item) => sum + (item.unitPrice * item.qty), 0);
   const taxableAmount = lineItems.filter(item => item.taxed).reduce((sum, item) => sum + (item.unitPrice * item.qty), 0);
@@ -509,8 +513,8 @@ export default function QuoteDocumentPage() {
       showToast('Please enter a quote title', 'error');
       return;
     }
-    if (!selectedClientId) {
-      showToast('Please select a client', 'error');
+    if (!selectedClientId && !selectedLeadId) {
+      showToast('Please select a client or lead', 'error');
       return;
     }
     
@@ -584,8 +588,9 @@ export default function QuoteDocumentPage() {
   };
 
   const handleSendToCustomer = async () => {
-    if (!client?.email) {
-      showToast('Please select a client with an email address', 'error');
+    const recipientEmail = recipientType === 'lead' ? selectedLead?.email : client?.email;
+    if (!recipientEmail) {
+      showToast(`Please select a ${recipientType || 'client or lead'} with an email address`, 'error');
       return;
     }
     if (!quote && isNewQuote) {
@@ -600,7 +605,12 @@ export default function QuoteDocumentPage() {
   };
 
   const sendProposalEmail = async () => {
-    if (!quote || !client?.email) return;
+    const recipientEmail = recipientType === 'lead' ? selectedLead?.email : client?.email;
+    const recipientName = recipientType === 'lead' 
+      ? (selectedLead?.company_name || selectedLead?.name || 'Lead')
+      : (client?.name || 'Client');
+    
+    if (!quote || !recipientEmail) return;
     
     setSendingProposal(true);
     try {
@@ -614,10 +624,10 @@ export default function QuoteDocumentPage() {
         body: JSON.stringify({
           quoteId: quote.id,
           companyId: profile?.company_id,
-          clientEmail: client.email,
-          clientName: client.name,
-          billingContactEmail: client.billing_contact_email || null,
-          billingContactName: client.billing_contact_name || null,
+          clientEmail: recipientEmail,
+          clientName: recipientName,
+          billingContactEmail: recipientType === 'client' ? (client?.billing_contact_email || null) : null,
+          billingContactName: recipientType === 'client' ? (client?.billing_contact_name || null) : null,
           projectName: projectName || documentTitle,
           companyName: companyInfo.name,
           senderName: profile?.full_name || companyInfo.name,
@@ -1399,7 +1409,7 @@ export default function QuoteDocumentPage() {
               </button>
               <button
                 onClick={saveChanges}
-                disabled={saving || !selectedClientId || !lineItems.some(i => i.description.trim())}
+                disabled={saving || (!selectedClientId && !selectedLeadId) || !lineItems.some(i => i.description.trim())}
                 className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-neutral-800 text-white rounded-xl hover:bg-neutral-700 transition-colors disabled:opacity-50"
               >
                 <Save className="w-5 h-5" />
@@ -1795,34 +1805,96 @@ export default function QuoteDocumentPage() {
                 </div>
               </div>
 
-              {/* Customer Section - iOS Card Style */}
+              {/* Recipient Section - Client OR Lead */}
               <div className="px-8 py-6">
-                <h3 className="text-sm font-semibold text-neutral-900 uppercase tracking-wider mb-4">Customer</h3>
+                <h3 className="text-sm font-semibold text-neutral-900 uppercase tracking-wider mb-4">Send To</h3>
                 <div className="bg-white rounded-2xl border border-neutral-100 p-5 shadow-sm">
                   {/* Onboarding hint for new quotes */}
-                  {isNewQuote && !selectedClientId && (
-                    <p className="text-neutral-400 text-sm mb-3 italic">② Select or create a client</p>
+                  {isNewQuote && !recipientType && (
+                    <p className="text-neutral-400 text-sm mb-3 italic">② Select a client or lead to send this proposal to</p>
                   )}
-                  <div className="mb-4 print:hidden">
+                  
+                  <div className="space-y-4 print:hidden">
+                    {/* Client Dropdown */}
+                    <div className={`transition-opacity ${recipientType === 'lead' ? 'opacity-40' : ''}`}>
+                      <label className="block text-xs font-medium text-neutral-500 uppercase tracking-wider mb-1.5">Client</label>
+                      <div className="flex items-center gap-2">
+                        <select
+                          value={selectedClientId}
+                          onChange={(e) => { 
+                            setSelectedClientId(e.target.value); 
+                            if (e.target.value) {
+                              setSelectedLeadId('');
+                              setSelectedLead(null);
+                            }
+                            setHasUnsavedChanges(true); 
+                          }}
+                          disabled={recipientType === 'lead'}
+                          className={`flex-1 px-3 py-2.5 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-[#476E66] focus:border-transparent outline-none text-sm ${recipientType === 'lead' ? 'bg-neutral-100 cursor-not-allowed' : ''}`}
+                        >
+                          <option value="">Select a client...</option>
+                          {clients.map(c => (
+                            <option key={c.id} value={c.id}>{c.name}</option>
+                          ))}
+                        </select>
+                        <button
+                          type="button"
+                          onClick={() => setShowNewClientModal(true)}
+                          disabled={recipientType === 'lead'}
+                          className={`px-3 py-2.5 text-sm border border-neutral-200 rounded-lg ${recipientType === 'lead' ? 'opacity-40 cursor-not-allowed' : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50'}`}
+                        >
+                          <UserPlus className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* OR Divider */}
                     <div className="flex items-center gap-3">
+                      <div className="flex-1 h-px bg-neutral-200" />
+                      <span className="text-xs font-medium text-neutral-400 uppercase">or</span>
+                      <div className="flex-1 h-px bg-neutral-200" />
+                    </div>
+
+                    {/* Lead Dropdown */}
+                    <div className={`transition-opacity ${recipientType === 'client' ? 'opacity-40' : ''}`}>
+                      <label className="block text-xs font-medium text-neutral-500 uppercase tracking-wider mb-1.5">Lead</label>
                       <select
-                        value={selectedClientId}
-                        onChange={(e) => { setSelectedClientId(e.target.value); setHasUnsavedChanges(true); }}
-                        className="flex-1 px-3 py-2.5 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-neutral-400 focus:border-transparent outline-none text-sm"
+                        value={selectedLeadId}
+                        onChange={(e) => { 
+                          setSelectedLeadId(e.target.value); 
+                          if (e.target.value) {
+                            setSelectedClientId('');
+                            setClient(null);
+                          }
+                          setHasUnsavedChanges(true); 
+                        }}
+                        disabled={recipientType === 'client'}
+                        className={`w-full px-3 py-2.5 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-[#476E66] focus:border-transparent outline-none text-sm ${recipientType === 'client' ? 'bg-neutral-100 cursor-not-allowed' : ''}`}
                       >
-                        <option value="">Select a client...</option>
-                        {clients.map(c => (
-                          <option key={c.id} value={c.id}>{c.name}</option>
+                        <option value="">Select a lead...</option>
+                        {leads.map(l => (
+                          <option key={l.id} value={l.id}>{l.name}{l.company_name ? ` (${l.company_name})` : ''}</option>
                         ))}
                       </select>
+                    </div>
+
+                    {/* Clear Selection Button */}
+                    {recipientType && (
                       <button
                         type="button"
-                        onClick={() => setShowNewClientModal(true)}
-                        className="px-3 py-2.5 text-sm text-neutral-600 hover:text-neutral-900 border border-neutral-200 rounded-lg hover:bg-neutral-50"
+                        onClick={() => {
+                          setSelectedClientId('');
+                          setSelectedLeadId('');
+                          setClient(null);
+                          setSelectedLead(null);
+                          setRecipientType(null);
+                          setHasUnsavedChanges(true);
+                        }}
+                        className="text-xs text-neutral-500 hover:text-neutral-700 underline"
                       >
-                        <UserPlus className="w-4 h-4" />
+                        Clear selection
                       </button>
-                    </div>
+                    )}
                   </div>
                   {client && (
                     <div className="space-y-3">
@@ -1878,7 +1950,29 @@ export default function QuoteDocumentPage() {
                       )}
                     </div>
                   )}
-                  {!client && !isNewQuote && <p className="text-neutral-400 text-sm italic">No client selected</p>}
+                  {/* Lead Info Display */}
+                  {selectedLead && recipientType === 'lead' && (
+                    <div className="space-y-3 mt-4 pt-4 border-t border-neutral-100">
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 text-xs font-medium bg-amber-100 text-amber-700 rounded-full">Lead</span>
+                      </div>
+                      <div>
+                        <p className="font-semibold text-neutral-900">{selectedLead.company_name || selectedLead.name}</p>
+                        {selectedLead.company_name && selectedLead.name && (
+                          <p className="text-neutral-600 text-sm">{selectedLead.name}</p>
+                        )}
+                        {selectedLead.email && <p className="text-neutral-500 text-sm">{selectedLead.email}</p>}
+                        {selectedLead.phone && <p className="text-neutral-500 text-sm">{selectedLead.phone}</p>}
+                      </div>
+                      {selectedLead.notes && (
+                        <div className="border-t border-neutral-100 pt-2">
+                          <p className="text-xs font-medium text-neutral-400 uppercase tracking-wider mb-1">Notes</p>
+                          <p className="text-sm text-neutral-600">{selectedLead.notes}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {!client && !selectedLead && !isNewQuote && <p className="text-neutral-400 text-sm italic">No recipient selected</p>}
                 </div>
               </div>
 
@@ -1886,7 +1980,7 @@ export default function QuoteDocumentPage() {
               <div className="px-4 sm:px-8 py-6">
                 <div className="flex items-center justify-between mb-4 sticky top-0 bg-white z-10 py-2 -mt-2">
                   <h3 className="text-sm font-semibold text-neutral-900 uppercase tracking-wider">Line Items</h3>
-                  {isNewQuote && selectedClientId && lineItems.every(item => !item.description.trim()) && (
+                  {isNewQuote && recipientType && lineItems.every(item => !item.description.trim()) && (
                     <span className="text-neutral-400 text-sm italic">③ Add your services</span>
                   )}
                 </div>
@@ -2980,14 +3074,22 @@ export default function QuoteDocumentPage() {
             <>
               <div className="p-6 border-b">
                 <h2 className="text-xl font-semibold text-neutral-900">Send Proposal</h2>
-                <p className="text-sm text-neutral-500 mt-1">Send this proposal to your client via email</p>
+                <p className="text-sm text-neutral-500 mt-1">Send this proposal to your {recipientType || 'recipient'} via email</p>
               </div>
               <div className="p-6 space-y-4">
                 <div className="bg-neutral-50 rounded-xl p-4">
-                  <p className="text-sm text-neutral-500 mb-1">Sending to</p>
+                  <div className="flex items-center gap-2 mb-2">
+                    <p className="text-sm text-neutral-500">Sending to</p>
+                    {recipientType === 'lead' && (
+                      <span className="px-2 py-0.5 text-xs font-medium bg-amber-100 text-amber-700 rounded-full">Lead</span>
+                    )}
+                    {recipientType === 'client' && (
+                      <span className="px-2 py-0.5 text-xs font-medium bg-green-100 text-green-700 rounded-full">Client</span>
+                    )}
+                  </div>
                   <p className="font-medium text-neutral-900">{displayClientName}</p>
-                  <p className="text-sm text-neutral-600">{client?.email}</p>
-                  {client?.billing_contact_email && (
+                  <p className="text-sm text-neutral-600">{recipientType === 'lead' ? selectedLead?.email : client?.email}</p>
+                  {recipientType === 'client' && client?.billing_contact_email && (
                     <div className="mt-2 pt-2 border-t border-neutral-200">
                       <p className="text-xs text-neutral-400">CC: Billing Contact</p>
                       <p className="text-sm text-neutral-600">{client.billing_contact_name || 'Billing'} - {client.billing_contact_email}</p>
