@@ -26,6 +26,32 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 // Track if auth has ever been initialized (persists across re-renders)
 let globalAuthInitialized = false;
 
+// Register device token for push notifications
+async function registerDeviceToken(token: string, userId: string, companyId: string, authToken: string) {
+  try {
+    const response = await fetch('https://bqxnagmmegdbqrzhheip.supabase.co/rest/v1/device_tokens', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJxeG5hZ21tZWdkYnFyemhoZWlwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI2OTM5NTgsImV4cCI6MjA2ODI2OTk1OH0.LBb7KaCSs7LpsD9NZCOcartkcDIIALBIrpnYcv5Y0yY',
+        'Authorization': `Bearer ${authToken}`,
+        'Prefer': 'resolution=merge-duplicates'
+      },
+      body: JSON.stringify({
+        device_token: token,
+        user_id: userId,
+        company_id: companyId,
+        platform: 'ios'
+      })
+    });
+    if (response.ok) {
+      console.log('Device token registered for push notifications');
+    }
+  } catch (e) {
+    console.error('Failed to register device token:', e);
+  }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -221,6 +247,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(data.user);
       const { data: profileData } = await supabase.from('profiles').select('*').eq('id', data.user.id).maybeSingle();
       setProfile(profileData);
+      
+      // Store credentials for iOS push notification registration
+      if (profileData?.company_id && data.session?.access_token) {
+        localStorage.setItem('userId', data.user.id);
+        localStorage.setItem('companyId', profileData.company_id);
+        localStorage.setItem('authToken', data.session.access_token);
+        
+        // Register device token if available (for iOS app)
+        const deviceToken = localStorage.getItem('apnsDeviceToken');
+        if (deviceToken) {
+          registerDeviceToken(deviceToken, data.user.id, profileData.company_id, data.session.access_token);
+        }
+      }
     }
     return { error };
   }
@@ -404,6 +443,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Clear Supabase auth storage explicitly to prevent ghost sessions
     localStorage.removeItem('sb-bqxnagmmegdbqrzhheip-auth-token');
     sessionStorage.removeItem('sb-bqxnagmmegdbqrzhheip-auth-token');
+    // Clear iOS push notification credentials
+    localStorage.removeItem('userId');
+    localStorage.removeItem('companyId');
+    localStorage.removeItem('authToken');
     // Then sign out from Supabase
     await supabase.auth.signOut();
   }

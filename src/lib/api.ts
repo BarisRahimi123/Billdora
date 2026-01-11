@@ -114,6 +114,7 @@ export interface Task {
   billed_amount?: number;
   total_budget?: number;
   billing_unit?: 'hours' | 'unit';  // 'hours' = time-based, 'unit' = fixed price per unit
+  billing_mode?: 'unset' | 'time' | 'percentage' | 'milestone';  // Exclusive billing mode - once set, cannot mix
 }
 
 export interface TaskBillingSelection {
@@ -552,6 +553,25 @@ export const api = {
 
   async createTimeEntry(entry: Partial<TimeEntry>) {
     return apiCall(async () => {
+      // If task_id provided, check and set billing_mode to 'time'
+      if (entry.task_id) {
+        const { data: task } = await supabase
+          .from('tasks')
+          .select('billing_mode')
+          .eq('id', entry.task_id)
+          .single();
+        
+        if (task) {
+          if (task.billing_mode && task.billing_mode !== 'unset' && task.billing_mode !== 'time') {
+            throw new Error(`Cannot add time entry: Task is set to ${task.billing_mode} billing mode`);
+          }
+          // Auto-lock to time mode on first entry
+          if (!task.billing_mode || task.billing_mode === 'unset') {
+            await supabase.from('tasks').update({ billing_mode: 'time' }).eq('id', entry.task_id);
+          }
+        }
+      }
+      
       const { data, error } = await supabase
         .from('time_entries')
         .insert(entry)
@@ -902,7 +922,7 @@ export const api = {
         unit: isHourBased ? 'hr' : 'unit',
       });
 
-      // Update task's cumulative billed percentage and amount
+      // Update task's cumulative billed percentage and amount, and lock billing_mode
       const newBilledPercentage = billing.previousBilledPercentage + billing.percentageToBill;
       const newBilledAmount = billing.previousBilledAmount + billing.amountToBill;
       
@@ -912,6 +932,7 @@ export const api = {
           billed_percentage: newBilledPercentage,
           billed_amount: newBilledAmount,
           total_budget: billing.totalBudget,
+          billing_mode: billing.billingType as 'milestone' | 'percentage',  // Lock billing mode
         })
         .eq('id', billing.taskId);
       

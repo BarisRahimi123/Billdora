@@ -5405,6 +5405,7 @@ function SubscriptionTab() {
   const { showToast } = useToast();
   const { profile } = useAuth();
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
+  const [portalLoading, setPortalLoading] = useState(false);
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
   const [usage, setUsage] = useState({ projects: 0, teamMembers: 0, clients: 0, invoices: 0 });
   const [usageLoading, setUsageLoading] = useState(true);
@@ -5506,6 +5507,48 @@ function SubscriptionTab() {
       showToast(err.message || 'Failed to start upgrade', 'error');
     } finally {
       setCheckoutLoading(null);
+    }
+  }
+
+  async function handleManageSubscription() {
+    setPortalLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session?.access_token) {
+        showToast('Please log in to manage subscription', 'error');
+        return;
+      }
+
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/stripe-customer-portal`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          user_id: profile?.id,
+          return_url: `${window.location.origin}/settings?tab=subscription`,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.error) {
+        throw new Error(result.error.message || result.error);
+      }
+
+      if (result.url) {
+        window.location.href = result.url;
+      } else {
+        throw new Error('No portal URL returned');
+      }
+    } catch (err: any) {
+      console.error('Manage subscription error:', err);
+      showToast(err.message || 'Failed to open billing portal', 'error');
+    } finally {
+      setPortalLoading(false);
     }
   }
 
@@ -5640,6 +5683,28 @@ function SubscriptionTab() {
                 )}
               </div>
             </div>
+
+            {/* Manage Subscription Button for Pro users */}
+            {isPro && subscription && (
+              <button
+                onClick={handleManageSubscription}
+                disabled={portalLoading}
+                className="flex items-center justify-center gap-2 px-4 py-2 border border-[#476E66] text-[#476E66] text-sm font-medium rounded-lg hover:bg-[#476E66]/5 transition-all disabled:opacity-50 whitespace-nowrap"
+              >
+                {portalLoading ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span className="hidden sm:inline">Loading...</span>
+                  </>
+                ) : (
+                  <>
+                    <Settings className="w-3.5 h-3.5" />
+                    <span className="hidden xs:inline">Manage Subscription</span>
+                    <span className="xs:hidden">Manage</span>
+                  </>
+                )}
+              </button>
+            )}
 
             {isStarter && (
               <button

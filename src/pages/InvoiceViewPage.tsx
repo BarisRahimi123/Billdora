@@ -83,24 +83,17 @@ export default function InvoiceViewPage() {
       
       setInvoice(data[0]);
 
-      // Track view - increment view count
+      // Track view via RPC (also creates notification)
       try {
-        await fetch(
-          `${SUPABASE_URL}/rest/v1/invoices?id=eq.${invoiceId}`,
-          {
-            method: 'PATCH',
-            headers: {
-              'apikey': SUPABASE_ANON_KEY,
-              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-              'Content-Type': 'application/json',
-              'Prefer': 'return=minimal'
-            },
-            body: JSON.stringify({
-              view_count: (data[0].view_count || 0) + 1,
-              last_viewed_at: new Date().toISOString()
-            })
-          }
-        );
+        await fetch(`${SUPABASE_URL}/rest/v1/rpc/track_invoice_view`, {
+          method: 'POST',
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ p_invoice_id: invoiceId })
+        });
       } catch (e) {
         console.warn('Failed to track view:', e);
       }

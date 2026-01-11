@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { bankStatementsApi, companyExpensesApi, BankStatement, BankTransaction, CompanyExpense } from '../lib/api';
 import { useToast } from '../components/Toast';
+import PlaidLink from '../components/PlaidLink';
 import { 
   Upload, FileText, Calendar, DollarSign, CheckCircle2, AlertTriangle, 
   XCircle, RefreshCw, Trash2, ChevronRight, ChevronDown, Download, 
@@ -324,6 +325,15 @@ export default function BankStatementsPage() {
               </div>
             </div>
           </div>
+
+          {/* Plaid Bank Connection */}
+          {profile?.id && profile?.company_id && (
+            <PlaidLink 
+              userId={profile.id} 
+              companyId={profile.company_id}
+              onSuccess={loadData}
+            />
+          )}
 
           {/* Statements List */}
           <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden">

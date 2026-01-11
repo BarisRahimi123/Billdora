@@ -976,6 +976,20 @@ function InvoiceModal({ clients, projects, companyId, onClose, onSave }: { clien
       alert('Please select at least one task to bill');
       return;
     }
+    
+    // Validate billing mode compatibility
+    if (calculatorType === 'milestone' || calculatorType === 'percentage') {
+      const incompatibleTask = tasks.find(t => 
+        selectedTasks.has(t.id) && 
+        (t as any).billing_mode && 
+        (t as any).billing_mode !== 'unset' && 
+        (t as any).billing_mode !== calculatorType
+      );
+      if (incompatibleTask) {
+        alert(`Cannot bill: Task "${incompatibleTask.name}" is locked to ${(incompatibleTask as any).billing_mode} billing mode`);
+        return;
+      }
+    }
 
     setSaving(true);
     try {
@@ -1167,11 +1181,30 @@ function InvoiceModal({ clients, projects, companyId, onClose, onSave }: { clien
                         const isSelected = selectedTasks.has(task.id);
                         const selection = selectedTasks.get(task.id);
                         const isFullyBilled = remainingPct <= 0;
+                        const taskMode = (task as any).billing_mode || 'unset';
+                        const isModeLocked = taskMode !== 'unset';
+                        const isModeIncompatible = isModeLocked && taskMode !== calculatorType;
+                        const isDisabled = isFullyBilled || isModeIncompatible;
 
                         return (
-                          <tr key={task.id} className={`${isFullyBilled ? 'bg-neutral-50 opacity-50' : isSelected ? 'bg-[#476E66]/5' : 'hover:bg-neutral-50/50'}`}>
+                          <tr 
+                            key={task.id} 
+                            className={`${isDisabled ? 'bg-neutral-50 opacity-50' : isSelected ? 'bg-[#476E66]/5' : 'hover:bg-neutral-50/50'}`}
+                            title={isModeIncompatible ? `Task locked to ${taskMode} billing` : undefined}
+                          >
                             <td className="px-1.5 py-1.5">
-                              <p className="text-xs font-medium text-neutral-900 leading-tight">{task.name}</p>
+                              <div className="flex items-center gap-1">
+                                <p className="text-xs font-medium text-neutral-900 leading-tight">{task.name}</p>
+                                {isModeLocked && (
+                                  <span className={`text-[9px] px-1 py-0.5 rounded font-medium ${
+                                    taskMode === 'time' ? 'bg-blue-100 text-blue-700' : 
+                                    taskMode === 'percentage' ? 'bg-purple-100 text-purple-700' : 
+                                    'bg-amber-100 text-amber-700'
+                                  }`}>
+                                    {taskMode === 'time' ? 'T&M' : taskMode === 'percentage' ? '%' : 'MS'}
+                                  </span>
+                                )}
+                              </div>
                               {billedPct > 0 && (
                                 <p className="text-xs text-neutral-500 mt-0.5">{billedPct}% billed</p>
                               )}
@@ -1202,7 +1235,7 @@ function InvoiceModal({ clients, projects, companyId, onClose, onSave }: { clien
                               <input
                                 type="checkbox"
                                 checked={isSelected}
-                                disabled={isFullyBilled}
+                                disabled={isDisabled}
                                 onChange={() => toggleTaskSelection(task.id, calculatorType as 'milestone' | 'percentage')}
                                 className="w-3.5 h-3.5 text-[#476E66] rounded border-neutral-300 focus:ring-[#476E66]"
                               />

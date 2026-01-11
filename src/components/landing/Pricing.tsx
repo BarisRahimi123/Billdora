@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Check, Users, Building2, Rocket, Loader2 } from 'lucide-react';
+import { Check, Users, Building2, Rocket, Loader2, Shield, CreditCard, Clock, ChevronDown, ChevronUp } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
 interface Plan {
@@ -23,38 +23,40 @@ const SUPABASE_URL = 'https://bqxnagmmegdbqrzhheip.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJxeG5hZ21tZWdkYnFyemhoZWlwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI2OTM5NTgsImV4cCI6MjA2ODI2OTk1OH0.LBb7KaCSs7LpsD9NZCOcartkcDIIALBIrpnYcv5Y0yY';
 
 const getIconForPlan = (planName: string) => {
-  if (planName.toLowerCase().includes('starter')) return Rocket;
-  if (planName.toLowerCase().includes('professional')) return Users;
-  if (planName.toLowerCase().includes('enterprise')) return Building2;
+  if (planName.toLowerCase().includes('free')) return Rocket;
+  if (planName.toLowerCase().includes('starter')) return Users;
+  if (planName.toLowerCase().includes('professional')) return Building2;
   return Users;
 };
 
 const defaultFeatures: Record<string, string[]> = {
-  starter: [
-    'Up to 3 active projects',
-    'Up to 2 team members',
-    'Up to 5 clients',
-    '10 invoices/month',
+  free: [
+    'Up to 3 clients',
+    '5 invoices per month',
     'Basic time tracking',
+    'Basic invoicing',
+    'Email support',
+  ],
+  starter: [
+    'Unlimited clients',
+    'Unlimited invoices',
+    'Up to 3 team members',
+    'Time & expense tracking',
+    'Plaid bank sync',
+    'Payment processing',
     'Email support',
   ],
   professional: [
     'Unlimited projects',
     'Up to 50 team members',
-    'Unlimited clients',
-    'Unlimited invoices',
+    'Unlimited clients & invoices',
     'Advanced time & expense tracking',
-    'Custom invoicing & billing',
-    'Reporting & analytics',
+    'Reports & analytics',
+    'Proposals & estimates',
+    'Plaid bank sync',
+    'Stripe payment integration',
+    'Custom branding',
     'Priority support',
-  ],
-  enterprise: [
-    'Unlimited everything',
-    'Unlimited team members',
-    'Advanced security & compliance',
-    'Custom integrations',
-    'Dedicated account manager',
-    'SLA & premium support',
   ],
 };
 
@@ -64,6 +66,15 @@ export const Pricing = () => {
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
   const [error, setError] = useState<string | null>(null);
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
+
+  const faqs = [
+    { q: 'How does the 14-day free trial work?', a: 'Start with full access to Professional features. Your card won\'t be charged until after the trial ends. Cancel anytime during the trial at no cost.' },
+    { q: 'Can I switch between monthly and yearly billing?', a: 'Yes! You can upgrade to yearly billing anytime to save 20%. When switching, we\'ll prorate the remaining balance.' },
+    { q: 'What payment methods do you accept?', a: 'We accept all major credit cards (Visa, Mastercard, American Express) via Stripe. Enterprise customers can pay via invoice.' },
+    { q: 'Can I cancel my subscription anytime?', a: 'Yes, you can cancel anytime from your account settings. You\'ll retain access until the end of your billing period.' },
+    { q: 'Is my payment information secure?', a: 'Absolutely. All payments are processed by Stripe with bank-level encryption. We never store your card details on our servers.' },
+  ];
 
   useEffect(() => {
     loadPlans();
@@ -153,10 +164,9 @@ export const Pricing = () => {
   const filteredPlans = plans.filter((plan) => {
     const isMonthly = plan.interval === 'month';
     const isYearly = plan.interval === 'year';
-    const isStarter = plan.name.toLowerCase() === 'starter' || plan.amount === 0;
-    const isEnterprise = plan.name.toLowerCase().includes('enterprise');
-    // Keep starter and enterprise always, filter others by billing cycle
-    if (isStarter || isEnterprise) return true;
+    const isFree = plan.name.toLowerCase() === 'free' || plan.amount === 0;
+    // Keep Free always, filter Starter/Professional by billing cycle
+    if (isFree) return true;
     return billingCycle === 'monthly' ? isMonthly : isYearly;
   });
   
@@ -167,24 +177,23 @@ export const Pricing = () => {
       : defaultFeatures[planKey] || defaultFeatures.starter;
 
     const isProfessional = plan.name.toLowerCase().includes('professional');
-    const isEnterprise = plan.name.toLowerCase().includes('enterprise');
-    const isStarter = plan.name.toLowerCase() === 'starter';
+    const isStarter = plan.name.toLowerCase().includes('starter');
+    const isFree = plan.name.toLowerCase() === 'free' || plan.amount === 0;
     
     // Handle pricing based on billing cycle for Professional
     let displayPrice: string;
     let period = '/ month';
     let yearlyTotal: number | null = null;
     
-    if (isStarter || plan.amount === 0) {
+    if (isFree) {
       displayPrice = 'Free';
       period = '';
-    } else if (isEnterprise) {
-      displayPrice = 'Custom';
-      period = '';
+    } else if (isStarter) {
+      displayPrice = billingCycle === 'monthly' ? '$20' : '$17';
+      yearlyTotal = 200;
     } else if (isProfessional) {
-      // $30/month or $24/month (20% off) for yearly
-      displayPrice = billingCycle === 'monthly' ? '$30' : '$24';
-      yearlyTotal = 288;
+      displayPrice = billingCycle === 'monthly' ? '$60' : '$50';
+      yearlyTotal = 600;
     } else {
       displayPrice = `$${plan.amount / 100}`;
     }
@@ -196,58 +205,56 @@ export const Pricing = () => {
       period,
       yearlyPrice: yearlyTotal,
       interval: plan.interval,
-      description: isStarter
-        ? 'Perfect for freelancers and small teams getting started.'
-        : isProfessional
-          ? 'Ideal for growing businesses with expanding teams.'
-          : 'For large organizations with specific requirements.',
+      description: isFree
+        ? 'Get started with essential invoicing features.'
+        : isStarter
+          ? 'Perfect for freelancers and small teams.'
+          : 'Ideal for growing businesses with expanding teams.',
       icon: getIconForPlan(plan.name),
       features,
-      cta: isStarter
+      cta: isFree
         ? 'Get Started Free' 
-        : isEnterprise
-          ? 'Contact Sales'
-          : 'Subscribe Now',
-      highlighted: isProfessional,
+        : 'Start 14-Day Trial',
+      highlighted: isStarter,
       plan,
     };
   }) : [
     {
-      id: 'starter',
-      name: 'Starter',
+      id: 'free',
+      name: 'Free',
       price: 'Free',
       period: '',
       yearlyPrice: null,
-      description: 'Perfect for freelancers and small teams getting started.',
+      description: 'Get started with essential invoicing features.',
       icon: Rocket,
-      features: defaultFeatures.starter,
+      features: defaultFeatures.free,
       cta: 'Get Started Free',
       highlighted: false,
       plan: null,
     },
     {
-      id: 'professional',
-      name: 'Professional',
-      price: billingCycle === 'monthly' ? '$30' : '$24',
+      id: 'starter',
+      name: 'Starter',
+      price: billingCycle === 'monthly' ? '$20' : '$17',
       period: '/ month',
-      yearlyPrice: 288,
-      description: 'Ideal for growing businesses with expanding teams.',
+      yearlyPrice: 200,
+      description: 'Perfect for freelancers and small teams.',
       icon: Users,
-      features: defaultFeatures.professional,
-      cta: 'Subscribe Now',
+      features: defaultFeatures.starter,
+      cta: 'Start 14-Day Trial',
       highlighted: true,
       plan: null,
     },
     {
-      id: 'enterprise',
-      name: 'Enterprise',
-      price: 'Custom',
-      period: '',
-      yearlyPrice: null,
-      description: 'For large organizations with specific requirements.',
+      id: 'professional',
+      name: 'Professional',
+      price: billingCycle === 'monthly' ? '$60' : '$50',
+      period: '/ month',
+      yearlyPrice: 600,
+      description: 'Ideal for growing businesses with expanding teams.',
       icon: Building2,
-      features: defaultFeatures.enterprise,
-      cta: 'Contact Sales',
+      features: defaultFeatures.professional,
+      cta: 'Start 14-Day Trial',
       highlighted: false,
       plan: null,
     },
@@ -320,7 +327,7 @@ export const Pricing = () => {
             <Loader2 className="w-8 h-8 animate-spin text-neutral-400" />
           </div>
         ) : (
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-3 gap-8 pt-4">
             {tiers.map((tier, index) => {
               const Icon = tier.icon;
               return (
@@ -332,17 +339,19 @@ export const Pricing = () => {
                   transition={{ duration: 0.4, delay: index * 0.1 }}
                   className={`relative rounded-2xl p-8 ${
                     tier.highlighted
-                      ? 'bg-white shadow-xl border-2'
+                      ? 'bg-white shadow-xl border-2 mt-4'
                       : 'bg-white border border-gray-200'
                   }`}
                   style={tier.highlighted ? { borderColor: '#476E66' } : {}}
                 >
                   {tier.highlighted && (
-                    <div
-                      className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 text-white text-sm font-semibold rounded-full"
-                      style={{ backgroundColor: '#476E66' }}
-                    >
-                      Most Popular
+                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 flex gap-2">
+                      <span className="px-3 py-1 text-white text-sm font-semibold rounded-full" style={{ backgroundColor: '#476E66' }}>
+                        Most Popular
+                      </span>
+                      <span className="px-3 py-1 bg-emerald-500 text-white text-sm font-semibold rounded-full flex items-center gap-1">
+                        <Clock size={12} /> 14-Day Trial
+                      </span>
                     </div>
                   )}
 
@@ -421,6 +430,61 @@ export const Pricing = () => {
             })}
           </div>
         )}
+
+        {/* Trust Badges */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="flex flex-wrap justify-center gap-8 mt-16 pt-8 border-t border-neutral-200"
+        >
+          <div className="flex items-center gap-2 text-neutral-600">
+            <Shield className="w-5 h-5" style={{ color: '#476E66' }} />
+            <span className="text-sm font-medium">256-bit SSL Encryption</span>
+          </div>
+          <div className="flex items-center gap-2 text-neutral-600">
+            <CreditCard className="w-5 h-5" style={{ color: '#476E66' }} />
+            <span className="text-sm font-medium">Secure Payments via Stripe</span>
+          </div>
+          <div className="flex items-center gap-2 text-neutral-600">
+            <Clock className="w-5 h-5" style={{ color: '#476E66' }} />
+            <span className="text-sm font-medium">Cancel Anytime</span>
+          </div>
+          <div className="flex items-center gap-2 text-neutral-600">
+            <Check className="w-5 h-5" style={{ color: '#476E66' }} />
+            <span className="text-sm font-medium">30-Day Money Back Guarantee</span>
+          </div>
+        </motion.div>
+
+        {/* FAQ Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="max-w-2xl mx-auto mt-20"
+        >
+          <h3 className="text-2xl font-bold text-center mb-8" style={{ color: '#474747' }}>
+            Frequently Asked Questions
+          </h3>
+          <div className="space-y-3">
+            {faqs.map((faq, idx) => (
+              <div key={idx} className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
+                <button
+                  onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
+                  className="w-full flex items-center justify-between p-4 text-left hover:bg-neutral-50 transition-colors"
+                >
+                  <span className="font-medium text-neutral-900">{faq.q}</span>
+                  {openFaq === idx ? <ChevronUp className="w-5 h-5 text-neutral-400" /> : <ChevronDown className="w-5 h-5 text-neutral-400" />}
+                </button>
+                {openFaq === idx && (
+                  <div className="px-4 pb-4 text-neutral-600 text-sm">
+                    {faq.a}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </motion.div>
       </div>
     </section>
   );

@@ -43,6 +43,7 @@ interface SubscriptionContextType {
   checkLimit: (limitType: 'projects' | 'team_members' | 'clients' | 'invoices', currentCount: number) => { allowed: boolean; limit: number | null; remaining: number | null };
   isPro: boolean;
   isStarter: boolean;
+  isFree: boolean;
 }
 
 const SubscriptionContext = createContext<SubscriptionContextType | undefined>(undefined);
@@ -99,11 +100,11 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
         setSubscription(subData);
         setCurrentPlan(subData.plan);
       } else {
-        // No active subscription - user is on Starter (free) plan
+        // No active subscription - user is on Free plan
         const allPlans = plans.length > 0 ? plans : await loadPlans();
-        const starterPlan = allPlans.find((p: Plan) => p.name === 'Starter' || p.amount === 0);
+        const freePlan = allPlans.find((p: Plan) => p.name === 'Free' || p.amount === 0);
         setSubscription(null);
-        setCurrentPlan(starterPlan || null);
+        setCurrentPlan(freePlan || null);
       }
     } catch (err: any) {
       console.error('Failed to load subscription:', err);
@@ -176,7 +177,8 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   }, [currentPlan]);
 
   const isPro = currentPlan?.name?.toLowerCase().includes('professional') || false;
-  const isStarter = !isPro && (currentPlan?.name === 'Starter' || currentPlan?.amount === 0 || !subscription);
+  const isStarter = currentPlan?.name?.toLowerCase().includes('starter') || false;
+  const isFree = !isPro && !isStarter && (currentPlan?.name === 'Free' || currentPlan?.amount === 0 || !subscription);
 
   return (
     <SubscriptionContext.Provider
@@ -191,6 +193,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
         checkLimit,
         isPro,
         isStarter,
+        isFree,
       }}
     >
       {children}

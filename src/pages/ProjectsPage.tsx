@@ -3052,6 +3052,21 @@ function ProjectInvoiceModal({ project, tasks, timeEntries, expenses, companyId,
       setError('Please select items or enter an amount');
       return;
     }
+    
+    // Validate billing mode compatibility for selected tasks
+    if (billingType === 'milestone' || billingType === 'percentage') {
+      const incompatibleTasks = tasks.filter(t => 
+        selectedTasks.has(t.id) && 
+        t.billing_mode && 
+        t.billing_mode !== 'unset' && 
+        t.billing_mode !== billingType
+      );
+      if (incompatibleTasks.length > 0) {
+        setError(`Cannot bill: Task "${incompatibleTasks[0].name}" is set to ${incompatibleTasks[0].billing_mode} billing mode`);
+        return;
+      }
+    }
+    
     setError(null);
     setSaving(true);
     try {
@@ -3339,21 +3354,37 @@ function ProjectInvoiceModal({ project, tasks, timeEntries, expenses, companyId,
                   const remainingAmt = (totalBudget * remainingPct) / 100;
                   const isFullyBilled = remainingPct <= 0;
                   const isSelected = selectedTasks.has(task.id);
+                  const taskMode = task.billing_mode || 'unset';
+                  const isModeLocked = taskMode !== 'unset';
+                  const isModeIncompatible = isModeLocked && taskMode !== billingType && billingType !== 'items';
+                  const isDisabled = isFullyBilled || isModeIncompatible;
                   
                   return (
                     <label 
                       key={task.id} 
-                      className={`flex items-center gap-2.5 px-3 py-2 cursor-pointer transition-colors ${isFullyBilled ? 'bg-neutral-50 opacity-50' : 'hover:bg-neutral-50/50'}`}
+                      className={`flex items-center gap-2.5 px-3 py-2 cursor-pointer transition-colors ${isDisabled ? 'bg-neutral-50 opacity-50' : 'hover:bg-neutral-50/50'}`}
+                      title={isModeIncompatible ? `Task locked to ${taskMode} billing` : undefined}
                     >
                       <input
                         type="checkbox"
                         checked={isSelected}
-                        disabled={isFullyBilled}
+                        disabled={isDisabled}
                         onChange={() => toggleTask(task.id)}
                         className="w-4 h-4 rounded border-neutral-300 text-[#476E66] focus:ring-[#476E66] flex-shrink-0"
                       />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-neutral-900 truncate leading-5" style={{ fontSize: '14px', fontWeight: '500', lineHeight: '20px' }}>{task.name}</p>
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-sm font-medium text-neutral-900 truncate leading-5" style={{ fontSize: '14px', fontWeight: '500', lineHeight: '20px' }}>{task.name}</p>
+                          {isModeLocked && (
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+                              taskMode === 'time' ? 'bg-blue-100 text-blue-700' : 
+                              taskMode === 'percentage' ? 'bg-purple-100 text-purple-700' : 
+                              'bg-amber-100 text-amber-700'
+                            }`}>
+                              {taskMode === 'time' ? 'T&M' : taskMode === 'percentage' ? '%' : 'MS'}
+                            </span>
+                          )}
+                        </div>
                         <p className="text-xs text-neutral-500">
                           {task.estimated_hours || 0}h estimated
                           {billedPct > 0 && (
@@ -3469,10 +3500,15 @@ function ProjectInvoiceModal({ project, tasks, timeEntries, expenses, companyId,
                         className="w-4 h-4 rounded border-neutral-300 text-neutral-500 focus:ring-primary-500"
                       />
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-neutral-900 truncate">{entry.description || 'Time entry'}</p>
+                        <div className="flex items-center gap-1.5">
+                          {entry.task?.name && (
+                            <span className="text-xs px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded font-medium">{entry.task.name}</span>
+                          )}
+                          <p className="font-medium text-neutral-900 truncate">{entry.description || 'Time entry'}</p>
+                        </div>
                         <p className="text-xs text-neutral-500">
-                          {new Date(entry.date).toLocaleDateString()} • {entry.hours}h @ ${rate}/hr = {formatCurrency(entryTotal)}
-                          {rateSource === 'entry' && <span className="ml-1 text-neutral-900">(custom rate)</span>}
+                          {new Date(entry.date).toLocaleDateString()} • {entry.hours}h @ ${rate}/hr
+                          {rateSource === 'entry' && <span className="ml-1 text-neutral-400">(custom)</span>}
                         </p>
                       </div>
                       <span className="font-medium text-neutral-700">{formatCurrency(entryTotal)}</span>

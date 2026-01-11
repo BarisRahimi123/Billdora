@@ -143,6 +143,23 @@ export default function ProposalPortalPage() {
         setTokenId(data.tokenId);
         setExistingResponse(data.existingResponse);
         setError('');
+
+        // Track proposal view (also creates notification)
+        if (data.quote?.id) {
+          try {
+            await fetch(`${SUPABASE_URL}/rest/v1/rpc/track_proposal_view`, {
+              method: 'POST',
+              headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ p_quote_id: data.quote.id })
+            });
+          } catch (e) {
+            console.warn('Failed to track proposal view:', e);
+          }
+        }
         
         // Pre-fill signer name from primary contact
         if (data.client?.primary_contact_name) {
