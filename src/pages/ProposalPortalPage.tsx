@@ -85,7 +85,11 @@ export default function ProposalPortalPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const codeInputRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)];
+  const codeInputRef0 = useRef<HTMLInputElement>(null);
+  const codeInputRef1 = useRef<HTMLInputElement>(null);
+  const codeInputRef2 = useRef<HTMLInputElement>(null);
+  const codeInputRef3 = useRef<HTMLInputElement>(null);
+  const codeInputRefs = [codeInputRef0, codeInputRef1, codeInputRef2, codeInputRef3];
 
   useEffect(() => {
     verifyToken();
@@ -299,8 +303,11 @@ export default function ProposalPortalPage() {
     setSubmitting(false);
   }
 
-  const subtotal = lineItems.reduce((sum, item) => sum + (item.unit_price * item.quantity), 0);
-  const formatCurrency = (n: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n);
+  const subtotal = (lineItems || []).reduce((sum, item) => sum + ((item?.unit_price || 0) * (item?.quantity || 0)), 0);
+  const formatCurrency = (n: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n || 0);
+
+  // Debug - log rendering
+  console.log('ProposalPortalPage rendering, step:', step);
 
   // Loading state
   if (step === 'loading') {

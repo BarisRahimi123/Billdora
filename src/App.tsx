@@ -59,7 +59,7 @@ function AppRoutes() {
       <Route path="/terms" element={<TermsPage />} />
       <Route path="/privacy" element={<PrivacyPage />} />
       <Route path="/quotes/:quoteId/document" element={<ProtectedRoute><QuoteDocumentPage /></ProtectedRoute>} />
-      <Route path="/proposal/:token" element={<ProposalPortalPage />} />
+      <Route path="/proposal/:token" element={<ErrorBoundary><ProposalPortalPage /></ErrorBoundary>} />
       <Route path="/invoice-view/:invoiceId" element={<InvoiceViewPage />} />
       <Route path="/portal/:token" element={<ClientPortalPage />} />
       
