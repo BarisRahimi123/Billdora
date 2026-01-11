@@ -259,15 +259,9 @@ export default function InvoiceViewPage() {
                     <CheckCircle className="w-5 h-5" />
                     Paid - {formatCurrency(invoice?.total || 0)}
                   </div>
-                ) : invoice && invoice.total > 0 ? (
+                ) : canPay ? (
                   <button
-                    onClick={() => {
-                      if (canPay) {
-                        handlePayNow();
-                      } else {
-                        setPaymentMessage({ type: 'error', text: 'Online payment coming soon. Please contact us for payment options.' });
-                      }
-                    }}
+                    onClick={handlePayNow}
                     disabled={processingPayment}
                     className="flex items-center justify-center gap-2 px-6 py-3 bg-[#635BFF] text-white font-semibold rounded-lg text-lg shadow-lg hover:bg-[#5851DB] transition-colors disabled:opacity-50 min-h-[44px] w-full sm:w-auto"
                   >
