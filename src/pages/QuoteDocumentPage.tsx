@@ -1564,8 +1564,9 @@ export default function QuoteDocumentPage() {
                     <thead>
                       <tr className="bg-neutral-50 border-b border-neutral-200">
                         <th className="text-left px-6 py-3 font-semibold text-neutral-600 text-xs uppercase tracking-wider">Description</th>
-                        <th className="text-center px-4 py-3 font-semibold text-neutral-600 text-xs uppercase tracking-wider w-16">Qty</th>
                         <th className="text-right px-4 py-3 font-semibold text-neutral-600 text-xs uppercase tracking-wider w-24">Unit Price</th>
+                        <th className="text-center px-4 py-3 font-semibold text-neutral-600 text-xs uppercase tracking-wider w-16">Unit</th>
+                        <th className="text-center px-4 py-3 font-semibold text-neutral-600 text-xs uppercase tracking-wider w-16">Qty</th>
                         <th className="text-right px-6 py-3 font-semibold text-neutral-600 text-xs uppercase tracking-wider w-24">Amount</th>
                       </tr>
                     </thead>
@@ -1573,8 +1574,9 @@ export default function QuoteDocumentPage() {
                       {lineItems.filter(i => i.description.trim()).map(item => (
                         <tr key={item.id}>
                           <td className="px-6 py-3 text-neutral-900">{item.description}</td>
-                          <td className="px-4 py-3 text-center text-neutral-900">{item.qty}</td>
                           <td className="px-4 py-3 text-right text-neutral-600">{formatCurrency(item.unitPrice)}</td>
+                          <td className="px-4 py-3 text-center text-neutral-500 text-xs">{item.unit}</td>
+                          <td className="px-4 py-3 text-center text-neutral-900">{item.qty}</td>
                           <td className="px-6 py-3 text-right font-medium text-neutral-900">{formatCurrency(item.unitPrice * item.qty)}</td>
                         </tr>
                       ))}
