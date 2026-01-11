@@ -3,13 +3,24 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Plus, Search, Filter, Download, MoreHorizontal, X, FileText, ArrowRight, Eye, Printer, Send, Check, XCircle, Mail, Trash2, List, LayoutGrid, ChevronDown, ChevronRight, ArrowLeft, Edit2, Loader2, Link2, Copy, User } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { usePermissions } from '../contexts/PermissionsContext';
-import { api, Client, Quote, clientPortalApi } from '../lib/api';
+import { api, Client, Quote, Lead, leadsApi, clientPortalApi } from '../lib/api';
 import { NotificationService } from '../lib/notificationService';
 import { useToast } from '../components/Toast';
 import { FieldError } from '../components/ErrorBoundary';
 import { validateEmail } from '../lib/validation';
 
-type Tab = 'clients' | 'quotes' | 'responses';
+type Tab = 'leads' | 'clients' | 'quotes' | 'responses';
+type LeadStage = 'all' | 'new' | 'contacted' | 'qualified' | 'proposal_sent' | 'won' | 'lost';
+
+const PIPELINE_STAGES: { key: LeadStage; label: string; color: string; bgColor: string }[] = [
+  { key: 'all', label: 'All', color: 'text-neutral-700', bgColor: 'bg-neutral-100' },
+  { key: 'new', label: 'New', color: 'text-blue-700', bgColor: 'bg-blue-100' },
+  { key: 'contacted', label: 'Contacted', color: 'text-purple-700', bgColor: 'bg-purple-100' },
+  { key: 'qualified', label: 'Qualified', color: 'text-amber-700', bgColor: 'bg-amber-100' },
+  { key: 'proposal_sent', label: 'Proposal', color: 'text-cyan-700', bgColor: 'bg-cyan-100' },
+  { key: 'won', label: 'Won', color: 'text-emerald-700', bgColor: 'bg-emerald-100' },
+  { key: 'lost', label: 'Lost', color: 'text-red-700', bgColor: 'bg-red-100' },
+];
 
 // Generate quote number in format: YYMMDD-XXX (e.g., 250102-001)
 function generateQuoteNumber(): string {
@@ -26,9 +37,15 @@ export default function SalesPage() {
   const location = useLocation();
   const { profile, loading: authLoading } = useAuth();
   const { isAdmin } = usePermissions();
-  const [activeTab, setActiveTab] = useState<Tab>('quotes');
+  const [activeTab, setActiveTab] = useState<Tab>('leads');
+  const [leads, setLeads] = useState<Lead[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [quotes, setQuotes] = useState<Quote[]>([]);
+  const [showLeadModal, setShowLeadModal] = useState(false);
+  const [editingLead, setEditingLead] = useState<Lead | null>(null);
+  const [showConvertModal, setShowConvertModal] = useState(false);
+  const [convertingLead, setConvertingLead] = useState<Lead | null>(null);
+  const [selectedPipelineStage, setSelectedPipelineStage] = useState<LeadStage>('all');
   const [responses, setResponses] = useState<any[]>([]);
   const [selectedSignature, setSelectedSignature] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -72,6 +89,12 @@ export default function SalesPage() {
       return;
     }
     setLoading(true);
+    try {
+      const leadsData = await leadsApi.getLeads(profile.company_id);
+      setLeads(leadsData);
+    } catch (error) {
+      console.error('Failed to load leads:', error);
+    }
     try {
       const clientsData = await api.getClients(profile.company_id);
       setClients(clientsData);
@@ -301,7 +324,10 @@ export default function SalesPage() {
         </div>
         <button
           onClick={() => {
-            if (activeTab === 'clients') {
+            if (activeTab === 'leads') {
+              setEditingLead(null);
+              setShowLeadModal(true);
+            } else if (activeTab === 'clients') {
               setSelectedClient(null);
               setIsAddingNewClient(true);
             } else {
@@ -311,13 +337,25 @@ export default function SalesPage() {
           className="flex items-center gap-1.5 px-3 py-2 bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54] transition-colors text-sm font-medium"
         >
           <Plus className="w-4 h-4" />
-          <span className="hidden sm:inline">Add {activeTab === 'clients' ? 'Client' : 'Quote'}</span>
+          <span className="hidden sm:inline">Add {activeTab === 'leads' ? 'Lead' : activeTab === 'clients' ? 'Client' : 'Quote'}</span>
           <span className="sm:hidden">Add</span>
         </button>
       </div>
 
       {/* Tabs */}
       <div className="flex gap-0.5 p-0.5 bg-neutral-100 rounded-lg w-fit">
+        <button
+          onClick={() => setActiveTab('leads')}
+          className={`px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition-colors ${
+            activeTab === 'leads' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-600 hover:text-neutral-900'
+          }`}
+        >
+          Leads {leads.filter(l => l.status !== 'won' && l.status !== 'lost').length > 0 && (
+            <span className="ml-1 px-1.5 py-0.5 bg-amber-100 text-amber-700 text-xs rounded-full">
+              {leads.filter(l => l.status !== 'won' && l.status !== 'lost').length}
+            </span>
+          )}
+        </button>
         <button
           onClick={() => setActiveTab('clients')}
           className={`px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition-colors ${
@@ -383,6 +421,174 @@ export default function SalesPage() {
           <span className="hidden xl:inline">Export</span>
         </button>
       </div>
+
+      {/* Leads Section */}
+      {activeTab === 'leads' && (
+        <div className="space-y-4">
+          {/* Pipeline Header */}
+          <div className="flex flex-wrap gap-2">
+            {PIPELINE_STAGES.map((stage) => {
+              const count = stage.key === 'all' 
+                ? leads.length 
+                : leads.filter(l => l.status === stage.key).length;
+              const isSelected = selectedPipelineStage === stage.key;
+              return (
+                <button
+                  key={stage.key}
+                  onClick={() => setSelectedPipelineStage(stage.key)}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                    isSelected 
+                      ? `${stage.bgColor} ${stage.color} ring-2 ring-offset-1 ring-current` 
+                      : 'bg-white border border-neutral-200 text-neutral-600 hover:bg-neutral-50'
+                  }`}
+                >
+                  <span>{stage.label}</span>
+                  <span className={`px-1.5 py-0.5 rounded text-xs ${isSelected ? 'bg-white/50' : 'bg-neutral-100'}`}>
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Leads List */}
+          <div className="bg-white rounded-2xl border border-neutral-100 overflow-hidden">
+          {leads.length === 0 ? (
+            <div className="p-12 text-center">
+              <div className="w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                <User className="w-8 h-8 text-amber-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-neutral-900 mb-2">No leads yet</h3>
+              <p className="text-neutral-500 mb-4">Start tracking your potential clients</p>
+              <button
+                onClick={() => { setEditingLead(null); setShowLeadModal(true); }}
+                className="px-4 py-2 bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54]"
+              >
+                Add Your First Lead
+              </button>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-neutral-50 border-b border-neutral-100">
+                  <tr>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-500 uppercase">Lead</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-500 uppercase">Source</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-500 uppercase">Status</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-500 uppercase">Est. Value</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-500 uppercase">Created</th>
+                    <th className="text-right px-4 py-3 text-xs font-semibold text-neutral-500 uppercase">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {leads.filter(l => {
+                      const matchesSearch = searchTerm ? l.name.toLowerCase().includes(searchTerm.toLowerCase()) || l.company_name?.toLowerCase().includes(searchTerm.toLowerCase()) : true;
+                      const matchesStage = selectedPipelineStage === 'all' || l.status === selectedPipelineStage;
+                      return matchesSearch && matchesStage;
+                    }).map((lead) => (
+                    <tr key={lead.id} className="border-b border-neutral-100 hover:bg-neutral-50">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center text-amber-700 font-medium text-sm">
+                            {lead.name.charAt(0)}
+                          </div>
+                          <div>
+                            <p className="font-medium text-neutral-900">{lead.name}</p>
+                            <p className="text-sm text-neutral-500">{lead.company_name || lead.email || '-'}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-sm text-neutral-600 capitalize">{lead.source?.replace('_', ' ') || '-'}</span>
+                        {lead.source_details && <p className="text-xs text-neutral-400 truncate max-w-[150px]">{lead.source_details}</p>}
+                      </td>
+                      <td className="px-4 py-3">
+                        <select
+                          value={lead.status || 'new'}
+                          onChange={async (e) => {
+                            try {
+                              await leadsApi.updateLead(lead.id, { status: e.target.value as Lead['status'] });
+                              loadData();
+                            } catch (error) {
+                              console.error('Failed to update lead:', error);
+                            }
+                          }}
+                          className={`text-xs font-medium px-2 py-1 rounded-full border-0 cursor-pointer ${
+                            lead.status === 'new' ? 'bg-blue-50 text-blue-700' :
+                            lead.status === 'contacted' ? 'bg-purple-50 text-purple-700' :
+                            lead.status === 'qualified' ? 'bg-amber-50 text-amber-700' :
+                            lead.status === 'proposal_sent' ? 'bg-cyan-50 text-cyan-700' :
+                            lead.status === 'won' ? 'bg-emerald-50 text-emerald-700' :
+                            lead.status === 'lost' ? 'bg-red-50 text-red-700' :
+                            'bg-neutral-100 text-neutral-600'
+                          }`}
+                        >
+                          <option value="new">New</option>
+                          <option value="contacted">Contacted</option>
+                          <option value="qualified">Qualified</option>
+                          <option value="proposal_sent">Proposal Sent</option>
+                          <option value="won">Won</option>
+                          <option value="lost">Lost</option>
+                        </select>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-neutral-600">
+                        {lead.estimated_value ? `$${lead.estimated_value.toLocaleString()}` : '-'}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-neutral-500">
+                        {lead.created_at ? new Date(lead.created_at).toLocaleDateString() : '-'}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-end gap-1">
+                          {lead.status !== 'won' && lead.status !== 'lost' && (
+                            <>
+                              <button
+                                onClick={() => navigate(`/quotes/new/document?lead_id=${lead.id}&lead_name=${encodeURIComponent(lead.name)}&lead_email=${encodeURIComponent(lead.email || '')}&lead_company=${encodeURIComponent(lead.company_name || '')}`)}
+                                className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-[#476E66] bg-[#476E66]/10 rounded-lg hover:bg-[#476E66]/20"
+                              >
+                                <Send className="w-3 h-3" />
+                                Proposal
+                              </button>
+                              <button
+                                onClick={() => { setConvertingLead(lead); setShowConvertModal(true); }}
+                                className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100"
+                              >
+                                <User className="w-3 h-3" />
+                                Convert
+                              </button>
+                            </>
+                          )}
+                          <button
+                            onClick={() => { setEditingLead(lead); setShowLeadModal(true); }}
+                            className="p-1.5 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 rounded"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={async () => {
+                              if (confirm('Delete this lead?')) {
+                                try {
+                                  await leadsApi.deleteLead(lead.id);
+                                  loadData();
+                                } catch (error) {
+                                  console.error('Failed to delete lead:', error);
+                                }
+                              }
+                            }}
+                            className="p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          </div>
+        </div>
+      )}
 
       {/* Clients Section - Inline editing */}
       {activeTab === 'clients' && (
@@ -948,6 +1154,26 @@ export default function SalesPage() {
           companyId={profile?.company_id || ''}
           onClose={() => { setShowQuoteModal(false); setEditingQuote(null); }}
           onSave={() => { loadData(); setShowQuoteModal(false); setEditingQuote(null); }}
+        />
+      )}
+
+      {/* Lead Modal */}
+      {showLeadModal && (
+        <LeadModal
+          lead={editingLead}
+          companyId={profile?.company_id || ''}
+          onClose={() => { setShowLeadModal(false); setEditingLead(null); }}
+          onSave={() => { loadData(); setShowLeadModal(false); setEditingLead(null); }}
+        />
+      )}
+
+      {/* Convert Lead to Client Modal */}
+      {showConvertModal && convertingLead && (
+        <ConvertToClientModal
+          lead={convertingLead}
+          companyId={profile?.company_id || ''}
+          onClose={() => { setShowConvertModal(false); setConvertingLead(null); }}
+          onSave={() => { loadData(); setShowConvertModal(false); setConvertingLead(null); }}
         />
       )}
     </div>
@@ -1579,6 +1805,521 @@ function QuoteModal({ quote, clients, companyId, onClose, onSave }: { quote: Quo
               View Full Document
             </button>
           )}
+        </form>
+      </div>
+    </div>
+  );
+}
+
+
+// Lead Modal Component
+function LeadModal({ lead, companyId, onClose, onSave }: {
+  lead: Lead | null;
+  companyId: string;
+  onClose: () => void;
+  onSave: () => void;
+}) {
+  const [name, setName] = useState(lead?.name || '');
+  const [email, setEmail] = useState(lead?.email || '');
+  const [phone, setPhone] = useState(lead?.phone || '');
+  const [companyName, setCompanyName] = useState(lead?.company_name || '');
+  const [source, setSource] = useState<string>(lead?.source || 'other');
+  const [sourceDetails, setSourceDetails] = useState(lead?.source_details || '');
+  const [estimatedValue, setEstimatedValue] = useState(lead?.estimated_value?.toString() || '');
+  const [notes, setNotes] = useState(lead?.notes || '');
+  const [saving, setSaving] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+
+    setSaving(true);
+    try {
+      const data: Partial<Lead> = {
+        company_id: companyId,
+        name: name.trim(),
+        email: email.trim() || undefined,
+        phone: phone.trim() || undefined,
+        company_name: companyName.trim() || undefined,
+        source: source as Lead['source'],
+        source_details: sourceDetails.trim() || undefined,
+        estimated_value: estimatedValue ? parseFloat(estimatedValue) : undefined,
+        notes: notes.trim() || undefined,
+      };
+
+      if (lead) {
+        await leadsApi.updateLead(lead.id, data);
+      } else {
+        await leadsApi.createLead(data);
+      }
+      onSave();
+    } catch (error) {
+      console.error('Failed to save lead:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <div className="p-6 border-b border-neutral-100 flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-neutral-900">{lead ? 'Edit Lead' : 'Add New Lead'}</h2>
+          <button onClick={onClose} className="p-2 hover:bg-neutral-100 rounded-lg">
+            <X className="w-5 h-5 text-neutral-400" />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 mb-1.5">Contact Name *</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+              className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-[#476E66] focus:border-transparent outline-none"
+              placeholder="John Smith"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-1.5">Email</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-[#476E66] focus:border-transparent outline-none"
+                placeholder="john@company.com"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-1.5">Phone</label>
+              <input
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-[#476E66] focus:border-transparent outline-none"
+                placeholder="(555) 123-4567"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 mb-1.5">Company</label>
+            <input
+              type="text"
+              value={companyName}
+              onChange={(e) => setCompanyName(e.target.value)}
+              className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-[#476E66] focus:border-transparent outline-none"
+              placeholder="Acme Inc."
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-1.5">Lead Source</label>
+              <select
+                value={source}
+                onChange={(e) => setSource(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-[#476E66] focus:border-transparent outline-none"
+              >
+                <option value="referral">Referral</option>
+                <option value="website">Website</option>
+                <option value="social_media">Social Media</option>
+                <option value="cold_call">Cold Call</option>
+                <option value="advertisement">Advertisement</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-1.5">Estimated Value</label>
+              <input
+                type="number"
+                value={estimatedValue}
+                onChange={(e) => setEstimatedValue(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-[#476E66] focus:border-transparent outline-none"
+                placeholder="5000"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 mb-1.5">Source Details</label>
+            <input
+              type="text"
+              value={sourceDetails}
+              onChange={(e) => setSourceDetails(e.target.value)}
+              className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-[#476E66] focus:border-transparent outline-none"
+              placeholder="Referred by John Doe, Saw our Google ad, etc."
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 mb-1.5">Notes</label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={3}
+              className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-[#476E66] focus:border-transparent outline-none resize-none"
+              placeholder="Initial contact notes, requirements, etc."
+            />
+          </div>
+          <div className="flex gap-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2.5 border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={saving || !name.trim()}
+              className="flex-1 px-4 py-2.5 bg-[#476E66] text-white rounded-xl hover:bg-[#3A5B54] transition-colors disabled:opacity-50"
+            >
+              {saving ? 'Saving...' : lead ? 'Update Lead' : 'Create Lead'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+
+// Convert Lead to Client Modal Component
+function ConvertToClientModal({ lead, companyId, onClose, onSave }: {
+  lead: Lead;
+  companyId: string;
+  onClose: () => void;
+  onSave: () => void;
+}) {
+  // Pre-fill from lead data
+  const [name, setName] = useState(lead.company_name || lead.name || '');
+  const [displayName, setDisplayName] = useState(lead.name || '');
+  const [email, setEmail] = useState(lead.email || '');
+  const [phone, setPhone] = useState(lead.phone || '');
+  
+  // Additional client fields
+  const [address, setAddress] = useState('');
+  const [city, setCity] = useState('');
+  const [state, setState] = useState('');
+  const [zip, setZip] = useState('');
+  const [country, setCountry] = useState('');
+  const [website, setWebsite] = useState('');
+  const [clientType, setClientType] = useState('');
+  
+  // Primary contact
+  const [primaryContactName, setPrimaryContactName] = useState(lead.name || '');
+  const [primaryContactTitle, setPrimaryContactTitle] = useState('');
+  const [primaryContactEmail, setPrimaryContactEmail] = useState(lead.email || '');
+  const [primaryContactPhone, setPrimaryContactPhone] = useState(lead.phone || '');
+  
+  // Billing contact
+  const [billingContactName, setBillingContactName] = useState('');
+  const [billingContactTitle, setBillingContactTitle] = useState('');
+  const [billingContactEmail, setBillingContactEmail] = useState('');
+  const [billingContactPhone, setBillingContactPhone] = useState('');
+  
+  const [saving, setSaving] = useState(false);
+  const { showToast } = useToast();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+
+    setSaving(true);
+    try {
+      // Create client with all fields
+      await api.createClient({
+        company_id: companyId,
+        name: name.trim(),
+        display_name: displayName.trim() || name.trim(),
+        email: email.trim() || undefined,
+        phone: phone.trim() || undefined,
+        address: address.trim() || undefined,
+        city: city.trim() || undefined,
+        state: state.trim() || undefined,
+        zip: zip.trim() || undefined,
+        country: country.trim() || undefined,
+        website: website.trim() || undefined,
+        type: clientType.trim() || undefined,
+        lifecycle_stage: 'client',
+        primary_contact_name: primaryContactName.trim() || undefined,
+        primary_contact_title: primaryContactTitle.trim() || undefined,
+        primary_contact_email: primaryContactEmail.trim() || undefined,
+        primary_contact_phone: primaryContactPhone.trim() || undefined,
+        billing_contact_name: billingContactName.trim() || undefined,
+        billing_contact_title: billingContactTitle.trim() || undefined,
+        billing_contact_email: billingContactEmail.trim() || undefined,
+        billing_contact_phone: billingContactPhone.trim() || undefined,
+      });
+      
+      // Update lead status to won
+      await leadsApi.updateLead(lead.id, { status: 'won' });
+      
+      showToast('Lead converted to client successfully!', 'success');
+      onSave();
+    } catch (error) {
+      console.error('Failed to convert lead:', error);
+      showToast('Failed to convert lead', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="p-6 border-b border-neutral-100 flex items-center justify-between sticky top-0 bg-white z-10">
+          <div>
+            <h2 className="text-lg font-semibold text-neutral-900">Convert Lead to Client</h2>
+            <p className="text-sm text-neutral-500">Complete the client profile to finalize conversion</p>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-neutral-100 rounded-lg">
+            <X className="w-5 h-5 text-neutral-400" />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          {/* Basic Info */}
+          <div>
+            <h3 className="text-sm font-semibold text-neutral-900 uppercase tracking-wider mb-3">Basic Information</h3>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1.5">Company/Client Name *</label>
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required
+                    className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-[#476E66] focus:border-transparent outline-none"
+                    placeholder="Acme Corporation"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1.5">Display Name</label>
+                  <input
+                    type="text"
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-[#476E66] focus:border-transparent outline-none"
+                    placeholder="Acme Corp"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1.5">Email</label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-[#476E66] focus:border-transparent outline-none"
+                    placeholder="contact@company.com"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1.5">Phone</label>
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-[#476E66] focus:border-transparent outline-none"
+                    placeholder="(555) 123-4567"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1.5">Website</label>
+                  <input
+                    type="url"
+                    value={website}
+                    onChange={(e) => setWebsite(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-[#476E66] focus:border-transparent outline-none"
+                    placeholder="https://company.com"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1.5">Client Type</label>
+                  <input
+                    type="text"
+                    value={clientType}
+                    onChange={(e) => setClientType(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-[#476E66] focus:border-transparent outline-none"
+                    placeholder="Commercial, Residential, etc."
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Address */}
+          <div>
+            <h3 className="text-sm font-semibold text-neutral-900 uppercase tracking-wider mb-3">Address</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1.5">Street Address</label>
+                <input
+                  type="text"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-[#476E66] focus:border-transparent outline-none"
+                  placeholder="123 Main Street"
+                />
+              </div>
+              <div className="grid grid-cols-4 gap-4">
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-neutral-700 mb-1.5">City</label>
+                  <input
+                    type="text"
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-[#476E66] focus:border-transparent outline-none"
+                    placeholder="New York"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1.5">State</label>
+                  <input
+                    type="text"
+                    value={state}
+                    onChange={(e) => setState(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-[#476E66] focus:border-transparent outline-none"
+                    placeholder="NY"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1.5">ZIP</label>
+                  <input
+                    type="text"
+                    value={zip}
+                    onChange={(e) => setZip(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-[#476E66] focus:border-transparent outline-none"
+                    placeholder="10001"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Primary Contact */}
+          <div>
+            <h3 className="text-sm font-semibold text-neutral-900 uppercase tracking-wider mb-3">Primary Contact</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1.5">Name</label>
+                <input
+                  type="text"
+                  value={primaryContactName}
+                  onChange={(e) => setPrimaryContactName(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-[#476E66] focus:border-transparent outline-none"
+                  placeholder="John Smith"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1.5">Title</label>
+                <input
+                  type="text"
+                  value={primaryContactTitle}
+                  onChange={(e) => setPrimaryContactTitle(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-[#476E66] focus:border-transparent outline-none"
+                  placeholder="Project Manager"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1.5">Email</label>
+                <input
+                  type="email"
+                  value={primaryContactEmail}
+                  onChange={(e) => setPrimaryContactEmail(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-[#476E66] focus:border-transparent outline-none"
+                  placeholder="john@company.com"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1.5">Phone</label>
+                <input
+                  type="tel"
+                  value={primaryContactPhone}
+                  onChange={(e) => setPrimaryContactPhone(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-[#476E66] focus:border-transparent outline-none"
+                  placeholder="(555) 123-4567"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Billing Contact */}
+          <div>
+            <h3 className="text-sm font-semibold text-neutral-900 uppercase tracking-wider mb-3">Billing Contact <span className="text-neutral-400 font-normal">(Optional)</span></h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1.5">Name</label>
+                <input
+                  type="text"
+                  value={billingContactName}
+                  onChange={(e) => setBillingContactName(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-[#476E66] focus:border-transparent outline-none"
+                  placeholder="Jane Doe"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1.5">Title</label>
+                <input
+                  type="text"
+                  value={billingContactTitle}
+                  onChange={(e) => setBillingContactTitle(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-[#476E66] focus:border-transparent outline-none"
+                  placeholder="Accounts Payable"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1.5">Email</label>
+                <input
+                  type="email"
+                  value={billingContactEmail}
+                  onChange={(e) => setBillingContactEmail(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-[#476E66] focus:border-transparent outline-none"
+                  placeholder="billing@company.com"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1.5">Phone</label>
+                <input
+                  type="tel"
+                  value={billingContactPhone}
+                  onChange={(e) => setBillingContactPhone(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-[#476E66] focus:border-transparent outline-none"
+                  placeholder="(555) 987-6543"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex gap-3 pt-4 border-t border-neutral-200">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2.5 border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={saving || !name.trim()}
+              className="flex-1 px-4 py-2.5 bg-[#476E66] text-white rounded-xl hover:bg-[#3A5B54] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {saving ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Converting...
+                </>
+              ) : (
+                <>
+                  <Check className="w-4 h-4" />
+                  Convert to Client
+                </>
+              )}
+            </button>
+          </div>
         </form>
       </div>
     </div>

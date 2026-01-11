@@ -20,6 +20,7 @@ import ProposalPortalPage from './pages/ProposalPortalPage';
 import InvoiceViewPage from './pages/InvoiceViewPage';
 import ClientPortalPage from './pages/ClientPortalPage';
 import CompanyExpensesPage from './pages/CompanyExpensesPage';
+import BankStatementsPage from './pages/BankStatementsPage';
 import FinancialsPage from './pages/FinancialsPage';
 import NotificationsPage from './pages/NotificationsPage';
 
@@ -74,6 +75,7 @@ function AppRoutes() {
         <Route path="/reports" element={<ErrorBoundary><ReportsPage /></ErrorBoundary>} />
         <Route path="/financials" element={<ErrorBoundary><FinancialsPage /></ErrorBoundary>} />
         <Route path="/company-expenses" element={<ErrorBoundary><CompanyExpensesPage /></ErrorBoundary>} />
+        <Route path="/bank-statements" element={<ErrorBoundary><BankStatementsPage /></ErrorBoundary>} />
         <Route path="/notifications" element={<ErrorBoundary><NotificationsPage /></ErrorBoundary>} />
         <Route path="/settings" element={<ErrorBoundary><SettingsPage /></ErrorBoundary>} />
       </Route>

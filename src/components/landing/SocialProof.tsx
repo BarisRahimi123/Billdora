@@ -1,8 +1,11 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 
-const clients = [
-  'Stratton Oakmont', 'Sterling Cooper', 'Pearson Specter', 'Hooli', 'Massive Dynamic', 'Initech'
+const stats = [
+  { value: '10,000+', label: 'Businesses' },
+  { value: '2M+', label: 'Invoices Sent' },
+  { value: '$500M+', label: 'Payments Processed' },
+  { value: '99.9%', label: 'Uptime' },
 ];
 
 export const SocialProof = () => {
@@ -11,12 +14,13 @@ export const SocialProof = () => {
       <div className="container mx-auto px-6 max-w-[1200px]">
         <div className="text-center mb-16">
           <p className="text-sm font-bold uppercase tracking-widest text-swiss-gray-medium mb-8">
-            Trusted by industry leaders
+            Trusted by growing businesses worldwide
           </p>
-          <div className="grid grid-cols-2 md:grid-cols-6 gap-8 items-center opacity-60">
-            {clients.map((client) => (
-              <div key={client} className="text-lg font-bold font-sans text-swiss-black">
-                {client}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 items-center max-w-3xl mx-auto">
+            {stats.map((stat) => (
+              <div key={stat.label} className="text-center">
+                <div className="text-3xl md:text-4xl font-bold text-swiss-black">{stat.value}</div>
+                <div className="text-sm text-swiss-gray-medium mt-1">{stat.label}</div>
               </div>
             ))}
           </div>
@@ -30,11 +34,11 @@ export const SocialProof = () => {
           className="bg-white p-12 md:p-16 border border-swiss-gray-border max-w-4xl mx-auto text-center"
         >
           <blockquote className="text-3xl md:text-4xl font-medium leading-tight text-swiss-black mb-8">
-            "Billdora transformed our billing cycle from a two-week headache into a two-hour process. It is the backbone of our operations."
+            "We cut our invoicing time by 85%. What used to take two weeks now takes two hours. Billdora is the backbone of our operations."
           </blockquote>
           <cite className="not-italic">
-            <div className="text-xl font-bold text-swiss-black">Harvey Specter</div>
-            <div className="text-swiss-gray-medium">Managing Partner, Pearson Specter</div>
+            <div className="text-xl font-bold text-swiss-black">Sarah Chen</div>
+            <div className="text-swiss-gray-medium">Founder, Apex Consulting</div>
           </cite>
         </motion.div>
       </div>

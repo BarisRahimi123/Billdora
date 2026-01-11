@@ -7,6 +7,22 @@ async function apiCall<T>(fn: () => Promise<T>): Promise<T> {
 }
 
 // Types
+export interface Lead {
+  id: string;
+  company_id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  company_name?: string;
+  source?: 'referral' | 'website' | 'social_media' | 'cold_call' | 'advertisement' | 'other';
+  source_details?: string;
+  estimated_value?: number;
+  status?: 'new' | 'contacted' | 'qualified' | 'proposal_sent' | 'won' | 'lost';
+  notes?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface Client {
   id: string;
   company_id: string;
@@ -2118,4 +2134,245 @@ export const clientPortalApi = {
   getPortalUrl(token: string) {
     return `${window.location.origin}/portal/${token}`;
   },
+};
+
+// Bank Statements Types and API
+export interface BankStatement {
+  id: string;
+  company_id: string;
+  file_path: string;
+  original_filename?: string;
+  account_name?: string;
+  account_number?: string;
+  period_start?: string;
+  period_end?: string;
+  beginning_balance?: number;
+  ending_balance?: number;
+  total_deposits?: number;
+  total_withdrawals?: number;
+  status: 'pending' | 'processing' | 'processed' | 'error';
+  error_message?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface BankTransaction {
+  id: string;
+  statement_id: string;
+  transaction_date: string;
+  description?: string;
+  amount: number;
+  transaction_type: 'deposit' | 'withdrawal' | 'check' | 'fee' | 'interest' | 'transfer';
+  check_number?: string;
+  matched_expense_id?: string;
+  match_status: 'matched' | 'unmatched' | 'discrepancy' | 'ignored';
+  match_notes?: string;
+  created_at?: string;
+  // Joined data
+  matched_expense?: CompanyExpense;
+}
+
+export const bankStatementsApi = {
+  async getStatements(companyId: string) {
+    const { data, error } = await supabase
+      .from('bank_statements')
+      .select('*')
+      .eq('company_id', companyId)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return data as BankStatement[];
+  },
+
+  async getStatement(id: string) {
+    const { data, error } = await supabase
+      .from('bank_statements')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+    if (error) throw error;
+    return data as BankStatement | null;
+  },
+
+  async createStatement(statement: Partial<BankStatement>) {
+    const { data, error } = await supabase
+      .from('bank_statements')
+      .insert(statement)
+      .select()
+      .single();
+    if (error) throw error;
+    return data as BankStatement;
+  },
+
+  async updateStatement(id: string, updates: Partial<BankStatement>) {
+    const { data, error } = await supabase
+      .from('bank_statements')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data as BankStatement;
+  },
+
+  async deleteStatement(id: string) {
+    // First delete all transactions
+    await supabase
+      .from('bank_transactions')
+      .delete()
+      .eq('statement_id', id);
+    
+    // Then delete the statement
+    const { error } = await supabase
+      .from('bank_statements')
+      .delete()
+      .eq('id', id);
+    if (error) throw error;
+  },
+
+  async getTransactions(statementId: string) {
+    const { data, error } = await supabase
+      .from('bank_transactions')
+      .select('*')
+      .eq('statement_id', statementId)
+      .order('transaction_date', { ascending: true });
+    if (error) throw error;
+    return data as BankTransaction[];
+  },
+
+  async updateTransaction(id: string, updates: Partial<BankTransaction>) {
+    const { data, error } = await supabase
+      .from('bank_transactions')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data as BankTransaction;
+  },
+
+  async uploadStatement(companyId: string, file: File): Promise<BankStatement> {
+    // Upload file to storage
+    const fileName = `${companyId}/${Date.now()}-${file.name}`;
+    const { error: uploadError } = await supabase.storage
+      .from('bank-statements')
+      .upload(fileName, file);
+    
+    if (uploadError) throw uploadError;
+    
+    // Create statement record
+    const statement = await this.createStatement({
+      company_id: companyId,
+      file_path: fileName,
+      original_filename: file.name,
+      status: 'pending'
+    });
+    
+    return statement;
+  },
+
+  async parseStatement(statementId: string, companyId: string, file: File): Promise<any> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('company_id', companyId);
+    formData.append('statement_id', statementId);
+    
+    const { data, error } = await supabase.functions.invoke('parse-bank-statement', {
+      body: formData
+    });
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async reconcileStatement(statementId: string, companyId: string): Promise<any> {
+    const { data, error } = await supabase.functions.invoke('reconcile-statement', {
+      body: { statement_id: statementId, company_id: companyId }
+    });
+    
+    if (error) throw error;
+    return data;
+  },
+
+  getReconciliationSummary(transactions: BankTransaction[]) {
+    const matched = transactions.filter(t => t.match_status === 'matched');
+    const unmatched = transactions.filter(t => t.match_status === 'unmatched');
+    const discrepancies = transactions.filter(t => t.match_status === 'discrepancy');
+    const deposits = transactions.filter(t => t.amount > 0);
+    const withdrawals = transactions.filter(t => t.amount < 0);
+    
+    return {
+      totalTransactions: transactions.length,
+      matchedCount: matched.length,
+      unmatchedCount: unmatched.length,
+      discrepancyCount: discrepancies.length,
+      depositsTotal: deposits.reduce((sum, t) => sum + t.amount, 0),
+      withdrawalsTotal: Math.abs(withdrawals.reduce((sum, t) => sum + t.amount, 0)),
+      matched,
+      unmatched,
+      discrepancies,
+      deposits,
+      withdrawals
+    };
+  }
+};
+
+// Leads API
+export const leadsApi = {
+  async getLeads(companyId: string): Promise<Lead[]> {
+    const { data, error } = await supabase
+      .from('leads')
+      .select('*')
+      .eq('company_id', companyId)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return data || [];
+  },
+
+  async createLead(lead: Partial<Lead>): Promise<Lead> {
+    const { data, error } = await supabase
+      .from('leads')
+      .insert(lead)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async updateLead(id: string, updates: Partial<Lead>): Promise<Lead> {
+    const { data, error } = await supabase
+      .from('leads')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async deleteLead(id: string): Promise<void> {
+    const { error } = await supabase.from('leads').delete().eq('id', id);
+    if (error) throw error;
+  },
+
+  async convertLeadToClient(lead: Lead, companyId: string): Promise<Client> {
+    // Create client from lead data
+    const { data, error } = await supabase
+      .from('clients')
+      .insert({
+        company_id: companyId,
+        name: lead.company_name || lead.name,
+        display_name: lead.name,
+        email: lead.email,
+        phone: lead.phone,
+        lifecycle_stage: 'client'
+      })
+      .select()
+      .single();
+    if (error) throw error;
+    
+    // Update lead status to won
+    await supabase.from('leads').update({ status: 'won', updated_at: new Date().toISOString() }).eq('id', lead.id);
+    
+    return data;
+  }
 };

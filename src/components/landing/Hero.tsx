@@ -44,9 +44,9 @@ export default function Hero() {
               className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 md:mb-6 leading-tight"
               style={{ color: '#474747' }}
             >
-              Streamline Your
+              Proposal to Invoice
               <br />
-              Business Workflow
+              in Minutes, Not Days
             </motion.h1>
             <motion.p
               initial={{ opacity: 0, y: 20 }}
@@ -55,7 +55,7 @@ export default function Hero() {
               className="text-base md:text-xl mb-6 md:mb-8 max-w-lg"
               style={{ color: '#6B6B6B' }}
             >
-              From proposal to payment, manage your entire business cycle in one elegant platform.
+              Save 10+ hours weekly on billing. Track time, manage projects, and get paid faster—all in one platform.
             </motion.p>
             <motion.div
               initial={{ opacity: 0, y: 20 }}

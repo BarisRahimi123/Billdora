@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Download, Send, Upload, Plus, Trash2, Check, Save, X, Package, UserPlus, Settings, Eye, EyeOff } from 'lucide-react';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { ArrowLeft, Download, Send, Upload, Plus, Trash2, Check, Save, X, Package, UserPlus, Settings, Eye, EyeOff, Image, Users, FileText, Calendar, ClipboardList, ChevronRight } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { api, Quote, Client, QuoteLineItem, CompanySettings, Service } from '../lib/api';
 import { useToast } from '../components/Toast';
@@ -32,9 +32,16 @@ function generateQuoteNumber(): string {
 export default function QuoteDocumentPage() {
   const { quoteId } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { profile } = useAuth();
   const { showToast } = useToast();
   const isNewQuote = quoteId === 'new';
+  
+  // Lead info from URL params (when creating proposal from lead)
+  const leadId = searchParams.get('lead_id');
+  const leadName = searchParams.get('lead_name') || '';
+  const leadEmail = searchParams.get('lead_email') || '';
+  const leadCompany = searchParams.get('lead_company') || '';
 
   const [quote, setQuote] = useState<Quote | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
@@ -103,6 +110,34 @@ export default function QuoteDocumentPage() {
   });
   const [showSectionSettings, setShowSectionSettings] = useState(false);
 
+  // 4-Stage Wizard Navigation
+  type WizardStep = 1 | 2 | 3 | 4;
+  const [currentStep, setCurrentStep] = useState<WizardStep>(1);
+
+  // Wizard step validation
+  const canProceedFromStep = (step: WizardStep): boolean => {
+    switch (step) {
+      case 1: return lineItems.some(item => item.description.trim());
+      case 2: return true; // Scope/timeline is optional
+      case 3: return true; // Cover/terms are optional
+      case 4: return true;
+      default: return true;
+    }
+  };
+
+  const wizardSteps = [
+    { step: 1 as WizardStep, label: 'Services & Scope', icon: <ClipboardList className="w-4 h-4" />, complete: lineItems.some(item => item.description.trim()) },
+    { step: 2 as WizardStep, label: 'Timeline', icon: <Calendar className="w-4 h-4" />, complete: lineItems.some(item => item.estimatedDays > 0 && item.description.trim()) },
+    { step: 3 as WizardStep, label: 'Cover & Terms', icon: <Image className="w-4 h-4" />, complete: true },
+    { step: 4 as WizardStep, label: 'Preview & Send', icon: <Send className="w-4 h-4" />, complete: false },
+  ];
+
+  // Display name for proposal (client or lead fallback)
+  const displayClientName = client?.name || leadCompany || leadName || 'Client';
+  const displayClientEmail = client?.email || leadEmail || '';
+  const displayContactName = client?.primary_contact_name || leadName || '';
+  const displayLeadName = leadName || client?.primary_contact_name || '';
+
   // Letter content
   const [letterContent, setLetterContent] = useState('');
 
@@ -136,7 +171,7 @@ export default function QuoteDocumentPage() {
           <tr>
             <td style="padding: 40px;">
               <p style="margin: 0 0 20px; color: #18181b; font-size: 18px; font-weight: 600;">
-                Hello ${client?.name || 'Client'},
+                Hello ${displayClientName},
               </p>
               <p style="margin: 0 0 24px; color: #52525b; font-size: 16px; line-height: 1.6;">
                 Your proposal for <strong style="color: #18181b;">${projectName || documentTitle}</strong> is ready for your review.
@@ -215,6 +250,41 @@ export default function QuoteDocumentPage() {
         setCompanySettings(settings);
         setTaxRate(settings.default_tax_rate || 8.25);
         if (settings.default_terms) setTerms(settings.default_terms);
+      }
+
+      // If creating from a lead, find matching client or create new one
+      if (isNewQuote && leadId) {
+        // Try to find existing client by email or company name
+        let matchedClient = clientsData.find(c => 
+          (leadEmail && c.email?.toLowerCase() === leadEmail.toLowerCase()) ||
+          (leadCompany && c.name?.toLowerCase() === leadCompany.toLowerCase())
+        );
+        
+        if (matchedClient) {
+          setSelectedClientId(matchedClient.id);
+          setClient(matchedClient);
+        } else if (leadCompany || leadName) {
+          // Auto-create a new client from lead info
+          try {
+            const newClient = await api.createClient({
+              company_id: profile.company_id,
+              name: leadCompany || leadName,
+              email: leadEmail || undefined,
+              primary_contact_name: leadName || undefined,
+              lifecycle_stage: 'prospect',
+            });
+            setClients([...clientsData, newClient]);
+            setSelectedClientId(newClient.id);
+            setClient(newClient);
+          } catch (err) {
+            console.error('Failed to create client from lead:', err);
+          }
+        }
+        
+        // Set document title from lead
+        if (leadCompany || leadName) {
+          setDocumentTitle(`Proposal for ${leadCompany || leadName}`);
+        }
       }
 
       if (!isNewQuote && quoteId) {
@@ -498,7 +568,11 @@ export default function QuoteDocumentPage() {
 
       setHasUnsavedChanges(false);
       showToast('Quote saved successfully!', 'success');
-      navigate('/sales');
+      
+      // If this was a new quote, navigate to the saved quote so user can send it
+      if (isNewQuote && savedQuoteId && savedQuoteId !== 'new') {
+        navigate(`/quotes/${savedQuoteId}/document`, { replace: true });
+      }
     } catch (error: any) {
       console.error('Failed to save:', error);
       showToast(error?.message || 'Failed to save. Please try again.', 'error');
@@ -581,20 +655,30 @@ export default function QuoteDocumentPage() {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-100">
+    <div className="min-h-screen bg-neutral-50">
       {/* Toolbar */}
-      <div className="sticky top-0 z-50 bg-white border-b border-neutral-200 px-4 lg:px-6 py-3 print:hidden">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div className="sticky top-0 z-50 bg-white border-b border-neutral-200 px-4 lg:px-6 py-3 print:hidden shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 max-w-[1200px] mx-auto">
           <div className="flex items-center gap-2 sm:gap-4 overflow-x-auto">
             <button onClick={() => {
               if (hasUnsavedChanges && !confirm('You have unsaved changes. Are you sure you want to leave?')) return;
               navigate('/sales');
             }} className="flex items-center gap-1 sm:gap-2 text-neutral-600 hover:text-neutral-900 flex-shrink-0">
               <ArrowLeft className="w-5 h-5" />
-              <span className="hidden sm:inline">Back to Sales</span>
+              <span className="hidden sm:inline">Back</span>
             </button>
             <div className="h-6 w-px bg-neutral-200 hidden sm:block" />
-            <span className="text-sm font-medium text-neutral-900">Proposal Builder</span>
+            <h1 className="text-lg font-semibold text-neutral-900">{isNewQuote ? 'New Proposal' : documentTitle}</h1>
+            {quote?.status && (
+              <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                quote.status === 'approved' ? 'bg-green-100 text-green-700' :
+                quote.status === 'sent' ? 'bg-amber-100 text-amber-700' :
+                quote.status === 'declined' ? 'bg-red-100 text-red-700' :
+                'bg-neutral-100 text-neutral-600'
+              }`}>
+                {quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto">
           {hasUnsavedChanges && (
@@ -669,59 +753,131 @@ export default function QuoteDocumentPage() {
         </div>
       )}
 
-      {/* Document Container */}
-      <div className="py-8 px-4 flex justify-center">
-        <div className="w-full max-w-[850px] space-y-8">
-          
-          {/* COVER PAGE */}
-          {showSections.cover && (
-          <div 
-            className="bg-white shadow-xl rounded-lg overflow-hidden relative"
-            style={{ minHeight: '600px' }}
-            >
-              {/* Background Image */}
-              <div 
-                className="absolute inset-0 bg-cover bg-center"
-                style={{ backgroundImage: `url(${coverBgUrl})` }}
-              >
-                <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-black/80" />
-              </div>
-
-              {/* Upload Background Button with onboarding hint */}
-              <label className="absolute top-4 right-4 z-20 cursor-pointer print:hidden">
-                <input type="file" accept="image/*" onChange={handleBgUpload} className="hidden" />
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-white/20 backdrop-blur-sm text-white text-sm rounded-lg hover:bg-white/30 transition-colors">
-                  <Upload className="w-4 h-4" />
-                  {isNewQuote ? '① Upload Background' : 'Change Background'}
+      {/* Wizard Step Navigation */}
+      <div className="bg-white border-b border-neutral-200 px-4 print:hidden sticky top-[57px] z-40">
+        <div className="max-w-[1200px] mx-auto">
+          <div className="flex items-center justify-between py-3">
+            {/* Step indicators */}
+            <div className="flex items-center gap-2">
+              {wizardSteps.map((ws, idx) => (
+                <div key={ws.step} className="flex items-center">
+                  <button
+                    onClick={() => setCurrentStep(ws.step)}
+                    className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-xl transition-all ${
+                      currentStep === ws.step
+                        ? 'bg-[#476E66] text-white shadow-sm'
+                        : ws.step < currentStep
+                          ? 'bg-green-50 text-green-700'
+                          : 'text-neutral-500 hover:bg-neutral-100'
+                    }`}
+                  >
+                    <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                      currentStep === ws.step ? 'bg-white/20' :
+                      ws.step < currentStep ? 'bg-green-100' : 'bg-neutral-100'
+                    }`}>
+                      {ws.step < currentStep ? <Check className="w-3.5 h-3.5" /> : ws.step}
+                    </span>
+                    <span className="hidden sm:inline">{ws.label}</span>
+                  </button>
+                  {idx < wizardSteps.length - 1 && (
+                    <ChevronRight className="w-4 h-4 text-neutral-300 mx-1" />
+                  )}
                 </div>
-              </label>
+              ))}
+            </div>
+            
+            {/* Navigation buttons */}
+            <div className="flex items-center gap-2">
+              {currentStep > 1 && (
+                <button
+                  onClick={() => setCurrentStep((currentStep - 1) as WizardStep)}
+                  className="px-4 py-2 text-sm text-neutral-600 hover:bg-neutral-100 rounded-lg"
+                >
+                  Back
+                </button>
+              )}
+              {currentStep < 4 && (
+                <button
+                  onClick={() => setCurrentStep((currentStep + 1) as WizardStep)}
+                  className="px-4 py-2 text-sm bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54] flex items-center gap-1"
+                >
+                  Next <ChevronRight className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
 
-              {/* Content */}
-              <div className="relative z-10 h-full flex flex-col text-white p-12">
-                {/* Header */}
-                <div className="flex justify-between items-start mb-8">
+      {/* Document Container */}
+      <div className="py-6 px-4">
+        <div className="w-full max-w-[1200px] mx-auto">
+          
+          {/* COVER TAB */}
+          {/* STEP 3: Cover, Letter & Terms */}
+          {currentStep === 3 && (
+          <div className="space-y-6">
+            {/* Cover Preview Card */}
+            <div className="bg-white rounded-xl shadow-sm border border-neutral-200 overflow-hidden">
+              <div className="px-6 py-4 border-b border-neutral-100 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-[#476E66]/10 flex items-center justify-center">
+                    <Image className="w-5 h-5 text-[#476E66]" />
+                  </div>
                   <div>
-                    {companyInfo.logo ? (
-                      <img src={companyInfo.logo} alt={companyInfo.name} className="w-16 h-16 object-contain rounded-lg bg-white/10 mb-2" />
-                    ) : (
-                      <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center text-2xl font-bold mb-2">
-                        {companyInfo.name?.charAt(0) || 'C'}
-                      </div>
-                    )}
-                    <p className="text-white/70 text-sm">{companyInfo.website}</p>
+                    <h3 className="font-semibold text-neutral-900">Cover Page</h3>
+                    <p className="text-sm text-neutral-500">Your proposal's first impression</p>
                   </div>
                 </div>
-
-                {/* Client Info */}
-                <div className="mb-auto">
-                  <p className="text-white/60 text-sm uppercase tracking-wider mb-2">Prepared For</p>
-                  <h3 className="text-2xl font-semibold mb-1">{client?.name || 'Select a Client'}</h3>
-                  <p className="text-white/60 mt-4">{formatDate(quote?.created_at)}</p>
+              </div>
+              
+              <div className="relative" style={{ minHeight: '500px' }}>
+                {/* Background Image */}
+                <div 
+                  className="absolute inset-0 bg-cover bg-center"
+                  style={{ backgroundImage: `url(${coverBgUrl})` }}
+                >
+                  <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-black/80" />
                 </div>
 
-                {/* Center Title */}
-                <div className="text-center py-16">
-                  {editingTitle ? (
+                {/* Upload Background Button */}
+                <label className="absolute top-4 right-4 z-20 cursor-pointer print:hidden">
+                  <input type="file" accept="image/*" onChange={handleBgUpload} className="hidden" />
+                  <div className="flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-sm text-white text-sm rounded-xl hover:bg-white/30 transition-colors">
+                    <Upload className="w-4 h-4" />
+                    Change Image
+                  </div>
+                </label>
+
+                {/* Cover Content */}
+                <div className="relative z-10 h-full flex flex-col text-white p-8 md:p-12" style={{ minHeight: '500px' }}>
+                  {/* Header */}
+                  <div className="flex justify-between items-start mb-8">
+                    <div>
+                      {companyInfo.logo ? (
+                        <img src={companyInfo.logo} alt={companyInfo.name} className="w-16 h-16 object-contain rounded-xl bg-white/10 mb-2" />
+                      ) : (
+                        <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center text-2xl font-bold mb-2">
+                          {companyInfo.name?.charAt(0) || 'C'}
+                        </div>
+                      )}
+                      <p className="text-white/70 text-sm">{companyInfo.website}</p>
+                    </div>
+                  </div>
+
+                  {/* Client Info */}
+                  <div className="mb-auto">
+                    <p className="text-white/60 text-sm uppercase tracking-wider mb-2">Prepared For</p>
+                    <h3 className="text-2xl font-semibold mb-1">{displayClientName}</h3>
+                    {displayLeadName && displayLeadName !== displayClientName && (
+                      <p className="text-white/80">{displayLeadName}</p>
+                    )}
+                    <p className="text-white/60 mt-4">{formatDate(quote?.created_at)}</p>
+                  </div>
+
+                  {/* Center Title */}
+                  <div className="text-center py-12">
+                    {editingTitle ? (
                     <div className="inline-flex items-center gap-2">
                       <input
                         type="text"
@@ -746,27 +902,36 @@ export default function QuoteDocumentPage() {
                   <p className="text-lg text-white/70 mt-4">Proposal #{quote?.quote_number || 'New'}</p>
                 </div>
 
-                {/* Footer */}
-                <div className="mt-auto pt-8 border-t border-white/20">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xl font-semibold">{companyInfo.name}</p>
-                      <p className="text-white/60 text-sm">{companyInfo.address}</p>
-                      <p className="text-white/60 text-sm">{companyInfo.city}, {companyInfo.state} {companyInfo.zip}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-white/60 text-sm">{companyInfo.phone}</p>
-                      <p className="text-white/60 text-sm">{companyInfo.website}</p>
+                  {/* Footer */}
+                  <div className="mt-auto pt-8 border-t border-white/20">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xl font-semibold">{companyInfo.name}</p>
+                        <p className="text-white/60 text-sm">{companyInfo.address}</p>
+                        <p className="text-white/60 text-sm">{companyInfo.city}, {companyInfo.state} {companyInfo.zip}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-white/60 text-sm">{companyInfo.phone}</p>
+                        <p className="text-white/60 text-sm">{companyInfo.website}</p>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-          )}
 
-          {/* LETTER PAGE */}
-          {showSections.letter && (
-          <div className="bg-white shadow-xl rounded-lg overflow-hidden p-8">
+            {/* Letter Card - within Cover Tab */}
+            <div className="bg-white rounded-xl shadow-sm border border-neutral-200 overflow-hidden">
+              <div className="px-6 py-4 border-b border-neutral-100 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
+                  <FileText className="w-5 h-5 text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-neutral-900">Cover Letter</h3>
+                  <p className="text-sm text-neutral-500">Personal message to your client</p>
+                </div>
+              </div>
+              <div className="p-6">
             {/* Letterhead */}
             <div className="flex justify-between items-start mb-8">
               <div className="flex gap-4">
@@ -791,7 +956,7 @@ export default function QuoteDocumentPage() {
 
             {/* Recipient */}
             <div className="mb-6">
-              <p className="font-semibold text-neutral-900">{client?.name || 'Client Name'}</p>
+              <p className="font-semibold text-neutral-900">{displayClientName}</p>
               {client?.display_name && client.display_name !== client.name && (
                 <p className="text-neutral-600">{client.display_name}</p>
               )}
@@ -807,7 +972,7 @@ export default function QuoteDocumentPage() {
 
             {/* Letter Body */}
             <div className="mb-6">
-              <p className="text-neutral-900 mb-4">Dear {client?.primary_contact_name?.trim().split(' ')[0] || 'Valued Client'},</p>
+              <p className="text-neutral-900 mb-4">Dear {displayContactName?.trim().split(' ')[0] || 'Valued Client'},</p>
               <textarea
                 value={letterContent || `Thank you for the potential opportunity to work together on the ${documentTitle || projectName || 'project'}. I have attached the proposal for your consideration which includes a thorough Scope of Work, deliverable schedule, and Fee.\n\nPlease review and let me know if you have any questions or comments. If you are ready for us to start working on the project, please sign the proposal sheet.`}
                 onChange={(e) => { setLetterContent(e.target.value); setHasUnsavedChanges(true); }}
@@ -816,18 +981,662 @@ export default function QuoteDocumentPage() {
               />
             </div>
 
-            {/* Closing */}
-            <div className="mt-8">
-              <p className="text-neutral-900 mb-4">Sincerely,</p>
-              <div className="mt-8">
-                <p className="font-semibold text-neutral-900">{profile?.full_name || companyInfo.name}</p>
-                <p className="text-sm text-neutral-600">{companyInfo.name}</p>
+                {/* Closing */}
+                <div className="mt-8">
+                  <p className="text-neutral-900 mb-4">Sincerely,</p>
+                  <div className="mt-8">
+                    <p className="font-semibold text-neutral-900">{profile?.full_name || companyInfo.name}</p>
+                    <p className="text-sm text-neutral-600">{companyInfo.name}</p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
           )}
 
-          {/* SCOPE OF WORK & TIMELINE PAGE */}
+          {/* STEP 1: Line Items Table */}
+          {currentStep === 1 && (
+          <div className="bg-white rounded-xl shadow-sm border border-neutral-200 overflow-hidden">
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-neutral-100 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center">
+                  <ClipboardList className="w-5 h-5 text-green-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-neutral-900">Line Items</h3>
+                  <p className="text-sm text-neutral-500">Add services and products to this proposal</p>
+                </div>
+              </div>
+            </div>
+            {/* Project Name field */}
+            <div className="px-6 py-4 border-b border-neutral-100">
+              <label className="block text-sm font-medium text-neutral-700 mb-1.5">Project Name</label>
+              <input
+                type="text"
+                value={projectName}
+                onChange={(e) => { setProjectName(e.target.value); setHasUnsavedChanges(true); }}
+                className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-[#476E66] focus:border-transparent outline-none"
+                placeholder="Enter project name (shown on cover page)"
+              />
+            </div>
+
+            {/* Desktop Table Layout */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-neutral-50 border-b border-neutral-200">
+                    <th className="text-left px-5 py-3 font-semibold text-neutral-500 text-xs uppercase tracking-wider">Description</th>
+                    <th className="text-right px-4 py-3 font-semibold text-neutral-500 text-xs uppercase tracking-wider w-24">Unit Price</th>
+                    <th className="text-center px-4 py-3 font-semibold text-neutral-500 text-xs uppercase tracking-wider w-20">Unit</th>
+                    <th className="text-center px-4 py-3 font-semibold text-neutral-500 text-xs uppercase tracking-wider w-14">Qty</th>
+                    <th className="text-center px-4 py-3 font-semibold text-neutral-500 text-xs uppercase tracking-wider w-14">Tax</th>
+                    <th className="text-center px-2 py-3 font-semibold text-neutral-500 text-xs uppercase tracking-wider w-12">Days</th>
+                    <th className="text-center px-2 py-3 font-semibold text-neutral-500 text-xs uppercase tracking-wider w-28">Scheduling</th>
+                    <th className="text-right px-5 py-3 font-semibold text-neutral-500 text-xs uppercase tracking-wider w-24">Amount</th>
+                    <th className="w-10"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-neutral-100">
+                  {lineItems.map((item) => (
+                    <tr key={item.id} className="group hover:bg-neutral-50">
+                      <td className="px-5 py-3">
+                        <input
+                          type="text"
+                          value={item.description}
+                          onChange={(e) => updateLineItem(item.id, { description: e.target.value })}
+                          className="w-full bg-transparent outline-none text-neutral-900 focus:bg-white focus:ring-1 focus:ring-[#476E66] rounded px-2 py-1 -mx-2"
+                          placeholder="Item description..."
+                        />
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <input
+                          type="number"
+                          value={item.unitPrice}
+                          onChange={(e) => updateLineItem(item.id, { unitPrice: parseFloat(e.target.value) || 0 })}
+                          className="w-full text-right bg-transparent outline-none text-neutral-900 focus:bg-white focus:ring-1 focus:ring-[#476E66] rounded px-2 py-1"
+                        />
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <select
+                          value={item.unit}
+                          onChange={(e) => updateLineItem(item.id, { unit: e.target.value })}
+                          className="w-full text-center bg-transparent outline-none text-neutral-900 text-xs cursor-pointer"
+                        >
+                          <option value="each">each</option>
+                          <option value="hour">hour</option>
+                          <option value="day">day</option>
+                          <option value="sq ft">sq ft</option>
+                          <option value="linear ft">linear ft</option>
+                          <option value="project">project</option>
+                          <option value="lump sum">lump sum</option>
+                          <option value="month">month</option>
+                        </select>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <input
+                          type="number"
+                          value={item.qty}
+                          onChange={(e) => updateLineItem(item.id, { qty: parseInt(e.target.value) || 1 })}
+                          className="w-12 text-center bg-white border border-neutral-200 outline-none text-neutral-900 focus:ring-1 focus:ring-[#476E66] rounded px-2 py-1"
+                          min="1"
+                        />
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <input
+                          type="checkbox"
+                          checked={item.taxed}
+                          onChange={(e) => updateLineItem(item.id, { taxed: e.target.checked })}
+                          className="w-4 h-4 rounded border-neutral-300 text-[#476E66] focus:ring-[#476E66]"
+                        />
+                      </td>
+                      <td className="px-1 py-2 text-center">
+                        <input
+                          type="number"
+                          value={item.estimatedDays}
+                          onChange={(e) => updateLineItem(item.id, { estimatedDays: parseInt(e.target.value) || 1 })}
+                          className="w-10 text-center bg-transparent outline-none text-neutral-900 text-xs focus:bg-white focus:ring-1 focus:ring-[#476E66] rounded"
+                          min="1"
+                        />
+                      </td>
+                      <td className="px-1 py-2 text-center">
+                        <div className="flex flex-col gap-1">
+                          <select
+                            value={item.dependsOn || ''}
+                            onChange={(e) => {
+                              const depId = e.target.value;
+                              if (!depId) {
+                                updateLineItem(item.id, { dependsOn: '', startType: 'parallel' });
+                              } else {
+                                updateLineItem(item.id, { dependsOn: depId, startType: item.startType === 'parallel' ? 'sequential' : item.startType });
+                              }
+                            }}
+                            className="w-full text-center bg-white border border-neutral-200 outline-none text-neutral-700 text-xs cursor-pointer rounded px-1 py-0.5"
+                          >
+                            <option value="">Day 1</option>
+                            {lineItems.filter(li => li.id !== item.id).map((li) => (
+                              <option key={li.id} value={li.id}>After: {li.description.substring(0, 20) || 'Untitled'}{li.description.length > 20 ? '...' : ''}</option>
+                            ))}
+                          </select>
+                          {item.dependsOn && (
+                            <div className="flex items-center gap-1">
+                              <select
+                                value={item.startType}
+                                onChange={(e) => updateLineItem(item.id, { startType: e.target.value as 'sequential' | 'overlap' })}
+                                className="flex-1 text-center bg-transparent outline-none text-neutral-600 text-xs cursor-pointer"
+                              >
+                                <option value="sequential">After ends</option>
+                                <option value="overlap">Overlap</option>
+                              </select>
+                              {item.startType === 'overlap' && (
+                                <input
+                                  type="number"
+                                  value={item.overlapDays}
+                                  onChange={(e) => updateLineItem(item.id, { overlapDays: parseInt(e.target.value) || 0 })}
+                                  className="w-8 text-center bg-white border border-neutral-200 text-xs rounded"
+                                  min="0"
+                                  title="Days after dependency starts"
+                                />
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-5 py-3 text-right font-medium text-neutral-900">
+                        {formatCurrency(item.unitPrice * item.qty)}
+                      </td>
+                      <td className="px-2 py-3">
+                        {lineItems.length > 1 && (
+                          <button
+                            onClick={() => removeLineItem(item.id)}
+                            className="p-1.5 text-neutral-400 hover:text-red-500 hover:bg-red-50 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Add Item Buttons */}
+            <div className="px-5 py-3 border-t border-neutral-100 flex gap-4">
+              <button
+                onClick={addLineItem}
+                className="flex items-center gap-2 text-sm text-neutral-600 hover:text-neutral-900"
+              >
+                <Plus className="w-4 h-4" />
+                Add Item
+              </button>
+              {services.length > 0 && (
+                <button
+                  onClick={() => setShowServicesModal(true)}
+                  className="flex items-center gap-2 text-sm text-neutral-600 hover:text-neutral-900"
+                >
+                  <Package className="w-4 h-4" />
+                  From Services
+                </button>
+              )}
+            </div>
+
+            {/* Totals */}
+            <div className="px-6 py-4 bg-neutral-50 border-t border-neutral-200">
+              <div className="flex justify-end">
+                <div className="w-72 space-y-2 text-sm">
+                  <div className="flex justify-between py-1">
+                    <span className="text-neutral-600">Subtotal:</span>
+                    <span className="font-medium text-neutral-900">{formatCurrency(subtotal)}</span>
+                  </div>
+                  <div className="flex justify-between py-1">
+                    <span className="text-neutral-600">Taxable Amount:</span>
+                    <span className="text-neutral-900">{formatCurrency(taxableAmount)}</span>
+                  </div>
+                  <div className="flex justify-between py-1 items-center">
+                    <span className="text-neutral-600">Tax Rate:</span>
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        value={taxRate}
+                        onChange={(e) => { setTaxRate(parseFloat(e.target.value) || 0); setHasUnsavedChanges(true); }}
+                        className="w-16 text-right bg-transparent border-b border-neutral-200 outline-none focus:border-neutral-500 text-neutral-900"
+                        step="0.01"
+                      />
+                      <span className="text-neutral-900">%</span>
+                    </div>
+                  </div>
+                  <div className="flex justify-between py-1">
+                    <span className="text-neutral-600">Tax Due:</span>
+                    <span className="text-neutral-900">{formatCurrency(taxDue)}</span>
+                    </div>
+                    <div className="flex justify-between pt-2 border-t border-neutral-300">
+                      <span className="text-lg font-bold text-neutral-900">Total</span>
+                      <span className="text-lg font-bold text-[#476E66]">{formatCurrency(total)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 2: Scope of Work & Timeline */}
+          {currentStep === 2 && (
+          <div className="space-y-6">
+            {/* Scope of Work Card */}
+            <div className="bg-white rounded-xl shadow-sm border border-neutral-200 overflow-hidden">
+              <div className="px-6 py-4 border-b border-neutral-100 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center">
+                  <FileText className="w-5 h-5 text-indigo-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-neutral-900">Scope of Work</h3>
+                  <p className="text-sm text-neutral-500">Detailed description of deliverables</p>
+                </div>
+              </div>
+              <div className="p-6">
+                <textarea
+                  value={scopeOfWork}
+                  onChange={(e) => { setScopeOfWork(e.target.value); setHasUnsavedChanges(true); }}
+                  className="w-full h-48 px-4 py-3 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-[#476E66]/20 focus:border-[#476E66] outline-none resize-none"
+                  placeholder="Describe the scope of work for this project. Include deliverables, milestones, and key objectives..."
+                />
+              </div>
+            </div>
+
+            {/* Project Timeline Card */}
+            <div className="bg-white rounded-xl shadow-sm border border-neutral-200 overflow-hidden">
+              <div className="px-6 py-4 border-b border-neutral-100 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-cyan-50 flex items-center justify-center">
+                  <Calendar className="w-5 h-5 text-cyan-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-neutral-900">Project Timeline</h3>
+                  <p className="text-sm text-neutral-500">Visual schedule based on your line items</p>
+                </div>
+              </div>
+              <div className="p-6">
+                {lineItems.filter(item => item.description.trim()).length > 0 ? (
+                  <div className="border border-neutral-200 rounded-xl p-4">
+                    {(() => {
+                      const validItems = lineItems.filter(item => item.description.trim());
+                      const computedOffsets = getComputedStartOffsets(validItems);
+                      const maxEnd = Math.max(...validItems.map(item => (computedOffsets.get(item.id) || 0) + item.estimatedDays));
+                      const totalDays = maxEnd || 1;
+                      return (
+                        <div className="space-y-3">
+                          <div className="flex items-center text-xs text-neutral-500 border-b pb-2">
+                            <div className="w-48 flex-shrink-0 font-medium">Task</div>
+                            <div className="flex-1 flex justify-between px-2">
+                              <span>Day 1</span>
+                              <span>Day {Math.ceil(totalDays / 2)}</span>
+                              <span>Day {totalDays}</span>
+                            </div>
+                          </div>
+                          {validItems.map((item, idx) => {
+                            const startDay = computedOffsets.get(item.id) || 0;
+                            const widthPercent = (item.estimatedDays / totalDays) * 100;
+                            const leftPercent = (startDay / totalDays) * 100;
+                            const colors = ['bg-[#476E66]', 'bg-cyan-500', 'bg-indigo-500', 'bg-purple-500'];
+                            return (
+                              <div key={item.id} className="flex items-center">
+                                <div className="w-48 flex-shrink-0 text-sm text-neutral-700 truncate pr-2" title={item.description}>
+                                  {item.description.length > 30 ? item.description.substring(0, 30) + '...' : item.description}
+                                </div>
+                                <div className="flex-1 h-8 bg-neutral-100 rounded-lg relative">
+                                  <div 
+                                    className={`absolute h-full ${colors[idx % colors.length]} rounded-lg flex items-center justify-center text-white text-xs font-medium`}
+                                    style={{ left: `${leftPercent}%`, width: `${Math.max(widthPercent, 8)}%`, minWidth: '50px' }}
+                                  >
+                                    {item.estimatedDays}d
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                          <div className="pt-3 border-t text-sm text-neutral-600 flex justify-between">
+                            <span>Total Project Duration:</span>
+                            <span className="font-semibold text-neutral-900">{totalDays} day{totalDays > 1 ? 's' : ''}</span>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                ) : (
+                  <div className="text-center py-12 bg-neutral-50 rounded-xl border-2 border-dashed border-neutral-200">
+                    <Calendar className="w-12 h-12 text-neutral-300 mx-auto mb-3" />
+                    <p className="text-neutral-500 font-medium">No timeline to display</p>
+                    <p className="text-sm text-neutral-400 mt-1">Add line items with estimated days to see the timeline</p>
+                    <button
+                      onClick={() => setCurrentStep(1)}
+                      className="mt-4 px-4 py-2 bg-[#476E66] text-white rounded-lg text-sm hover:bg-[#3A5B54]"
+                    >
+                      Add Services
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+          )}
+
+          {/* TERMS TAB */}
+          {/* TERMS - Part of Step 3 */}
+          {currentStep === 3 && showSections.terms && (
+          <div className="space-y-6">
+            <div className="bg-white rounded-xl shadow-sm border border-neutral-200 overflow-hidden">
+              <div className="px-6 py-4 border-b border-neutral-100 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-rose-50 flex items-center justify-center">
+                  <FileText className="w-5 h-5 text-rose-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-neutral-900">Terms & Conditions</h3>
+                  <p className="text-sm text-neutral-500">Legal terms for this proposal</p>
+                </div>
+              </div>
+              <div className="p-6">
+                <textarea
+                  value={terms}
+                  onChange={(e) => { setTerms(e.target.value); setHasUnsavedChanges(true); }}
+                  className="w-full h-48 px-4 py-3 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-[#476E66]/20 focus:border-[#476E66] outline-none resize-none"
+                  placeholder="Enter terms and conditions..."
+                />
+              </div>
+            </div>
+
+            {/* Signature Section */}
+            <div className="bg-white rounded-xl shadow-sm border border-neutral-200 overflow-hidden">
+              <div className="px-6 py-4 border-b border-neutral-100 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center">
+                  <Check className="w-5 h-5 text-emerald-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-neutral-900">Customer Signature</h3>
+                  <p className="text-sm text-neutral-500">Signature fields for acceptance</p>
+                </div>
+              </div>
+              <div className="p-6">
+                <div className="bg-neutral-50 rounded-xl p-6 border border-neutral-200">
+                  <p className="text-sm text-neutral-600 mb-4">Customer Acceptance (sign below):</p>
+                  <div className="grid sm:grid-cols-2 gap-6">
+                    <div>
+                      <div className="border-b-2 border-neutral-400 pb-1 mb-2 h-10 flex items-end">
+                        <span className="text-2xl font-serif text-neutral-400">X</span>
+                      </div>
+                      <p className="text-sm text-neutral-500">Signature</p>
+                    </div>
+                    <div>
+                      <input
+                        type="text"
+                        value={signatureName}
+                        onChange={(e) => setSignatureName(e.target.value)}
+                        placeholder="Print Name"
+                        className="w-full border-b-2 border-neutral-400 pb-1 mb-2 h-10 bg-transparent outline-none"
+                      />
+                      <p className="text-sm text-neutral-500">Print Name</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          )}
+
+          {/* STEP 4: Preview & Send */}
+          {currentStep === 4 && (
+          <div className="space-y-6">
+            {/* Action Buttons at Top */}
+            <div className="flex gap-4 sticky top-0 bg-neutral-50 py-3 z-10">
+              <button
+                onClick={handlePrint}
+                className="flex-1 flex items-center justify-center gap-2 px-6 py-3 border border-neutral-200 bg-white rounded-xl hover:bg-neutral-50 transition-colors"
+              >
+                <Download className="w-5 h-5" />
+                <span>Download PDF</span>
+              </button>
+              <button
+                onClick={saveChanges}
+                disabled={saving || !selectedClientId || !lineItems.some(i => i.description.trim())}
+                className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-neutral-800 text-white rounded-xl hover:bg-neutral-700 transition-colors disabled:opacity-50"
+              >
+                <Save className="w-5 h-5" />
+                <span>{saving ? 'Saving...' : 'Save Proposal'}</span>
+              </button>
+              {client?.email && (
+                <button
+                  onClick={isNewQuote ? saveChanges : handleSendToCustomer}
+                  disabled={saving || (isNewQuote ? !lineItems.some(i => i.description.trim()) : hasUnsavedChanges)}
+                  className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-[#476E66] text-white rounded-xl hover:bg-[#3A5B54] transition-colors disabled:opacity-50"
+                >
+                  <Send className="w-5 h-5" />
+                  <span>{isNewQuote ? 'Save & Continue to Send' : 'Send to Client'}</span>
+                </button>
+              )}
+            </div>
+
+            {/* Preview Sections */}
+            <div className="flex flex-col items-center gap-6">
+              
+              {/* 1. COVER PAGE */}
+              {showSections.cover && (
+              <div className="w-full max-w-3xl bg-white rounded-xl shadow-lg overflow-hidden" style={{ minHeight: '500px' }}>
+                <div className="relative h-[500px]">
+                  <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${coverBgUrl})` }}>
+                    <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-black/80" />
+                  </div>
+                  <div className="relative z-10 h-full flex flex-col text-white p-8">
+                    <div className="flex justify-between items-start mb-4">
+                      <div>
+                        {companyInfo.logo ? (
+                          <img src={companyInfo.logo} alt={companyInfo.name} className="w-12 h-12 object-contain rounded-lg bg-white/10 mb-2" />
+                        ) : (
+                          <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center text-xl font-bold mb-2">
+                            {companyInfo.name?.charAt(0) || 'C'}
+                          </div>
+                        )}
+                        <p className="text-white/70 text-xs">{companyInfo.website}</p>
+                      </div>
+                    </div>
+                    <div className="mb-auto">
+                      <p className="text-white/60 text-xs uppercase tracking-wider mb-1">Prepared For</p>
+                      <h3 className="text-xl font-semibold mb-1">{displayClientName}</h3>
+                      {displayLeadName && displayLeadName !== displayClientName && (
+                        <p className="text-white/80 text-sm">{displayLeadName}</p>
+                      )}
+                      <p className="text-white/60 text-sm mt-2">{formatDate(quote?.created_at)}</p>
+                    </div>
+                    <div className="text-center py-8">
+                      <h1 className="text-3xl font-bold tracking-tight">{projectName || documentTitle || 'PROJECT NAME'}</h1>
+                      <p className="text-white/70 mt-2 text-sm">{description || 'Professional Services Proposal'}</p>
+                    </div>
+                    <div className="mt-auto text-center">
+                      <p className="text-2xl font-bold">{formatCurrency(total)}</p>
+                      <p className="text-white/60 text-sm">Proposed Investment</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              )}
+
+              {/* 2. THANK YOU LETTER */}
+              {showSections.letter && (
+              <div className="w-full max-w-3xl bg-white rounded-xl shadow-lg p-8">
+                <div className="mb-6">
+                  <p className="text-sm text-neutral-500 mb-1">{formatDate(quote?.created_at)}</p>
+                  <p className="text-lg font-semibold text-neutral-900">{displayClientName}</p>
+                  {displayLeadName && displayLeadName !== displayClientName && (
+                    <p className="text-neutral-600">{displayLeadName}</p>
+                  )}
+                </div>
+                <div className="mb-6">
+                  <p className="text-neutral-900"><span className="font-semibold">Subject:</span> {documentTitle || projectName || 'Project Proposal'}</p>
+                </div>
+                <div className="mb-6">
+                  <p className="text-neutral-900 mb-4">Dear {displayContactName?.trim().split(' ')[0] || 'Valued Client'},</p>
+                  <div className="text-neutral-700 whitespace-pre-line leading-relaxed">
+                    {letterContent || `Thank you for the opportunity to work together on the ${documentTitle || projectName || 'project'}. I have attached the proposal for your consideration which includes a thorough Scope of Work, deliverable schedule, and Fee.\n\nPlease review and let me know if you have any questions. If you are ready for us to start, please sign the proposal.`}
+                  </div>
+                </div>
+                <div className="mt-8">
+                  <p className="text-neutral-900 mb-4">Sincerely,</p>
+                  <p className="font-semibold text-neutral-900">{profile?.full_name || companyInfo.name}</p>
+                  <p className="text-sm text-neutral-600">{companyInfo.name}</p>
+                </div>
+              </div>
+              )}
+
+              {/* 3. SCOPE OF WORK & TIMELINE */}
+              {(showSections.scopeOfWork || showSections.timeline) && (
+              <div className="w-full max-w-3xl bg-white rounded-xl shadow-lg p-8">
+                <h2 className="text-xl font-bold text-neutral-900 mb-6">Scope of Work & Project Timeline</h2>
+                
+                {showSections.scopeOfWork && scopeOfWork && (
+                <div className="mb-6">
+                  <h3 className="text-sm font-semibold text-neutral-900 uppercase tracking-wider mb-3">Scope of Work</h3>
+                  <div className="text-neutral-700 whitespace-pre-line leading-relaxed border border-neutral-200 rounded-lg p-4 bg-neutral-50">
+                    {scopeOfWork}
+                  </div>
+                </div>
+                )}
+
+                {showSections.timeline && lineItems.filter(item => item.description.trim()).length > 0 && (
+                <div>
+                  <h3 className="text-sm font-semibold text-neutral-900 uppercase tracking-wider mb-3">Project Timeline</h3>
+                  <div className="border border-neutral-200 rounded-lg p-4">
+                    {(() => {
+                      const validItems = lineItems.filter(item => item.description.trim());
+                      const computedOffsets = getComputedStartOffsets(validItems);
+                      const maxEnd = Math.max(...validItems.map(item => (computedOffsets.get(item.id) || 0) + item.estimatedDays));
+                      const totalDays = maxEnd || 1;
+                      return (
+                        <div className="space-y-3">
+                          <div className="flex items-center text-xs text-neutral-500 border-b pb-2">
+                            <div className="w-40 flex-shrink-0 font-medium">Task</div>
+                            <div className="flex-1 flex justify-between px-2">
+                              <span>Day 1</span>
+                              <span>Day {Math.ceil(totalDays / 2)}</span>
+                              <span>Day {totalDays}</span>
+                            </div>
+                          </div>
+                          {validItems.map((item, idx) => {
+                            const startDay = computedOffsets.get(item.id) || 0;
+                            const widthPercent = (item.estimatedDays / totalDays) * 100;
+                            const leftPercent = (startDay / totalDays) * 100;
+                            return (
+                              <div key={item.id} className="flex items-center">
+                                <div className="w-40 flex-shrink-0 text-sm text-neutral-700 truncate pr-2" title={item.description}>
+                                  {item.description.length > 25 ? item.description.substring(0, 25) + '...' : item.description}
+                                </div>
+                                <div className="flex-1 h-7 bg-neutral-100 rounded relative">
+                                  <div 
+                                    className="absolute h-full bg-[#476E66] rounded flex items-center justify-center text-white text-xs font-medium"
+                                    style={{ left: `${leftPercent}%`, width: `${Math.max(widthPercent, 10)}%`, minWidth: '40px' }}
+                                  >
+                                    {item.estimatedDays}d
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                          <div className="pt-3 border-t text-sm text-neutral-600 flex justify-between">
+                            <span>Total Duration:</span>
+                            <span className="font-semibold text-neutral-900">{totalDays} day{totalDays > 1 ? 's' : ''}</span>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
+                )}
+              </div>
+              )}
+
+              {/* 4. LINE ITEMS */}
+              <div className="w-full max-w-3xl bg-white rounded-xl shadow-lg overflow-hidden">
+                <div className="px-8 py-4 border-b border-neutral-200">
+                  <h2 className="text-xl font-bold text-neutral-900">Proposal Details</h2>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-neutral-50 border-b border-neutral-200">
+                        <th className="text-left px-6 py-3 font-semibold text-neutral-600 text-xs uppercase tracking-wider">Description</th>
+                        <th className="text-center px-4 py-3 font-semibold text-neutral-600 text-xs uppercase tracking-wider w-16">Qty</th>
+                        <th className="text-right px-4 py-3 font-semibold text-neutral-600 text-xs uppercase tracking-wider w-24">Unit Price</th>
+                        <th className="text-right px-6 py-3 font-semibold text-neutral-600 text-xs uppercase tracking-wider w-24">Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-neutral-100">
+                      {lineItems.filter(i => i.description.trim()).map(item => (
+                        <tr key={item.id}>
+                          <td className="px-6 py-3 text-neutral-900">{item.description}</td>
+                          <td className="px-4 py-3 text-center text-neutral-900">{item.qty}</td>
+                          <td className="px-4 py-3 text-right text-neutral-600">{formatCurrency(item.unitPrice)}</td>
+                          <td className="px-6 py-3 text-right font-medium text-neutral-900">{formatCurrency(item.unitPrice * item.qty)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="px-8 py-4 bg-neutral-50 border-t border-neutral-200">
+                  <div className="flex justify-end gap-8 text-sm">
+                    <div className="text-right">
+                      <p className="text-neutral-500">Subtotal</p>
+                      <p className="text-neutral-500">Tax ({taxRate}%)</p>
+                      <p className="font-bold text-neutral-900 text-lg mt-1">Total</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-neutral-900">{formatCurrency(subtotal)}</p>
+                      <p className="text-neutral-900">{formatCurrency(taxDue)}</p>
+                      <p className="font-bold text-[#476E66] text-lg mt-1">{formatCurrency(total)}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 5. SIGNATURE SECTION */}
+              {showSections.terms && (
+              <div className="w-full max-w-3xl bg-white rounded-xl shadow-lg p-8">
+                <h2 className="text-xl font-bold text-neutral-900 mb-6">Terms & Acceptance</h2>
+                
+                {terms && (
+                <div className="mb-6">
+                  <h3 className="text-sm font-semibold text-neutral-900 uppercase tracking-wider mb-3">Terms & Conditions</h3>
+                  <div className="text-neutral-700 whitespace-pre-line leading-relaxed text-sm border border-neutral-200 rounded-lg p-4 bg-neutral-50">
+                    {terms}
+                  </div>
+                </div>
+                )}
+
+                <div className="border-t border-neutral-200 pt-6">
+                  <h3 className="text-sm font-semibold text-neutral-900 uppercase tracking-wider mb-4">Customer Acceptance</h3>
+                  <div className="grid grid-cols-2 gap-8">
+                    <div>
+                      <div className="border-b-2 border-neutral-300 h-16 mb-2"></div>
+                      <p className="text-sm text-neutral-500">Signature</p>
+                    </div>
+                    <div>
+                      <div className="border-b-2 border-neutral-300 h-16 mb-2 flex items-end pb-1">
+                        <span className="text-neutral-700">{signatureName}</span>
+                      </div>
+                      <p className="text-sm text-neutral-500">Printed Name</p>
+                    </div>
+                  </div>
+                  <div className="mt-4">
+                    <div className="border-b-2 border-neutral-300 w-48 h-8 mb-2"></div>
+                    <p className="text-sm text-neutral-500">Date</p>
+                  </div>
+                </div>
+              </div>
+              )}
+
+            </div>
+          </div>
+          )}
+
+          {/* Keep old sections for export preview - hidden in tab view */}
+          <div className="hidden">
+          {/* SCOPE OF WORK & TIMELINE PAGE (for export) */}
           {(showSections.scopeOfWork || showSections.timeline) && (
           <div className="bg-white shadow-xl rounded-lg overflow-hidden p-8">
             <h2 className="text-2xl font-bold text-neutral-900 mb-6">Scope of Work & Project Timeline</h2>
@@ -873,7 +1682,7 @@ export default function QuoteDocumentPage() {
                         const startDay = computedOffsets.get(item.id) || 0;
                         const widthPercent = (item.estimatedDays / totalDays) * 100;
                         const leftPercent = (startDay / totalDays) * 100;
-                        const colors = ['bg-neutral-700', 'bg-neutral-600', 'bg-neutral-500', 'bg-neutral-400'];
+                        const barColor = 'bg-[#476E66]';
                         return (
                           <div key={item.id} className="flex items-center">
                             <div className="w-48 flex-shrink-0 text-sm text-neutral-700 truncate pr-2" title={item.description}>
@@ -881,7 +1690,7 @@ export default function QuoteDocumentPage() {
                             </div>
                             <div className="flex-1 h-8 bg-neutral-100 rounded relative">
                               <div 
-                                className={`absolute h-full ${colors[idx % colors.length]} rounded flex items-center justify-center text-white text-xs font-medium`}
+                                className={`absolute h-full ${barColor} rounded flex items-center justify-center text-white text-xs font-medium`}
                                 style={{ left: `${leftPercent}%`, width: `${Math.max(widthPercent, 8)}%`, minWidth: '40px' }}
                               >
                                 {item.estimatedDays} day{item.estimatedDays > 1 ? 's' : ''}
@@ -1549,6 +2358,7 @@ export default function QuoteDocumentPage() {
               </div>
             </div>
           )}
+          </div>{/* End hidden div for export sections */}
 
         </div>
       </div>
@@ -1586,7 +2396,7 @@ export default function QuoteDocumentPage() {
                 <span>{projectName || documentTitle}</span>
               </div>
               <div className="flex items-center gap-4">
-                <span>{client?.name}</span>
+                <span>{displayClientName}</span>
                 <span>|</span>
                 <span className="font-medium">Page {pageNum} of {totalPages}</span>
               </div>
@@ -1642,7 +2452,10 @@ export default function QuoteDocumentPage() {
                   </div>
                   <div className="mb-auto">
                     <p className="text-white/60 text-sm uppercase tracking-wider mb-2">Prepared For</p>
-                    <h3 className="text-2xl font-semibold mb-1">{client?.name || 'Client'}</h3>
+                    <h3 className="text-2xl font-semibold mb-1">{displayClientName}</h3>
+                    {displayLeadName && displayLeadName !== displayClientName && (
+                      <p className="text-white/80">{displayLeadName}</p>
+                    )}
                     <p className="text-white/60 mt-4">{formatDate(quote?.created_at)}</p>
                   </div>
                   <div className="text-center py-16">
@@ -1695,7 +2508,7 @@ export default function QuoteDocumentPage() {
 
               {/* Recipient */}
               <div className="mb-8">
-                <p className="font-semibold text-neutral-900">{client?.name || 'Client Name'}</p>
+                <p className="font-semibold text-neutral-900">{displayClientName}</p>
                 {client?.display_name && client.display_name !== client.name && (
                   <p className="text-neutral-600">{client.display_name}</p>
                 )}
@@ -1711,7 +2524,7 @@ export default function QuoteDocumentPage() {
 
               {/* Letter Body */}
               <div className="mb-8">
-                <p className="text-neutral-900 mb-6">Dear {client?.primary_contact_name?.trim().split(' ')[0] || 'Valued Client'},</p>
+                <p className="text-neutral-900 mb-6">Dear {displayContactName?.trim().split(' ')[0] || 'Valued Client'},</p>
                 <div className="text-neutral-700 whitespace-pre-line leading-relaxed">
                   {letterContent || `Thank you for the potential opportunity to work together on the ${documentTitle || projectName || 'project'}. I have attached the proposal for your consideration which includes a thorough Scope of Work, deliverable schedule, and Fee.\n\nPlease review and let me know if you have any questions or comments. If you are ready for us to start working on the project, please sign the proposal sheet.`}
                 </div>
@@ -1772,7 +2585,7 @@ export default function QuoteDocumentPage() {
                           const startDay = computedOffsets.get(item.id) || 0;
                           const widthPercent = (item.estimatedDays / totalDays) * 100;
                           const leftPercent = (startDay / totalDays) * 100;
-                          const colors = ['bg-neutral-700', 'bg-neutral-600', 'bg-neutral-500', 'bg-neutral-400'];
+                          const barColor = 'bg-[#476E66]';
                           return (
                             <div key={item.id} className="flex items-center">
                               <div className="w-48 flex-shrink-0 text-sm text-neutral-700 truncate pr-2" title={item.description}>
@@ -1780,7 +2593,7 @@ export default function QuoteDocumentPage() {
                               </div>
                               <div className="flex-1 h-8 bg-neutral-100 rounded relative">
                                 <div 
-                                  className={`absolute h-full ${colors[idx % colors.length]} rounded flex items-center justify-center text-white text-xs font-medium`}
+                                  className={`absolute h-full ${barColor} rounded flex items-center justify-center text-white text-xs font-medium`}
                                   style={{ left: `${leftPercent}%`, width: `${Math.max(widthPercent, 8)}%`, minWidth: '40px' }}
                                 >
                                   {item.estimatedDays} day{item.estimatedDays > 1 ? 's' : ''}
@@ -2167,7 +2980,7 @@ export default function QuoteDocumentPage() {
               <div className="p-6 space-y-4">
                 <div className="bg-neutral-50 rounded-xl p-4">
                   <p className="text-sm text-neutral-500 mb-1">Sending to</p>
-                  <p className="font-medium text-neutral-900">{client?.name}</p>
+                  <p className="font-medium text-neutral-900">{displayClientName}</p>
                   <p className="text-sm text-neutral-600">{client?.email}</p>
                   {client?.billing_contact_email && (
                     <div className="mt-2 pt-2 border-t border-neutral-200">
@@ -2185,19 +2998,38 @@ export default function QuoteDocumentPage() {
                   The client will receive an email with a secure link and 4-digit access code to view and respond to this proposal.
                 </p>
               </div>
-              <div className="p-6 bg-neutral-50 flex gap-3">
+              <div className="p-6 bg-neutral-50 space-y-3">
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowSendModal(false)}
+                    className="flex-1 px-4 py-2.5 border border-neutral-300 rounded-xl hover:bg-white transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => setShowEmailPreview(true)}
+                    className="flex-1 px-4 py-2.5 border border-neutral-300 rounded-xl hover:bg-white transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Eye className="w-4 h-4" />
+                    Preview
+                  </button>
+                </div>
                 <button
-                  onClick={() => setShowSendModal(false)}
-                  className="flex-1 px-4 py-2.5 border border-neutral-300 rounded-xl hover:bg-white transition-colors"
+                  onClick={sendProposalEmail}
+                  disabled={sendingProposal}
+                  className="w-full px-4 py-3 bg-[#476E66] text-white rounded-xl hover:bg-[#3A5B54] transition-colors disabled:opacity-50 flex items-center justify-center gap-2 font-medium"
                 >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => setShowEmailPreview(true)}
-                  className="flex-1 px-4 py-2.5 bg-neutral-900 text-white rounded-xl hover:bg-neutral-800 transition-colors flex items-center justify-center gap-2"
-                >
-                  <Eye className="w-4 h-4" />
-                  Preview Email
+                  {sendingProposal ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4" />
+                      Send Proposal Now
+                    </>
+                  )}
                 </button>
               </div>
             </>

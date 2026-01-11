@@ -5,28 +5,28 @@ import { Clock, Briefcase, Receipt, BarChart3, Users, Shield, FileCheck } from '
 const features = [
   {
     title: 'Precision Time Tracking',
-    description: 'Capture every billable minute with our streamlined timesheet interface. Integrated timers and easy approvals ensure accuracy.',
+    description: 'Capture every billable minute. Teams report 40% fewer missed hours with our streamlined timesheet interface.',
     icon: Clock,
   },
   {
     title: 'Project Management',
-    description: 'Keep projects on track and within budget. Real-time insights into utilization, margins, and resource allocation.',
+    description: 'Keep projects on track. Real-time budget tracking helps teams stay within budget 95% of the time.',
     icon: Briefcase,
   },
   {
     title: 'Automated Billing',
-    description: 'Turn tracked time into professional invoices in seconds. Support for multiple billing models: T&M, Fixed Fee, and Retainers.',
+    description: 'Turn tracked time into invoices in seconds—not hours. Support for T&M, Fixed Fee, and Retainers.',
     icon: FileCheck,
     isHighlighted: true,
   },
   {
     title: 'Real-time Analytics',
-    description: 'Dashboard insights into profitability, utilization rates, and project performance at a glance.',
+    description: 'See profitability, utilization, and project health at a glance. Make data-driven decisions instantly.',
     icon: BarChart3,
   },
   {
     title: 'Team Collaboration',
-    description: 'Seamless coordination between team members with role-based access and approval workflows.',
+    description: 'Role-based access and approval workflows keep everyone aligned without the back-and-forth.',
     icon: Users,
   },
   {

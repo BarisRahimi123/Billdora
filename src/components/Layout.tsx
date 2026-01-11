@@ -7,20 +7,23 @@ import { DEFAULT_HOURLY_RATE, MIN_TIMER_SAVE_SECONDS, NOTIFICATIONS_LIMIT, SEARC
 import { useDebounce } from '../hooks/useDebounce';
 import { 
   LayoutDashboard, Users, FolderKanban, Clock, FileText, Calendar, BarChart3, Settings, LogOut,
-  Search, Bell, ChevronDown, X, Play, Pause, Square, Menu, PieChart, ArrowLeft, Wallet
+  Search, Bell, ChevronDown, ChevronRight, X, Play, Pause, Square, Menu, PieChart, ArrowLeft, Wallet, FileSpreadsheet
 } from 'lucide-react';
 
-const navItems = [
+const mainNavItems = [
   { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { path: '/sales', icon: Users, label: 'Sales' },
   { path: '/projects', icon: FolderKanban, label: 'Projects' },
-  { path: '/time-expense', icon: Clock, label: 'Timesheets' },
+  { path: '/time-expense', icon: Clock, label: 'Time' },
   { path: '/invoicing', icon: FileText, label: 'Invoicing' },
   { path: '/resourcing', icon: Calendar, label: 'Team' },
-  { path: '/reports', icon: PieChart, label: 'Reports' },
-  { path: '/financials', icon: BarChart3, label: 'Financials' },
   { path: '/company-expenses', icon: Wallet, label: 'Expenses' },
-  { path: '/settings', icon: Settings, label: 'Settings' },
+];
+
+const financialsSubItems = [
+  { path: '/financials', icon: BarChart3, label: 'Overview' },
+  { path: '/reports', icon: PieChart, label: 'Reports' },
+  { path: '/bank-statements', icon: FileSpreadsheet, label: 'Bank Statements' },
 ];
 
 interface SearchResult {
@@ -38,6 +41,7 @@ export default function Layout() {
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
+  const [financialsExpanded, setFinancialsExpanded] = useState(false);
   const hideSidebar = false;
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -74,6 +78,10 @@ export default function Layout() {
   // Close sidebar on route change (mobile)
   useEffect(() => {
     setSidebarOpen(false);
+    // Auto-expand financials if on a financials page
+    if (['/financials', '/reports', '/bank-statements'].includes(location.pathname)) {
+      setFinancialsExpanded(true);
+    }
   }, [location.pathname]);
 
   useEffect(() => {
@@ -335,13 +343,10 @@ export default function Layout() {
           </div>
 
           <nav className="flex-1 py-4 overflow-y-auto">
-            {navItems.filter(item => {
-              if (!canViewFinancials && (item.path === '/invoicing' || item.path === '/sales')) {
-                return false;
-              }
-              if (!isAdmin && (item.path === '/reports' || item.path === '/analytics' || item.path === '/settings' || item.path === '/resourcing')) {
-                return false;
-              }
+            {/* Main Nav Items */}
+            {mainNavItems.filter(item => {
+              if (!canViewFinancials && (item.path === '/invoicing' || item.path === '/sales')) return false;
+              if (!isAdmin && item.path === '/resourcing') return false;
               return true;
             }).map((item) => (
               <NavLink
@@ -357,9 +362,66 @@ export default function Layout() {
                 {(sidebarExpanded || sidebarOpen) && <span className="text-sm font-medium">{item.label}</span>}
               </NavLink>
             ))}
+
+            {/* Financials Section (Expandable) */}
+            {isAdmin && (
+              <div className="mt-2">
+                <button
+                  onClick={() => setFinancialsExpanded(!financialsExpanded)}
+                  className={`flex items-center gap-3 px-4 py-3 mx-2 rounded-xl transition-colors w-[calc(100%-1rem)] ${
+                    ['/financials', '/reports', '/bank-statements'].includes(location.pathname)
+                      ? 'bg-white/20 text-white'
+                      : 'text-white/70 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  <BarChart3 className="w-5 h-5 flex-shrink-0" />
+                  {(sidebarExpanded || sidebarOpen) && (
+                    <>
+                      <span className="text-sm font-medium flex-1 text-left">Financials</span>
+                      {financialsExpanded ? (
+                        <ChevronDown className="w-4 h-4" />
+                      ) : (
+                        <ChevronRight className="w-4 h-4" />
+                      )}
+                    </>
+                  )}
+                </button>
+                {financialsExpanded && (sidebarExpanded || sidebarOpen) && (
+                  <div className="ml-4 mt-1">
+                    {financialsSubItems.map((item) => (
+                      <NavLink
+                        key={item.path}
+                        to={item.path}
+                        className={({ isActive }) =>
+                          `flex items-center gap-3 px-4 py-2.5 mx-2 rounded-xl transition-colors ${
+                            isActive ? 'bg-white/15 text-white' : 'text-white/60 hover:text-white hover:bg-white/10'
+                          }`
+                        }
+                      >
+                        <item.icon className="w-4 h-4 flex-shrink-0" />
+                        <span className="text-sm">{item.label}</span>
+                      </NavLink>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </nav>
 
           <div className="p-4" style={{ borderTop: '1px solid rgba(255,255,255,0.2)' }}>
+            {isAdmin && (
+              <NavLink
+                to="/settings"
+                className={({ isActive }) =>
+                  `flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-colors mb-2 ${
+                    isActive ? 'bg-white/20 text-white' : 'text-white/70 hover:text-white hover:bg-white/10'
+                  }`
+                }
+              >
+                <Settings className="w-5 h-5" />
+                {(sidebarExpanded || sidebarOpen) && <span className="text-sm font-medium">Settings</span>}
+              </NavLink>
+            )}
             <button
               onClick={() => signOut()}
               className="flex items-center gap-3 w-full px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 rounded-xl transition-colors"

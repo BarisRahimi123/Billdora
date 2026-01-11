@@ -121,7 +121,8 @@ export const CTA = () => {
               <div className="flex flex-col sm:flex-row items-start gap-4">
                 <a 
                   href="/login" 
-                  className="w-full sm:w-auto h-16 px-12 bg-swiss-red-DEFAULT hover:bg-swiss-red-dark text-white text-lg font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-colors duration-200"
+                  className="w-full sm:w-auto h-16 px-12 text-white text-lg font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-colors duration-200 hover:opacity-90"
+                  style={{ backgroundColor: '#476E66' }}
                 >
                   Get Started Now <ArrowRight size={20} />
                 </a>
