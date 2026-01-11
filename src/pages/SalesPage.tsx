@@ -56,6 +56,7 @@ export default function SalesPage() {
   const [editingQuote, setEditingQuote] = useState<Quote | null>(null);
   const [activeQuoteMenu, setActiveQuoteMenu] = useState<string | null>(null);
   const [quoteViewMode, setQuoteViewMode] = useState<'list' | 'client'>('client');
+  const [quoteSourceTab, setQuoteSourceTab] = useState<'clients' | 'leads'>('clients');
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [isAddingNewClient, setIsAddingNewClient] = useState(false);
   const [expandedClients, setExpandedClients] = useState<Set<string>>(() => {
@@ -142,10 +143,16 @@ export default function SalesPage() {
     c.display_name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const filteredQuotes = quotes.filter(q =>
-    q.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    q.quote_number?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredQuotes = quotes.filter(q => {
+    const matchesSearch = q.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      q.quote_number?.toLowerCase().includes(searchTerm.toLowerCase());
+    // Filter by source tab
+    if (quoteSourceTab === 'clients') {
+      return matchesSearch && q.client_id && !q.lead_id;
+    } else {
+      return matchesSearch && q.lead_id;
+    }
+  });
 
   const getStatusColor = (status?: string) => {
     switch (status) {
@@ -401,6 +408,21 @@ export default function SalesPage() {
           <span className="hidden md:inline">Filters</span>
         </button>
         {activeTab === 'quotes' && (
+          <>
+          <div className="flex items-center gap-0.5 p-0.5 bg-neutral-100 rounded-lg flex-shrink-0">
+            <button
+              onClick={() => setQuoteSourceTab('clients')}
+              className={`px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors ${quoteSourceTab === 'clients' ? 'bg-white shadow-sm text-neutral-900' : 'text-neutral-600 hover:text-neutral-900'}`}
+            >
+              Clients
+            </button>
+            <button
+              onClick={() => setQuoteSourceTab('leads')}
+              className={`px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors ${quoteSourceTab === 'leads' ? 'bg-white shadow-sm text-neutral-900' : 'text-neutral-600 hover:text-neutral-900'}`}
+            >
+              Leads
+            </button>
+          </div>
           <div className="flex items-center gap-0.5 p-0.5 bg-neutral-100 rounded-lg flex-shrink-0">
             <button
               onClick={() => setQuoteViewMode('list')}
@@ -417,6 +439,7 @@ export default function SalesPage() {
               <LayoutGrid className="w-4 h-4" />
             </button>
           </div>
+          </>
         )}
         <button className="hidden lg:flex items-center gap-1.5 px-4 py-2.5 border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors text-sm flex-shrink-0">
           <Download className="w-4 h-4" />
@@ -872,7 +895,8 @@ export default function SalesPage() {
             )}
           </div>
         ) : (
-          /* Client-Grouped View */
+          /* Grouped View - for both Clients and Leads */
+          quoteSourceTab === 'clients' ? (
           <div className="space-y-4">
             {(() => {
               const grouped: Record<string, Quote[]> = {};
@@ -1040,6 +1064,113 @@ export default function SalesPage() {
               <div className="text-center py-12 text-sm text-neutral-500 bg-white rounded-2xl" style={{ boxShadow: 'var(--shadow-card)' }}>No quotes found</div>
             )}
           </div>
+          ) : (
+          /* Leads Grouped View */
+          <div className="space-y-4">
+            {(() => {
+              const grouped: Record<string, Quote[]> = {};
+              filteredQuotes.forEach(q => {
+                const leadName = leads.find(l => l.id === q.lead_id)?.name || 'Unassigned';
+                if (!grouped[leadName]) grouped[leadName] = [];
+                grouped[leadName].push(q);
+              });
+              const sortedLeads = Object.keys(grouped).sort((a, b) => a === 'Unassigned' ? 1 : b === 'Unassigned' ? -1 : a.localeCompare(b));
+              return sortedLeads.length === 0 ? (
+                <div className="bg-white rounded-2xl p-12 text-center" style={{ boxShadow: 'var(--shadow-card)' }}>
+                  <div className="w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <User className="w-8 h-8 text-amber-600" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-neutral-900 mb-2">No Lead Quotes</h3>
+                  <p className="text-neutral-500">Create a proposal for a lead to see it here</p>
+                </div>
+              ) : sortedLeads.map(leadName => {
+                const leadQuotes = grouped[leadName];
+                const leadTotal = leadQuotes.reduce((sum, q) => sum + Number(q.total_amount || 0), 0);
+                const draftQuotes = leadQuotes.filter(q => q.status === 'draft');
+                const sentQuotes = leadQuotes.filter(q => q.status === 'sent');
+                const signedQuotes = leadQuotes.filter(q => q.status === 'accepted' || q.status === 'approved');
+                return (
+                  <div key={leadName} className="bg-white rounded-2xl overflow-hidden" style={{ boxShadow: 'var(--shadow-card)' }}>
+                    <button
+                      onClick={() => toggleClientExpanded(leadName)}
+                      className="w-full flex items-center justify-between px-3 py-3 sm:px-4 sm:py-4 bg-amber-50 hover:bg-amber-100 transition-colors"
+                    >
+                      <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                        {expandedClients.has(leadName) ? <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600 flex-shrink-0" /> : <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600 flex-shrink-0" />}
+                        <div className="min-w-0">
+                          <span className="font-semibold text-neutral-900 text-sm sm:text-base truncate block">{leadName}</span>
+                          <span className="text-xs sm:text-sm text-neutral-500">({leadQuotes.length} quote{leadQuotes.length !== 1 ? 's' : ''})</span>
+                        </div>
+                      </div>
+                      <span className="font-semibold text-neutral-900 text-sm sm:text-base flex-shrink-0">{formatCurrency(leadTotal)}</span>
+                    </button>
+                    {expandedClients.has(leadName) && (
+                      <div className="divide-y divide-neutral-100">
+                        {draftQuotes.length > 0 && (
+                          <div>
+                            <div className="px-4 py-2 bg-amber-50/50 border-b border-amber-100">
+                              <span className="text-xs font-semibold text-amber-700 uppercase">Draft ({draftQuotes.length})</span>
+                            </div>
+                            {draftQuotes.map(quote => (
+                              <div key={quote.id} className="px-4 py-3 hover:bg-neutral-50 cursor-pointer flex items-center justify-between" onClick={() => navigate(`/quotes/${quote.id}/document`)}>
+                                <div className="flex items-center gap-3 min-w-0">
+                                  <FileText className="w-4 h-4 text-neutral-400 flex-shrink-0" />
+                                  <div className="min-w-0">
+                                    <p className="font-medium text-neutral-900 text-sm truncate">{quote.title}</p>
+                                    <p className="text-xs text-neutral-500">{quote.quote_number}</p>
+                                  </div>
+                                </div>
+                                <span className="font-medium text-neutral-900 text-sm">{formatCurrency(quote.total_amount)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {sentQuotes.length > 0 && (
+                          <div>
+                            <div className="px-4 py-2 bg-blue-50/50 border-b border-blue-100">
+                              <span className="text-xs font-semibold text-blue-700 uppercase">Sent ({sentQuotes.length})</span>
+                            </div>
+                            {sentQuotes.map(quote => (
+                              <div key={quote.id} className="px-4 py-3 hover:bg-neutral-50 cursor-pointer flex items-center justify-between" onClick={() => navigate(`/quotes/${quote.id}/document`)}>
+                                <div className="flex items-center gap-3 min-w-0">
+                                  <FileText className="w-4 h-4 text-blue-400 flex-shrink-0" />
+                                  <div className="min-w-0">
+                                    <p className="font-medium text-neutral-900 text-sm truncate">{quote.title}</p>
+                                    <p className="text-xs text-neutral-500">{quote.quote_number}</p>
+                                  </div>
+                                </div>
+                                <span className="font-medium text-neutral-900 text-sm">{formatCurrency(quote.total_amount)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {signedQuotes.length > 0 && (
+                          <div>
+                            <div className="px-4 py-2 bg-emerald-50/50 border-b border-emerald-100">
+                              <span className="text-xs font-semibold text-emerald-700 uppercase">Signed ({signedQuotes.length})</span>
+                            </div>
+                            {signedQuotes.map(quote => (
+                              <div key={quote.id} className="px-4 py-3 hover:bg-neutral-50 cursor-pointer flex items-center justify-between" onClick={() => navigate(`/quotes/${quote.id}/document`)}>
+                                <div className="flex items-center gap-3 min-w-0">
+                                  <FileText className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                                  <div className="min-w-0">
+                                    <p className="font-medium text-neutral-900 text-sm truncate">{quote.title}</p>
+                                    <p className="text-xs text-neutral-500">{quote.quote_number}</p>
+                                  </div>
+                                </div>
+                                <span className="font-medium text-neutral-900 text-sm">{formatCurrency(quote.total_amount)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              });
+            })()}
+          </div>
+          )
         )
       )}
 
