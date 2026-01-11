@@ -2193,7 +2193,7 @@ function ConvertToClientModal({ lead, companyId, onClose, onSave }: {
         zip: zip.trim() || undefined,
         country: country.trim() || undefined,
         website: website.trim() || undefined,
-        type: clientType.trim() || undefined,
+        type: clientType.trim().toLowerCase() === 'person' ? 'person' : 'company',
         lifecycle_stage: 'active',
         primary_contact_name: primaryContactName.trim() || undefined,
         primary_contact_title: primaryContactTitle.trim() || undefined,
