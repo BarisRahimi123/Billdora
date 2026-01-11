@@ -5,7 +5,7 @@ import sourceIdentifierPlugin from 'vite-plugin-source-identifier'
 
 const isProd = process.env.BUILD_MODE === 'prod'
 export default defineConfig({
-  base: './',
+  base: '/',
   plugins: [
     react(),
     sourceIdentifierPlugin({
@@ -19,4 +19,7 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    sourcemap: false,
+  }
 })
