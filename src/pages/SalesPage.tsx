@@ -2205,7 +2205,7 @@ function ConvertToClientModal({ lead, companyId, onClose, onSave }: {
         billing_contact_phone: billingContactPhone.trim() || undefined,
       });
       
-      // Update lead status to won
+      // Mark lead as won (keeps history for tracking)
       await leadsApi.updateLead(lead.id, { status: 'won' });
       
       showToast('Lead converted to client successfully!', 'success');
