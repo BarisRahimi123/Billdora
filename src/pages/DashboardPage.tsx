@@ -458,7 +458,7 @@ export default function DashboardPage() {
       <>
       {/* KPI Cards - Row 1 */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
-        {canViewFinancials && <div className="bg-white rounded-lg p-2" style={{ boxShadow: 'var(--shadow-card)' }}>
+        {canViewFinancials && <div className="bg-white rounded-lg p-2 cursor-pointer hover:bg-neutral-50 transition-colors" style={{ boxShadow: 'var(--shadow-card)' }} onClick={() => navigate('/invoicing')}>
           <div className="flex items-center gap-1 mb-0.5">
             <div className="w-6 h-6 rounded-lg bg-[#476E66]/10 flex items-center justify-center">
               <DollarSign className="w-3 h-3 text-[#476E66]" />
@@ -469,7 +469,7 @@ export default function DashboardPage() {
           <p className="text-[10px] text-neutral-400 mt-0">All-time paid</p>
         </div>}
 
-        {canViewFinancials && <div className="bg-white rounded-lg p-2" style={{ boxShadow: 'var(--shadow-card)' }}>
+        {canViewFinancials && <div className="bg-white rounded-lg p-2 cursor-pointer hover:bg-neutral-50 transition-colors" style={{ boxShadow: 'var(--shadow-card)' }} onClick={() => navigate('/invoicing')}>
           <div className="flex items-center gap-1 mb-0.5">
             <div className="w-6 h-6 rounded-lg bg-[#476E66]/10 flex items-center justify-center">
               <FileText className="w-3 h-3 text-[#476E66]" />
@@ -480,7 +480,7 @@ export default function DashboardPage() {
           <p className="text-[10px] text-neutral-400 mt-0">Awaiting payment</p>
         </div>}
 
-        <div className="bg-white rounded-lg p-2" style={{ boxShadow: 'var(--shadow-card)' }}>
+        <div className="bg-white rounded-lg p-2 cursor-pointer hover:bg-neutral-50 transition-colors" style={{ boxShadow: 'var(--shadow-card)' }} onClick={() => navigate('/time-expense')}>
           <div className="flex items-center gap-1 mb-0.5">
             <div className="w-6 h-6 rounded-lg bg-[#476E66]/10 flex items-center justify-center">
               <Clock className="w-3 h-3 text-[#476E66]" />
@@ -491,7 +491,7 @@ export default function DashboardPage() {
           <p className="text-[10px] text-neutral-400 mt-0">{stats?.hoursToday || 0}h today</p>
         </div>
 
-        <div className="bg-white rounded-lg p-2" style={{ boxShadow: 'var(--shadow-card)' }}>
+        <div className="bg-white rounded-lg p-2 cursor-pointer hover:bg-neutral-50 transition-colors" style={{ boxShadow: 'var(--shadow-card)' }} onClick={() => navigate('/projects')}>
           <div className="flex items-center gap-1 mb-0.5">
             <div className="w-6 h-6 rounded-lg bg-[#476E66]/10 flex items-center justify-center">
               <FolderPlus className="w-3 h-3 text-[#476E66]" />
@@ -505,7 +505,7 @@ export default function DashboardPage() {
 
       {/* KPI Cards - Row 2 */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
-        {canViewFinancials && <div className="bg-white rounded-lg p-2" style={{ boxShadow: 'var(--shadow-card)' }}>
+        {canViewFinancials && <div className="bg-white rounded-lg p-2 cursor-pointer hover:bg-neutral-50 transition-colors" style={{ boxShadow: 'var(--shadow-card)' }} onClick={() => navigate('/time-expense')}>
           <div className="flex items-center gap-1 mb-0.5">
             <div className="w-6 h-6 rounded-lg bg-[#476E66]/10 flex items-center justify-center">
               <TrendingUp className="w-3 h-3 text-[#476E66]" />
@@ -515,7 +515,7 @@ export default function DashboardPage() {
           <p className="text-base font-bold text-neutral-900">{formatCurrency(stats?.unbilledWIP || 0)}</p>
         </div>}
 
-        <div className="bg-white rounded-lg p-2" style={{ boxShadow: 'var(--shadow-card)' }}>
+        <div className="bg-white rounded-lg p-2 cursor-pointer hover:bg-neutral-50 transition-colors" style={{ boxShadow: 'var(--shadow-card)' }} onClick={() => navigate('/projects')}>
           <div className="flex items-center gap-1 mb-0.5">
             <div className="w-6 h-6 rounded-lg bg-[#476E66]/10 flex items-center justify-center">
               <CheckSquare className="w-3 h-3 text-[#476E66]" />
@@ -526,7 +526,7 @@ export default function DashboardPage() {
           <p className="text-[10px] text-neutral-400 mt-0">Pending</p>
         </div>
 
-        <div className="bg-white rounded-lg p-2" style={{ boxShadow: 'var(--shadow-card)' }}>
+        <div className="bg-white rounded-lg p-2 cursor-pointer hover:bg-neutral-50 transition-colors" style={{ boxShadow: 'var(--shadow-card)' }} onClick={() => navigate('/time-expense')}>
           <div className="flex items-center gap-1 mb-0.5">
             <div className="w-6 h-6 rounded-lg bg-[#476E66]/10 flex items-center justify-center">
               <TrendingUp className="w-3 h-3 text-[#476E66]" />
@@ -537,7 +537,7 @@ export default function DashboardPage() {
         </div>
 
         {canViewFinancials && (
-          <div className="bg-white rounded-lg p-2" style={{ boxShadow: 'var(--shadow-card)' }}>
+          <div className="bg-white rounded-lg p-2 cursor-pointer hover:bg-neutral-50 transition-colors" style={{ boxShadow: 'var(--shadow-card)' }} onClick={() => navigate('/invoicing')}>
             <div className="flex items-center gap-1 mb-0.5">
               <div className="w-6 h-6 rounded-lg bg-[#476E66]/10 flex items-center justify-center">
                 <FileText className="w-3 h-3 text-[#476E66]" />
