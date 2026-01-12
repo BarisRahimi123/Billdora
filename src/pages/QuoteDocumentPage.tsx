@@ -1531,11 +1531,9 @@ export default function QuoteDocumentPage() {
                 onClick={async () => {
                   // Save first if there are unsaved changes or it's a new quote
                   if (hasUnsavedChanges || isNewQuote) {
-                    const saved = await saveChanges();
-                    if (saved) {
-                      // Wait for state to update, then show send modal
-                      setTimeout(() => setShowSendModal(true), 300);
-                    }
+                    await saveChanges();
+                    // Wait for state to update, then show send modal
+                    setTimeout(() => setShowSendModal(true), 300);
                   } else {
                     setShowSendModal(true);
                   }
