@@ -6,8 +6,9 @@ import PlaidLink from '../components/PlaidLink';
 import { 
   Upload, FileText, Calendar, DollarSign, CheckCircle2, AlertTriangle, 
   XCircle, RefreshCw, Trash2, ChevronRight, ChevronDown, Download, 
-  Printer, ArrowLeft, Building2, Search, Filter, X
+  Printer, ArrowLeft, Building2, Search, Filter, X, Link2, Camera, Image as ImageIcon
 } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 type ViewMode = 'list' | 'detail' | 'report';
 
@@ -30,6 +31,9 @@ export default function BankStatementsPage() {
     unmatched: true,
     discrepancies: true
   });
+  const [autoMatching, setAutoMatching] = useState(false);
+  const [receipts, setReceipts] = useState<any[]>([]);
+  const [showAttachModal, setShowAttachModal] = useState<string | null>(null);
 
   useEffect(() => {
     if (profile?.company_id) {
@@ -41,12 +45,14 @@ export default function BankStatementsPage() {
     if (!profile?.company_id) return;
     setLoading(true);
     try {
-      const [statementsData, expensesData] = await Promise.all([
+      const [statementsData, expensesData, receiptsData] = await Promise.all([
         bankStatementsApi.getStatements(profile.company_id),
-        companyExpensesApi.getExpenses(profile.company_id)
+        companyExpensesApi.getExpenses(profile.company_id),
+        supabase.from('receipts').select('*').eq('company_id', profile.company_id).then(r => r.data || [])
       ]);
       setStatements(statementsData);
       setExpenses(expensesData);
+      setReceipts(receiptsData);
     } catch (error) {
       console.error('Failed to load data:', error);
       showToast('Failed to load bank statements', 'error');
@@ -147,6 +153,52 @@ export default function BankStatementsPage() {
     }
   }
 
+  async function handleAutoMatchReceipts() {
+    if (!profile?.company_id) return;
+    setAutoMatching(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/auto-match-receipts`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session?.access_token}`,
+          },
+          body: JSON.stringify({ company_id: profile.company_id }),
+        }
+      );
+      const result = await response.json();
+      if (result.error) throw new Error(result.error);
+      showToast(`Matched ${result.matched} receipts to transactions!`, 'success');
+      loadData();
+    } catch (err: any) {
+      showToast(err.message || 'Failed to auto-match receipts', 'error');
+    } finally {
+      setAutoMatching(false);
+    }
+  }
+
+  async function handleAttachReceipt(transactionId: string, receiptId: string) {
+    try {
+      await supabase.from('receipts').update({ matched_transaction_id: transactionId }).eq('id', receiptId);
+      setReceipts(receipts.map(r => r.id === receiptId ? { ...r, matched_transaction_id: transactionId } : r));
+      showToast('Receipt attached!', 'success');
+      setShowAttachModal(null);
+    } catch (err) {
+      showToast('Failed to attach receipt', 'error');
+    }
+  }
+
+  function getReceiptForTransaction(transactionId: string) {
+    return receipts.find(r => r.matched_transaction_id === transactionId);
+  }
+
+  function getUnmatchedReceipts() {
+    return receipts.filter(r => !r.matched_transaction_id);
+  }
+
   function formatCurrency(amount: number) {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
   }
@@ -236,6 +288,19 @@ export default function BankStatementsPage() {
           
           {viewMode === 'detail' && (
             <>
+              <button
+                onClick={handleAutoMatchReceipts}
+                disabled={autoMatching}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-[#476E66] text-[#476E66] rounded-lg hover:bg-[#476E66]/10 disabled:opacity-50"
+              >
+                {autoMatching ? (
+                  <Link2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  <Link2 className="w-3 h-3" />
+                )}
+                <span className="hidden sm:inline">{autoMatching ? 'Matching...' : 'Auto-Match Receipts'}</span>
+                <span className="sm:hidden">{autoMatching ? '...' : 'Match'}</span>
+              </button>
               <button
                 onClick={handleReconcile}
                 disabled={reconciling}
@@ -504,6 +569,7 @@ export default function BankStatementsPage() {
                     <th className="text-left px-2 py-1 text-[10px] font-medium text-neutral-500 uppercase tracking-wide hidden sm:table-cell">Type</th>
                     <th className="text-right px-2 py-1 text-[10px] font-medium text-neutral-500 uppercase tracking-wide">Amount</th>
                     <th className="text-center px-2 py-1 text-[10px] font-medium text-neutral-500 uppercase tracking-wide">Status</th>
+                    <th className="text-center px-2 py-1 text-[10px] font-medium text-neutral-500 uppercase tracking-wide">Receipt</th>
                     <th className="text-right px-2 py-1 text-[10px] font-medium text-neutral-500 uppercase tracking-wide">Actions</th>
                   </tr>
                 </thead>
@@ -541,6 +607,31 @@ export default function BankStatementsPage() {
                           {tx.match_status === 'discrepancy' && <AlertTriangle className="w-2.5 h-2.5" />}
                           <span className="hidden sm:inline">{tx.match_status}</span>
                         </span>
+                      </td>
+                      <td className="px-2 py-1.5 text-center">
+                        {(() => {
+                          const receipt = getReceiptForTransaction(tx.id);
+                          if (receipt) {
+                            return (
+                              <a href={receipt.image_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-[10px]">
+                                <ImageIcon className="w-2.5 h-2.5" />
+                                <span className="hidden sm:inline">View</span>
+                              </a>
+                            );
+                          }
+                          if (tx.amount < 0) {
+                            return (
+                              <button
+                                onClick={() => setShowAttachModal(tx.id)}
+                                className="inline-flex items-center gap-1 px-1.5 py-0.5 border border-dashed border-neutral-300 text-neutral-500 rounded text-[10px] hover:border-[#476E66] hover:text-[#476E66]"
+                              >
+                                <Camera className="w-2.5 h-2.5" />
+                                <span className="hidden sm:inline">Attach</span>
+                              </button>
+                            );
+                          }
+                          return <span className="text-neutral-300 text-[10px]">—</span>;
+                        })()}
                       </td>
                       <td className="px-2 py-1.5 text-right">
                         <select
@@ -802,6 +893,47 @@ export default function BankStatementsPage() {
                   </tr>
                 </tbody>
               </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Attach Receipt Modal */}
+      {showAttachModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl w-full max-w-md max-h-[80vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h3 className="text-lg font-semibold">Attach Receipt</h3>
+              <button onClick={() => setShowAttachModal(null)} className="p-1 hover:bg-neutral-100 rounded-lg">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="overflow-y-auto flex-1 p-4">
+              {getUnmatchedReceipts().length === 0 ? (
+                <div className="text-center py-8">
+                  <Camera className="w-10 h-10 text-neutral-300 mx-auto mb-3" />
+                  <p className="text-neutral-500 text-sm">No unmatched receipts</p>
+                  <p className="text-neutral-400 text-xs mt-1">Scan receipts first from the Receipts page</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-3">
+                  {getUnmatchedReceipts().map((receipt) => (
+                    <button
+                      key={receipt.id}
+                      onClick={() => handleAttachReceipt(showAttachModal, receipt.id)}
+                      className="border border-neutral-200 rounded-lg overflow-hidden hover:border-[#476E66] hover:shadow-md transition-all"
+                    >
+                      <div className="aspect-[3/4] bg-neutral-100">
+                        <img src={receipt.image_url} alt="Receipt" className="w-full h-full object-cover" />
+                      </div>
+                      <div className="p-2 text-left">
+                        <p className="text-xs font-medium truncate">{receipt.vendor || 'Unknown'}</p>
+                        <p className="text-xs text-[#476E66]">{formatCurrency(receipt.amount || 0)}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
