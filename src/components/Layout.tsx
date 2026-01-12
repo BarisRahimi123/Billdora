@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useSubscription } from '../contexts/SubscriptionContext';
+import UpgradeModal from './UpgradeModal';
 import { usePermissions } from '../contexts/PermissionsContext';
 import { api, Project, Client, Invoice, Task, notificationsApi, Notification as AppNotification } from '../lib/api';
 import { DEFAULT_HOURLY_RATE, MIN_TIMER_SAVE_SECONDS, NOTIFICATIONS_LIMIT, SEARCH_RESULTS_PER_TYPE, SEARCH_DEBOUNCE_MS } from '../lib/constants';
@@ -37,6 +39,7 @@ interface SearchResult {
 export default function Layout() {
   const { profile, signOut } = useAuth();
   const { canViewFinancials, isAdmin } = usePermissions();
+  const { upgradeModalState, hideUpgradeModal } = useSubscription();
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -732,6 +735,14 @@ export default function Layout() {
           </div>
         )}
       </div>
+
+      {/* Global Upgrade Modal */}
+      <UpgradeModal
+        isOpen={upgradeModalState.isOpen}
+        onClose={hideUpgradeModal}
+        limitType={upgradeModalState.limitType}
+        currentCount={upgradeModalState.currentCount}
+      />
     </div>
   );
 }

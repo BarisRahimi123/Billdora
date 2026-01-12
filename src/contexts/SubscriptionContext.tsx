@@ -32,6 +32,12 @@ export interface Subscription {
   plan?: Plan;
 }
 
+interface UpgradeModalState {
+  isOpen: boolean;
+  limitType?: 'projects' | 'team_members' | 'clients' | 'invoices';
+  currentCount?: number;
+}
+
 interface SubscriptionContextType {
   subscription: Subscription | null;
   currentPlan: Plan | null;
@@ -41,6 +47,10 @@ interface SubscriptionContextType {
   refreshSubscription: () => Promise<void>;
   canUseFeature: (feature: string) => boolean;
   checkLimit: (limitType: 'projects' | 'team_members' | 'clients' | 'invoices', currentCount: number) => { allowed: boolean; limit: number | null; remaining: number | null };
+  checkLimitAndPrompt: (limitType: 'projects' | 'team_members' | 'clients' | 'invoices', currentCount: number) => boolean;
+  showUpgradeModal: (limitType?: 'projects' | 'team_members' | 'clients' | 'invoices', currentCount?: number) => void;
+  hideUpgradeModal: () => void;
+  upgradeModalState: UpgradeModalState;
   isPro: boolean;
   isStarter: boolean;
   isFree: boolean;
@@ -57,6 +67,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [upgradeModalState, setUpgradeModalState] = useState<UpgradeModalState>({ isOpen: false });
 
   const loadPlans = useCallback(async () => {
     try {
@@ -180,6 +191,30 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   const isStarter = currentPlan?.name?.toLowerCase().includes('starter') || false;
   const isFree = !isPro && !isStarter && (currentPlan?.name === 'Free' || currentPlan?.amount === 0 || !subscription);
 
+  const showUpgradeModal = useCallback((
+    limitType?: 'projects' | 'team_members' | 'clients' | 'invoices',
+    currentCount?: number
+  ) => {
+    setUpgradeModalState({ isOpen: true, limitType, currentCount });
+  }, []);
+
+  const hideUpgradeModal = useCallback(() => {
+    setUpgradeModalState({ isOpen: false });
+  }, []);
+
+  // Check limit and automatically show upgrade modal if limit reached
+  const checkLimitAndPrompt = useCallback((
+    limitType: 'projects' | 'team_members' | 'clients' | 'invoices',
+    currentCount: number
+  ): boolean => {
+    const result = checkLimit(limitType, currentCount);
+    if (!result.allowed) {
+      setUpgradeModalState({ isOpen: true, limitType, currentCount });
+      return false;
+    }
+    return true;
+  }, [checkLimit]);
+
   return (
     <SubscriptionContext.Provider
       value={{
@@ -191,6 +226,10 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
         refreshSubscription,
         canUseFeature,
         checkLimit,
+        checkLimitAndPrompt,
+        showUpgradeModal,
+        hideUpgradeModal,
+        upgradeModalState,
         isPro,
         isStarter,
         isFree,

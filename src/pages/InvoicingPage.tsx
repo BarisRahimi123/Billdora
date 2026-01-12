@@ -21,6 +21,7 @@ export default function InvoicingPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'sent' | 'aging'>('all');
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -162,17 +163,66 @@ export default function InvoicingPage() {
   const stats = useMemo(() => {
     const wip = invoices.filter(i => i.status === 'draft').reduce((sum, i) => sum + Number(i.total), 0);
     const drafts = invoices.filter(i => i.status === 'draft').length;
-    const arAging = invoices.filter(i => i.status === 'sent' && i.due_date && new Date(i.due_date) < new Date())
+    const sentInvoices = invoices.filter(i => i.status === 'sent');
+    const sentTotal = sentInvoices.reduce((sum, i) => sum + Number(i.total), 0);
+    const arAging = invoices.filter(i => (i.status === 'sent' || i.status === 'overdue') && i.due_date && new Date(i.due_date) < new Date())
       .reduce((sum, i) => sum + Number(i.total), 0);
-    return { wip, drafts, arAging };
+    const agingCount = invoices.filter(i => (i.status === 'sent' || i.status === 'overdue') && i.due_date && new Date(i.due_date) < new Date()).length;
+    return { wip, drafts, arAging, agingCount, sentTotal, sentCount: sentInvoices.length };
   }, [invoices]);
 
-  const filteredInvoices = invoices.filter(i => {
-    const matchesSearch = i.invoice_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      i.client?.name?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || i.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  // AR Aging breakdown by bucket
+  const agingBuckets = useMemo(() => {
+    const buckets = { current: { count: 0, amount: 0 }, '1-30': { count: 0, amount: 0 }, '31-60': { count: 0, amount: 0 }, '61-90': { count: 0, amount: 0 }, '90+': { count: 0, amount: 0 } };
+    invoices.filter(i => i.status === 'sent' || i.status === 'overdue').forEach(inv => {
+      if (!inv.due_date) return;
+      const daysOverdue = Math.floor((new Date().getTime() - new Date(inv.due_date).getTime()) / (1000 * 60 * 60 * 24));
+      const amount = Number(inv.total || 0);
+      if (daysOverdue <= 0) { buckets.current.count++; buckets.current.amount += amount; }
+      else if (daysOverdue <= 30) { buckets['1-30'].count++; buckets['1-30'].amount += amount; }
+      else if (daysOverdue <= 60) { buckets['31-60'].count++; buckets['31-60'].amount += amount; }
+      else if (daysOverdue <= 90) { buckets['61-90'].count++; buckets['61-90'].amount += amount; }
+      else { buckets['90+'].count++; buckets['90+'].amount += amount; }
+    });
+    return buckets;
+  }, [invoices]);
+
+  // Invoices for AR Aging view (with days overdue calculation)
+  const agingInvoices = useMemo(() => {
+    return invoices
+      .filter(i => (i.status === 'sent' || i.status === 'overdue') && i.due_date)
+      .map(inv => ({
+        ...inv,
+        daysOverdue: Math.floor((new Date().getTime() - new Date(inv.due_date!).getTime()) / (1000 * 60 * 60 * 24))
+      }))
+      .sort((a, b) => b.daysOverdue - a.daysOverdue);
+  }, [invoices]);
+
+  // Sent invoices list
+  const sentInvoicesList = useMemo(() => {
+    return invoices.filter(i => i.status === 'sent').sort((a, b) => 
+      new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
+    );
+  }, [invoices]);
+
+  const filteredInvoices = useMemo(() => {
+    let filtered = invoices;
+    
+    // Apply tab filter first
+    if (activeTab === 'sent') {
+      filtered = sentInvoicesList;
+    } else if (activeTab === 'aging') {
+      filtered = agingInvoices;
+    }
+    
+    // Then apply search and status filters
+    return filtered.filter(i => {
+      const matchesSearch = i.invoice_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        i.client?.name?.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesStatus = statusFilter === 'all' || i.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    });
+  }, [invoices, activeTab, sentInvoicesList, agingInvoices, searchTerm, statusFilter]);
 
   const getStatusColor = (status?: string) => {
     switch (status) {
@@ -472,18 +522,33 @@ export default function InvoicingPage() {
         </div>
 
         <div 
-          onClick={() => setStatusFilter('overdue')}
-          className="bg-white rounded-lg p-2 cursor-pointer hover:bg-neutral-50 transition-colors" 
+          onClick={() => setActiveTab('sent')}
+          className={`bg-white rounded-lg p-2 cursor-pointer hover:bg-neutral-50 transition-colors ${activeTab === 'sent' ? 'ring-1 ring-[#476E66]' : ''}`}
           style={{ boxShadow: 'var(--shadow-card)' }}
         >
           <div className="flex items-center gap-1.5 mb-1">
-            <div className="w-7 h-7 rounded-lg bg-[#476E66]/10 flex items-center justify-center flex-shrink-0">
-              <DollarSign className="w-3.5 h-3.5 text-[#476E66]" />
+            <div className="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
+              <Send className="w-3.5 h-3.5 text-blue-600" />
+            </div>
+            <span className="text-neutral-600 text-xs font-medium">Sent</span>
+          </div>
+          <p className="text-base font-semibold text-neutral-900">{formatCurrency(stats.sentTotal)}</p>
+          <p className="text-xs text-neutral-400">{stats.sentCount} invoices</p>
+        </div>
+
+        <div 
+          onClick={() => setActiveTab('aging')}
+          className={`bg-white rounded-lg p-2 cursor-pointer hover:bg-neutral-50 transition-colors ${activeTab === 'aging' ? 'ring-1 ring-[#476E66]' : ''}`}
+          style={{ boxShadow: 'var(--shadow-card)' }}
+        >
+          <div className="flex items-center gap-1.5 mb-1">
+            <div className="w-7 h-7 rounded-lg bg-red-50 flex items-center justify-center flex-shrink-0">
+              <AlertCircle className="w-3.5 h-3.5 text-red-500" />
             </div>
             <span className="text-neutral-600 text-xs font-medium">A/R Aging</span>
           </div>
           <p className="text-base font-semibold text-neutral-900">{formatCurrency(stats.arAging)}</p>
-          <p className="text-xs text-neutral-400">Overdue balance</p>
+          <p className="text-xs text-neutral-400">{stats.agingCount} overdue</p>
         </div>
 
         <div 
@@ -501,6 +566,70 @@ export default function InvoicingPage() {
           <p className="text-xs text-neutral-400">Active schedules</p>
         </div>
       </div>
+
+      {/* Tab Navigation */}
+      <div className="flex items-center gap-1 bg-neutral-100 p-0.5 rounded-lg w-fit overflow-x-auto">
+        <button
+          onClick={() => { setActiveTab('all'); setStatusFilter('all'); }}
+          className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+            activeTab === 'all' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-500 hover:text-neutral-700'
+          }`}
+        >
+          All Invoices
+        </button>
+        <button
+          onClick={() => { setActiveTab('sent'); setStatusFilter('all'); }}
+          className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors flex items-center gap-1 ${
+            activeTab === 'sent' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-500 hover:text-neutral-700'
+          }`}
+        >
+          <Send className="w-3 h-3" /> Sent
+          <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full">{stats.sentCount}</span>
+        </button>
+        <button
+          onClick={() => { setActiveTab('aging'); setStatusFilter('all'); }}
+          className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors flex items-center gap-1 ${
+            activeTab === 'aging' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-500 hover:text-neutral-700'
+          }`}
+        >
+          <AlertCircle className="w-3 h-3" /> AR Aging
+          {stats.agingCount > 0 && <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full">{stats.agingCount}</span>}
+        </button>
+      </div>
+
+      {/* AR Aging Summary - Only show when on aging tab */}
+      {activeTab === 'aging' && (
+        <div className="bg-white rounded-lg p-2 sm:p-3" style={{ boxShadow: 'var(--shadow-card)' }}>
+          <h3 className="text-xs font-semibold text-neutral-700 mb-2">Aging Summary</h3>
+          <div className="flex gap-1.5 overflow-x-auto pb-1 sm:grid sm:grid-cols-5 sm:gap-2">
+            <div className="p-1.5 sm:p-2 bg-emerald-50 rounded-md min-w-[70px] flex-shrink-0 text-center">
+              <p className="text-[9px] sm:text-[10px] text-neutral-500">Current</p>
+              <p className="text-xs sm:text-sm font-semibold text-emerald-700">{formatCurrency(agingBuckets.current.amount)}</p>
+              <p className="text-[8px] sm:text-[9px] text-neutral-400">{agingBuckets.current.count}</p>
+            </div>
+            <div className="p-1.5 sm:p-2 bg-yellow-50 rounded-md min-w-[70px] flex-shrink-0 text-center">
+              <p className="text-[9px] sm:text-[10px] text-neutral-500">1-30d</p>
+              <p className="text-xs sm:text-sm font-semibold text-yellow-700">{formatCurrency(agingBuckets['1-30'].amount)}</p>
+              <p className="text-[8px] sm:text-[9px] text-neutral-400">{agingBuckets['1-30'].count}</p>
+            </div>
+            <div className="p-1.5 sm:p-2 bg-orange-50 rounded-md min-w-[70px] flex-shrink-0 text-center">
+              <p className="text-[9px] sm:text-[10px] text-neutral-500">31-60d</p>
+              <p className="text-xs sm:text-sm font-semibold text-orange-700">{formatCurrency(agingBuckets['31-60'].amount)}</p>
+              <p className="text-[8px] sm:text-[9px] text-neutral-400">{agingBuckets['31-60'].count}</p>
+            </div>
+            <div className="p-1.5 sm:p-2 bg-red-50 rounded-md min-w-[70px] flex-shrink-0 text-center">
+              <p className="text-[9px] sm:text-[10px] text-neutral-500">61-90d</p>
+              <p className="text-xs sm:text-sm font-semibold text-red-600">{formatCurrency(agingBuckets['61-90'].amount)}</p>
+              <p className="text-[8px] sm:text-[9px] text-neutral-400">{agingBuckets['61-90'].count}</p>
+            </div>
+            <div className="p-1.5 sm:p-2 bg-red-100 rounded-md min-w-[70px] flex-shrink-0 text-center">
+              <p className="text-[9px] sm:text-[10px] text-neutral-500">90+d</p>
+              <p className="text-xs sm:text-sm font-semibold text-red-700">{formatCurrency(agingBuckets['90+'].amount)}</p>
+              <p className="text-[8px] sm:text-[9px] text-neutral-400">{agingBuckets['90+'].count}</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Search and filters */}
       <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
@@ -545,7 +674,7 @@ export default function InvoicingPage() {
 
       {/* Invoices Table */}
       {viewMode === 'list' ? (
-        <div className="bg-white rounded-lg overflow-hidden" style={{ boxShadow: 'var(--shadow-card)' }}>
+        <div className="bg-white rounded-lg overflow-x-auto" style={{ boxShadow: 'var(--shadow-card)' }}>
           <table className="w-full">
             <thead className="bg-neutral-50 border-b border-neutral-100">
               <tr>
@@ -560,9 +689,11 @@ export default function InvoicingPage() {
                 </th>
                 <th className="text-left px-2 py-2 text-xs font-medium text-neutral-600">Invoice</th>
                 <th className="text-left px-2 py-2 text-xs font-medium text-neutral-600">Client</th>
-                <th className="text-left px-2 py-2 text-xs font-medium text-neutral-600 hidden sm:table-cell">Project</th>
+                {activeTab === 'sent' && <th className="text-left px-2 py-2 text-xs font-medium text-neutral-600 hidden sm:table-cell">Sent To</th>}
+                {activeTab !== 'sent' && <th className="text-left px-2 py-2 text-xs font-medium text-neutral-600 hidden sm:table-cell">Project</th>}
                 <th className="text-right px-2 py-2 text-xs font-medium text-neutral-600">Amount</th>
-                <th className="text-left px-2 py-2 text-xs font-medium text-neutral-600 hidden md:table-cell">Status</th>
+                {activeTab === 'aging' && <th className="text-center px-2 py-2 text-xs font-medium text-neutral-600">Days Overdue</th>}
+                {activeTab !== 'aging' && <th className="text-left px-2 py-2 text-xs font-medium text-neutral-600 hidden md:table-cell">Status</th>}
                 <th className="text-left px-2 py-2 text-xs font-medium text-neutral-600 hidden lg:table-cell">Views</th>
                 <th className="text-left px-2 py-2 text-xs font-medium text-neutral-600 hidden md:table-cell">Due Date</th>
                 <th className="w-8">
@@ -600,9 +731,32 @@ export default function InvoicingPage() {
                       <p className="text-xs text-neutral-500">{new Date(invoice.created_at || '').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</p>
                     </td>
                     <td className="px-2 py-2 text-sm text-neutral-600">{invoice.client?.name || '-'}</td>
-                    <td className="px-2 py-2 text-sm text-neutral-600 hidden sm:table-cell">{invoice.project?.name || '-'}</td>
+                    {activeTab === 'sent' && (
+                      <td className="px-2 py-2 text-sm text-neutral-600 hidden sm:table-cell">
+                        <div className="flex items-center gap-1">
+                          <Mail className="w-3 h-3 text-neutral-400" />
+                          <span className="truncate max-w-[120px]">{invoice.client?.email || '-'}</span>
+                        </div>
+                      </td>
+                    )}
+                    {activeTab !== 'sent' && <td className="px-2 py-2 text-sm text-neutral-600 hidden sm:table-cell">{invoice.project?.name || '-'}</td>}
                     <td className="px-2 py-2 text-right text-sm font-medium text-neutral-900">{formatCurrency(invoice.total)}</td>
-                    <td className="px-2 py-2 hidden md:table-cell">
+                    {activeTab === 'aging' && (
+                      <td className="px-2 py-2 text-center">
+                        {(() => {
+                          const daysOverdue = (invoice as any).daysOverdue || 0;
+                          const bgColor = daysOverdue <= 0 ? 'bg-emerald-100 text-emerald-700' : 
+                                          daysOverdue <= 30 ? 'bg-yellow-100 text-yellow-700' : 
+                                          daysOverdue <= 60 ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700';
+                          return (
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${bgColor}`}>
+                              {daysOverdue <= 0 ? 'Current' : `${daysOverdue}d`}
+                            </span>
+                          );
+                        })()}
+                      </td>
+                    )}
+                    {activeTab !== 'aging' && <td className="px-2 py-2 hidden md:table-cell">
                       <div className="flex items-center gap-1.5">
                         <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(invoice.status)}`}>
                           {invoice.status || 'draft'}
@@ -613,7 +767,7 @@ export default function InvoicingPage() {
                           </span>
                         )}
                       </div>
-                    </td>
+                    </td>}
                     <td className="px-2 py-2 hidden lg:table-cell">
                       {invoice.view_count ? (
                         <div className="flex flex-col">

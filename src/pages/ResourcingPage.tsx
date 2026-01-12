@@ -298,11 +298,11 @@ function PersonalDetailsTab({ staff, onEdit, onDelete, onToggleActive }: { staff
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-2 gap-4">
         {/* Personal Information */}
-        <div className="space-y-4">
-          <h4 className="text-sm font-semibold text-neutral-800 border-b pb-2">PERSONAL INFORMATION</h4>
-          <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <h4 className="text-xs font-semibold text-neutral-800 border-b pb-1.5">PERSONAL INFORMATION</h4>
+          <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="text-xs text-neutral-500">Full Name</label>
               <p className="text-neutral-900 font-medium">{staff.full_name || '-'}</p>
@@ -335,9 +335,9 @@ function PersonalDetailsTab({ staff, onEdit, onDelete, onToggleActive }: { staff
         </div>
 
         {/* Employment Details */}
-        <div className="space-y-4">
-          <h4 className="text-sm font-semibold text-neutral-800 border-b pb-2">EMPLOYMENT DETAILS</h4>
-          <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <h4 className="text-xs font-semibold text-neutral-800 border-b pb-1.5">EMPLOYMENT DETAILS</h4>
+          <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="text-xs text-neutral-500">Hire Date</label>
               <div className="flex items-center gap-1.5">
@@ -370,9 +370,9 @@ function PersonalDetailsTab({ staff, onEdit, onDelete, onToggleActive }: { staff
       </div>
 
       {/* Emergency Contact */}
-      <div className="space-y-4">
-        <h4 className="text-sm font-semibold text-neutral-800 border-b pb-2">EMERGENCY CONTACT</h4>
-        <div className="grid grid-cols-4 gap-4">
+      <div className="space-y-2">
+        <h4 className="text-xs font-semibold text-neutral-800 border-b pb-1.5">EMERGENCY CONTACT</h4>
+        <div className="grid grid-cols-4 gap-2">
           <div>
             <label className="text-xs text-neutral-500">Contact Name</label>
             <p className="text-neutral-900">{(staff as any).emergency_contact_name || '-'}</p>
@@ -393,9 +393,9 @@ function PersonalDetailsTab({ staff, onEdit, onDelete, onToggleActive }: { staff
       </div>
 
       {/* Additional Information */}
-      <div className="space-y-4">
-        <h4 className="text-sm font-semibold text-neutral-800 border-b pb-2">ADDITIONAL INFORMATION</h4>
-        <div className="grid grid-cols-4 gap-4">
+      <div className="space-y-2">
+        <h4 className="text-xs font-semibold text-neutral-800 border-b pb-1.5">ADDITIONAL INFORMATION</h4>
+        <div className="grid grid-cols-4 gap-2">
           <div>
             <label className="text-xs text-neutral-500">Reports To</label>
             <p className="text-neutral-900">{(staff as any).reports_to || '-'}</p>
@@ -1205,32 +1205,32 @@ function PerformanceTab({ staff, companyId }: { staff: UserProfile; companyId: s
 
   return (
     <div className="space-y-6">
-      <p className="text-sm text-neutral-500">Performance metrics for {staff.full_name} (This Month)</p>
+      <p className="text-xs text-neutral-500">Performance metrics for {staff.full_name} (This Month)</p>
       
-      <div className="space-y-4">
-        <div className="flex justify-between items-center py-3 border-b border-neutral-100">
-          <span className="text-neutral-600">Total Hours</span>
-          <span className="text-xl font-semibold text-neutral-900">{stats?.totalHours?.toFixed(1) || '0'}h</span>
+      <div className="space-y-1">
+        <div className="flex justify-between items-center py-2 border-b border-neutral-100">
+          <span className="text-sm text-neutral-600">Total Hours</span>
+          <span className="text-sm font-medium text-neutral-900">{stats?.totalHours?.toFixed(1) || '0'}h</span>
         </div>
-        <div className="flex justify-between items-center py-3 border-b border-neutral-100">
-          <span className="text-neutral-600">Billable Hours</span>
-          <span className="text-xl font-semibold text-neutral-900">{stats?.billableHours?.toFixed(1) || '0'}h</span>
+        <div className="flex justify-between items-center py-2 border-b border-neutral-100">
+          <span className="text-sm text-neutral-600">Billable Hours</span>
+          <span className="text-sm font-medium text-neutral-900">{stats?.billableHours?.toFixed(1) || '0'}h</span>
         </div>
-        <div className="flex justify-between items-center py-3 border-b border-neutral-100">
-          <span className="text-neutral-600">Revenue Generated</span>
-          <span className="text-xl font-semibold text-emerald-600">${(stats?.revenueGenerated || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+        <div className="flex justify-between items-center py-2 border-b border-neutral-100">
+          <span className="text-sm text-neutral-600">Revenue Generated</span>
+          <span className="text-sm font-medium text-emerald-600">${(stats?.revenueGenerated || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
         </div>
-        <div className="flex justify-between items-center py-3 border-b border-neutral-100">
-          <span className="text-neutral-600">Utilization Rate</span>
-          <span className="text-xl font-semibold text-neutral-900">{stats?.utilization || 0}%</span>
+        <div className="flex justify-between items-center py-2 border-b border-neutral-100">
+          <span className="text-sm text-neutral-600">Utilization Rate</span>
+          <span className="text-sm font-medium text-neutral-900">{stats?.utilization || 0}%</span>
         </div>
-        <div className="flex justify-between items-center py-3 border-b border-neutral-100">
-          <span className="text-neutral-600">Target Utilization</span>
-          <span className="text-xl font-semibold text-neutral-900">75%</span>
+        <div className="flex justify-between items-center py-2 border-b border-neutral-100">
+          <span className="text-sm text-neutral-600">Target Utilization</span>
+          <span className="text-sm font-medium text-neutral-900">75%</span>
         </div>
-        <div className="flex justify-between items-center py-3">
-          <span className="text-neutral-600">Status</span>
-          <span className="text-neutral-900">{stats?.utilization >= 75 ? 'Meeting target' : `${75 - (stats?.utilization || 0)}% below target`}</span>
+        <div className="flex justify-between items-center py-2">
+          <span className="text-sm text-neutral-600">Status</span>
+          <span className="text-sm text-neutral-900">{stats?.utilization >= 75 ? 'Meeting target' : `${75 - (stats?.utilization || 0)}% below target`}</span>
         </div>
       </div>
     </div>
@@ -1382,25 +1382,25 @@ function CompensationTab({ staff, companyId, onUpdate }: { staff: UserProfile; c
       )}
 
       {/* Summary - Cost vs Revenue */}
-      <div className="grid grid-cols-2 gap-6 border-b border-neutral-200 pb-4">
+      <div className="grid grid-cols-2 gap-4 border-b border-neutral-200 pb-3">
         <div>
-          <p className="text-sm text-neutral-500">Total Monthly Cost</p>
-          <p className="text-2xl font-bold text-neutral-900 mt-1">${calculateMonthlyCost().toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+          <p className="text-xs text-neutral-500">Total Monthly Cost</p>
+          <p className="text-base font-semibold text-neutral-900 mt-0.5">${calculateMonthlyCost().toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
         </div>
         <div>
-          <p className="text-sm text-neutral-500">Revenue Generated (This Month)</p>
-          <p className={`text-2xl font-bold mt-1 ${(billableRevenue?.monthly || 0) >= calculateMonthlyCost() ? 'text-emerald-600' : 'text-neutral-900'}`}>
+          <p className="text-xs text-neutral-500">Revenue Generated (This Month)</p>
+          <p className={`text-base font-semibold mt-0.5 ${(billableRevenue?.monthly || 0) >= calculateMonthlyCost() ? 'text-emerald-600' : 'text-neutral-900'}`}>
             ${(billableRevenue?.monthly || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </p>
-          <p className="text-xs text-neutral-400 mt-1">{billableRevenue?.hours?.toFixed(1) || 0}h × ${formData.hourly_rate || 0}/hr</p>
+          <p className="text-xs text-neutral-400">{billableRevenue?.hours?.toFixed(1) || 0}h × ${formData.hourly_rate || 0}/hr</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
         {/* Salary Section */}
-        <div className="border border-neutral-200 rounded-xl p-5">
-          <h3 className="font-medium text-neutral-900 mb-4">Salary / Pay Rate</h3>
-          <div className="space-y-4">
+        <div className="border border-neutral-200 rounded-lg p-3">
+          <h3 className="text-sm font-medium text-neutral-900 mb-2">Salary / Pay Rate</h3>
+          <div className="space-y-2">
             <div>
               <label className="block text-sm text-neutral-600 mb-1">Pay Type</label>
               {editing ? (
@@ -1440,9 +1440,9 @@ function CompensationTab({ staff, companyId, onUpdate }: { staff: UserProfile; c
         </div>
 
         {/* Benefits Section */}
-        <div className="border border-neutral-200 rounded-xl p-5">
-          <h3 className="font-medium text-neutral-900 mb-4">Benefits & Expenses (Monthly)</h3>
-          <div className="space-y-4">
+        <div className="border border-neutral-200 rounded-lg p-3">
+          <h3 className="text-sm font-medium text-neutral-900 mb-2">Benefits & Expenses (Monthly)</h3>
+          <div className="space-y-2">
             <div>
               <label className="block text-sm text-neutral-600 mb-1">Health Insurance</label>
               {editing ? (
@@ -1479,9 +1479,9 @@ function CompensationTab({ staff, companyId, onUpdate }: { staff: UserProfile; c
         </div>
 
         {/* Client Billing Rate Section */}
-        <div className="border border-neutral-200 rounded-xl p-5">
-          <h3 className="font-medium text-neutral-900 mb-4">Client Billing Rate</h3>
-          <div className="space-y-4">
+        <div className="border border-neutral-200 rounded-lg p-3">
+          <h3 className="text-sm font-medium text-neutral-900 mb-2">Client Billing Rate</h3>
+          <div className="space-y-2">
             <div>
               <label className="block text-sm text-neutral-600 mb-1">Billable Status</label>
               {editing ? (
@@ -1505,7 +1505,7 @@ function CompensationTab({ staff, companyId, onUpdate }: { staff: UserProfile; c
                   <input type="number" value={formData.hourly_rate} onChange={(e) => setFormData({...formData, hourly_rate: e.target.value})} className="w-full pl-7 pr-3 py-2 border border-neutral-200 rounded-lg" placeholder="0.00" />
                 </div>
               ) : (
-                <p className="text-neutral-900 text-lg font-medium">{formData.hourly_rate ? `$${formData.hourly_rate}/hr` : '-'}</p>
+                <p className="text-neutral-900 text-sm font-medium">{formData.hourly_rate ? `$${formData.hourly_rate}/hr` : '-'}</p>
               )}
             </div>
           </div>

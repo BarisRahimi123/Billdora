@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { Clock, CheckSquare, DollarSign, TrendingUp, Plus, FileText, FolderPlus, Timer, ChevronDown, X, CheckCircle, XCircle, BarChart3, TreePine, Camera } from 'lucide-react';
+import { Clock, CheckSquare, DollarSign, TrendingUp, Plus, FileText, FolderPlus, Timer, ChevronDown, X, CheckCircle, XCircle, BarChart3, TreePine, Camera, Target, Settings2 } from 'lucide-react';
 import BusinessHealthTree from '../components/BusinessHealthTree';
 import { useAuth } from '../contexts/AuthContext';
 import { usePermissions } from '../contexts/PermissionsContext';
@@ -83,6 +83,14 @@ export default function DashboardPage() {
     momentum: 0,
     profitMargin: 0,
   });
+  const [profitTarget, setProfitTarget] = useState(() => {
+    const saved = localStorage.getItem('billdora_profit_target');
+    return saved ? Number(saved) : 10000;
+  });
+  const [actualProfit, setActualProfit] = useState(0);
+  const [totalExpenses, setTotalExpenses] = useState(0);
+  const [showProfitTargetModal, setShowProfitTargetModal] = useState(false);
+  const [tempProfitTarget, setTempProfitTarget] = useState(profitTarget);
 
   // Handle subscription success/cancel URL params
   useEffect(() => {
@@ -220,6 +228,10 @@ export default function DashboardPage() {
         momentum: quotesThisMonth,
         profitMargin: Math.max(0, profitMarginPct), // Don't show negative
       });
+      
+      // Set actual P&L values for the P&L card
+      setActualProfit(totalRevenue - annualOverhead);
+      setTotalExpenses(annualOverhead);
     } catch (err) {
       // Don't show error if request was cancelled
       if (signal?.aborted) return;
@@ -456,6 +468,69 @@ export default function DashboardPage() {
         />
       ) : (
       <>
+      {/* P&L Target Card */}
+      {canViewFinancials && (() => {
+        const profitPct = profitTarget > 0 ? (actualProfit / profitTarget) * 100 : 0;
+        const isOnTrack = profitPct >= 100;
+        const isBehind = profitPct >= 50 && profitPct < 100;
+        const isCritical = profitPct < 50;
+        
+        return (
+          <div 
+            className={`bg-white rounded-xl p-3 mb-2 ${isCritical ? 'animate-pulse ring-2 ring-red-400' : isBehind ? 'animate-pulse ring-2 ring-amber-400' : ''}`}
+            style={{ boxShadow: 'var(--shadow-card)' }}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isOnTrack ? 'bg-green-100' : isBehind ? 'bg-amber-100' : 'bg-red-100'}`}>
+                  <Target className={`w-4 h-4 ${isOnTrack ? 'text-green-600' : isBehind ? 'text-amber-600' : 'text-red-600'}`} />
+                </div>
+                <div>
+                  <span className="text-sm font-medium text-neutral-700">Profit & Loss</span>
+                  <p className="text-[10px] text-neutral-400">vs Target</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => { setTempProfitTarget(profitTarget); setShowProfitTargetModal(true); }}
+                className="p-1.5 hover:bg-neutral-100 rounded-lg transition-colors"
+              >
+                <Settings2 className="w-4 h-4 text-neutral-400" />
+              </button>
+            </div>
+            
+            <div className="flex items-end justify-between mb-2">
+              <div>
+                <p className={`text-xl font-bold ${isOnTrack ? 'text-green-600' : isBehind ? 'text-amber-600' : 'text-red-600'}`}>
+                  {formatCurrency(actualProfit)}
+                </p>
+                <p className="text-[10px] text-neutral-400">Actual Profit</p>
+              </div>
+              <div className="text-right">
+                <p className="text-sm font-medium text-neutral-600">{formatCurrency(profitTarget)}</p>
+                <p className="text-[10px] text-neutral-400">Target</p>
+              </div>
+            </div>
+            
+            {/* Progress Bar */}
+            <div className="h-2 bg-neutral-100 rounded-full overflow-hidden mb-1">
+              <div 
+                className={`h-full rounded-full transition-all ${isOnTrack ? 'bg-green-500' : isBehind ? 'bg-amber-500' : 'bg-red-500'}`}
+                style={{ width: `${Math.min(100, Math.max(0, profitPct))}%` }}
+              />
+            </div>
+            
+            <div className="flex items-center justify-between text-[10px]">
+              <span className={`font-medium ${isOnTrack ? 'text-green-600' : isBehind ? 'text-amber-600' : 'text-red-600'}`}>
+                {profitPct.toFixed(0)}% of target
+              </span>
+              <span className="text-neutral-400">
+                {isOnTrack ? '✓ On Track' : isBehind ? '⚠ Behind Target' : '⚠ Critical'}
+              </span>
+            </div>
+          </div>
+        );
+      })()}
+      
       {/* KPI Cards - Row 1 */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
         {canViewFinancials && <div className="bg-white rounded-lg p-2 cursor-pointer hover:bg-neutral-50 transition-colors" style={{ boxShadow: 'var(--shadow-card)' }} onClick={() => navigate('/invoicing')}>
@@ -526,28 +601,7 @@ export default function DashboardPage() {
           <p className="text-[10px] text-neutral-400 mt-0">Pending</p>
         </div>
 
-        <div className="bg-white rounded-lg p-2 cursor-pointer hover:bg-neutral-50 transition-colors" style={{ boxShadow: 'var(--shadow-card)' }} onClick={() => navigate('/time-expense')}>
-          <div className="flex items-center gap-1 mb-0.5">
-            <div className="w-6 h-6 rounded-lg bg-[#476E66]/10 flex items-center justify-center">
-              <TrendingUp className="w-3 h-3 text-[#476E66]" />
-            </div>
-            <span className="text-neutral-500 text-[11px]">Utilization</span>
-          </div>
-          <p className="text-base font-bold text-neutral-900">{stats?.utilization || 0}%</p>
-        </div>
-
-        {canViewFinancials && (
-          <div className="bg-white rounded-lg p-2 cursor-pointer hover:bg-neutral-50 transition-colors" style={{ boxShadow: 'var(--shadow-card)' }} onClick={() => navigate('/invoicing')}>
-            <div className="flex items-center gap-1 mb-0.5">
-              <div className="w-6 h-6 rounded-lg bg-[#476E66]/10 flex items-center justify-center">
-                <FileText className="w-3 h-3 text-[#476E66]" />
-              </div>
-              <span className="text-neutral-500 text-[11px]">Drafts</span>
-            </div>
-            <p className="text-base font-bold text-neutral-900">{stats?.draftInvoices || 0}</p>
-            <p className="text-[10px] text-neutral-400 mt-0">Invoices</p>
-          </div>
-        )}
+        {/* Utilization and Drafts cards hidden per user request */}
       </div>
 
       {/* Charts Row */}
@@ -755,6 +809,63 @@ export default function DashboardPage() {
               </button>
               <button onClick={() => setShowTargetsModal(false)} className="px-4 py-2 bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54]">
                 Save Targets
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Profit Target Modal */}
+      {showProfitTargetModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-neutral-900">Set Profit Target</h3>
+              <button onClick={() => setShowProfitTargetModal(false)} className="p-1 hover:bg-neutral-100 rounded-lg">
+                <X className="w-5 h-5 text-neutral-500" />
+              </button>
+            </div>
+            <p className="text-sm text-neutral-500 mb-4">
+              Set your profit target. The card will flash yellow when below target, and red when below 50%.
+            </p>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-neutral-700 mb-1">Target Amount</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400">$</span>
+                <input
+                  type="number"
+                  value={tempProfitTarget}
+                  onChange={(e) => setTempProfitTarget(Number(e.target.value))}
+                  className="w-full pl-7 pr-3 py-2 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-[#476E66] focus:border-transparent"
+                  placeholder="10000"
+                />
+              </div>
+            </div>
+            <div className="p-3 bg-neutral-50 rounded-lg mb-4">
+              <div className="flex justify-between text-sm">
+                <span className="text-neutral-500">Current Profit:</span>
+                <span className={`font-medium ${actualProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {formatCurrency(actualProfit)}
+                </span>
+              </div>
+              <div className="flex justify-between text-sm mt-1">
+                <span className="text-neutral-500">Total Expenses:</span>
+                <span className="font-medium text-neutral-700">{formatCurrency(totalExpenses)}</span>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3">
+              <button onClick={() => setShowProfitTargetModal(false)} className="px-4 py-2 text-neutral-700 hover:bg-neutral-100 rounded-lg">
+                Cancel
+              </button>
+              <button 
+                onClick={() => {
+                  setProfitTarget(tempProfitTarget);
+                  localStorage.setItem('billdora_profit_target', String(tempProfitTarget));
+                  setShowProfitTargetModal(false);
+                }} 
+                className="px-4 py-2 bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54]"
+              >
+                Save Target
               </button>
             </div>
           </div>

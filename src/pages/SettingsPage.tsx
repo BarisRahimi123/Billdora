@@ -276,7 +276,7 @@ export default function SettingsPage() {
         </div>
 
         {/* Tab Content */}
-        <div className="p-3 sm:p-4">
+        <div className="p-3 sm:p-4 max-h-[calc(100vh-200px)] overflow-y-auto">
 
         {/* Content */}
         <div className="w-full">
@@ -5541,59 +5541,33 @@ function SubscriptionTab() {
     }
   }
 
-  // Progress bar component
+  // Progress bar component - compact design
   const UsageBar = ({ used, limit, label, isLoading }: { used: number; limit: number | null; label: string; isLoading?: boolean }) => {
     if (isLoading) {
       return (
-        <div className="space-y-1.5">
-          <div className="flex justify-between text-xs">
-            <span className="text-neutral-600">{label}</span>
-            <span className="w-10 h-3 bg-neutral-200 animate-pulse rounded" />
-          </div>
-          <div className="h-1.5 bg-neutral-100 rounded-full overflow-hidden">
-            <div className="h-full bg-neutral-200 animate-pulse rounded-full w-1/3" />
-          </div>
+        <div className="flex items-center justify-between py-1">
+          <span className="text-xs text-neutral-500">{label}</span>
+          <span className="w-8 h-3 bg-neutral-200 animate-pulse rounded" />
         </div>
       );
     }
     if (limit === null) {
       return (
-        <div className="space-y-1.5">
-          <div className="flex justify-between text-xs">
-            <span className="text-neutral-600">{label}</span>
-            <span className="font-medium text-neutral-900">{used} used</span>
-          </div>
-          <div className="h-1.5 bg-neutral-100 rounded-full overflow-hidden">
-            <div className="h-full bg-[#476E66] rounded-full" style={{ width: '15%' }} />
-          </div>
-          <p className="text-[10px] text-emerald-600 font-medium">Unlimited</p>
+        <div className="flex items-center justify-between py-1">
+          <span className="text-xs text-neutral-500">{label}</span>
+          <span className="text-xs font-medium text-emerald-600">{used} / ∞</span>
         </div>
       );
     }
     const percentage = Math.min((used / limit) * 100, 100);
-    const isNearLimit = percentage >= 80;
     const isAtLimit = percentage >= 100;
     
     return (
-      <div className="space-y-1.5">
-        <div className="flex justify-between text-xs">
-          <span className="text-neutral-600">{label}</span>
-          <span className={`font-medium ${isAtLimit ? 'text-red-600' : isNearLimit ? 'text-amber-600' : 'text-neutral-900'}`}>
-            {used} / {limit}
-          </span>
-        </div>
-        <div className="h-1.5 bg-neutral-100 rounded-full overflow-hidden">
-          <div 
-            className={`h-full rounded-full transition-all ${isAtLimit ? 'bg-red-500' : isNearLimit ? 'bg-amber-500' : 'bg-[#476E66]'}`}
-            style={{ width: `${percentage}%` }}
-          />
-        </div>
-        {isNearLimit && !isAtLimit && (
-          <p className="text-[10px] text-amber-600">Approaching limit</p>
-        )}
-        {isAtLimit && (
-          <p className="text-[10px] text-red-600">Limit reached - upgrade to continue</p>
-        )}
+      <div className="flex items-center justify-between py-1">
+        <span className="text-xs text-neutral-500">{label}</span>
+        <span className={`text-xs font-medium ${isAtLimit ? 'text-red-600' : 'text-neutral-700'}`}>
+          {used} / {limit}
+        </span>
       </div>
     );
   };
@@ -5624,103 +5598,63 @@ function SubscriptionTab() {
 
   return (
     <div className="space-y-3">
-      {/* Current Plan Card - Enhanced with gradient border */}
-      <div className="relative rounded-lg p-[2px] bg-gradient-to-br from-[#476E66] via-[#5a8a80] to-[#3A5B54]">
-        <div className="bg-white rounded-[6px] p-3 sm:p-4">
-          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-            <div className="flex items-start gap-3">
-              <div 
-                className="w-12 h-12 rounded-lg flex items-center justify-center shadow-sm"
-                style={{ 
-                  background: isPro ? 'linear-gradient(135deg, #476E66 0%, #3A5B54 100%)' : 'linear-gradient(135deg, #E8E8E6 0%, #D4D4D2 100%)'
-                }}
-              >
-                <CreditCard className="w-5 h-5" style={{ color: isPro ? '#fff' : '#474747' }} />
-              </div>
-              
-              <div>
-                <div className="flex items-center gap-2 mb-0.5">
-                  <h3 className="text-base sm:text-lg font-bold text-neutral-900">
-                    {currentPlan?.name || 'Starter'}
-                  </h3>
-                  {isPro ? (
-                    <span className="px-2 py-0.5 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-full text-[10px] font-semibold">
-                      PRO
-                    </span>
-                  ) : (
-                    <span className="px-2 py-0.5 bg-neutral-100 text-neutral-600 rounded-full text-[10px] font-medium">
-                      Free Plan
-                    </span>
-                  )}
-                </div>
-                <p className="text-neutral-500 text-xs">
-                  {isPro ? 'Full access to all features' : 'Basic features for getting started'}
-                </p>
-                
-                {subscription && (
-                  <div className="mt-2 flex items-center gap-3 text-xs">
-                    <span className="flex items-center gap-1">
-                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                      <span className="text-neutral-600">Active</span>
-                    </span>
-                    {subscription.current_period_end && (
-                      <span className="text-neutral-500 hidden sm:inline">
-                        {subscription.cancel_at_period_end ? 'Ends' : 'Renews'}: {formatDate(subscription.current_period_end)}
-                      </span>
-                    )}
-                  </div>
-                )}
-              </div>
+      {/* Current Plan Card - Clean compact design */}
+      <div className="bg-white rounded-lg border border-neutral-200 p-3">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <div 
+              className={`w-8 h-8 rounded-md flex items-center justify-center ${isPro ? 'bg-[#476E66]' : 'bg-neutral-100'}`}
+            >
+              <CreditCard className="w-4 h-4" style={{ color: isPro ? '#fff' : '#6b7280' }} />
             </div>
-
-            {/* Manage Subscription Button for Pro users */}
-            {isPro && subscription && (
-              <button
-                onClick={handleManageSubscription}
-                disabled={portalLoading}
-                className="flex items-center justify-center gap-2 px-4 py-2 border border-[#476E66] text-[#476E66] text-sm font-medium rounded-lg hover:bg-[#476E66]/5 transition-all disabled:opacity-50 whitespace-nowrap"
-              >
-                {portalLoading ? (
-                  <>
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    <span className="hidden sm:inline">Loading...</span>
-                  </>
+            
+            <div>
+              <div className="flex items-center gap-1.5">
+                <h3 className="text-sm font-semibold text-neutral-900">
+                  {currentPlan?.name || 'Starter'}
+                </h3>
+                {isPro ? (
+                  <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-700 rounded text-[9px] font-medium">
+                    PRO
+                  </span>
                 ) : (
-                  <>
-                    <Settings className="w-3.5 h-3.5" />
-                    <span className="hidden xs:inline">Manage Subscription</span>
-                    <span className="xs:hidden">Manage</span>
-                  </>
+                  <span className="px-1.5 py-0.5 bg-neutral-100 text-neutral-500 rounded text-[9px] font-medium">
+                    Free
+                  </span>
                 )}
-              </button>
-            )}
-
-            {isStarter && (
-              <button
-                onClick={handleUpgrade}
-                disabled={!!checkoutLoading}
-                className="flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-[#476E66] to-[#3A5B54] text-white text-sm font-semibold rounded-lg hover:shadow-lg transition-all disabled:opacity-50 whitespace-nowrap"
-              >
-                {checkoutLoading ? (
-                  <>
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    <span className="hidden sm:inline">Processing...</span>
-                  </>
-                ) : (
-                  <>
-                    <CreditCard className="w-3.5 h-3.5" />
-                    <span className="hidden xs:inline">Upgrade to Professional</span>
-                    <span className="xs:hidden">Upgrade</span>
-                  </>
-                )}
-              </button>
-            )}
+              </div>
+              <p className="text-neutral-400 text-[10px]">
+                {isPro ? 'Full access to all features' : 'Basic features for getting started'}
+              </p>
+                
+            </div>
           </div>
 
-          {/* Usage Progress Bars */}
-          <div className="mt-4 pt-3 border-t border-neutral-100">
-            <h4 className="text-xs font-semibold text-neutral-700 mb-3">Current Usage</h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {/* Action Button */}
+          {isPro && subscription ? (
+            <button
+              onClick={handleManageSubscription}
+              disabled={portalLoading}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 border border-neutral-200 text-neutral-600 text-xs font-medium rounded-md hover:bg-neutral-50 transition-all disabled:opacity-50"
+            >
+              {portalLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Settings className="w-3 h-3" />}
+              <span>Manage</span>
+            </button>
+          ) : isStarter ? (
+            <button
+              onClick={handleUpgrade}
+              disabled={!!checkoutLoading}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 bg-[#476E66] text-white text-xs font-medium rounded-md hover:bg-[#3A5B54] transition-all disabled:opacity-50"
+            >
+              {checkoutLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <CreditCard className="w-3 h-3" />}
+              <span>Upgrade</span>
+            </button>
+          ) : null}
+        </div>
+
+        {/* Usage - Compact list */}
+        <div className="mt-2 pt-2 border-t border-neutral-100">
+          <div className="grid grid-cols-2 gap-x-4">
               <UsageBar 
                 used={usage.projects} 
                 limit={currentPlan?.limits?.projects === -1 ? null : (currentPlan?.limits?.projects ?? 3)} 
@@ -5745,7 +5679,6 @@ function SubscriptionTab() {
                 label="Invoices This Month"
                 isLoading={usageLoading}
               />
-            </div>
           </div>
         </div>
       </div>
