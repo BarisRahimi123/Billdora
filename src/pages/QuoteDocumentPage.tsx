@@ -1093,7 +1093,7 @@ export default function QuoteDocumentPage() {
                       </span>
                     )}
                     {recipientType === 'lead' && (
-                      <span className="px-2 py-1 text-xs font-medium bg-amber-100 text-amber-700 rounded-full">
+                      <span className="px-2 py-1 text-xs font-medium bg-neutral-100 text-neutral-500 rounded-full">
                         ✓ Sending to Lead: {selectedLead?.company_name || selectedLead?.name}
                       </span>
                     )}
@@ -2160,7 +2160,7 @@ export default function QuoteDocumentPage() {
                   {selectedLead && recipientType === 'lead' && (
                     <div className="space-y-3 mt-4 pt-4 border-t border-neutral-100">
                       <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 text-xs font-medium bg-amber-100 text-amber-700 rounded-full">Lead</span>
+                        <span className="px-2 py-0.5 text-xs font-medium bg-neutral-100 text-neutral-500 rounded-full">Lead</span>
                       </div>
                       <div>
                         <p className="font-semibold text-neutral-900">{selectedLead.company_name || selectedLead.name}</p>
@@ -3311,7 +3311,7 @@ export default function QuoteDocumentPage() {
                   <div className="flex items-center gap-2 mb-2">
                     <p className="text-sm text-neutral-500">Sending to</p>
                     {recipientType === 'lead' && (
-                      <span className="px-2 py-0.5 text-xs font-medium bg-amber-100 text-amber-700 rounded-full">Lead</span>
+                      <span className="px-2 py-0.5 text-xs font-medium bg-neutral-100 text-neutral-500 rounded-full">Lead</span>
                     )}
                     {recipientType === 'client' && (
                       <span className="px-2 py-0.5 text-xs font-medium bg-green-100 text-green-700 rounded-full">Client</span>
