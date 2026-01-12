@@ -67,9 +67,15 @@ export default function PlaidLink({ userId, companyId, onSuccess }: PlaidLinkPro
     setLoading(true);
     try {
       // Get link token
+      const authToken = localStorage.getItem('sb-bqxnagmmegdbqrzhheip-auth-token');
+      const accessToken = authToken ? JSON.parse(authToken).access_token : '';
+      
       const tokenResponse = await fetch(`${SUPABASE_URL}/functions/v1/plaid-link-token`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`
+        },
         body: JSON.stringify({ user_id: userId })
       });
       const { link_token, error } = await tokenResponse.json();
@@ -84,9 +90,14 @@ export default function PlaidLink({ userId, companyId, onSuccess }: PlaidLinkPro
         onSuccess: async (public_token: string, metadata: any) => {
           try {
             // Exchange token
+            const authToken = localStorage.getItem('sb-bqxnagmmegdbqrzhheip-auth-token');
+            const accessToken = authToken ? JSON.parse(authToken).access_token : '';
             await fetch(`${SUPABASE_URL}/functions/v1/plaid-exchange-token`, {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${accessToken}`
+              },
               body: JSON.stringify({
                 public_token,
                 company_id: companyId,
@@ -115,9 +126,14 @@ export default function PlaidLink({ userId, companyId, onSuccess }: PlaidLinkPro
   async function syncTransactions(itemId: string) {
     setSyncing(itemId);
     try {
+      const authToken = localStorage.getItem('sb-bqxnagmmegdbqrzhheip-auth-token');
+      const accessToken = authToken ? JSON.parse(authToken).access_token : '';
       const response = await fetch(`${SUPABASE_URL}/functions/v1/plaid-sync-transactions`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`
+        },
         body: JSON.stringify({ plaid_item_id: itemId })
       });
       const result = await response.json();
