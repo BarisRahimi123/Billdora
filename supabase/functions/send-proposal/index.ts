@@ -99,16 +99,29 @@ Deno.serve(async (req) => {
                 </tr>
               </table>
               
-              <!-- CTA Button -->
+              <!-- CTA Button - Email-client compatible -->
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td align="center" style="padding: 8px 0 24px;">
-                    <a href="${proposalLink}" style="display: inline-block; background-color: #476E66; color: #ffffff; text-decoration: none; padding: 16px 48px; border-radius: 8px; font-size: 16px; font-weight: 600;">
-                      View Proposal
-                    </a>
+                    <table cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td align="center" bgcolor="#476E66" style="background-color: #476E66; border-radius: 8px;">
+                          <a href="${proposalLink}" target="_blank" style="display: block; padding: 16px 48px; font-size: 16px; font-weight: 600; color: #ffffff; text-decoration: none; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+                            <!--[if mso]><i style="letter-spacing: 48px; mso-font-width: -100%; mso-text-raise: 30pt;">&nbsp;</i><![endif]-->
+                            <span style="mso-text-raise: 15pt;">View Proposal</span>
+                            <!--[if mso]><i style="letter-spacing: 48px; mso-font-width: -100%;">&nbsp;</i><![endif]-->
+                          </a>
+                        </td>
+                      </tr>
+                    </table>
                   </td>
                 </tr>
               </table>
+              
+              <!-- Fallback Link -->
+              <p style="margin: 0 0 16px; color: #71717a; font-size: 13px; text-align: center;">
+                Button not working? <a href="${proposalLink}" style="color: #476E66;">Click here to view your proposal</a>
+              </p>
               
               <p style="margin: 0 0 16px; color: #52525b; font-size: 14px; line-height: 1.6;">
                 You'll need to enter the access code above to view your proposal. This ensures your proposal remains secure and private.
