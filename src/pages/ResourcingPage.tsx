@@ -825,40 +825,40 @@ function TimeTab({ staff, companyId }: { staff: UserProfile; companyId: string }
         ))}
       </div>
 
-      <div className="border border-neutral-200 rounded-lg overflow-hidden">
-        <table className="w-full">
+      <div className="border border-neutral-200 rounded-lg overflow-x-auto">
+        <table className="w-full min-w-0">
           <thead className="bg-neutral-50">
             <tr>
-              <th className="text-left px-4 py-3 text-sm font-medium text-neutral-600">Date Range</th>
-              <th colSpan={2} className="text-center px-4 py-3 text-sm font-medium text-neutral-600 border-l border-neutral-200">Input</th>
-              <th colSpan={2} className="text-center px-4 py-3 text-sm font-medium text-neutral-600 border-l border-neutral-200">Billable</th>
+              <th className="text-left px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-medium text-neutral-600 whitespace-nowrap">Date Range</th>
+              <th colSpan={2} className="text-center px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-medium text-neutral-600 border-l border-neutral-200">Input</th>
+              <th colSpan={2} className="text-center px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-medium text-neutral-600 border-l border-neutral-200">Billable</th>
             </tr>
             <tr className="border-t border-neutral-200 bg-neutral-50">
-              <th className="px-4 py-2"></th>
-              <th className="text-right px-4 py-2 text-xs font-medium text-neutral-500">Hours</th>
-              <th className="text-right px-4 py-2 text-xs font-medium text-neutral-500">Charges</th>
-              <th className="text-right px-4 py-2 text-xs font-medium text-neutral-500 border-l border-neutral-200">Hours</th>
-              <th className="text-right px-4 py-2 text-xs font-medium text-neutral-500">Charges</th>
+              <th className="px-2 sm:px-4 py-1 sm:py-2"></th>
+              <th className="text-right px-2 sm:px-4 py-1 sm:py-2 text-[10px] sm:text-xs font-medium text-neutral-500">Hours</th>
+              <th className="text-right px-2 sm:px-4 py-1 sm:py-2 text-[10px] sm:text-xs font-medium text-neutral-500">Charges</th>
+              <th className="text-right px-2 sm:px-4 py-1 sm:py-2 text-[10px] sm:text-xs font-medium text-neutral-500 border-l border-neutral-200">Hours</th>
+              <th className="text-right px-2 sm:px-4 py-1 sm:py-2 text-[10px] sm:text-xs font-medium text-neutral-500">Charges</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-neutral-100">
             {monthlyTotals.slice(0, 12).map((row) => (
               <tr key={row.month} className="hover:bg-neutral-50">
-                <td className="px-4 py-3 text-sm text-neutral-600">{formatMonthRange(row.month)}</td>
-                <td className="px-4 py-3 text-sm text-right text-neutral-900">{row.inputHours.toFixed(2)}</td>
-                <td className="px-4 py-3 text-sm text-right text-neutral-900">${row.inputCharges.toLocaleString()}</td>
-                <td className="px-4 py-3 text-sm text-right text-neutral-900 border-l border-neutral-100">{row.billableHours.toFixed(2)}</td>
-                <td className="px-4 py-3 text-sm text-right text-neutral-900">${row.billableCharges.toLocaleString()}</td>
+                <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-neutral-600 whitespace-nowrap">{formatMonthRange(row.month)}</td>
+                <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-right text-neutral-900">{row.inputHours.toFixed(2)}</td>
+                <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-right text-neutral-900">${row.inputCharges.toLocaleString()}</td>
+                <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-right text-neutral-900 border-l border-neutral-100">{row.billableHours.toFixed(2)}</td>
+                <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-right text-neutral-900">${row.billableCharges.toLocaleString()}</td>
               </tr>
             ))}
           </tbody>
           <tfoot className="bg-neutral-50 border-t border-neutral-200">
             <tr className="font-medium">
-              <td className="px-4 py-3 text-sm text-neutral-700">OVERALL TOTALS</td>
-              <td className="px-4 py-3 text-sm text-right text-neutral-600">{overallTotals.inputHours.toFixed(2)}</td>
-              <td className="px-4 py-3 text-sm text-right text-neutral-900">${overallTotals.inputCharges.toLocaleString()}</td>
-              <td className="px-4 py-3 text-sm text-right text-neutral-900 border-l border-neutral-100">{overallTotals.billableHours.toFixed(2)}</td>
-              <td className="px-4 py-3 text-sm text-right text-neutral-900">${overallTotals.billableCharges.toLocaleString()}</td>
+              <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-neutral-700 whitespace-nowrap">OVERALL TOTALS</td>
+              <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-right text-neutral-600">{overallTotals.inputHours.toFixed(2)}</td>
+              <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-right text-neutral-900">${overallTotals.inputCharges.toLocaleString()}</td>
+              <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-right text-neutral-900 border-l border-neutral-100">{overallTotals.billableHours.toFixed(2)}</td>
+              <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-right text-neutral-900">${overallTotals.billableCharges.toLocaleString()}</td>
             </tr>
           </tfoot>
         </table>
