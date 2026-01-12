@@ -1581,6 +1581,7 @@ export default function QuoteDocumentPage() {
                     <div className="text-center py-8">
                       <h1 className="text-3xl font-bold tracking-tight">{projectName || documentTitle || 'PROJECT NAME'}</h1>
                       <p className="text-white/70 mt-2 text-sm">{description || 'Professional Services Proposal'}</p>
+                      <p className="text-white/50 mt-3 text-xs font-medium tracking-wider">PROPOSAL #{quote?.quote_number || 'DRAFT'}</p>
                     </div>
                     <div className="mt-auto text-center">
                       <p className="text-2xl font-bold">{formatCurrency(total)}</p>
@@ -3387,12 +3388,18 @@ export default function QuoteDocumentPage() {
                   The access code was included in the email. You can also share it manually if needed.
                 </p>
               </div>
-              <div className="p-6 bg-neutral-50">
+              <div className="p-6 bg-neutral-50 space-y-3">
                 <button
                   onClick={() => { setShowSendModal(false); setSentAccessCode(''); setShowEmailPreview(false); }}
                   className="w-full px-4 py-2.5 bg-neutral-900 text-white rounded-xl hover:bg-neutral-800 transition-colors"
                 >
                   Done
+                </button>
+                <button
+                  onClick={() => navigate('/quotes')}
+                  className="w-full px-4 py-2.5 border border-neutral-300 text-neutral-700 rounded-xl hover:bg-neutral-100 transition-colors"
+                >
+                  Back to Proposals
                 </button>
               </div>
             </>
