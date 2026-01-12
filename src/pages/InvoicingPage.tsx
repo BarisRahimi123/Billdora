@@ -441,7 +441,11 @@ export default function InvoicingPage() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2">
-        <div className="bg-white rounded-lg p-2" style={{ boxShadow: 'var(--shadow-card)' }}>
+        <div 
+          onClick={() => setStatusFilter('draft')}
+          className="bg-white rounded-lg p-2 cursor-pointer hover:bg-neutral-50 transition-colors" 
+          style={{ boxShadow: 'var(--shadow-card)' }}
+        >
           <div className="flex items-center gap-1.5 mb-1">
             <div className="w-7 h-7 rounded-lg bg-[#476E66]/10 flex items-center justify-center flex-shrink-0">
               <Clock className="w-3.5 h-3.5 text-[#476E66]" />
@@ -452,7 +456,11 @@ export default function InvoicingPage() {
           <p className="text-xs text-neutral-400">{stats.drafts} draft invoices</p>
         </div>
 
-        <div className="bg-white rounded-lg p-2" style={{ boxShadow: 'var(--shadow-card)' }}>
+        <div 
+          onClick={() => setStatusFilter('draft')}
+          className="bg-white rounded-lg p-2 cursor-pointer hover:bg-neutral-50 transition-colors" 
+          style={{ boxShadow: 'var(--shadow-card)' }}
+        >
           <div className="flex items-center gap-1.5 mb-1">
             <div className="w-7 h-7 rounded-lg bg-[#476E66]/10 flex items-center justify-center flex-shrink-0">
               <FileText className="w-3.5 h-3.5 text-[#476E66]" />
@@ -463,7 +471,11 @@ export default function InvoicingPage() {
           <p className="text-xs text-neutral-400">{stats.drafts} invoices</p>
         </div>
 
-        <div className="bg-white rounded-lg p-2" style={{ boxShadow: 'var(--shadow-card)' }}>
+        <div 
+          onClick={() => setStatusFilter('overdue')}
+          className="bg-white rounded-lg p-2 cursor-pointer hover:bg-neutral-50 transition-colors" 
+          style={{ boxShadow: 'var(--shadow-card)' }}
+        >
           <div className="flex items-center gap-1.5 mb-1">
             <div className="w-7 h-7 rounded-lg bg-[#476E66]/10 flex items-center justify-center flex-shrink-0">
               <DollarSign className="w-3.5 h-3.5 text-[#476E66]" />
@@ -474,7 +486,11 @@ export default function InvoicingPage() {
           <p className="text-xs text-neutral-400">Overdue balance</p>
         </div>
 
-        <div className="bg-white rounded-lg p-2" style={{ boxShadow: 'var(--shadow-card)' }}>
+        <div 
+          onClick={() => setStatusFilter('all')}
+          className="bg-white rounded-lg p-2 cursor-pointer hover:bg-neutral-50 transition-colors" 
+          style={{ boxShadow: 'var(--shadow-card)' }}
+        >
           <div className="flex items-center gap-1.5 mb-1">
             <div className="w-7 h-7 rounded-lg bg-[#476E66]/10 flex items-center justify-center flex-shrink-0">
               <Repeat className="w-3.5 h-3.5 text-[#476E66]" />
