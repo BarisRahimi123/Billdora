@@ -85,7 +85,7 @@ function AppRoutes() {
           <Route path="/reports" element={<ErrorBoundary><ReportsPage /></ErrorBoundary>} />
           <Route path="/financials" element={<ErrorBoundary><FinancialsPage /></ErrorBoundary>} />
           <Route path="/company-expenses" element={<ErrorBoundary><CompanyExpensesPage /></ErrorBoundary>} />
-          <Route path="/bank-statements" element={<ErrorBoundary><BankStatementsPage /></ErrorBoundary>} />
+          <Route path="/bank-statements" element={<Navigate to="/financials" replace />} />
           <Route path="/receipts" element={<ErrorBoundary><ReceiptsPage /></ErrorBoundary>} />
           <Route path="/notifications" element={<ErrorBoundary><NotificationsPage /></ErrorBoundary>} />
           <Route path="/settings" element={<ErrorBoundary><SettingsPage /></ErrorBoundary>} />

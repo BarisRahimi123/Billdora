@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
-import { DollarSign, TrendingUp, TrendingDown, FileText, Calendar, AlertCircle, Users, Wallet, ArrowUpRight, ArrowDownRight, Plus, Upload, X, Check, Link2, Edit2, Trash2, Building2, CreditCard, RefreshCw, ChevronDown, ChevronRight, Search, Filter, Download, Printer, BarChart3, PieChart, ClipboardList } from 'lucide-react';
+import { DollarSign, TrendingUp, TrendingDown, FileText, Calendar, AlertCircle, Users, Wallet, ArrowUpRight, ArrowDownRight, Plus, Upload, X, Check, Link2, Edit2, Trash2, Building2, CreditCard, RefreshCw, ChevronDown, ChevronRight, Search, Filter, Download, Printer, BarChart3, PieChart, ClipboardList, Landmark } from 'lucide-react';
+import BankStatementsPage from './BankStatementsPage';
 import { useAuth } from '../contexts/AuthContext';
 import { api, Invoice, Expense, companyExpensesApi } from '../lib/api';
 import { supabase } from '../lib/supabase';
@@ -53,7 +54,7 @@ interface PlatformTransaction {
   status?: string;
 }
 
-type FinancialTab = 'pnl' | 'accounts' | 'reconciliation' | 'transactions' | 'reports' | 'taxreports';
+type FinancialTab = 'pnl' | 'bank' | 'transactions' | 'reports' | 'taxreports';
 
 export default function FinancialsPage() {
   const { profile } = useAuth();
@@ -320,8 +321,7 @@ export default function FinancialsPage() {
       <div className="flex gap-0.5 p-0.5 bg-neutral-100 rounded-lg overflow-x-auto scrollbar-hide">
         {[
           { key: 'pnl', label: 'P&L', fullLabel: 'Profit & Loss' },
-          { key: 'accounts', label: 'Banks', fullLabel: 'Bank Accounts' },
-          { key: 'reconciliation', label: 'Recon', fullLabel: 'Reconciliation' },
+          { key: 'bank', label: 'Bank', fullLabel: 'Bank & Receipts' },
           { key: 'transactions', label: 'Trans', fullLabel: 'Transactions' },
           { key: 'reports', label: 'Reports', fullLabel: 'Reports' },
           { key: 'taxreports', label: 'Tax', fullLabel: 'Tax Reports' },
@@ -344,24 +344,8 @@ export default function FinancialsPage() {
         <ProfitLossTab monthlyData={monthlyData} payrollData={payrollData} formatCurrency={formatCurrency} />
       )}
 
-      {activeTab === 'accounts' && (
-        <BankAccountsTab 
-          accounts={bankAccounts} 
-          onEdit={(acc) => { setEditingAccount(acc); setShowAccountModal(true); }}
-          onRefresh={loadData}
-          formatCurrency={formatCurrency}
-          companyId={profile?.company_id || ''}
-        />
-      )}
-
-      {activeTab === 'reconciliation' && (
-        <ReconciliationTab 
-          bankTransactions={bankTransactions}
-          platformTransactions={platformTransactions}
-          onRefresh={loadData}
-          formatCurrency={formatCurrency}
-          companyId={profile?.company_id || ''}
-        />
+      {activeTab === 'bank' && (
+        <BankStatementsPage />
       )}
 
       {activeTab === 'transactions' && (
