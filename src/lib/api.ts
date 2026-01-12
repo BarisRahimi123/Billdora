@@ -2288,6 +2288,7 @@ export const bankStatementsApi = {
     // Create statement record
     const statement = await this.createStatement({
       company_id: companyId,
+      file_name: file.name,
       file_path: fileName,
       original_filename: file.name,
       status: 'pending'

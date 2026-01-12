@@ -34,6 +34,22 @@ const PrivacyPage = lazy(() => import('./pages/PrivacyPage'));
 
 import CookieConsent from './components/CookieConsent';
 
+// Coming Soon placeholder for features in development
+function ComingSoonPage({ title }: { title: string }) {
+  return (
+    <div className="min-h-[60vh] flex flex-col items-center justify-center text-center px-4">
+      <div className="w-16 h-16 mb-6 rounded-full bg-[#476E66]/10 flex items-center justify-center">
+        <svg className="w-8 h-8 text-[#476E66]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+        </svg>
+      </div>
+      <h1 className="text-2xl font-semibold text-neutral-900 mb-2">{title}</h1>
+      <p className="text-neutral-500 mb-1">Coming Soon</p>
+      <p className="text-sm text-neutral-400">We're working on something great. Stay tuned!</p>
+    </div>
+  );
+}
+
 // Loading spinner component for Suspense fallback
 function PageLoader() {
   return (
@@ -83,7 +99,7 @@ function AppRoutes() {
           <Route path="/resourcing" element={<ErrorBoundary><ResourcingPage /></ErrorBoundary>} />
           <Route path="/analytics" element={<ErrorBoundary><AnalyticsPage /></ErrorBoundary>} />
           <Route path="/reports" element={<ErrorBoundary><ReportsPage /></ErrorBoundary>} />
-          <Route path="/financials" element={<ErrorBoundary><FinancialsPage /></ErrorBoundary>} />
+          <Route path="/financials" element={<ErrorBoundary><ComingSoonPage title="Financials" /></ErrorBoundary>} />
           <Route path="/company-expenses" element={<ErrorBoundary><CompanyExpensesPage /></ErrorBoundary>} />
           <Route path="/bank-statements" element={<Navigate to="/financials" replace />} />
           <Route path="/receipts" element={<ErrorBoundary><ReceiptsPage /></ErrorBoundary>} />

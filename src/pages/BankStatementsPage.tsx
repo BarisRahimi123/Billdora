@@ -73,33 +73,46 @@ export default function BankStatementsPage() {
   }
 
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file || !profile?.company_id) return;
+    const files = e.target.files;
+    if (!files || files.length === 0 || !profile?.company_id) return;
     
-    if (!file.name.toLowerCase().endsWith('.pdf')) {
-      showToast('Please upload a PDF file', 'error');
-      return;
+    // Validate all files are PDFs
+    for (let i = 0; i < files.length; i++) {
+      if (!files[i].name.toLowerCase().endsWith('.pdf')) {
+        showToast('Please upload only PDF files', 'error');
+        return;
+      }
     }
     
     setUploading(true);
+    let successCount = 0;
+    let errorCount = 0;
+    
     try {
-      // Create statement record and upload file
-      const statement = await bankStatementsApi.uploadStatement(profile.company_id, file);
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        try {
+          // Create statement record and upload file
+          const statement = await bankStatementsApi.uploadStatement(profile.company_id, file);
+          
+          // Parse the PDF
+          await bankStatementsApi.parseStatement(statement.id, profile.company_id, file);
+          successCount++;
+        } catch (err) {
+          console.error(`Failed to upload ${file.name}:`, err);
+          errorCount++;
+        }
+      }
       
-      // Parse the PDF
-      await bankStatementsApi.parseStatement(statement.id, profile.company_id, file);
-      
-      showToast('Statement uploaded and parsed successfully', 'success');
-      await loadData();
-      
-      // Load the newly created statement
-      const updatedStatement = await bankStatementsApi.getStatement(statement.id);
-      if (updatedStatement) {
-        await loadStatementDetails(updatedStatement);
+      if (successCount > 0) {
+        showToast(`${successCount} statement(s) uploaded successfully${errorCount > 0 ? `, ${errorCount} failed` : ''}`, 'success');
+        await loadData();
+      } else {
+        showToast('Failed to upload statements', 'error');
       }
     } catch (error: any) {
       console.error('Upload failed:', error);
-      showToast(error?.message || 'Failed to upload statement', 'error');
+      showToast(error?.message || 'Failed to upload statements', 'error');
     }
     setUploading(false);
     if (fileInputRef.current) fileInputRef.current.value = '';
@@ -138,6 +151,36 @@ export default function BankStatementsPage() {
     } catch (error) {
       console.error('Delete failed:', error);
       showToast('Failed to delete statement', 'error');
+    }
+  }
+
+  async function handleReprocessStatement(statement: BankStatement) {
+    if (!profile?.company_id || !statement.file_path) return;
+    
+    showToast('Reprocessing statement...', 'info');
+    setStatements(statements.map(s => s.id === statement.id ? { ...s, status: 'processing' } : s));
+    
+    try {
+      // Download the file from storage
+      const { data: fileData, error: downloadError } = await supabase.storage
+        .from('bank-statements')
+        .download(statement.file_path);
+      
+      if (downloadError || !fileData) {
+        throw new Error('Could not download file');
+      }
+      
+      // Create a File object
+      const file = new File([fileData], statement.original_filename || 'statement.pdf', { type: 'application/pdf' });
+      
+      // Re-parse
+      await bankStatementsApi.parseStatement(statement.id, profile.company_id, file);
+      showToast('Statement reprocessed successfully', 'success');
+      await loadData();
+    } catch (error: any) {
+      console.error('Reprocess failed:', error);
+      showToast(error?.message || 'Failed to reprocess statement', 'error');
+      setStatements(statements.map(s => s.id === statement.id ? { ...s, status: 'error' } : s));
     }
   }
 
@@ -267,6 +310,7 @@ export default function BankStatementsPage() {
                 ref={fileInputRef}
                 type="file"
                 accept=".pdf"
+                multiple
                 onChange={handleFileUpload}
                 className="hidden"
               />
@@ -280,7 +324,7 @@ export default function BankStatementsPage() {
                 ) : (
                   <Upload className="w-3 h-3" />
                 )}
-                <span className="hidden sm:inline">{uploading ? 'Uploading...' : 'Upload Statement'}</span>
+                <span className="hidden sm:inline">{uploading ? 'Uploading...' : 'Upload Statements'}</span>
                 <span className="sm:hidden">{uploading ? '...' : 'Upload'}</span>
               </button>
             </>
@@ -472,6 +516,15 @@ export default function BankStatementsPage() {
                         </td>
                         <td className="px-2 py-2 text-right">
                           <div className="flex items-center justify-end gap-1">
+                            {(statement.status === 'pending' || statement.status === 'error') && (
+                              <button
+                                onClick={() => handleReprocessStatement(statement)}
+                                className="p-1 hover:bg-blue-50 rounded text-blue-600"
+                                title="Reprocess"
+                              >
+                                <RefreshCw className="w-3 h-3" />
+                              </button>
+                            )}
                             <button
                               onClick={() => loadStatementDetails(statement)}
                               className="p-1 hover:bg-neutral-100 rounded text-neutral-600"
