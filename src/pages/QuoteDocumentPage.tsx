@@ -697,18 +697,8 @@ export default function QuoteDocumentPage() {
           </div>
           <div className="flex items-center gap-1.5">
           {hasUnsavedChanges && (
-            <span className="text-xs text-amber-600 font-medium mr-1">Unsaved</span>
+            <span className="text-xs text-amber-600 font-medium">Unsaved</span>
           )}
-          <button onClick={handlePrint} className="flex items-center justify-center p-1.5 text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 rounded-md transition-colors" title="Preview">
-            <Eye className="w-3.5 h-3.5" />
-          </button>
-          <button 
-            onClick={() => setShowSectionSettings(!showSectionSettings)} 
-            className="flex items-center justify-center p-1.5 text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 rounded-md transition-colors"
-            title="Section Settings"
-          >
-            <Settings className="w-3.5 h-3.5" />
-          </button>
           </div>
         </div>
       </div>
@@ -915,15 +905,7 @@ export default function QuoteDocumentPage() {
 
             {/* Letter Card - within Cover Tab */}
             <div className="bg-white rounded-xl shadow-sm border border-neutral-200 overflow-hidden">
-              <div className="px-6 py-4 border-b border-neutral-100 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
-                  <FileText className="w-5 h-5 text-blue-600" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-neutral-900">Cover Letter</h3>
-                  <p className="text-sm text-neutral-500">Personal message to your client</p>
-                </div>
-              </div>
+              
               <div className="p-6">
             {/* Letterhead */}
             <div className="flex justify-between items-start mb-8">
@@ -1475,15 +1457,7 @@ export default function QuoteDocumentPage() {
           {currentStep === 3 && showSections.terms && (
           <div className="space-y-6">
             <div className="bg-white rounded-xl shadow-sm border border-neutral-200 overflow-hidden">
-              <div className="px-6 py-4 border-b border-neutral-100 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-rose-50 flex items-center justify-center">
-                  <FileText className="w-5 h-5 text-rose-600" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-neutral-900">Terms & Conditions</h3>
-                  <p className="text-sm text-neutral-500">Legal terms for this proposal</p>
-                </div>
-              </div>
+              
               <div className="p-6">
                 <textarea
                   value={terms}
@@ -1536,10 +1510,10 @@ export default function QuoteDocumentPage() {
           {currentStep === 4 && (
           <div className="space-y-6">
             {/* Action Buttons at Top */}
-            <div className="flex gap-2 sticky top-0 bg-neutral-50 py-3 z-10">
+            <div className="flex gap-2 sticky top-0 bg-neutral-50 py-2 z-10">
               <button
                 onClick={handlePrint}
-                className="flex-1 flex items-center justify-center gap-1 px-3 py-2 border border-neutral-200 bg-white rounded-lg hover:bg-neutral-50 transition-colors text-sm font-medium"
+                className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 border border-neutral-200 bg-white rounded-lg hover:bg-neutral-50 transition-colors text-sm font-medium"
               >
                 <Download className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Download</span>
@@ -1548,7 +1522,7 @@ export default function QuoteDocumentPage() {
               <button
                 onClick={saveChanges}
                 disabled={saving || (!selectedClientId && !selectedLeadId) || !lineItems.some(i => i.description.trim())}
-                className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-neutral-800 text-white rounded-lg hover:bg-neutral-700 transition-colors disabled:opacity-50 text-sm font-medium"
+                className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-neutral-800 text-white rounded-lg hover:bg-neutral-700 transition-colors disabled:opacity-50 text-sm font-medium"
               >
                 <Save className="w-3.5 h-3.5" />
                 <span>{saving ? 'Saving...' : 'Save'}</span>
@@ -1557,15 +1531,17 @@ export default function QuoteDocumentPage() {
                 onClick={async () => {
                   // Save first if there are unsaved changes or it's a new quote
                   if (hasUnsavedChanges || isNewQuote) {
-                    await saveChanges();
+                    const saved = await saveChanges();
+                    if (saved) {
+                      // Wait for state to update, then show send modal
+                      setTimeout(() => setShowSendModal(true), 300);
+                    }
+                  } else {
+                    setShowSendModal(true);
                   }
-                  // Then send (handleSendToCustomer will reload and send)
-                  setTimeout(() => {
-                    handleSendToCustomer();
-                  }, 500);
                 }}
                 disabled={saving || (!client?.email && !selectedLead?.email) || !lineItems.some(i => i.description.trim())}
-                className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54] transition-colors disabled:opacity-50 text-sm font-medium"
+                className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54] transition-colors disabled:opacity-50 text-sm font-medium"
               >
                 <Send className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">{(hasUnsavedChanges || isNewQuote) ? 'Save & Send' : 'Send'}</span>
