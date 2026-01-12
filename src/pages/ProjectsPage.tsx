@@ -539,25 +539,25 @@ export default function ProjectsPage() {
             <div className="space-y-3 sm:space-y-4">
               {/* Financial Summary KPIs - Compact & Modern */}
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
-                <div className="p-3 bg-white rounded-lg" style={{ boxShadow: 'var(--shadow-card)' }}>
+                <div className="p-3 bg-white rounded-lg cursor-pointer hover:bg-neutral-50 transition-colors" style={{ boxShadow: 'var(--shadow-card)' }} onClick={() => setActiveTab('billing')}>
                   <p className="text-xs font-medium text-neutral-500 mb-1">Budget</p>
                   <p className="text-lg font-semibold text-neutral-900">{formatCurrency(selectedProject.budget)}</p>
                 </div>
-                <div className="p-3 bg-white rounded-lg" style={{ boxShadow: 'var(--shadow-card)' }}>
+                <div className="p-3 bg-white rounded-lg cursor-pointer hover:bg-neutral-50 transition-colors" style={{ boxShadow: 'var(--shadow-card)' }} onClick={() => setActiveTab('tasks')}>
                   <p className="text-xs font-medium text-neutral-500 mb-1">Labor Cost</p>
                   <p className="text-lg font-semibold text-neutral-900">{formatCurrency(stats.billableHours * 150)}</p>
                   <p className="text-xs text-neutral-400 mt-0.5">{stats.billableHours}h @ $150/hr</p>
                 </div>
-                <div className="p-3 bg-white rounded-lg" style={{ boxShadow: 'var(--shadow-card)' }}>
+                <div className="p-3 bg-white rounded-lg cursor-pointer hover:bg-neutral-50 transition-colors" style={{ boxShadow: 'var(--shadow-card)' }} onClick={() => navigate('/time-expense')}>
                   <p className="text-xs font-medium text-neutral-500 mb-1">Expenses</p>
                   <p className="text-lg font-semibold text-neutral-900">{formatCurrency(expenses.reduce((sum, e) => sum + (e.amount || 0), 0))}</p>
                   <p className="text-xs text-neutral-400 mt-0.5">{expenses.length} expense{expenses.length !== 1 ? 's' : ''}</p>
                 </div>
-                <div className="p-3 bg-white rounded-lg" style={{ boxShadow: 'var(--shadow-card)' }}>
+                <div className="p-3 bg-white rounded-lg cursor-pointer hover:bg-neutral-50 transition-colors" style={{ boxShadow: 'var(--shadow-card)' }} onClick={() => setActiveTab('billing')}>
                   <p className="text-xs font-medium text-neutral-500 mb-1">Invoiced</p>
                   <p className="text-lg font-semibold text-[#476E66]">{formatCurrency(stats.totalInvoiced)}</p>
                 </div>
-                <div className="p-3 bg-white rounded-lg col-span-2 sm:col-span-1" style={{ boxShadow: 'var(--shadow-card)' }}>
+                <div className="p-3 bg-white rounded-lg col-span-2 sm:col-span-1 cursor-pointer hover:bg-neutral-50 transition-colors" style={{ boxShadow: 'var(--shadow-card)' }} onClick={() => setActiveTab('billing')}>
                   <p className="text-xs font-medium text-neutral-500 mb-1">Collected</p>
                   <p className="text-lg font-semibold text-neutral-900">{formatCurrency(stats.billedAmount)}</p>
                 </div>
@@ -4775,7 +4775,7 @@ function ProjectDetailsTab({
   ];
 
   return (
-    <div className="space-y-4 sm:space-y-5">
+    <div className="space-y-5">
       <div className="flex items-center justify-between">
         <h3 className="text-base sm:text-lg font-semibold text-neutral-900">Project Details</h3>
         <button
@@ -4787,75 +4787,82 @@ function ProjectDetailsTab({
         </button>
       </div>
 
-      {/* Project Name - Read Only */}
+      {/* Status */}
       <div>
-        <label className="block text-xs font-medium text-neutral-700 mb-1.5">Project Name</label>
-        <input
-          type="text"
-          value={project.name}
-          disabled
-          className="w-full px-3 py-2 text-sm border border-neutral-200 rounded-lg bg-neutral-50 text-neutral-600"
-        />
+        <label className="block text-xs font-medium text-neutral-500 mb-2">Status</label>
+        <div className="flex flex-wrap gap-2">
+          {STATUS_OPTIONS.map(opt => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => setFormData({ ...formData, status: opt.value })}
+              className={`px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${
+                formData.status === opt.value
+                  ? 'bg-[#476E66] text-white'
+                  : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Status & Category */}
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="block text-xs font-medium text-neutral-700 mb-1.5">Project Status</label>
-          <select
-            value={formData.status}
-            onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-            className="w-full px-3 py-2 text-sm border border-neutral-200 rounded-lg focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none bg-white"
-          >
-            {STATUS_OPTIONS.map(opt => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-neutral-700 mb-1.5">Category</label>
-          <select
-            value={formData.category}
-            onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-            className="w-full px-3 py-2 text-sm border border-neutral-200 rounded-lg focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none bg-white"
-          >
-            {PROJECT_CATEGORIES.map(cat => (
-              <option key={cat.value} value={cat.value}>{cat.label}</option>
-            ))}
-          </select>
+      {/* Category */}
+      <div>
+        <label className="block text-xs font-medium text-neutral-500 mb-2">Category</label>
+        <div className="flex flex-wrap gap-2">
+          {PROJECT_CATEGORIES.map(cat => (
+            <button
+              key={cat.value}
+              type="button"
+              onClick={() => setFormData({ ...formData, category: cat.value })}
+              className={`px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${
+                formData.category === cat.value
+                  ? 'bg-[#476E66] text-white'
+                  : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
+              }`}
+            >
+              {cat.label}
+            </button>
+          ))}
         </div>
       </div>
 
       {/* Dates */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-xs font-medium text-neutral-700 mb-1.5">Start Date</label>
-          <input
-            type="date"
-            value={formData.start_date}
-            onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
-            className="w-full px-3 py-2 text-sm border border-neutral-200 rounded-lg focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none"
-          />
+          <label className="block text-xs font-medium text-neutral-500 mb-2">Start Date</label>
+          <div className="relative">
+            <input
+              type="date"
+              value={formData.start_date}
+              onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+              className="w-full px-3 py-2.5 text-sm border border-neutral-200 rounded-xl focus:ring-2 focus:ring-[#476E66]/20 focus:border-[#476E66] outline-none bg-white"
+            />
+          </div>
         </div>
         <div>
-          <label className="block text-xs font-medium text-neutral-700 mb-1.5">Due Date</label>
-          <input
-            type="date"
-            value={formData.due_date}
-            onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
-            className="w-full px-3 py-2 text-sm border border-neutral-200 rounded-lg focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none"
-          />
+          <label className="block text-xs font-medium text-neutral-500 mb-2">Due Date</label>
+          <div className="relative">
+            <input
+              type="date"
+              value={formData.due_date}
+              onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
+              className="w-full px-3 py-2.5 text-sm border border-neutral-200 rounded-xl focus:ring-2 focus:ring-[#476E66]/20 focus:border-[#476E66] outline-none bg-white"
+            />
+          </div>
         </div>
       </div>
 
       {/* Notes */}
       <div>
-        <label className="block text-xs font-medium text-neutral-700 mb-1.5">Notes</label>
+        <label className="block text-xs font-medium text-neutral-500 mb-2">Notes</label>
         <textarea
           value={formData.status_notes}
           onChange={(e) => setFormData({ ...formData, status_notes: e.target.value })}
           rows={3}
-          className="w-full px-3 py-2 text-sm border border-neutral-200 rounded-lg focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none resize-none"
+          className="w-full px-3 py-2.5 text-sm border border-neutral-200 rounded-xl focus:ring-2 focus:ring-[#476E66]/20 focus:border-[#476E66] outline-none resize-none"
           placeholder="Add any notes about this project..."
         />
       </div>

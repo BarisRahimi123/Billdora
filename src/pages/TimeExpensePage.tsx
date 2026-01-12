@@ -1017,8 +1017,8 @@ export default function TimeExpensePage() {
             </div>
 
             {/* Mobile View: Single Day */}
-            <div className="block md:hidden">
-              <table className="w-full">
+            <div className="block md:hidden overflow-x-auto">
+              <table className="w-full min-w-0">
                 <thead className="bg-neutral-50 border-b border-neutral-100">
                   <tr>
                     <th className="text-left px-3 py-2 text-xs font-medium text-neutral-600">Project / Task</th>
