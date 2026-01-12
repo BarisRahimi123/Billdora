@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.primeledger.billdora',
+  appId: 'com.plansrow.billdora',
   appName: 'BillDora',
   webDir: 'dist'
 };
