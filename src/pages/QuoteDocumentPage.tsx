@@ -1269,13 +1269,21 @@ export default function QuoteDocumentPage() {
                 <Plus className="w-4 h-4" />
                 Add Item
               </button>
-              {services.length > 0 && (
+              {services.length > 0 ? (
                 <button
                   onClick={() => setShowServicesModal(true)}
                   className="flex items-center gap-2 text-sm text-neutral-600 hover:text-neutral-900"
                 >
                   <Package className="w-4 h-4" />
                   From Services
+                </button>
+              ) : (
+                <button
+                  onClick={() => navigate('/settings?tab=services')}
+                  className="flex items-center gap-2 text-sm text-amber-600 hover:text-amber-700 bg-amber-50 px-3 py-1.5 rounded-lg"
+                >
+                  <Package className="w-4 h-4" />
+                  Add Your Services
                 </button>
               )}
             </div>
@@ -2301,13 +2309,21 @@ export default function QuoteDocumentPage() {
                       <Plus className="w-5 h-5" />
                       Add Item
                     </button>
-                    {services.length > 0 && (
+                    {services.length > 0 ? (
                       <button
                         onClick={() => setShowServicesModal(true)}
                         className="flex items-center gap-2 px-4 py-3 text-sm text-neutral-600 bg-neutral-50 hover:bg-neutral-100 rounded-xl min-h-[44px]"
                       >
                         <Package className="w-5 h-5" />
                         From Services
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => navigate('/settings?tab=services')}
+                        className="flex items-center gap-2 px-4 py-3 text-sm text-amber-600 bg-amber-50 hover:bg-amber-100 rounded-xl min-h-[44px]"
+                      >
+                        <Package className="w-5 h-5" />
+                        Add Your Services
                       </button>
                     )}
                   </div>
@@ -2482,13 +2498,21 @@ export default function QuoteDocumentPage() {
                       <Plus className="w-4 h-4" />
                       Add Item
                     </button>
-                    {services.length > 0 && (
+                    {services.length > 0 ? (
                       <button
                         onClick={() => setShowServicesModal(true)}
                         className="flex items-center gap-2 text-sm text-neutral-500 hover:text-neutral-900 min-h-[44px]"
                       >
                         <Package className="w-4 h-4" />
                         From Services
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => navigate('/settings?tab=services')}
+                        className="flex items-center gap-2 text-sm text-amber-600 hover:text-amber-700 min-h-[44px]"
+                      >
+                        <Package className="w-4 h-4" />
+                        Add Your Services
                       </button>
                     )}
                   </div>
