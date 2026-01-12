@@ -379,7 +379,7 @@ export default function ProjectsPage() {
         {activeTab === 'vitals' && (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
             {/* Hours Card */}
-            <div className="bg-white rounded-lg p-3" style={{ boxShadow: 'var(--shadow-card)' }}>
+            <div className="bg-white rounded-lg p-3 cursor-pointer hover:bg-neutral-50 transition-colors" style={{ boxShadow: 'var(--shadow-card)' }} onClick={() => setActiveTab('tasks')}>
               <div className="flex items-center gap-2 mb-1.5">
                 <div className="w-8 h-8 rounded-full bg-[#476E66]/10 flex items-center justify-center flex-shrink-0">
                   <Clock className="w-4 h-4 text-[#476E66]" />
@@ -391,7 +391,7 @@ export default function ProjectsPage() {
 
             {/* Budget Card */}
             {canViewFinancials && (
-              <div className="bg-white rounded-lg p-3" style={{ boxShadow: 'var(--shadow-card)' }}>
+              <div className="bg-white rounded-lg p-3 cursor-pointer hover:bg-neutral-50 transition-colors" style={{ boxShadow: 'var(--shadow-card)' }} onClick={() => setActiveTab('billing')}>
                 <div className="flex items-center gap-2 mb-1.5">
                   <div className="w-8 h-8 rounded-full bg-[#476E66]/10 flex items-center justify-center flex-shrink-0">
                     <DollarSign className="w-4 h-4 text-[#476E66]" />
@@ -403,7 +403,7 @@ export default function ProjectsPage() {
             )}
 
             {/* Tasks Card */}
-            <div className="bg-white rounded-lg p-3" style={{ boxShadow: 'var(--shadow-card)' }}>
+            <div className="bg-white rounded-lg p-3 cursor-pointer hover:bg-neutral-50 transition-colors" style={{ boxShadow: 'var(--shadow-card)' }} onClick={() => setActiveTab('tasks')}>
               <div className="flex items-center gap-2 mb-1.5">
                 <div className="w-8 h-8 rounded-full bg-[#476E66]/10 flex items-center justify-center flex-shrink-0">
                   <CheckSquare className="w-4 h-4 text-[#476E66]" />
@@ -426,7 +426,7 @@ export default function ProjectsPage() {
 
             {/* Invoiced Card */}
             {canViewFinancials && (
-              <div className="bg-white rounded-lg p-3" style={{ boxShadow: 'var(--shadow-card)' }}>
+              <div className="bg-white rounded-lg p-3 cursor-pointer hover:bg-neutral-50 transition-colors" style={{ boxShadow: 'var(--shadow-card)' }} onClick={() => setActiveTab('billing')}>
                 <div className="flex items-center gap-2 mb-1.5">
                   <div className="w-8 h-8 rounded-full bg-[#476E66]/10 flex items-center justify-center flex-shrink-0">
                     <FileText className="w-4 h-4 text-[#476E66]" />
