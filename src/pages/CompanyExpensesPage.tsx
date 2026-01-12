@@ -197,7 +197,7 @@ export default function CompanyExpensesPage() {
     <div className="min-h-screen bg-neutral-50">
       <header className="bg-white border-b border-neutral-100 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-3 flex items-center gap-2 h-12">
-          <button onClick={() => navigate(-1)} className="text-neutral-500 hover:text-neutral-900"><X className="w-5 h-5" /></button>
+            <button onClick={() => navigate(-1)} className="text-neutral-500 hover:text-neutral-900"><X className="w-5 h-5" /></button>
           <h1 className="text-base font-semibold text-neutral-900">Company Expenses</h1>
         </div>
       </header>

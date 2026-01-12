@@ -24,11 +24,10 @@ export const Navbar = () => {
 
   return (
     <nav 
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-200 bg-white border-b border-swiss-gray-border ${
-        isScrolled ? 'h-16' : 'h-20'
-      }`}
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-200 bg-white border-b border-swiss-gray-border pt-2`}
+      style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 8px)' }}
     >
-      <div className="container mx-auto h-full px-6 flex items-center justify-between max-w-[1200px]">
+      <div className={`container mx-auto px-6 flex items-center justify-between max-w-[1200px] ${isScrolled ? 'h-14' : 'h-16'}`}>
         {/* Logo */}
         <a href="#" className="flex items-center gap-2 z-50">
           <img src="/billdora-logo.png" alt="Billdora" className="h-10" />
@@ -57,27 +56,31 @@ export const Navbar = () => {
 
         {/* Mobile Menu Toggle */}
         <button 
-          className="md:hidden z-50 text-swiss-black"
+          className="md:hidden z-50 text-swiss-black p-2 -mr-2 rounded-lg active:bg-neutral-100"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
         >
-          {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          {mobileMenuOpen ? <X size={28} /> : <Menu size={28} />}
         </button>
 
         {/* Mobile Menu */}
         <AnimatePresence>
           {mobileMenuOpen && (
             <motion.div 
-              initial={{ opacity: 0, y: -20 }}
+              initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.2 }}
-              className="absolute top-0 left-0 w-full bg-white border-b border-swiss-gray-border p-6 pt-24 shadow-lg md:hidden flex flex-col gap-6"
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.15 }}
+              className="absolute top-0 left-0 w-full bg-white border-b border-neutral-200 px-5 pb-4 md:hidden flex flex-col gap-1"
+              style={{ 
+                paddingTop: 'calc(env(safe-area-inset-top, 0px) + 60px)',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.08)'
+              }}
             >
               {navLinks.map((link) => (
                 <a 
                   key={link.name} 
                   href={link.href}
-                  className="text-lg font-bold uppercase tracking-wider text-swiss-black"
+                  className="text-sm font-semibold uppercase tracking-wide text-neutral-700 py-2.5 px-2 rounded-lg hover:bg-neutral-50 active:bg-neutral-100 transition-colors"
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   {link.name}
@@ -85,7 +88,7 @@ export const Navbar = () => {
               ))}
               <Link 
                 to="/login" 
-                className="text-center text-lg font-bold uppercase tracking-wider text-white py-4 rounded-lg"
+                className="text-center text-sm font-semibold uppercase tracking-wide text-white py-2.5 rounded-lg mt-2"
                 style={{ backgroundColor: '#476E66' }}
                 onClick={() => setMobileMenuOpen(false)}
               >

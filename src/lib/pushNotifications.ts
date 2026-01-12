@@ -4,10 +4,22 @@
  * Handles native iOS push notifications using Capacitor.
  * This service manages permission requests, token registration,
  * and local notification delivery.
+ * 
+ * Uses lazy loading to avoid blocking app startup.
  */
 
-import { PushNotifications } from '@capacitor/push-notifications';
 import { Capacitor } from '@capacitor/core';
+
+// Lazy load PushNotifications to avoid blocking app startup
+let PushNotificationsModule: typeof import('@capacitor/push-notifications').PushNotifications | null = null;
+
+async function getPushNotifications() {
+  if (!PushNotificationsModule) {
+    const module = await import('@capacitor/push-notifications');
+    PushNotificationsModule = module.PushNotifications;
+  }
+  return PushNotificationsModule;
+}
 
 export interface PushNotificationToken {
   value: string;
@@ -23,7 +35,15 @@ export interface PushNotificationData {
  * Check if push notifications are available (only on native platforms)
  */
 export function isPushNotificationsAvailable(): boolean {
-  return Capacitor.isNativePlatform();
+  // Check multiple ways to detect native platform
+  const platform = Capacitor.getPlatform();
+  const isNative = Capacitor.isNativePlatform();
+  const isIOS = platform === 'ios';
+  const isAndroid = platform === 'android';
+  
+  console.log('[Push] Platform detection:', { platform, isNative, isIOS, isAndroid });
+  
+  return isNative || isIOS || isAndroid;
 }
 
 /**
@@ -36,6 +56,8 @@ export async function requestPushPermission(): Promise<boolean> {
   }
 
   try {
+    const PushNotifications = await getPushNotifications();
+    
     // Check current permission status
     const permStatus = await PushNotifications.checkPermissions();
     
@@ -70,6 +92,8 @@ export async function registerPushNotifications(): Promise<string | null> {
     return null;
   }
 
+  const PushNotifications = await getPushNotifications();
+
   return new Promise((resolve) => {
     // Listen for registration success
     PushNotifications.addListener('registration', (token: PushNotificationToken) => {
@@ -91,12 +115,14 @@ export async function registerPushNotifications(): Promise<string | null> {
 /**
  * Add listener for incoming push notifications
  */
-export function addPushNotificationListener(
+export async function addPushNotificationListener(
   callback: (notification: { title: string; body: string; data: any }) => void
-): void {
+): Promise<void> {
   if (!isPushNotificationsAvailable()) {
     return;
   }
+
+  const PushNotifications = await getPushNotifications();
 
   // Listen for push notification received
   PushNotifications.addListener('pushNotificationReceived', (notification) => {
@@ -126,6 +152,7 @@ export async function removeAllPushListeners(): Promise<void> {
   if (!isPushNotificationsAvailable()) {
     return;
   }
+  const PushNotifications = await getPushNotifications();
   await PushNotifications.removeAllListeners();
 }
 
@@ -138,25 +165,24 @@ export async function sendLocalNotification(
   body: string,
   data?: Record<string, unknown>
 ): Promise<boolean> {
-  if (!isPushNotificationsAvailable()) {
-    console.log('Local notifications not available on web');
-    return false;
-  }
-
+  // Try to send notification regardless of platform detection
+  // This helps debug issues with Capacitor bridge detection
   try {
-    // For local notifications, we use the native notification API
-    // This simulates a push notification for testing
     const { LocalNotifications } = await import('@capacitor/local-notifications');
     
-    const hasPermission = await LocalNotifications.checkPermissions();
-    if (hasPermission.display !== 'granted') {
-      await LocalNotifications.requestPermissions();
+    // Request permissions
+    const permResult = await LocalNotifications.requestPermissions();
+    
+    if (permResult.display !== 'granted') {
+      throw new Error('Notification permission denied by user');
     }
+    
+    const notificationId = Math.floor(Math.random() * 100000);
     
     await LocalNotifications.schedule({
       notifications: [
         {
-          id: Date.now(),
+          id: notificationId,
           title,
           body,
           schedule: { at: new Date(Date.now() + 1000) }, // 1 second delay
@@ -166,9 +192,9 @@ export async function sendLocalNotification(
     });
     
     return true;
-  } catch (error) {
-    console.error('Failed to send local notification:', error);
-    return false;
+  } catch (error: any) {
+    // Re-throw with more context
+    throw new Error(`Notification failed: ${error?.message || error}`);
   }
 }
 
@@ -181,6 +207,7 @@ export async function getPushPermissionStatus(): Promise<'granted' | 'denied' | 
   }
 
   try {
+    const PushNotifications = await getPushNotifications();
     const status = await PushNotifications.checkPermissions();
     return status.receive as 'granted' | 'denied' | 'prompt';
   } catch (error) {

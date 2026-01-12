@@ -50,13 +50,25 @@ function ComingSoonPage({ title }: { title: string }) {
   );
 }
 
-// Loading spinner component for Suspense fallback
+// Loading spinner component for Suspense fallback - compact and fast
 function PageLoader() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-neutral-50">
-      <div className="animate-spin w-8 h-8 border-2 border-[#476E66] border-t-transparent rounded-full" />
+    <div className="min-h-[200px] flex items-center justify-center">
+      <div className="animate-spin w-6 h-6 border-2 border-[#476E66] border-t-transparent rounded-full" />
     </div>
   );
+}
+
+// Prefetch common pages after initial load
+if (typeof window !== 'undefined') {
+  window.addEventListener('load', () => {
+    setTimeout(() => {
+      // Prefetch dashboard and common pages in background
+      import('./pages/DashboardPage');
+      import('./pages/ProjectsPage');
+      import('./pages/SalesPage');
+    }, 2000);
+  });
 }
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -99,7 +111,7 @@ function AppRoutes() {
           <Route path="/resourcing" element={<ErrorBoundary><ResourcingPage /></ErrorBoundary>} />
           <Route path="/analytics" element={<ErrorBoundary><AnalyticsPage /></ErrorBoundary>} />
           <Route path="/reports" element={<ErrorBoundary><ReportsPage /></ErrorBoundary>} />
-          <Route path="/financials" element={<ErrorBoundary><ComingSoonPage title="Financials" /></ErrorBoundary>} />
+          <Route path="/financials" element={<ErrorBoundary><FinancialsPage /></ErrorBoundary>} />
           <Route path="/company-expenses" element={<ErrorBoundary><CompanyExpensesPage /></ErrorBoundary>} />
           <Route path="/bank-statements" element={<Navigate to="/financials" replace />} />
           <Route path="/receipts" element={<ErrorBoundary><ReceiptsPage /></ErrorBoundary>} />

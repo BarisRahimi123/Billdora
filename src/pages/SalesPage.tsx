@@ -449,21 +449,9 @@ export default function SalesPage() {
 
       {/* Leads Section */}
       {activeTab === 'leads' && (
-        <div className="space-y-3">
-          {/* Search Bar */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-neutral-400" />
-            <input
-              type="text"
-              placeholder="Search leads..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#476E66] focus:border-transparent"
-            />
-          </div>
-
+        <div className="space-y-2">
           {/* Pipeline Header */}
-          <div className="flex flex-wrap gap-1">
+          <div className="flex gap-0.5 overflow-x-auto scrollbar-hide pb-1">
             {PIPELINE_STAGES.map((stage) => {
               const count = stage.key === 'all' 
                 ? leads.length 
@@ -473,14 +461,14 @@ export default function SalesPage() {
                 <button
                   key={stage.key}
                   onClick={() => setSelectedPipelineStage(stage.key)}
-                  className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium transition-all ${
+                  className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[9px] font-medium transition-all flex-shrink-0 ${
                     isSelected 
-                      ? `${stage.bgColor} ${stage.color} ring-2 ring-offset-1 ring-current` 
+                      ? `${stage.bgColor} ${stage.color} ring-1 ring-current` 
                       : 'bg-white border border-neutral-200 text-neutral-600 hover:bg-neutral-50'
                   }`}
                 >
-                  <span>{stage.label}</span>
-                  <span className={`px-1 py-0.5 rounded text-[10px] ${isSelected ? 'bg-white/50' : 'bg-neutral-100'}`}>
+                  <span className="whitespace-nowrap">{stage.label}</span>
+                  <span className={`px-0.5 py-0 rounded text-[8px] min-w-[12px] text-center ${isSelected ? 'bg-white/50' : 'bg-neutral-100'}`}>
                     {count}
                   </span>
                 </button>

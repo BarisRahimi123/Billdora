@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { User } from '@supabase/supabase-js';
 import { supabase, Profile } from '../lib/supabase';
+import { Capacitor } from '@capacitor/core';
 
 interface SignUpResult {
   error: Error | null;
@@ -68,16 +69,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     }
     
-    // Safety timeout - never let loading state hang forever
+    // Safety timeout - never let loading state hang forever (reduced to 5s for faster UX)
     const timeout = setTimeout(() => {
       if (isMounted && !hasInitialized.current) {
-        console.warn('Auth check timed out after 10 seconds');
+        console.warn('Auth check timed out after 5 seconds');
         setLoading(false);
         initialLoadComplete = true;
         hasInitialized.current = true;
         globalAuthInitialized = true;
       }
-    }, 10000);
+    }, 5000);
     
     async function loadUser() {
       try {
@@ -203,28 +204,66 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }, 10 * 60 * 1000);
 
-    // Refresh session when tab becomes visible after being hidden
+    // Refresh session when app becomes visible after being hidden
+    // More resilient - don't clear user state on network errors
     const handleVisibilityChange = async () => {
       if (document.visibilityState === 'visible' && isMounted) {
         try {
-          const { data, error } = await supabase.auth.refreshSession();
-          if (error || !data.session) {
-            // Session expired, redirect to login
-            setUser(null);
-            setProfile(null);
+          // First check if we have a cached session
+          const { data: { session: currentSession } } = await supabase.auth.getSession();
+          
+          if (currentSession) {
+            // Try to refresh, but don't logout on failure (network may be slow)
+            const { data, error } = await supabase.auth.refreshSession();
+            
+            // Only clear session if we get a specific auth error (not network error)
+            if (error && (error.message.includes('Invalid') || error.message.includes('expired'))) {
+              console.warn('Session invalid, clearing auth state');
+              setUser(null);
+              setProfile(null);
+            } else if (data?.session?.user) {
+              // Update user if refresh succeeded
+              setUser(data.session.user);
+            }
+            // On network errors, keep existing state - don't logout user
           }
         } catch (e) {
-          console.warn('Session refresh on visibility failed:', e);
+          // Network error - keep existing auth state, don't logout
+          console.warn('Session refresh on visibility failed (keeping state):', e);
         }
       }
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // Handle Capacitor App state changes (iOS foreground/background)
+    let appStateListener: any = null;
+    if (Capacitor.isNativePlatform()) {
+      import('@capacitor/app').then(({ App }) => {
+        appStateListener = App.addListener('appStateChange', async ({ isActive }) => {
+          if (isActive && isMounted) {
+            console.log('App resumed from background');
+            try {
+              // Soft refresh - don't clear state on errors
+              const { data } = await supabase.auth.refreshSession();
+              if (data?.session?.user) {
+                setUser(data.session.user);
+              }
+            } catch (e) {
+              console.warn('App resume session refresh failed (keeping state):', e);
+            }
+          }
+        });
+      }).catch(console.error);
+    }
 
     return () => {
       isMounted = false;
       clearTimeout(timeout);
       clearInterval(refreshInterval);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      if (appStateListener) {
+        appStateListener.remove();
+      }
       subscription.unsubscribe();
     };
   }, []);

@@ -32,7 +32,7 @@ export default function Hero() {
   }, []);
 
   return (
-    <section className="pt-24 md:pt-32 pb-12 md:pb-20 px-4" style={{ backgroundColor: '#F5F5F3' }}>
+    <section className="pt-28 md:pt-36 pb-12 md:pb-20 px-4" style={{ backgroundColor: '#F5F5F3' }}>
       <div className="max-w-6xl mx-auto">
         <div className="flex flex-col md:flex-row items-center justify-between gap-8 md:gap-12">
           {/* Left side - Text content */}

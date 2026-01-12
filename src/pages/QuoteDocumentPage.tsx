@@ -695,42 +695,20 @@ export default function QuoteDocumentPage() {
               </span>
             )}
           </div>
-          <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto">
+          <div className="flex items-center gap-1.5">
           {hasUnsavedChanges && (
-            <span className="text-sm text-neutral-900">Unsaved changes</span>
+            <span className="text-xs text-amber-600 font-medium mr-1">Unsaved</span>
           )}
-          <button
-            onClick={saveChanges}
-            disabled={saving}
-            className="flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54] disabled:opacity-50 text-sm flex-shrink-0"
-          >
-            <Save className="w-4 h-4" />
-            <span className="hidden xs:inline">{saving ? 'Saving...' : isNewQuote ? 'Create' : 'Save'}</span>
-          </button>
-          <button 
-            onClick={handleServerPdf} 
-            disabled={generatingPdf}
-            className="hidden sm:flex items-center gap-2 px-4 py-2 border border-neutral-200 rounded-lg hover:bg-neutral-50 disabled:opacity-50 text-sm flex-shrink-0"
-          >
-            <Download className="w-4 h-4" />
-            {generatingPdf ? 'Generating...' : 'Export PDF'}
-          </button>
-          <button onClick={handlePrint} className="flex items-center gap-2 px-3 py-2 text-neutral-500 hover:text-neutral-900 text-sm" title="Preview">
-            Preview
+          <button onClick={handlePrint} className="flex items-center justify-center p-1.5 text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 rounded-md transition-colors" title="Preview">
+            <Eye className="w-3.5 h-3.5" />
           </button>
           <button 
             onClick={() => setShowSectionSettings(!showSectionSettings)} 
-            className="flex items-center gap-2 px-3 py-2 text-neutral-500 hover:text-neutral-900 text-sm"
+            className="flex items-center justify-center p-1.5 text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 rounded-md transition-colors"
             title="Section Settings"
           >
-            <Settings className="w-4 h-4" />
+            <Settings className="w-3.5 h-3.5" />
           </button>
-          {!isNewQuote && (
-            <button onClick={handleSendToCustomer} className="hidden md:flex items-center gap-2 px-4 py-2 border border-neutral-900 text-neutral-900 rounded-lg hover:bg-neutral-50 text-sm flex-shrink-0">
-              <Send className="w-4 h-4" />
-              Send
-            </button>
-          )}
           </div>
         </div>
       </div>
@@ -769,16 +747,16 @@ export default function QuoteDocumentPage() {
       )}
 
       {/* Wizard Step Navigation */}
-      <div className="bg-white border-b border-neutral-200 px-4 print:hidden sticky top-[57px] z-40">
+      <div className="bg-white border-b border-neutral-200 px-4 print:hidden sticky top-[57px] z-50 shadow-sm">
         <div className="max-w-[1200px] mx-auto">
-          <div className="flex items-center justify-between py-3">
+          <div className="flex items-center justify-between py-3 gap-2">
             {/* Step indicators */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide">
               {wizardSteps.map((ws, idx) => (
-                <div key={ws.step} className="flex items-center">
+                <div key={ws.step} className="flex items-center flex-shrink-0">
                   <button
                     onClick={() => setCurrentStep(ws.step)}
-                    className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-xl transition-all ${
+                    className={`flex items-center gap-1.5 px-2 sm:px-4 py-2 text-sm font-medium rounded-xl transition-all ${
                       currentStep === ws.step
                         ? 'bg-[#476E66] text-white shadow-sm'
                         : ws.step < currentStep
@@ -786,27 +764,27 @@ export default function QuoteDocumentPage() {
                           : 'text-neutral-500 hover:bg-neutral-100'
                     }`}
                   >
-                    <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                    <span className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-xs font-bold ${
                       currentStep === ws.step ? 'bg-white/20' :
                       ws.step < currentStep ? 'bg-green-100' : 'bg-neutral-100'
                     }`}>
-                      {ws.step < currentStep ? <Check className="w-3.5 h-3.5" /> : ws.step}
+                      {ws.step < currentStep ? <Check className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> : ws.step}
                     </span>
-                    <span className="hidden sm:inline">{ws.label}</span>
+                    <span className="hidden md:inline">{ws.label}</span>
                   </button>
                   {idx < wizardSteps.length - 1 && (
-                    <ChevronRight className="w-4 h-4 text-neutral-300 mx-1" />
+                    <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4 text-neutral-300 mx-0.5 sm:mx-1" />
                   )}
                 </div>
               ))}
             </div>
             
             {/* Navigation buttons */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 flex-shrink-0">
               {currentStep > 1 && (
                 <button
                   onClick={() => setCurrentStep((currentStep - 1) as WizardStep)}
-                  className="px-4 py-2 text-sm text-neutral-600 hover:bg-neutral-100 rounded-lg"
+                  className="px-2 sm:px-4 py-2 text-xs sm:text-sm text-neutral-600 hover:bg-neutral-100 rounded-lg"
                 >
                   Back
                 </button>
@@ -814,9 +792,9 @@ export default function QuoteDocumentPage() {
               {currentStep < 4 && (
                 <button
                   onClick={() => setCurrentStep((currentStep + 1) as WizardStep)}
-                  className="px-4 py-2 text-sm bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54] flex items-center gap-1"
+                  className="px-2 sm:px-4 py-2 text-xs sm:text-sm bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54] flex items-center gap-1"
                 >
-                  Next <ChevronRight className="w-4 h-4" />
+                  Next <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4" />
                 </button>
               )}
             </div>
@@ -847,52 +825,52 @@ export default function QuoteDocumentPage() {
               </div>
               
               <div className="relative" style={{ minHeight: '500px' }}>
-                {/* Background Image */}
-                <div 
-                  className="absolute inset-0 bg-cover bg-center"
-                  style={{ backgroundImage: `url(${coverBgUrl})` }}
-                >
-                  <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-black/80" />
-                </div>
+              {/* Background Image */}
+              <div 
+                className="absolute inset-0 bg-cover bg-center"
+                style={{ backgroundImage: `url(${coverBgUrl})` }}
+              >
+                <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-black/80" />
+              </div>
 
-                {/* Upload Background Button */}
-                <label className="absolute top-4 right-4 z-20 cursor-pointer print:hidden">
-                  <input type="file" accept="image/*" onChange={handleBgUpload} className="hidden" />
+              {/* Upload Background Button */}
+              <label className="absolute top-4 right-4 z-20 cursor-pointer print:hidden">
+                <input type="file" accept="image/*" onChange={handleBgUpload} className="hidden" />
                   <div className="flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-sm text-white text-sm rounded-xl hover:bg-white/30 transition-colors">
-                    <Upload className="w-4 h-4" />
+                  <Upload className="w-4 h-4" />
                     Change Image
-                  </div>
-                </label>
+                </div>
+              </label>
 
                 {/* Cover Content */}
                 <div className="relative z-10 h-full flex flex-col text-white p-8 md:p-12" style={{ minHeight: '500px' }}>
-                  {/* Header */}
-                  <div className="flex justify-between items-start mb-8">
-                    <div>
-                      {companyInfo.logo ? (
+                {/* Header */}
+                <div className="flex justify-between items-start mb-8">
+                  <div>
+                    {companyInfo.logo ? (
                         <img src={companyInfo.logo} alt={companyInfo.name} className="w-16 h-16 object-contain rounded-xl bg-white/10 mb-2" />
-                      ) : (
+                    ) : (
                         <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center text-2xl font-bold mb-2">
-                          {companyInfo.name?.charAt(0) || 'C'}
-                        </div>
-                      )}
-                      <p className="text-white/70 text-sm">{companyInfo.website}</p>
-                    </div>
+                        {companyInfo.name?.charAt(0) || 'C'}
+                      </div>
+                    )}
+                    <p className="text-white/70 text-sm">{companyInfo.website}</p>
                   </div>
+                </div>
 
-                  {/* Client Info */}
-                  <div className="mb-auto">
-                    <p className="text-white/60 text-sm uppercase tracking-wider mb-2">Prepared For</p>
+                {/* Client Info */}
+                <div className="mb-auto">
+                  <p className="text-white/60 text-sm uppercase tracking-wider mb-2">Prepared For</p>
                     <h3 className="text-2xl font-semibold mb-1">{displayClientName}</h3>
                     {displayLeadName && displayLeadName !== displayClientName && (
                       <p className="text-white/80">{displayLeadName}</p>
                     )}
-                    <p className="text-white/60 mt-4">{formatDate(quote?.created_at)}</p>
-                  </div>
+                  <p className="text-white/60 mt-4">{formatDate(quote?.created_at)}</p>
+                </div>
 
-                  {/* Center Title */}
+                {/* Center Title */}
                   <div className="text-center py-12">
-                    {editingTitle ? (
+                  {editingTitle ? (
                     <div className="inline-flex items-center gap-2">
                       <input
                         type="text"
@@ -917,22 +895,22 @@ export default function QuoteDocumentPage() {
                   <p className="text-lg text-white/70 mt-4">Proposal #{quote?.quote_number || 'New'}</p>
                 </div>
 
-                  {/* Footer */}
-                  <div className="mt-auto pt-8 border-t border-white/20">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-xl font-semibold">{companyInfo.name}</p>
-                        <p className="text-white/60 text-sm">{companyInfo.address}</p>
-                        <p className="text-white/60 text-sm">{companyInfo.city}, {companyInfo.state} {companyInfo.zip}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-white/60 text-sm">{companyInfo.phone}</p>
-                        <p className="text-white/60 text-sm">{companyInfo.website}</p>
-                      </div>
+                {/* Footer */}
+                <div className="mt-auto pt-8 border-t border-white/20">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xl font-semibold">{companyInfo.name}</p>
+                      <p className="text-white/60 text-sm">{companyInfo.address}</p>
+                      <p className="text-white/60 text-sm">{companyInfo.city}, {companyInfo.state} {companyInfo.zip}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-white/60 text-sm">{companyInfo.phone}</p>
+                      <p className="text-white/60 text-sm">{companyInfo.website}</p>
                     </div>
                   </div>
                 </div>
               </div>
+            </div>
             </div>
 
             {/* Letter Card - within Cover Tab */}
@@ -996,12 +974,12 @@ export default function QuoteDocumentPage() {
               />
             </div>
 
-                {/* Closing */}
-                <div className="mt-8">
-                  <p className="text-neutral-900 mb-4">Sincerely,</p>
-                  <div className="mt-8">
-                    <p className="font-semibold text-neutral-900">{profile?.full_name || companyInfo.name}</p>
-                    <p className="text-sm text-neutral-600">{companyInfo.name}</p>
+            {/* Closing */}
+            <div className="mt-8">
+              <p className="text-neutral-900 mb-4">Sincerely,</p>
+              <div className="mt-8">
+                <p className="font-semibold text-neutral-900">{profile?.full_name || companyInfo.name}</p>
+                <p className="text-sm text-neutral-600">{companyInfo.name}</p>
                   </div>
                 </div>
               </div>
@@ -1026,14 +1004,23 @@ export default function QuoteDocumentPage() {
             </div>
             {/* Project Name field */}
             <div className="px-6 py-4 border-b border-neutral-100">
-              <label className="block text-sm font-medium text-neutral-700 mb-1.5">Project Name</label>
+              <label className="block text-sm font-medium text-neutral-700 mb-1.5">
+                Project Name <span className="text-amber-600">*</span>
+              </label>
               <input
                 type="text"
                 value={projectName}
                 onChange={(e) => { setProjectName(e.target.value); setHasUnsavedChanges(true); }}
-                className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-[#476E66] focus:border-transparent outline-none"
+                className={`w-full px-4 py-2.5 rounded-xl border outline-none transition-colors ${
+                  !projectName.trim() 
+                    ? 'bg-amber-50 border-amber-300 focus:ring-2 focus:ring-amber-500 focus:border-transparent' 
+                    : 'border-neutral-200 focus:ring-2 focus:ring-[#476E66] focus:border-transparent'
+                }`}
                 placeholder="Enter project name (shown on cover page)"
               />
+              {!projectName.trim() && (
+                <p className="text-xs text-amber-600 mt-1.5">⚠️ Required - Will use company name if left empty</p>
+              )}
             </div>
 
             {/* Send To - Client OR Lead Selection */}
@@ -1162,6 +1149,7 @@ export default function QuoteDocumentPage() {
                           type="number"
                           value={item.unitPrice}
                           onChange={(e) => updateLineItem(item.id, { unitPrice: parseFloat(e.target.value) || 0 })}
+                          onFocus={(e) => e.target.select()}
                           className="w-full text-right bg-transparent outline-none text-neutral-900 focus:bg-white focus:ring-1 focus:ring-[#476E66] rounded px-2 py-1"
                         />
                       </td>
@@ -1186,6 +1174,7 @@ export default function QuoteDocumentPage() {
                           type="number"
                           value={item.qty}
                           onChange={(e) => updateLineItem(item.id, { qty: parseInt(e.target.value) || 1 })}
+                          onFocus={(e) => e.target.select()}
                           className="w-12 text-center bg-white border border-neutral-200 outline-none text-neutral-900 focus:ring-1 focus:ring-[#476E66] rounded px-2 py-1"
                           min="1"
                         />
@@ -1203,7 +1192,8 @@ export default function QuoteDocumentPage() {
                           type="number"
                           value={item.estimatedDays}
                           onChange={(e) => updateLineItem(item.id, { estimatedDays: parseInt(e.target.value) || 1 })}
-                          className="w-10 text-center bg-transparent outline-none text-neutral-900 text-xs focus:bg-white focus:ring-1 focus:ring-[#476E66] rounded"
+                          onFocus={(e) => e.target.select()}
+                          className="w-12 text-center bg-white border border-neutral-200 outline-none text-neutral-900 focus:ring-1 focus:ring-[#476E66] rounded px-2 py-1"
                           min="1"
                         />
                       </td>
@@ -1241,6 +1231,7 @@ export default function QuoteDocumentPage() {
                                   type="number"
                                   value={item.overlapDays}
                                   onChange={(e) => updateLineItem(item.id, { overlapDays: parseInt(e.target.value) || 0 })}
+                                  onFocus={(e) => e.target.select()}
                                   className="w-8 text-center bg-white border border-neutral-200 text-xs rounded"
                                   min="0"
                                   title="Days after dependency starts"
@@ -1308,6 +1299,7 @@ export default function QuoteDocumentPage() {
                         type="number"
                         value={taxRate}
                         onChange={(e) => { setTaxRate(parseFloat(e.target.value) || 0); setHasUnsavedChanges(true); }}
+                        onFocus={(e) => e.target.select()}
                         className="w-16 text-right bg-transparent border-b border-neutral-200 outline-none focus:border-neutral-500 text-neutral-900"
                         step="0.01"
                       />
@@ -1334,8 +1326,8 @@ export default function QuoteDocumentPage() {
             {/* Scope of Work Card */}
             <div className="bg-white rounded-xl shadow-sm border border-neutral-200 overflow-hidden">
               <div className="px-6 py-4 border-b border-neutral-100 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center">
-                  <FileText className="w-5 h-5 text-indigo-600" />
+                <div className="w-10 h-10 rounded-xl bg-[#476E66]/10 flex items-center justify-center">
+                  <FileText className="w-5 h-5 text-[#476E66]" />
                 </div>
                 <div>
                   <h3 className="font-semibold text-neutral-900">Scope of Work</h3>
@@ -1355,46 +1347,86 @@ export default function QuoteDocumentPage() {
             {/* Project Timeline Card */}
             <div className="bg-white rounded-xl shadow-sm border border-neutral-200 overflow-hidden">
               <div className="px-6 py-4 border-b border-neutral-100 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-cyan-50 flex items-center justify-center">
-                  <Calendar className="w-5 h-5 text-cyan-600" />
+                <div className="w-10 h-10 rounded-xl bg-[#476E66]/10 flex items-center justify-center">
+                  <Calendar className="w-5 h-5 text-[#476E66]" />
                 </div>
                 <div>
                   <h3 className="font-semibold text-neutral-900">Project Timeline</h3>
                   <p className="text-sm text-neutral-500">Visual schedule based on your line items</p>
                 </div>
               </div>
-              <div className="p-6">
+              <div className="p-4 sm:p-6">
                 {lineItems.filter(item => item.description.trim()).length > 0 ? (
-                  <div className="border border-neutral-200 rounded-xl p-4">
+                  <div className="border border-neutral-200 rounded-lg p-3 sm:p-4">
                     {(() => {
                       const validItems = lineItems.filter(item => item.description.trim());
                       const computedOffsets = getComputedStartOffsets(validItems);
+                      
+                      // Find the min and max days to normalize the timeline
+                      const minStart = Math.min(...validItems.map(item => computedOffsets.get(item.id) || 0));
                       const maxEnd = Math.max(...validItems.map(item => (computedOffsets.get(item.id) || 0) + item.estimatedDays));
+                      const timelineRange = maxEnd - minStart;
                       const totalDays = maxEnd || 1;
+                      
+                      // Generate day markers based on the actual range
+                      const dayMarkers: number[] = [minStart + 1]; // Start from first task's start day (1-indexed)
+                      const step = timelineRange > 20 ? 5 : timelineRange > 10 ? 4 : 2;
+                      for (let day = minStart + step; day < maxEnd; day += step) {
+                        dayMarkers.push(day + 1); // 1-indexed
+                      }
+                      if (dayMarkers[dayMarkers.length - 1] !== maxEnd) {
+                        dayMarkers.push(maxEnd);
+                      }
+                      
                       return (
-                        <div className="space-y-3">
-                          <div className="flex items-center text-xs text-neutral-500 border-b pb-2">
-                            <div className="w-48 flex-shrink-0 font-medium">Task</div>
-                            <div className="flex-1 flex justify-between px-2">
-                              <span>Day 1</span>
-                              <span>Day {Math.ceil(totalDays / 2)}</span>
-                              <span>Day {totalDays}</span>
+                        <div className="space-y-2">
+                          {/* Header with Day Markers */}
+                          <div className="flex items-center text-[10px] sm:text-xs text-neutral-500 pb-2 border-b border-neutral-200">
+                            <div className="w-32 sm:w-40 flex-shrink-0 font-semibold text-neutral-700">Task</div>
+                            <div className="flex-1 relative h-4">
+                              {dayMarkers.map((day, idx) => {
+                                const normalizedDay = day - minStart - 1; // Normalize to 0-based
+                                const position = idx === 0 ? 0 : idx === dayMarkers.length - 1 ? 100 : (normalizedDay / timelineRange) * 100;
+                                return (
+                                  <div
+                                    key={day}
+                                    className="absolute transform -translate-x-1/2"
+                                    style={{ left: idx === 0 ? '0%' : idx === dayMarkers.length - 1 ? '100%' : `${position}%` }}
+                                  >
+                                    <div className="text-[9px] sm:text-[10px] font-medium whitespace-nowrap">
+                                      {idx === 0 ? 'Start' : `Day ${day}`}
+                                    </div>
+                                  </div>
+                                );
+                              })}
                             </div>
                           </div>
-                          {validItems.map((item, idx) => {
+                          
+                          {/* Task Bars - sorted by start day */}
+                          {[...validItems]
+                            .sort((a, b) => (computedOffsets.get(a.id) || 0) - (computedOffsets.get(b.id) || 0))
+                            .map((item, idx) => {
                             const startDay = computedOffsets.get(item.id) || 0;
-                            const widthPercent = (item.estimatedDays / totalDays) * 100;
-                            const leftPercent = (startDay / totalDays) * 100;
-                            const colors = ['bg-[#476E66]', 'bg-cyan-500', 'bg-indigo-500', 'bg-purple-500'];
+                            const normalizedStart = startDay - minStart;
+                            const widthPercent = (item.estimatedDays / timelineRange) * 100;
+                            const leftPercent = (normalizedStart / timelineRange) * 100;
+                            const colors = ['bg-[#476E66]', 'bg-[#5A8078]', 'bg-[#6B8B82]', 'bg-[#7A9C93]'];
+                            const actualStartDay = startDay + 1;
+                            
                             return (
-                              <div key={item.id} className="flex items-center">
-                                <div className="w-48 flex-shrink-0 text-sm text-neutral-700 truncate pr-2" title={item.description}>
-                                  {item.description.length > 30 ? item.description.substring(0, 30) + '...' : item.description}
+                              <div key={item.id} className="flex items-center gap-2 py-1">
+                                <div className="w-32 sm:w-40 flex-shrink-0 text-[11px] sm:text-sm text-neutral-700 truncate" title={item.description}>
+                                  {item.description.length > 25 ? item.description.substring(0, 25) + '...' : item.description}
                                 </div>
-                                <div className="flex-1 h-8 bg-neutral-100 rounded-lg relative">
+                                <div className="flex-1 h-7 sm:h-8 bg-neutral-50 rounded-md relative border border-neutral-200">
                                   <div 
-                                    className={`absolute h-full ${colors[idx % colors.length]} rounded-lg flex items-center justify-center text-white text-xs font-medium`}
-                                    style={{ left: `${leftPercent}%`, width: `${Math.max(widthPercent, 8)}%`, minWidth: '50px' }}
+                                    className={`absolute h-full ${colors[idx % colors.length]} rounded-md flex items-center justify-center text-white text-[10px] sm:text-xs font-semibold shadow-sm`}
+                                    style={{ 
+                                      left: `${leftPercent}%`, 
+                                      width: `${Math.max(widthPercent, 10)}%`, 
+                                      minWidth: '40px' 
+                                    }}
+                                    title={`Starts Day ${actualStartDay}, Duration: ${item.estimatedDays} days`}
                                   >
                                     {item.estimatedDays}d
                                   </div>
@@ -1402,9 +1434,11 @@ export default function QuoteDocumentPage() {
                               </div>
                             );
                           })}
-                          <div className="pt-3 border-t text-sm text-neutral-600 flex justify-between">
-                            <span>Total Project Duration:</span>
-                            <span className="font-semibold text-neutral-900">{totalDays} day{totalDays > 1 ? 's' : ''}</span>
+                          
+                          {/* Total Duration */}
+                          <div className="pt-2 mt-1 border-t border-neutral-200 text-xs sm:text-sm text-neutral-600 flex justify-between items-center">
+                            <span className="font-medium">Total Duration:</span>
+                            <span className="font-semibold text-neutral-900 bg-[#476E66]/10 px-2 py-1 rounded-md">{totalDays} day{totalDays > 1 ? 's' : ''}</span>
                           </div>
                         </div>
                       );
@@ -1494,32 +1528,41 @@ export default function QuoteDocumentPage() {
           {currentStep === 4 && (
           <div className="space-y-6">
             {/* Action Buttons at Top */}
-            <div className="flex gap-4 sticky top-0 bg-neutral-50 py-3 z-10">
+            <div className="flex gap-2 sticky top-0 bg-neutral-50 py-3 z-10">
               <button
                 onClick={handlePrint}
-                className="flex-1 flex items-center justify-center gap-2 px-6 py-3 border border-neutral-200 bg-white rounded-xl hover:bg-neutral-50 transition-colors"
+                className="flex-1 flex items-center justify-center gap-1 px-3 py-2 border border-neutral-200 bg-white rounded-lg hover:bg-neutral-50 transition-colors text-sm font-medium"
               >
-                <Download className="w-5 h-5" />
-                <span>Download PDF</span>
+                <Download className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Download</span>
+                <span className="sm:hidden">PDF</span>
               </button>
               <button
                 onClick={saveChanges}
                 disabled={saving || (!selectedClientId && !selectedLeadId) || !lineItems.some(i => i.description.trim())}
-                className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-neutral-800 text-white rounded-xl hover:bg-neutral-700 transition-colors disabled:opacity-50"
+                className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-neutral-800 text-white rounded-lg hover:bg-neutral-700 transition-colors disabled:opacity-50 text-sm font-medium"
               >
-                <Save className="w-5 h-5" />
-                <span>{saving ? 'Saving...' : 'Save Proposal'}</span>
+                <Save className="w-3.5 h-3.5" />
+                <span>{saving ? 'Saving...' : 'Save'}</span>
               </button>
-              {client?.email && (
-                <button
-                  onClick={isNewQuote ? saveChanges : handleSendToCustomer}
-                  disabled={saving || (isNewQuote ? !lineItems.some(i => i.description.trim()) : hasUnsavedChanges)}
-                  className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-[#476E66] text-white rounded-xl hover:bg-[#3A5B54] transition-colors disabled:opacity-50"
-                >
-                  <Send className="w-5 h-5" />
-                  <span>{isNewQuote ? 'Save & Continue to Send' : 'Send to Client'}</span>
-                </button>
-              )}
+              <button
+                onClick={async () => {
+                  // Save first if there are unsaved changes or it's a new quote
+                  if (hasUnsavedChanges || isNewQuote) {
+                    await saveChanges();
+                  }
+                  // Then send (handleSendToCustomer will reload and send)
+                  setTimeout(() => {
+                    handleSendToCustomer();
+                  }, 500);
+                }}
+                disabled={saving || (!client?.email && !selectedLead?.email) || !lineItems.some(i => i.description.trim())}
+                className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54] transition-colors disabled:opacity-50 text-sm font-medium"
+              >
+                <Send className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">{(hasUnsavedChanges || isNewQuote) ? 'Save & Send' : 'Send'}</span>
+                <span className="sm:hidden">Send</span>
+              </button>
             </div>
 
             {/* Preview Sections */}
@@ -1614,31 +1657,65 @@ export default function QuoteDocumentPage() {
                     {(() => {
                       const validItems = lineItems.filter(item => item.description.trim());
                       const computedOffsets = getComputedStartOffsets(validItems);
+                      
+                      // Find the min and max days to normalize the timeline
+                      const minStart = Math.min(...validItems.map(item => computedOffsets.get(item.id) || 0));
                       const maxEnd = Math.max(...validItems.map(item => (computedOffsets.get(item.id) || 0) + item.estimatedDays));
+                      const timelineRange = maxEnd - minStart;
                       const totalDays = maxEnd || 1;
+                      
+                      // Generate day markers based on the actual range
+                      const dayMarkers: number[] = [minStart + 1];
+                      const step = timelineRange > 20 ? 5 : timelineRange > 10 ? 4 : 2;
+                      for (let day = minStart + step; day < maxEnd; day += step) {
+                        dayMarkers.push(day + 1);
+                      }
+                      if (dayMarkers[dayMarkers.length - 1] !== maxEnd) {
+                        dayMarkers.push(maxEnd);
+                      }
+                      
                       return (
-                        <div className="space-y-3">
-                          <div className="flex items-center text-xs text-neutral-500 border-b pb-2">
-                            <div className="w-40 flex-shrink-0 font-medium">Task</div>
-                            <div className="flex-1 flex justify-between px-2">
-                              <span>Day 1</span>
-                              <span>Day {Math.ceil(totalDays / 2)}</span>
-                              <span>Day {totalDays}</span>
+                        <div className="space-y-2">
+                          {/* Header with Day Markers */}
+                          <div className="flex items-center text-xs text-neutral-500 pb-2 border-b border-neutral-200">
+                            <div className="w-40 flex-shrink-0 font-semibold text-neutral-700">Task</div>
+                            <div className="flex-1 relative h-4">
+                              {dayMarkers.map((day, idx) => {
+                                const normalizedDay = day - minStart - 1;
+                                const position = idx === 0 ? 0 : idx === dayMarkers.length - 1 ? 100 : (normalizedDay / timelineRange) * 100;
+                                return (
+                                  <div
+                                    key={day}
+                                    className="absolute transform -translate-x-1/2 text-[10px] font-medium"
+                                    style={{ left: idx === 0 ? '0%' : idx === dayMarkers.length - 1 ? '100%' : `${position}%` }}
+                                  >
+                                    {idx === 0 ? 'Start' : `Day ${day}`}
+                                  </div>
+                                );
+                              })}
                             </div>
                           </div>
-                          {validItems.map((item, idx) => {
+                          
+                          {/* Task Bars - sorted by start day */}
+                          {[...validItems]
+                            .sort((a, b) => (computedOffsets.get(a.id) || 0) - (computedOffsets.get(b.id) || 0))
+                            .map((item, idx) => {
                             const startDay = computedOffsets.get(item.id) || 0;
-                            const widthPercent = (item.estimatedDays / totalDays) * 100;
-                            const leftPercent = (startDay / totalDays) * 100;
+                            const normalizedStart = startDay - minStart;
+                            const widthPercent = (item.estimatedDays / timelineRange) * 100;
+                            const leftPercent = (normalizedStart / timelineRange) * 100;
+                            const actualStartDay = startDay + 1;
+                            
                             return (
-                              <div key={item.id} className="flex items-center">
-                                <div className="w-40 flex-shrink-0 text-sm text-neutral-700 truncate pr-2" title={item.description}>
+                              <div key={item.id} className="flex items-center gap-2 py-1">
+                                <div className="w-40 flex-shrink-0 text-sm text-neutral-700 truncate" title={item.description}>
                                   {item.description.length > 25 ? item.description.substring(0, 25) + '...' : item.description}
                                 </div>
-                                <div className="flex-1 h-7 bg-neutral-100 rounded relative">
+                                <div className="flex-1 h-7 bg-neutral-50 rounded relative border border-neutral-200">
                                   <div 
-                                    className="absolute h-full bg-[#476E66] rounded flex items-center justify-center text-white text-xs font-medium"
+                                    className="absolute h-full bg-[#476E66] rounded flex items-center justify-center text-white text-xs font-semibold shadow-sm"
                                     style={{ left: `${leftPercent}%`, width: `${Math.max(widthPercent, 10)}%`, minWidth: '40px' }}
+                                    title={`Starts Day ${actualStartDay}, Duration: ${item.estimatedDays} days`}
                                   >
                                     {item.estimatedDays}d
                                   </div>
@@ -1646,9 +1723,11 @@ export default function QuoteDocumentPage() {
                               </div>
                             );
                           })}
-                          <div className="pt-3 border-t text-sm text-neutral-600 flex justify-between">
-                            <span>Total Duration:</span>
-                            <span className="font-semibold text-neutral-900">{totalDays} day{totalDays > 1 ? 's' : ''}</span>
+                          
+                          {/* Total Duration */}
+                          <div className="pt-2 mt-1 border-t border-neutral-200 text-sm text-neutral-600 flex justify-between items-center">
+                            <span className="font-medium">Total Duration:</span>
+                            <span className="font-semibold text-neutral-900 bg-[#476E66]/10 px-2 py-1 rounded">{totalDays} day{totalDays > 1 ? 's' : ''}</span>
                           </div>
                         </div>
                       );
@@ -1774,45 +1853,77 @@ export default function QuoteDocumentPage() {
                 {(() => {
                   const validItems = lineItems.filter(item => item.description.trim());
                   const computedOffsets = getComputedStartOffsets(validItems);
+                  
+                  // Find the min and max days to normalize the timeline
+                  const minStart = Math.min(...validItems.map(item => computedOffsets.get(item.id) || 0));
                   const maxEnd = Math.max(...validItems.map(item => (computedOffsets.get(item.id) || 0) + item.estimatedDays));
+                  const timelineRange = maxEnd - minStart;
                   const totalDays = maxEnd || 1;
+                  
+                  // Generate day markers based on the actual range
+                  const dayMarkers: number[] = [minStart + 1];
+                  const step = timelineRange > 20 ? 5 : timelineRange > 10 ? 4 : 2;
+                  for (let day = minStart + step; day < maxEnd; day += step) {
+                    dayMarkers.push(day + 1);
+                  }
+                  if (dayMarkers[dayMarkers.length - 1] !== maxEnd) {
+                    dayMarkers.push(maxEnd);
+                  }
+                  
                   return (
-                    <div className="space-y-3">
-                      {/* Timeline header */}
-                      <div className="flex items-center text-xs text-neutral-500 border-b pb-2">
-                        <div className="w-48 flex-shrink-0 font-medium">Task</div>
-                        <div className="flex-1 flex justify-between px-2">
-                          <span>Day 1</span>
-                          <span>Day {Math.ceil(totalDays / 2)}</span>
-                          <span>Day {totalDays}</span>
-                        </div>
+                    <div className="space-y-2">
+                      {/* Header with Day Markers */}
+                      <div className="flex items-center text-xs text-neutral-500 pb-2 border-b border-neutral-200">
+                        <div className="w-48 flex-shrink-0 font-semibold text-neutral-700">Task</div>
+                        <div className="flex-1 relative h-4">
+                          {dayMarkers.map((day, idx) => {
+                            const normalizedDay = day - minStart - 1;
+                            const position = idx === 0 ? 0 : idx === dayMarkers.length - 1 ? 100 : (normalizedDay / timelineRange) * 100;
+                            return (
+                              <div
+                                key={day}
+                                className="absolute transform -translate-x-1/2 text-[10px] font-medium"
+                                style={{ left: idx === 0 ? '0%' : idx === dayMarkers.length - 1 ? '100%' : `${position}%` }}
+                              >
+                                {idx === 0 ? 'Start' : `Day ${day}`}
+                              </div>
+                            );
+                          })}
                       </div>
-                      {/* Timeline bars */}
-                      {validItems.map((item, idx) => {
+                      </div>
+                      
+                      {/* Timeline bars - sorted by start day */}
+                      {[...validItems]
+                        .sort((a, b) => (computedOffsets.get(a.id) || 0) - (computedOffsets.get(b.id) || 0))
+                        .map((item, idx) => {
                         const startDay = computedOffsets.get(item.id) || 0;
-                        const widthPercent = (item.estimatedDays / totalDays) * 100;
-                        const leftPercent = (startDay / totalDays) * 100;
+                        const normalizedStart = startDay - minStart;
+                        const widthPercent = (item.estimatedDays / timelineRange) * 100;
+                        const leftPercent = (normalizedStart / timelineRange) * 100;
+                        const actualStartDay = startDay + 1;
                         const barColor = 'bg-[#476E66]';
                         return (
-                          <div key={item.id} className="flex items-center">
-                            <div className="w-48 flex-shrink-0 text-sm text-neutral-700 truncate pr-2" title={item.description}>
+                          <div key={item.id} className="flex items-center gap-2 py-1">
+                            <div className="w-48 flex-shrink-0 text-sm text-neutral-700 truncate" title={item.description}>
                               {item.description.length > 30 ? item.description.substring(0, 30) + '...' : item.description}
                             </div>
-                            <div className="flex-1 h-8 bg-neutral-100 rounded relative">
+                            <div className="flex-1 h-8 bg-neutral-50 rounded relative border border-neutral-200">
                               <div 
-                                className={`absolute h-full ${barColor} rounded flex items-center justify-center text-white text-xs font-medium`}
+                                className={`absolute h-full ${barColor} rounded flex items-center justify-center text-white text-xs font-semibold shadow-sm`}
                                 style={{ left: `${leftPercent}%`, width: `${Math.max(widthPercent, 8)}%`, minWidth: '40px' }}
+                                title={`Starts Day ${actualStartDay}, Duration: ${item.estimatedDays} days`}
                               >
-                                {item.estimatedDays} day{item.estimatedDays > 1 ? 's' : ''}
+                                {item.estimatedDays}d
                               </div>
                             </div>
                           </div>
                         );
                       })}
+                      
                       {/* Summary */}
-                      <div className="pt-3 border-t text-sm text-neutral-600 flex justify-between">
-                        <span>Total Project Duration:</span>
-                        <span className="font-semibold text-neutral-900">{totalDays} day{totalDays > 1 ? 's' : ''}</span>
+                      <div className="pt-2 mt-1 border-t border-neutral-200 text-sm text-neutral-600 flex justify-between items-center">
+                        <span className="font-medium">Total Duration:</span>
+                        <span className="font-semibold text-neutral-900 bg-[#476E66]/10 px-2 py-1 rounded">{totalDays} day{totalDays > 1 ? 's' : ''}</span>
                       </div>
                     </div>
                   );
@@ -1914,8 +2025,8 @@ export default function QuoteDocumentPage() {
                     <div className={`transition-opacity ${recipientType === 'lead' ? 'opacity-40' : ''}`}>
                       <label className="block text-xs font-medium text-neutral-500 uppercase tracking-wider mb-1.5">Client</label>
                       <div className="flex items-center gap-2">
-                        <select
-                          value={selectedClientId}
+                      <select
+                        value={selectedClientId}
                           onChange={(e) => { 
                             setSelectedClientId(e.target.value); 
                             if (e.target.value) {
@@ -1926,21 +2037,21 @@ export default function QuoteDocumentPage() {
                           }}
                           disabled={recipientType === 'lead'}
                           className={`flex-1 px-3 py-2.5 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-[#476E66] focus:border-transparent outline-none text-sm ${recipientType === 'lead' ? 'bg-neutral-100 cursor-not-allowed' : ''}`}
-                        >
-                          <option value="">Select a client...</option>
-                          {clients.map(c => (
-                            <option key={c.id} value={c.id}>{c.name}</option>
-                          ))}
-                        </select>
-                        <button
-                          type="button"
-                          onClick={() => setShowNewClientModal(true)}
+                      >
+                        <option value="">Select a client...</option>
+                        {clients.map(c => (
+                          <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => setShowNewClientModal(true)}
                           disabled={recipientType === 'lead'}
                           className={`px-3 py-2.5 text-sm border border-neutral-200 rounded-lg ${recipientType === 'lead' ? 'opacity-40 cursor-not-allowed' : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50'}`}
-                        >
-                          <UserPlus className="w-4 h-4" />
-                        </button>
-                      </div>
+                      >
+                        <UserPlus className="w-4 h-4" />
+                      </button>
+                    </div>
                     </div>
 
                     {/* OR Divider */}
@@ -2763,43 +2874,67 @@ export default function QuoteDocumentPage() {
                     const computedOffsets = getComputedStartOffsets(validItems);
                     const maxEnd = Math.max(...validItems.map(item => (computedOffsets.get(item.id) || 0) + item.estimatedDays));
                     const totalDays = maxEnd || 1;
+                    
+                    // Generate day markers
+                    const dayMarkers: number[] = [1];
+                    const step = totalDays > 20 ? 5 : totalDays > 10 ? 4 : 2;
+                    for (let day = step; day < totalDays; day += step) {
+                      dayMarkers.push(day);
+                    }
+                    if (dayMarkers[dayMarkers.length - 1] !== totalDays) {
+                      dayMarkers.push(totalDays);
+                    }
+                    
                     return (
-                      <div className="space-y-3">
-                        {/* Timeline header */}
-                        <div className="flex items-center text-xs text-neutral-500 border-b pb-2">
-                          <div className="w-48 flex-shrink-0 font-medium">Task</div>
-                          <div className="flex-1 flex justify-between px-2">
-                            <span>Day 1</span>
-                            <span>Day {Math.ceil(totalDays / 2)}</span>
-                            <span>Day {totalDays}</span>
+                      <div className="space-y-2">
+                        {/* Header with Day Markers */}
+                        <div className="flex items-center text-xs text-neutral-500 pb-2 border-b border-neutral-200">
+                          <div className="w-48 flex-shrink-0 font-semibold text-neutral-700">Task</div>
+                          <div className="flex-1 relative h-4">
+                            {dayMarkers.map((day) => {
+                              const position = ((day - 1) / (totalDays - 1)) * 100;
+                              return (
+                                <div
+                                  key={day}
+                                  className="absolute transform -translate-x-1/2 text-[10px] font-medium"
+                                  style={{ left: day === 1 ? '0%' : day === totalDays ? '100%' : `${position}%` }}
+                                >
+                                  {day === 1 ? 'Start' : `Day ${day}`}
                           </div>
+                              );
+                            })}
                         </div>
+                        </div>
+                        
                         {/* Timeline bars */}
                         {validItems.map((item, idx) => {
                           const startDay = computedOffsets.get(item.id) || 0;
                           const widthPercent = (item.estimatedDays / totalDays) * 100;
                           const leftPercent = (startDay / totalDays) * 100;
+                          const actualStartDay = startDay + 1;
                           const barColor = 'bg-[#476E66]';
                           return (
-                            <div key={item.id} className="flex items-center">
-                              <div className="w-48 flex-shrink-0 text-sm text-neutral-700 truncate pr-2" title={item.description}>
+                            <div key={item.id} className="flex items-center gap-2 py-1">
+                              <div className="w-48 flex-shrink-0 text-sm text-neutral-700 truncate" title={item.description}>
                                 {item.description.length > 30 ? item.description.substring(0, 30) + '...' : item.description}
                               </div>
-                              <div className="flex-1 h-8 bg-neutral-100 rounded relative">
+                              <div className="flex-1 h-8 bg-neutral-50 rounded relative border border-neutral-200">
                                 <div 
-                                  className={`absolute h-full ${barColor} rounded flex items-center justify-center text-white text-xs font-medium`}
+                                  className={`absolute h-full ${barColor} rounded flex items-center justify-center text-white text-xs font-semibold shadow-sm`}
                                   style={{ left: `${leftPercent}%`, width: `${Math.max(widthPercent, 8)}%`, minWidth: '40px' }}
+                                  title={`Starts Day ${actualStartDay}, Duration: ${item.estimatedDays} days`}
                                 >
-                                  {item.estimatedDays} day{item.estimatedDays > 1 ? 's' : ''}
+                                  {item.estimatedDays}d
                                 </div>
                               </div>
                             </div>
                           );
                         })}
+                        
                         {/* Summary */}
-                        <div className="pt-3 border-t text-sm text-neutral-600 flex justify-between">
-                          <span>Total Project Duration:</span>
-                          <span className="font-semibold text-neutral-900">{totalDays} day{totalDays > 1 ? 's' : ''}</span>
+                        <div className="pt-2 mt-1 border-t border-neutral-200 text-sm text-neutral-600 flex justify-between items-center">
+                          <span className="font-medium">Total Duration:</span>
+                          <span className="font-semibold text-neutral-900 bg-[#476E66]/10 px-2 py-1 rounded">{totalDays} day{totalDays > 1 ? 's' : ''}</span>
                         </div>
                       </div>
                     );
@@ -3202,17 +3337,17 @@ export default function QuoteDocumentPage() {
               </div>
               <div className="p-6 bg-neutral-50 space-y-3">
                 <div className="flex gap-3">
-                  <button
-                    onClick={() => setShowSendModal(false)}
-                    className="flex-1 px-4 py-2.5 border border-neutral-300 rounded-xl hover:bg-white transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={() => setShowEmailPreview(true)}
+                <button
+                  onClick={() => setShowSendModal(false)}
+                  className="flex-1 px-4 py-2.5 border border-neutral-300 rounded-xl hover:bg-white transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => setShowEmailPreview(true)}
                     className="flex-1 px-4 py-2.5 border border-neutral-300 rounded-xl hover:bg-white transition-colors flex items-center justify-center gap-2"
-                  >
-                    <Eye className="w-4 h-4" />
+                >
+                  <Eye className="w-4 h-4" />
                     Preview
                   </button>
                 </div>

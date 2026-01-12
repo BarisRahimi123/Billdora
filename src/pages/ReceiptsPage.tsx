@@ -164,58 +164,60 @@ export default function ReceiptsPage() {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
+    <div className="p-2 sm:p-3 space-y-2">
+      <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-xl font-bold text-neutral-900">Receipts</h1>
-          <p className="text-sm text-neutral-500">Scan and manage your expense receipts</p>
+          <h1 className="text-sm sm:text-base font-bold text-neutral-900">Receipts</h1>
+          <p className="text-[10px] text-neutral-500">Scan and manage your expense receipts</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <button
             onClick={handleAutoMatch}
             disabled={matching}
-            className="flex items-center gap-2 px-3 py-2 text-sm border border-neutral-200 rounded-lg hover:bg-neutral-50 disabled:opacity-50"
+            className="flex items-center gap-1.5 px-2 py-1.5 text-[10px] border border-[#476E66] text-[#476E66] rounded-lg hover:bg-[#476E66]/5 disabled:opacity-50 font-medium"
           >
-            <Link2 className={`w-4 h-4 ${matching ? 'animate-spin' : ''}`} />
-            {matching ? 'Matching...' : 'Auto-Match'}
+            <Link2 className={`w-3 h-3 ${matching ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">{matching ? 'Matching...' : 'Auto-Match'}</span>
           </button>
           <button
             onClick={() => setShowScanner(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54] text-sm font-medium"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54] text-[10px] font-medium"
           >
-            <Camera className="w-4 h-4" />
-            Scan Receipt
+            <Camera className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Scan Receipt</span>
+            <span className="sm:hidden">Scan</span>
           </button>
         </div>
       </div>
 
       {/* Receipts Grid */}
       {loading ? (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
           {[1, 2, 3, 4].map((i) => (
             <div key={i} className="aspect-[3/4] bg-neutral-100 rounded-lg animate-pulse" />
           ))}
         </div>
       ) : receipts.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-xl border border-neutral-200">
-          <ImageIcon className="w-12 h-12 text-neutral-300 mx-auto mb-3" />
-          <h3 className="text-lg font-medium text-neutral-900 mb-1">No receipts yet</h3>
-          <p className="text-neutral-500 text-sm mb-4">Scan or upload your first receipt</p>
+        <div className="text-center py-8 bg-white rounded-lg" style={{ boxShadow: 'var(--shadow-card)' }}>
+          <ImageIcon className="w-10 h-10 text-neutral-300 mx-auto mb-2" />
+          <h3 className="text-sm font-medium text-neutral-900 mb-1">No receipts yet</h3>
+          <p className="text-neutral-500 text-[10px] mb-3">Scan or upload your first receipt</p>
           <button
             onClick={() => setShowScanner(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54] text-sm"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54] text-[10px] font-medium"
           >
-            <Camera className="w-4 h-4" />
+            <Camera className="w-3.5 h-3.5" />
             Scan Receipt
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
           {receipts.map((receipt) => (
             <div
               key={receipt.id}
               onClick={() => setSelectedReceipt(receipt)}
-              className="bg-white rounded-lg border border-neutral-200 overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
+              className="bg-white rounded-lg overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
+              style={{ boxShadow: 'var(--shadow-card)' }}
             >
               <div className="aspect-[3/4] bg-neutral-100 relative">
                 <img
@@ -224,16 +226,16 @@ export default function ReceiptsPage() {
                   className="w-full h-full object-cover"
                 />
                 {receipt.matched_transaction_id && (
-                  <div className="absolute top-2 right-2 w-6 h-6 bg-emerald-500 rounded-full flex items-center justify-center">
-                    <Check className="w-4 h-4 text-white" />
+                  <div className="absolute top-1.5 right-1.5 w-5 h-5 bg-[#476E66] rounded-full flex items-center justify-center">
+                    <Check className="w-3 h-3 text-white" />
                   </div>
                 )}
               </div>
-              <div className="p-3">
-                <p className="font-medium text-neutral-900 text-sm truncate">{receipt.vendor || 'Unknown Vendor'}</p>
-                <div className="flex items-center justify-between mt-1">
-                  <span className="text-sm font-semibold text-[#476E66]">{formatCurrency(receipt.amount)}</span>
-                  <span className="text-xs text-neutral-500">{formatDate(receipt.receipt_date)}</span>
+              <div className="p-2">
+                <p className="font-medium text-neutral-900 text-[10px] truncate">{receipt.vendor || 'Unknown Vendor'}</p>
+                <div className="flex items-center justify-between mt-0.5">
+                  <span className="text-[10px] font-semibold text-[#476E66]">{formatCurrency(receipt.amount)}</span>
+                  <span className="text-[9px] text-neutral-500">{formatDate(receipt.receipt_date)}</span>
                 </div>
               </div>
             </div>
@@ -244,21 +246,21 @@ export default function ReceiptsPage() {
       {/* Scanner Modal */}
       {showScanner && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl w-full max-w-md p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold">Scan Receipt</h3>
+          <div className="bg-white rounded-xl w-full max-w-sm p-4" style={{ boxShadow: 'var(--shadow-elevated)' }}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold">Scan Receipt</h3>
               <button onClick={() => setShowScanner(false)} className="p-1 hover:bg-neutral-100 rounded-lg">
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
             {uploading ? (
-              <div className="text-center py-8">
-                <RefreshCw className="w-8 h-8 text-[#476E66] animate-spin mx-auto mb-3" />
-                <p className="text-neutral-600">Processing receipt...</p>
+              <div className="text-center py-6">
+                <RefreshCw className="w-6 h-6 text-[#476E66] animate-spin mx-auto mb-2" />
+                <p className="text-neutral-600 text-xs">Processing receipt...</p>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-2">
                 <input
                   ref={cameraInputRef}
                   type="file"
@@ -277,18 +279,18 @@ export default function ReceiptsPage() {
 
                 <button
                   onClick={() => cameraInputRef.current?.click()}
-                  className="w-full flex items-center justify-center gap-3 py-4 border-2 border-dashed border-neutral-300 rounded-lg hover:border-[#476E66] hover:bg-[#476E66]/5 transition-colors"
+                  className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-neutral-300 rounded-lg hover:border-[#476E66] hover:bg-[#476E66]/5 transition-colors"
                 >
-                  <Camera className="w-6 h-6 text-[#476E66]" />
-                  <span className="font-medium text-neutral-700">Take Photo</span>
+                  <Camera className="w-5 h-5 text-[#476E66]" />
+                  <span className="font-medium text-neutral-700 text-xs">Take Photo</span>
                 </button>
 
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="w-full flex items-center justify-center gap-3 py-4 border-2 border-dashed border-neutral-300 rounded-lg hover:border-[#476E66] hover:bg-[#476E66]/5 transition-colors"
+                  className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-neutral-300 rounded-lg hover:border-[#476E66] hover:bg-[#476E66]/5 transition-colors"
                 >
-                  <Upload className="w-6 h-6 text-[#476E66]" />
-                  <span className="font-medium text-neutral-700">Upload from Gallery</span>
+                  <Upload className="w-5 h-5 text-[#476E66]" />
+                  <span className="font-medium text-neutral-700 text-xs">Upload from Gallery</span>
                 </button>
               </div>
             )}
@@ -299,61 +301,61 @@ export default function ReceiptsPage() {
       {/* Receipt Detail Modal */}
       {selectedReceipt && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="flex items-center justify-between p-4 border-b">
-              <h3 className="text-lg font-semibold">Receipt Details</h3>
+          <div className="bg-white rounded-xl w-full max-w-md max-h-[90vh] overflow-hidden flex flex-col" style={{ boxShadow: 'var(--shadow-elevated)' }}>
+            <div className="flex items-center justify-between p-3 border-b">
+              <h3 className="text-sm font-semibold">Receipt Details</h3>
               <button onClick={() => setSelectedReceipt(null)} className="p-1 hover:bg-neutral-100 rounded-lg">
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
-            <div className="overflow-y-auto flex-1 p-4">
-              <div className="aspect-[3/4] bg-neutral-100 rounded-lg overflow-hidden mb-4">
+            <div className="overflow-y-auto flex-1 p-3">
+              <div className="aspect-[3/4] bg-neutral-100 rounded-lg overflow-hidden mb-3">
                 <img src={selectedReceipt.image_url} alt="Receipt" className="w-full h-full object-contain" />
               </div>
-              <div className="space-y-3">
-                <div className="flex justify-between">
+              <div className="space-y-2">
+                <div className="flex justify-between text-xs">
                   <span className="text-neutral-500">Vendor</span>
                   <span className="font-medium">{selectedReceipt.vendor || '—'}</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between text-xs">
                   <span className="text-neutral-500">Amount</span>
                   <span className="font-semibold text-[#476E66]">{formatCurrency(selectedReceipt.amount)}</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between text-xs">
                   <span className="text-neutral-500">Date</span>
                   <span>{formatDate(selectedReceipt.receipt_date)}</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between text-xs">
                   <span className="text-neutral-500">Category</span>
                   <span className="capitalize">{selectedReceipt.category?.replace('_', ' ') || '—'}</span>
                 </div>
-                <div className="flex justify-between items-center">
+                <div className="flex justify-between items-center text-xs">
                   <span className="text-neutral-500">Matched</span>
                   {selectedReceipt.matched_transaction_id ? (
-                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-100 text-emerald-700 rounded text-sm">
-                      <Check className="w-3 h-3" /> Linked
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-[#476E66]/10 text-[#476E66] border border-[#476E66]/20 rounded text-[9px] font-medium">
+                      <Check className="w-2.5 h-2.5" /> Linked
                     </span>
                   ) : (
-                    <span className="text-neutral-400 text-sm">Not matched</span>
+                    <span className="text-neutral-400 text-[10px]">Not matched</span>
                   )}
                 </div>
               </div>
             </div>
-            <div className="flex items-center justify-between p-4 border-t bg-neutral-50">
+            <div className="flex items-center justify-between p-3 border-t bg-neutral-50">
               <button
                 onClick={() => handleDeleteReceipt(selectedReceipt.id)}
-                className="flex items-center gap-2 px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg text-sm"
+                className="flex items-center gap-1.5 px-2 py-1.5 text-red-600 hover:bg-red-50 rounded-lg text-[10px] font-medium"
               >
-                <Trash2 className="w-4 h-4" />
+                <Trash2 className="w-3 h-3" />
                 Delete
               </button>
               <a
                 href={selectedReceipt.image_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2 px-3 py-2 text-[#476E66] hover:bg-[#476E66]/10 rounded-lg text-sm"
+                className="flex items-center gap-1.5 px-2 py-1.5 text-[#476E66] hover:bg-[#476E66]/10 rounded-lg text-[10px] font-medium"
               >
-                <Eye className="w-4 h-4" />
+                <Eye className="w-3 h-3" />
                 View Full Size
               </a>
             </div>

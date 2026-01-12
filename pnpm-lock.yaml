@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@capacitor/app':
+        specifier: ^8.0.0
+        version: 8.0.0(@capacitor/core@8.0.0)
       '@capacitor/cli':
         specifier: ^8.0.0
         version: 8.0.0
@@ -373,6 +376,11 @@ packages:
   '@babel/types@7.28.2':
     resolution: {integrity: sha512-ruv7Ae4J5dUYULmeXw1gmb7rYRz57OWCPM57pHojnLq/3Z1CK2lNSLTCVjxVk1F/TZHwOZZrOWi0ur95BbLxNQ==}
     engines: {node: '>=6.9.0'}
+
+  '@capacitor/app@8.0.0':
+    resolution: {integrity: sha512-OwzIkUs4w433Bu9WWAEbEYngXEfJXZ9Wmdb8eoaqzYBgB0W9/3Ed/mh6sAYPNBAZlpyarmewgP7Nb+d3Vrh+xA==}
+    peerDependencies:
+      '@capacitor/core': '>=8.0.0'
 
   '@capacitor/cli@8.0.0':
     resolution: {integrity: sha512-v9hEBi69xGxuuZhg55N031bMEenKaPSv71Il8C22VOOH6surDyv/MPeImN0oVfFc7eiklaW3rDFYVz6cmXfJWQ==}
@@ -3328,6 +3336,10 @@ snapshots:
     dependencies:
       '@babel/helper-string-parser': 7.27.1
       '@babel/helper-validator-identifier': 7.27.1
+
+  '@capacitor/app@8.0.0(@capacitor/core@8.0.0)':
+    dependencies:
+      '@capacitor/core': 8.0.0
 
   '@capacitor/cli@8.0.0':
     dependencies:

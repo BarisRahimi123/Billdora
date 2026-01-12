@@ -125,11 +125,17 @@ export default function NotificationsPage() {
   useEffect(() => {
     loadNotifications();
     loadSettings();
-    // Request push notification permission on mount
-    if (isPushNotificationsAvailable()) {
-      requestPushPermission();
-    }
   }, [profile?.company_id]);
+
+  // Request push permission only once, in background, after page loads
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (isPushNotificationsAvailable()) {
+        requestPushPermission().catch(console.error);
+      }
+    }, 1000); // Delay permission request to not block page load
+    return () => clearTimeout(timer);
+  }, []);
 
   async function loadNotifications() {
     if (!profile?.company_id) return;
@@ -176,12 +182,24 @@ export default function NotificationsPage() {
 
   function handleNotificationClick(notification: Notification) {
     markAsRead(notification.id);
+    
     if (notification.reference_type === 'quote' && notification.reference_id) {
-      navigate(`/quotes/${notification.reference_id}/document`);
+      // For signed/approved proposals, go to Sales page (read-only view makes more sense)
+      // For other proposal notifications (viewed, sent), go to the editor
+      if (notification.type?.includes('signed') || notification.type?.includes('approved')) {
+        // Signed proposals - go to Sales page to view the approved quote
+        navigate('/sales');
+      } else if (notification.type?.includes('declined')) {
+        // Declined proposals - go to Sales page
+        navigate('/sales');
+      } else {
+        // Other proposal actions (viewed, sent) - can go to editor
+        navigate(`/quotes/${notification.reference_id}/document`);
+      }
     } else if (notification.reference_type === 'invoice' && notification.reference_id) {
       navigate(`/invoicing`);
     } else if (notification.reference_type === 'project' && notification.reference_id) {
-      navigate(`/projects`);
+      navigate(`/projects/${notification.reference_id}`);
     }
   }
 
@@ -239,19 +257,16 @@ export default function NotificationsPage() {
   async function sendTestPushNotification() {
     setSendingPush(true);
     try {
-      const success = await sendLocalNotification(
+      await sendLocalNotification(
         '🔔 Billdora Notification',
         'This is a test push notification! It works on your lock screen.',
         { type: 'test', timestamp: Date.now() }
       );
-      if (success) {
-        alert('✅ Push notification scheduled! Lock your phone to see it.');
-      } else {
-        alert('❌ Push notifications not available. Try on a real device.');
-      }
-    } catch (error) {
+      alert('✅ Push notification scheduled! Lock your phone to see it.');
+    } catch (error: any) {
       console.error('Failed to send push notification:', error);
-      alert('❌ Failed to send push notification');
+      // Show the actual error message for debugging
+      alert(`❌ ${error?.message || 'Failed to send push notification'}`);
     }
     setSendingPush(false);
   }
