@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Check, CheckCheck, Trash2, Settings, Mail, Filter, FileText, Clock, ChevronRight, ChevronDown, FolderKanban, Receipt, Eye, Send, AlertTriangle, DollarSign, UserPlus, Rocket } from 'lucide-react';
+import { Bell, Check, CheckCheck, Trash2, Settings, Mail, Filter, FileText, Clock, ChevronRight, ChevronDown, FolderKanban, Receipt, Eye, Send, AlertTriangle, DollarSign, UserPlus, Rocket, TestTube, Smartphone } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { notificationsApi } from '../lib/api';
+import { NotificationService } from '../lib/notificationService';
+import { sendLocalNotification, requestPushPermission, isPushNotificationsAvailable } from '../lib/pushNotifications';
 
 interface Notification {
   id: string;
@@ -117,10 +119,16 @@ export default function NotificationsPage() {
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
   const [settings, setSettings] = useState<NotificationSettings>(defaultSettings);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['proposals', 'invoices', 'projects', 'other']));
+  const [sendingTest, setSendingTest] = useState(false);
+  const [sendingPush, setSendingPush] = useState(false);
 
   useEffect(() => {
     loadNotifications();
     loadSettings();
+    // Request push notification permission on mount
+    if (isPushNotificationsAvailable()) {
+      requestPushPermission();
+    }
   }, [profile?.company_id]);
 
   async function loadNotifications() {
@@ -207,6 +215,47 @@ export default function NotificationsPage() {
   const filteredNotifications = getCategoryNotifications();
   const unreadCount = notifications.filter(n => !n.is_read).length;
 
+  // Test in-app notification function
+  async function sendTestNotification() {
+    if (!profile?.company_id) return;
+    setSendingTest(true);
+    try {
+      await NotificationService.projectCreated(
+        profile.company_id,
+        'Test Project',
+        'Test Client'
+      );
+      // Reload notifications to show the new one
+      await loadNotifications();
+      alert('✅ Test notification sent! Check the list below.');
+    } catch (error) {
+      console.error('Failed to send test notification:', error);
+      alert('❌ Failed to send test notification');
+    }
+    setSendingTest(false);
+  }
+
+  // Test push notification (local notification for simulator testing)
+  async function sendTestPushNotification() {
+    setSendingPush(true);
+    try {
+      const success = await sendLocalNotification(
+        '🔔 Billdora Notification',
+        'This is a test push notification! It works on your lock screen.',
+        { type: 'test', timestamp: Date.now() }
+      );
+      if (success) {
+        alert('✅ Push notification scheduled! Lock your phone to see it.');
+      } else {
+        alert('❌ Push notifications not available. Try on a real device.');
+      }
+    } catch (error) {
+      console.error('Failed to send push notification:', error);
+      alert('❌ Failed to send push notification');
+    }
+    setSendingPush(false);
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -222,15 +271,35 @@ export default function NotificationsPage() {
           <h1 className="text-2xl font-bold text-neutral-900">Notifications</h1>
           <p className="text-neutral-500">Stay updated on proposals, invoices, and more</p>
         </div>
-        {unreadCount > 0 && activeTab !== 'settings' && (
+        <div className="flex items-center gap-2">
+          {/* Test In-App Notification Button */}
           <button
-            onClick={markAllAsRead}
-            className="flex items-center gap-2 px-4 py-2 text-sm text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded-lg transition-colors"
+            onClick={sendTestNotification}
+            disabled={sendingTest}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-[#476E66] border border-[#476E66] rounded-lg hover:bg-[#476E66]/5 transition-colors disabled:opacity-50"
           >
-            <CheckCheck className="w-4 h-4" />
-            Mark all as read
+            <TestTube className="w-3.5 h-3.5" />
+            {sendingTest ? '...' : 'In-App'}
           </button>
-        )}
+          {/* Test Push Notification Button */}
+          <button
+            onClick={sendTestPushNotification}
+            disabled={sendingPush}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-white bg-[#476E66] rounded-lg hover:bg-[#476E66]/90 transition-colors disabled:opacity-50"
+          >
+            <Smartphone className="w-3.5 h-3.5" />
+            {sendingPush ? '...' : 'Push'}
+          </button>
+          {unreadCount > 0 && activeTab !== 'settings' && (
+            <button
+              onClick={markAllAsRead}
+              className="flex items-center gap-2 px-4 py-2 text-sm text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded-lg transition-colors"
+            >
+              <CheckCheck className="w-4 h-4" />
+              Mark all as read
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Tabs */}

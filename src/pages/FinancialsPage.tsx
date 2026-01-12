@@ -243,69 +243,98 @@ export default function FinancialsPage() {
   }
 
   return (
-    <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
+    <div className="p-2 sm:p-3 max-w-7xl mx-auto space-y-2">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-neutral-900">Financials</h1>
-          <p className="text-sm text-neutral-500">Profit & Loss, Bank Accounts, Reconciliation</p>
+          <h1 className="text-sm sm:text-base font-bold text-neutral-900">Financials</h1>
+          <p className="text-[10px] text-neutral-500">Profit & Loss, Bank Accounts, Reconciliation</p>
         </div>
         <button
           onClick={() => { setEditingAccount(null); setShowAccountModal(true); }}
-          className="flex items-center gap-2 px-4 py-2 bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54] text-sm font-medium"
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54] text-xs font-medium"
         >
-          <Plus className="w-4 h-4" />
-          Add Bank Account
+          <Plus className="w-3 h-3" />
+          <span className="hidden sm:inline">Add Bank Account</span>
+          <span className="sm:hidden">Add</span>
         </button>
       </div>
 
-      {/* Summary Metrics Row */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-        <div className="bg-white rounded-xl border border-neutral-100 p-4">
-          <p className="text-xs text-neutral-500 mb-1">Total Revenue (YTD)</p>
-          <p className="text-xl font-bold text-neutral-900">{formatCurrency(summary.totalRevenue)}</p>
+      {/* Summary Metrics Row - Ultra Compact */}
+      <div className="grid grid-cols-3 sm:grid-cols-5 gap-1">
+        <div className="bg-white rounded-lg p-1 overflow-hidden" style={{ boxShadow: 'var(--shadow-card)' }}>
+          <div className="flex items-center gap-0.5 mb-0.5">
+            <div className="w-3.5 h-3.5 rounded bg-[#476E66]/10 flex items-center justify-center flex-shrink-0">
+              <DollarSign className="w-2 h-2 text-[#476E66]" />
+            </div>
+            <p className="text-[8px] text-neutral-500 leading-none truncate">Revenue</p>
+          </div>
+          <p className="text-[11px] font-bold text-neutral-900 truncate">{formatCurrency(summary.totalRevenue)}</p>
         </div>
-        <div className="bg-white rounded-xl border border-neutral-100 p-4">
-          <p className="text-xs text-neutral-500 mb-1">Total Expenses (YTD)</p>
-          <p className="text-xl font-bold text-neutral-900">{formatCurrency(summary.totalExpenses)}</p>
+        <div className="bg-white rounded-lg p-1 overflow-hidden" style={{ boxShadow: 'var(--shadow-card)' }}>
+          <div className="flex items-center gap-0.5 mb-0.5">
+            <div className="w-3.5 h-3.5 rounded bg-red-50 flex items-center justify-center flex-shrink-0">
+              <TrendingDown className="w-2 h-2 text-red-600" />
+            </div>
+            <p className="text-[8px] text-neutral-500 leading-none truncate">Expenses</p>
+          </div>
+          <p className="text-[11px] font-bold text-neutral-900 truncate">{formatCurrency(summary.totalExpenses)}</p>
         </div>
-        <div className="bg-white rounded-xl border border-neutral-100 p-4">
-          <p className="text-xs text-neutral-500 mb-1">Net Profit</p>
-          <p className={`text-xl font-bold ${summary.netProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+        <div className="bg-white rounded-lg p-1 overflow-hidden" style={{ boxShadow: 'var(--shadow-card)' }}>
+          <div className="flex items-center gap-0.5 mb-0.5">
+            <div className={`w-3.5 h-3.5 rounded flex items-center justify-center flex-shrink-0 ${summary.netProfit >= 0 ? 'bg-[#476E66]/10' : 'bg-red-50'}`}>
+              <TrendingUp className={`w-2 h-2 ${summary.netProfit >= 0 ? 'text-[#476E66]' : 'text-red-600'}`} />
+            </div>
+            <p className="text-[8px] text-neutral-500 leading-none truncate">Profit</p>
+          </div>
+          <p className={`text-[11px] font-bold truncate ${summary.netProfit >= 0 ? 'text-[#476E66]' : 'text-red-600'}`}>
             {formatCurrency(summary.netProfit)}
           </p>
         </div>
-        <div className="bg-white rounded-xl border border-neutral-100 p-4">
-          <p className="text-xs text-neutral-500 mb-1">Outstanding AR</p>
-          <p className="text-xl font-bold text-amber-600">{formatCurrency(summary.arOutstanding)}</p>
+        <div className="bg-white rounded-lg p-1 overflow-hidden" style={{ boxShadow: 'var(--shadow-card)' }}>
+          <div className="flex items-center gap-0.5 mb-0.5">
+            <div className="w-3.5 h-3.5 rounded bg-amber-50 flex items-center justify-center flex-shrink-0">
+              <FileText className="w-2 h-2 text-amber-600" />
+            </div>
+            <p className="text-[8px] text-neutral-500 leading-none truncate">AR</p>
+          </div>
+          <p className="text-[11px] font-bold text-amber-600 truncate">{formatCurrency(summary.arOutstanding)}</p>
         </div>
-        <div className="bg-white rounded-xl border border-neutral-100 p-4">
-          <p className="text-xs text-neutral-500 mb-1">Bank Balance</p>
-          <p className="text-xl font-bold text-blue-600">{formatCurrency(summary.bankBalance)}</p>
-          {summary.unmatchedCount > 0 && (
-            <p className="text-xs text-amber-600 mt-1">{summary.unmatchedCount} unmatched</p>
-          )}
+        <div className="bg-white rounded-lg p-1 overflow-hidden col-span-3 sm:col-span-1" style={{ boxShadow: 'var(--shadow-card)' }}>
+          <div className="flex items-center gap-0.5 mb-0.5">
+            <div className="w-3.5 h-3.5 rounded bg-[#476E66]/10 flex items-center justify-center flex-shrink-0">
+              <Wallet className="w-2 h-2 text-[#476E66]" />
+            </div>
+            <p className="text-[8px] text-neutral-500 leading-none truncate">Bank</p>
+          </div>
+          <div className="flex items-center gap-1">
+            <p className="text-[11px] font-bold text-[#476E66] truncate">{formatCurrency(summary.bankBalance)}</p>
+            {summary.unmatchedCount > 0 && (
+              <span className="text-[8px] text-amber-600">({summary.unmatchedCount})</span>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 p-1 bg-neutral-100 rounded-lg w-fit">
+      {/* Tabs - Compact */}
+      <div className="flex gap-0.5 p-0.5 bg-neutral-100 rounded-lg overflow-x-auto scrollbar-hide">
         {[
-          { key: 'pnl', label: 'Profit & Loss' },
-          { key: 'accounts', label: 'Bank Accounts' },
-          { key: 'reconciliation', label: 'Reconciliation' },
-          { key: 'transactions', label: 'Transactions' },
-          { key: 'reports', label: 'Reports' },
-          { key: 'taxreports', label: 'Tax Reports' },
+          { key: 'pnl', label: 'P&L', fullLabel: 'Profit & Loss' },
+          { key: 'accounts', label: 'Banks', fullLabel: 'Bank Accounts' },
+          { key: 'reconciliation', label: 'Recon', fullLabel: 'Reconciliation' },
+          { key: 'transactions', label: 'Trans', fullLabel: 'Transactions' },
+          { key: 'reports', label: 'Reports', fullLabel: 'Reports' },
+          { key: 'taxreports', label: 'Tax', fullLabel: 'Tax Reports' },
         ].map(tab => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key as FinancialTab)}
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+            className={`px-2 py-1 rounded-md text-[10px] font-medium transition-colors whitespace-nowrap ${
               activeTab === tab.key ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-600 hover:text-neutral-900'
             }`}
           >
-            {tab.label}
+            <span className="sm:hidden">{tab.label}</span>
+            <span className="hidden sm:inline">{tab.fullLabel}</span>
           </button>
         ))}
       </div>
@@ -393,30 +422,30 @@ function ProfitLossTab({ monthlyData, payrollData, formatCurrency }: {
   }), [monthlyData, payrollData]);
 
   return (
-    <div className="bg-white rounded-xl border border-neutral-100 overflow-hidden">
-      <div className="px-6 py-4 border-b border-neutral-100 flex items-center justify-between">
-        <h3 className="font-semibold text-neutral-900">Profit & Loss Statement</h3>
-        <span className="text-sm text-neutral-500">Last 12 months</span>
+    <div className="bg-white rounded-lg overflow-hidden" style={{ boxShadow: 'var(--shadow-card)' }}>
+      <div className="px-2.5 py-1.5 border-b border-neutral-100 flex items-center justify-between">
+        <h3 className="text-xs font-semibold text-neutral-900">Profit & Loss Statement</h3>
+        <span className="text-[9px] text-neutral-500">Last 12 months</span>
       </div>
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full">
           <thead className="bg-neutral-50 border-b border-neutral-100">
             <tr>
-              <th className="text-left px-6 py-3 font-semibold text-neutral-700">Month</th>
-              <th className="text-right px-6 py-3 font-semibold text-neutral-700">Revenue</th>
-              <th className="text-right px-6 py-3 font-semibold text-neutral-700">Expenses</th>
-              <th className="text-right px-6 py-3 font-semibold text-neutral-700">Payroll</th>
-              <th className="text-right px-6 py-3 font-semibold text-neutral-700">Net Profit</th>
+              <th className="text-left px-2 py-1 text-[10px] font-medium text-neutral-600 uppercase tracking-wide">Month</th>
+              <th className="text-right px-2 py-1 text-[10px] font-medium text-neutral-600 uppercase tracking-wide">Revenue</th>
+              <th className="text-right px-2 py-1 text-[10px] font-medium text-neutral-600 uppercase tracking-wide">Expenses</th>
+              <th className="text-right px-2 py-1 text-[10px] font-medium text-neutral-600 uppercase tracking-wide hidden sm:table-cell">Payroll</th>
+              <th className="text-right px-2 py-1 text-[10px] font-medium text-neutral-600 uppercase tracking-wide">Net Profit</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-neutral-100">
+          <tbody className="divide-y divide-neutral-50">
             {monthlyData.map((month, idx) => (
-              <tr key={idx} className="hover:bg-neutral-50">
-                <td className="px-6 py-3 font-medium text-neutral-900">{month.month}</td>
-                <td className="px-6 py-3 text-right text-emerald-600">{formatCurrency(month.revenue)}</td>
-                <td className="px-6 py-3 text-right text-red-600">{formatCurrency(month.expenses)}</td>
-                <td className="px-6 py-3 text-right text-orange-600">{formatCurrency(month.payroll)}</td>
-                <td className={`px-6 py-3 text-right font-semibold ${month.profit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+              <tr key={idx} className="hover:bg-neutral-50 transition-colors">
+                <td className="px-2 py-1.5 text-xs font-medium text-neutral-900">{month.month}</td>
+                <td className="px-2 py-1.5 text-right text-xs text-[#476E66]">{formatCurrency(month.revenue)}</td>
+                <td className="px-2 py-1.5 text-right text-xs text-red-600">{formatCurrency(month.expenses)}</td>
+                <td className="px-2 py-1.5 text-right text-xs text-amber-600 hidden sm:table-cell">{formatCurrency(month.payroll)}</td>
+                <td className={`px-2 py-1.5 text-right text-xs font-semibold ${month.profit >= 0 ? 'text-[#476E66]' : 'text-red-600'}`}>
                   {formatCurrency(month.profit)}
                 </td>
               </tr>
@@ -424,11 +453,11 @@ function ProfitLossTab({ monthlyData, payrollData, formatCurrency }: {
           </tbody>
           <tfoot className="bg-neutral-100 border-t-2 border-neutral-200">
             <tr className="font-bold">
-              <td className="px-6 py-4 text-neutral-900">Total (YTD)</td>
-              <td className="px-6 py-4 text-right text-emerald-700">{formatCurrency(totals.revenue)}</td>
-              <td className="px-6 py-4 text-right text-red-700">{formatCurrency(totals.expenses)}</td>
-              <td className="px-6 py-4 text-right text-orange-700">{formatCurrency(totals.payroll)}</td>
-              <td className={`px-6 py-4 text-right ${totals.profit >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
+              <td className="px-2 py-2 text-xs text-neutral-900">Total (YTD)</td>
+              <td className="px-2 py-2 text-right text-xs text-[#476E66]">{formatCurrency(totals.revenue)}</td>
+              <td className="px-2 py-2 text-right text-xs text-red-600">{formatCurrency(totals.expenses)}</td>
+              <td className="px-2 py-2 text-right text-xs text-amber-600 hidden sm:table-cell">{formatCurrency(totals.payroll)}</td>
+              <td className={`px-2 py-2 text-right text-xs ${totals.profit >= 0 ? 'text-[#476E66]' : 'text-red-600'}`}>
                 {formatCurrency(totals.profit)}
               </td>
             </tr>
@@ -454,58 +483,59 @@ function BankAccountsTab({ accounts, onEdit, onRefresh, formatCurrency, companyI
   };
 
   return (
-    <div className="bg-white rounded-xl border border-neutral-100 overflow-hidden">
-      <div className="px-6 py-4 border-b border-neutral-100">
-        <h3 className="font-semibold text-neutral-900">Bank Accounts</h3>
+    <div className="bg-white rounded-lg overflow-hidden" style={{ boxShadow: 'var(--shadow-card)' }}>
+      <div className="px-2.5 py-1.5 border-b border-neutral-100">
+        <h3 className="text-xs font-semibold text-neutral-900">Bank Accounts</h3>
       </div>
       {accounts.length === 0 ? (
-        <div className="p-12 text-center">
-          <Building2 className="w-12 h-12 text-neutral-300 mx-auto mb-4" />
-          <h3 className="font-semibold text-neutral-900 mb-2">No bank accounts</h3>
-          <p className="text-sm text-neutral-500">Add a bank account to start reconciling transactions</p>
+        <div className="p-6 text-center">
+          <Building2 className="w-8 h-8 text-neutral-300 mx-auto mb-2" />
+          <h3 className="text-xs font-semibold text-neutral-900 mb-0.5">No bank accounts</h3>
+          <p className="text-[10px] text-neutral-500">Add a bank account to start reconciling transactions</p>
         </div>
       ) : (
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto">
+        <table className="w-full min-w-[600px]">
           <thead className="bg-neutral-50 border-b border-neutral-100">
             <tr>
-              <th className="text-left px-6 py-3 font-semibold text-neutral-700">Account</th>
-              <th className="text-left px-6 py-3 font-semibold text-neutral-700">Bank</th>
-              <th className="text-left px-6 py-3 font-semibold text-neutral-700">Account #</th>
-              <th className="text-left px-6 py-3 font-semibold text-neutral-700">Type</th>
-              <th className="text-right px-6 py-3 font-semibold text-neutral-700">Balance</th>
-              <th className="text-right px-6 py-3 font-semibold text-neutral-700">Actions</th>
+              <th className="text-left px-2 py-1 text-[10px] font-medium text-neutral-600 uppercase tracking-wide">Account</th>
+              <th className="text-left px-2 py-1 text-[10px] font-medium text-neutral-600 uppercase tracking-wide hidden md:table-cell">Bank</th>
+              <th className="text-left px-2 py-1 text-[10px] font-medium text-neutral-600 uppercase tracking-wide hidden sm:table-cell">Account #</th>
+              <th className="text-left px-2 py-1 text-[10px] font-medium text-neutral-600 uppercase tracking-wide">Type</th>
+              <th className="text-right px-2 py-1 text-[10px] font-medium text-neutral-600 uppercase tracking-wide">Balance</th>
+              <th className="text-right px-2 py-1 text-[10px] font-medium text-neutral-600 uppercase tracking-wide">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-neutral-100">
+          <tbody className="divide-y divide-neutral-50">
             {accounts.map(acc => (
-              <tr key={acc.id} className="hover:bg-neutral-50">
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
-                      <CreditCard className="w-5 h-5 text-blue-600" />
+              <tr key={acc.id} className="hover:bg-neutral-50 transition-colors">
+                <td className="px-2 py-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-7 h-7 rounded-lg bg-[#476E66]/10 flex items-center justify-center">
+                      <CreditCard className="w-3.5 h-3.5 text-[#476E66]" />
                     </div>
-                    <span className="font-medium text-neutral-900">{acc.account_name}</span>
+                    <span className="text-xs font-medium text-neutral-900">{acc.account_name}</span>
                   </div>
                 </td>
-                <td className="px-6 py-4 text-neutral-600">{acc.bank_name || '-'}</td>
-                <td className="px-6 py-4 text-neutral-600 font-mono">
+                <td className="px-2 py-1.5 text-xs text-neutral-600 hidden md:table-cell">{acc.bank_name || '-'}</td>
+                <td className="px-2 py-1.5 text-xs text-neutral-600 font-mono hidden sm:table-cell">
                   {acc.account_number ? `****${acc.account_number.slice(-4)}` : '-'}
                 </td>
-                <td className="px-6 py-4">
-                  <span className="px-2 py-1 bg-neutral-100 text-neutral-600 rounded text-xs capitalize">
+                <td className="px-2 py-1.5">
+                  <span className="px-1.5 py-0.5 bg-neutral-100 text-neutral-600 rounded text-[10px] capitalize">
                     {acc.account_type}
                   </span>
                 </td>
-                <td className="px-6 py-4 text-right font-semibold text-neutral-900">
+                <td className="px-2 py-1.5 text-right text-xs font-semibold text-[#476E66]">
                   {formatCurrency(acc.balance)}
                 </td>
-                <td className="px-6 py-4 text-right">
-                  <div className="flex items-center justify-end gap-2">
-                    <button onClick={() => onEdit(acc)} className="p-1.5 hover:bg-neutral-100 rounded text-neutral-500 hover:text-neutral-700">
-                      <Edit2 className="w-4 h-4" />
+                <td className="px-2 py-1.5 text-right">
+                  <div className="flex items-center justify-end gap-0.5">
+                    <button onClick={() => onEdit(acc)} className="p-0.5 hover:bg-neutral-100 rounded text-neutral-500 hover:text-neutral-700">
+                      <Edit2 className="w-3 h-3" />
                     </button>
-                    <button onClick={() => handleDelete(acc.id)} className="p-1.5 hover:bg-red-50 rounded text-neutral-500 hover:text-red-600">
-                      <Trash2 className="w-4 h-4" />
+                    <button onClick={() => handleDelete(acc.id)} className="p-0.5 hover:bg-red-50 rounded text-neutral-500 hover:text-red-600">
+                      <Trash2 className="w-3 h-3" />
                     </button>
                   </div>
                 </td>
@@ -513,6 +543,7 @@ function BankAccountsTab({ accounts, onEdit, onRefresh, formatCurrency, companyI
             ))}
           </tbody>
         </table>
+        </div>
       )}
     </div>
   );
@@ -651,21 +682,21 @@ function ReconciliationTab({ bankTransactions, platformTransactions, onRefresh, 
   };
 
   return (
-    <div className="space-y-6">
-      {/* Upload Section */}
-      <div className="bg-white rounded-xl border border-neutral-100 p-6">
-        <div className="flex items-center justify-between mb-4">
+    <div className="space-y-3">
+      {/* Upload Section - Compact */}
+      <div className="bg-white rounded-lg p-3" style={{ boxShadow: 'var(--shadow-card)' }}>
+        <div className="flex items-center justify-between mb-2">
           <div>
-            <h3 className="font-semibold text-neutral-900">Import Bank Statement</h3>
-            <p className="text-sm text-neutral-500">Upload CSV or PDF bank statements to reconcile</p>
+            <h3 className="text-sm font-semibold text-neutral-900">Import Bank Statement</h3>
+            <p className="text-[10px] text-neutral-500">Upload CSV or PDF to reconcile</p>
           </div>
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium disabled:opacity-50"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54] text-xs font-medium disabled:opacity-50"
           >
-            <Upload className="w-4 h-4" />
-            {uploading ? 'Uploading...' : 'Upload Statement'}
+            <Upload className="w-3 h-3" />
+            {uploading ? 'Uploading...' : 'Upload'}
           </button>
           <input
             ref={fileInputRef}
@@ -676,70 +707,71 @@ function ReconciliationTab({ bankTransactions, platformTransactions, onRefresh, 
           />
         </div>
         
-        <div className="grid grid-cols-3 gap-4 text-center">
-          <div className="p-4 bg-amber-50 rounded-lg">
-            <p className="text-2xl font-bold text-amber-700">{unmatchedBank.length}</p>
-            <p className="text-sm text-amber-600">Unmatched Bank Txns</p>
+        {/* Stats Cards - Brand Colors */}
+        <div className="grid grid-cols-3 gap-2 text-center">
+          <div className="p-2 bg-amber-50/50 rounded-lg border border-amber-100">
+            <p className="text-base font-bold text-amber-700">{unmatchedBank.length}</p>
+            <p className="text-[9px] text-amber-600 leading-tight">Unmatched Bank</p>
           </div>
-          <div className="p-4 bg-emerald-50 rounded-lg">
-            <p className="text-2xl font-bold text-emerald-700">{matchedBank.length}</p>
-            <p className="text-sm text-emerald-600">Matched</p>
+          <div className="p-2 bg-[#476E66]/5 rounded-lg border border-[#476E66]/20">
+            <p className="text-base font-bold text-[#476E66]">{matchedBank.length}</p>
+            <p className="text-[9px] text-[#476E66] leading-tight">Matched</p>
           </div>
-          <div className="p-4 bg-blue-50 rounded-lg">
-            <p className="text-2xl font-bold text-blue-700">{unmatchedPlatform.length}</p>
-            <p className="text-sm text-blue-600">Unmatched Platform Txns</p>
+          <div className="p-2 bg-neutral-50 rounded-lg border border-neutral-200">
+            <p className="text-base font-bold text-neutral-700">{unmatchedPlatform.length}</p>
+            <p className="text-[9px] text-neutral-500 leading-tight">Unmatched Platform</p>
           </div>
         </div>
       </div>
 
-      {/* Two-Column Reconciliation View */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Two-Column Reconciliation View - Compact */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         {/* Bank Transactions Column */}
-        <div className="bg-white rounded-xl border border-neutral-100 overflow-hidden">
-          <div className="px-6 py-4 border-b border-neutral-100 bg-blue-50">
-            <h3 className="font-semibold text-blue-900">Bank Transactions</h3>
-            <p className="text-xs text-blue-600">From uploaded statements</p>
+        <div className="bg-white rounded-lg overflow-hidden" style={{ boxShadow: 'var(--shadow-card)' }}>
+          <div className="px-3 py-2 border-b border-neutral-100 bg-[#476E66]/5">
+            <h3 className="text-xs font-semibold text-[#476E66]">Bank Transactions</h3>
+            <p className="text-[9px] text-neutral-500">From uploaded statements</p>
           </div>
-          <div className="max-h-[500px] overflow-y-auto">
+          <div className="max-h-[350px] overflow-y-auto">
             {bankTransactions.length === 0 ? (
-              <div className="p-8 text-center text-neutral-500">
-                <p>No bank transactions imported yet</p>
-                <p className="text-sm mt-1">Upload a bank statement to get started</p>
+              <div className="p-6 text-center text-neutral-500">
+                <p className="text-xs">No bank transactions imported yet</p>
+                <p className="text-[10px] mt-1">Upload a bank statement to get started</p>
               </div>
             ) : (
-              <div className="divide-y divide-neutral-100">
+              <div className="divide-y divide-neutral-50">
                 {bankTransactions.map(txn => (
                   <div 
                     key={txn.id} 
-                    className={`p-4 hover:bg-neutral-50 cursor-pointer transition-colors ${
-                      selectedBankTxn === txn.id ? 'bg-blue-50 border-l-4 border-blue-500' : ''
-                    } ${txn.match_status === 'matched' ? 'bg-emerald-50/50' : ''}`}
+                    className={`px-3 py-2 hover:bg-neutral-50 cursor-pointer transition-colors ${
+                      selectedBankTxn === txn.id ? 'bg-[#476E66]/10 border-l-2 border-[#476E66]' : ''
+                    } ${txn.match_status === 'matched' ? 'bg-[#476E66]/5' : ''}`}
                     onClick={() => setSelectedBankTxn(selectedBankTxn === txn.id ? null : txn.id)}
                   >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-medium text-neutral-900 truncate flex-1">
+                    <div className="flex items-center justify-between mb-0.5">
+                      <span className="text-xs font-medium text-neutral-900 truncate flex-1">
                         {txn.description}
                       </span>
-                      <span className={`font-semibold ml-2 ${txn.type === 'credit' ? 'text-emerald-600' : 'text-red-600'}`}>
+                      <span className={`text-xs font-semibold ml-2 ${txn.type === 'credit' ? 'text-[#476E66]' : 'text-red-600'}`}>
                         {txn.type === 'credit' ? '+' : '-'}{formatCurrency(txn.amount)}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-xs text-neutral-500">{new Date(txn.transaction_date).toLocaleDateString()}</span>
+                      <span className="text-[10px] text-neutral-500">{new Date(txn.transaction_date).toLocaleDateString()}</span>
                       {txn.match_status === 'matched' ? (
-                        <div className="flex items-center gap-2">
-                          <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded text-xs flex items-center gap-1">
-                            <Check className="w-3 h-3" /> Matched
+                        <div className="flex items-center gap-1.5">
+                          <span className="px-1.5 py-0.5 bg-[#476E66]/10 text-[#476E66] rounded text-[10px] flex items-center gap-0.5">
+                            <Check className="w-2.5 h-2.5" /> Matched
                           </span>
                           <button 
                             onClick={(e) => { e.stopPropagation(); handleUnmatch(txn.id); }}
-                            className="text-xs text-red-600 hover:underline"
+                            className="text-[10px] text-red-600 hover:underline"
                           >
                             Unmatch
                           </button>
                         </div>
                       ) : (
-                        <span className="px-2 py-0.5 bg-amber-100 text-amber-700 rounded text-xs">
+                        <span className="px-1.5 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 rounded text-[10px]">
                           Unmatched
                         </span>
                       )}
@@ -752,18 +784,18 @@ function ReconciliationTab({ bankTransactions, platformTransactions, onRefresh, 
         </div>
 
         {/* Platform Transactions Column */}
-        <div className="bg-white rounded-xl border border-neutral-100 overflow-hidden">
-          <div className="px-6 py-4 border-b border-neutral-100 bg-emerald-50">
-            <h3 className="font-semibold text-emerald-900">Platform Transactions</h3>
-            <p className="text-xs text-emerald-600">Invoices & Expenses from Billdora</p>
+        <div className="bg-white rounded-lg overflow-hidden" style={{ boxShadow: 'var(--shadow-card)' }}>
+          <div className="px-3 py-2 border-b border-neutral-100 bg-neutral-50">
+            <h3 className="text-xs font-semibold text-neutral-900">Platform Transactions</h3>
+            <p className="text-[9px] text-neutral-500">Invoices & Expenses from Billdora</p>
           </div>
-          <div className="max-h-[500px] overflow-y-auto">
+          <div className="max-h-[350px] overflow-y-auto">
             {platformTransactions.length === 0 ? (
-              <div className="p-8 text-center text-neutral-500">
-                <p>No transactions in platform yet</p>
+              <div className="p-6 text-center text-neutral-500">
+                <p className="text-xs">No transactions in platform yet</p>
               </div>
             ) : (
-              <div className="divide-y divide-neutral-100">
+              <div className="divide-y divide-neutral-50">
                 {platformTransactions.map(txn => {
                   const isMatched = bankTransactions.some(bt => 
                     (bt.matched_expense_id === txn.id || bt.matched_invoice_id === txn.id) && bt.match_status === 'matched'
@@ -771,38 +803,38 @@ function ReconciliationTab({ bankTransactions, platformTransactions, onRefresh, 
                   return (
                     <div 
                       key={txn.id} 
-                      className={`p-4 hover:bg-neutral-50 transition-colors ${isMatched ? 'bg-emerald-50/50' : ''}`}
+                      className={`px-3 py-2 hover:bg-neutral-50 transition-colors ${isMatched ? 'bg-[#476E66]/5' : ''}`}
                     >
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-medium text-neutral-900 truncate flex-1">
+                      <div className="flex items-center justify-between mb-0.5">
+                        <span className="text-xs font-medium text-neutral-900 truncate flex-1">
                           {txn.description}
                         </span>
-                        <span className={`font-semibold ml-2 ${txn.type === 'income' ? 'text-emerald-600' : 'text-red-600'}`}>
+                        <span className={`text-xs font-semibold ml-2 ${txn.type === 'income' ? 'text-[#476E66]' : 'text-red-600'}`}>
                           {txn.type === 'income' ? '+' : '-'}{formatCurrency(txn.amount)}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-neutral-500">{new Date(txn.date).toLocaleDateString()}</span>
-                          <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
-                            txn.source === 'invoice' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] text-neutral-500">{new Date(txn.date).toLocaleDateString()}</span>
+                          <span className={`px-1 py-0.5 rounded text-[9px] font-medium ${
+                            txn.source === 'invoice' ? 'bg-[#476E66]/10 text-[#476E66]' : 'bg-amber-50 text-amber-700'
                           }`}>
                             {txn.source === 'invoice' ? 'Invoice' : 'Expense'}
                           </span>
                         </div>
                         {isMatched ? (
-                          <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded text-xs flex items-center gap-1">
-                            <Check className="w-3 h-3" /> Matched
+                          <span className="px-1.5 py-0.5 bg-[#476E66]/10 text-[#476E66] rounded text-[10px] flex items-center gap-0.5">
+                            <Check className="w-2.5 h-2.5" /> Matched
                           </span>
                         ) : selectedBankTxn ? (
                           <button
                             onClick={() => handleMatch(selectedBankTxn, txn)}
-                            className="px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 flex items-center gap-1"
+                            className="px-2 py-1 bg-[#476E66] text-white rounded text-[10px] hover:bg-[#3A5B54] flex items-center gap-0.5"
                           >
-                            <Link2 className="w-3 h-3" /> Match
+                            <Link2 className="w-2.5 h-2.5" /> Match
                           </button>
                         ) : (
-                          <span className="px-2 py-0.5 bg-neutral-100 text-neutral-500 rounded text-xs">
+                          <span className="px-1.5 py-0.5 bg-neutral-100 text-neutral-500 rounded text-[10px]">
                             Select bank txn
                           </span>
                         )}
@@ -817,7 +849,7 @@ function ReconciliationTab({ bankTransactions, platformTransactions, onRefresh, 
       </div>
 
       {selectedBankTxn && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-blue-600 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-4">
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-[#476E66] text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-3 text-xs">
           <span>Select a platform transaction to match</span>
           <button onClick={() => setSelectedBankTxn(null)} className="px-3 py-1 bg-white/20 rounded hover:bg-white/30">
             Cancel
@@ -828,7 +860,7 @@ function ReconciliationTab({ bankTransactions, platformTransactions, onRefresh, 
   );
 }
 
-// Transactions Tab - Full Ledger
+// Transactions Tab - Full Ledger - Optimized
 function TransactionsTab({ transactions, searchTerm, setSearchTerm, formatCurrency }: {
   transactions: PlatformTransaction[];
   searchTerm: string;
@@ -839,48 +871,57 @@ function TransactionsTab({ transactions, searchTerm, setSearchTerm, formatCurren
     t.description.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Helper to format date safely
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return 'N/A';
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
+
   return (
-    <div className="bg-white rounded-xl border border-neutral-100 overflow-hidden">
-      <div className="px-6 py-4 border-b border-neutral-100 flex items-center justify-between">
-        <h3 className="font-semibold text-neutral-900">All Transactions</h3>
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+    <div className="bg-white rounded-lg overflow-hidden" style={{ boxShadow: 'var(--shadow-card)' }}>
+      {/* Header - Compact */}
+      <div className="px-3 py-2 border-b border-neutral-100 flex items-center justify-between gap-2">
+        <h3 className="text-xs font-semibold text-neutral-900">All Transactions</h3>
+        <div className="relative flex-shrink-0">
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-neutral-400" />
           <input
             type="text"
             placeholder="Search..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9 pr-4 py-2 border border-neutral-200 rounded-lg text-sm focus:ring-2 focus:ring-[#476E66] focus:border-transparent outline-none"
+            className="pl-7 pr-2 py-1 w-28 border border-neutral-200 rounded-lg text-[10px] focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none"
           />
         </div>
       </div>
+      {/* Table with horizontal scroll */}
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full min-w-[400px]">
           <thead className="bg-neutral-50 border-b border-neutral-100">
             <tr>
-              <th className="text-left px-6 py-3 font-semibold text-neutral-700">Date</th>
-              <th className="text-left px-6 py-3 font-semibold text-neutral-700">Description</th>
-              <th className="text-left px-6 py-3 font-semibold text-neutral-700">Type</th>
-              <th className="text-left px-6 py-3 font-semibold text-neutral-700">Source</th>
-              <th className="text-right px-6 py-3 font-semibold text-neutral-700">Amount</th>
+              <th className="text-left px-2 py-1.5 text-[10px] font-medium text-neutral-600 uppercase tracking-wide">Date</th>
+              <th className="text-left px-2 py-1.5 text-[10px] font-medium text-neutral-600 uppercase tracking-wide">Description</th>
+              <th className="text-left px-2 py-1.5 text-[10px] font-medium text-neutral-600 uppercase tracking-wide">Type</th>
+              <th className="text-left px-2 py-1.5 text-[10px] font-medium text-neutral-600 uppercase tracking-wide hidden sm:table-cell">Source</th>
+              <th className="text-right px-2 py-1.5 text-[10px] font-medium text-neutral-600 uppercase tracking-wide">Amount</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-neutral-100">
+          <tbody className="divide-y divide-neutral-50">
             {filtered.map(txn => (
-              <tr key={txn.id} className="hover:bg-neutral-50">
-                <td className="px-6 py-3 text-neutral-600">{new Date(txn.date).toLocaleDateString()}</td>
-                <td className="px-6 py-3 text-neutral-900 font-medium">{txn.description}</td>
-                <td className="px-6 py-3">
-                  <span className={`px-2 py-1 rounded text-xs font-medium ${
-                    txn.type === 'income' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
+              <tr key={txn.id} className="hover:bg-neutral-50 transition-colors">
+                <td className="px-2 py-1.5 text-[10px] text-neutral-500 whitespace-nowrap">{formatDate(txn.date)}</td>
+                <td className="px-2 py-1.5 text-xs text-neutral-900 font-medium truncate max-w-[120px]">{txn.description}</td>
+                <td className="px-2 py-1.5">
+                  <span className={`px-1.5 py-0.5 rounded text-[9px] font-medium ${
+                    txn.type === 'income' ? 'bg-[#476E66]/10 text-[#476E66]' : 'bg-amber-50 text-amber-700 border border-amber-200'
                   }`}>
                     {txn.type === 'income' ? 'Income' : 'Expense'}
                   </span>
                 </td>
-                <td className="px-6 py-3">
-                  <span className="text-xs text-neutral-500 capitalize">{txn.source.replace('_', ' ')}</span>
+                <td className="px-2 py-1.5 hidden sm:table-cell">
+                  <span className="text-[10px] text-neutral-500 capitalize">{txn.source.replace('_', ' ')}</span>
                 </td>
-                <td className={`px-6 py-3 text-right font-semibold ${txn.type === 'income' ? 'text-emerald-600' : 'text-red-600'}`}>
+                <td className={`px-2 py-1.5 text-right text-xs font-semibold whitespace-nowrap ${txn.type === 'income' ? 'text-[#476E66]' : 'text-red-600'}`}>
                   {txn.type === 'income' ? '+' : '-'}{formatCurrency(txn.amount)}
                 </td>
               </tr>
@@ -888,7 +929,7 @@ function TransactionsTab({ transactions, searchTerm, setSearchTerm, formatCurren
           </tbody>
         </table>
         {filtered.length === 0 && (
-          <div className="p-8 text-center text-neutral-500">No transactions found</div>
+          <div className="p-6 text-center text-neutral-500 text-xs">No transactions found</div>
         )}
       </div>
     </div>
@@ -1038,31 +1079,31 @@ function ReportsTab({ monthlyData, invoices, expenses, companyExpenses, payrollD
   const reports = [
     {
       id: 'pnl',
-      name: 'Profit & Loss Statement',
-      description: 'Income statement showing revenue, expenses, and net profit over time',
+      name: 'Profit & Loss',
+      description: 'Revenue, expenses, and net profit',
       icon: BarChart3,
-      color: 'bg-emerald-50 text-emerald-600'
+      color: 'bg-[#476E66]/10 text-[#476E66]'
     },
     {
       id: 'ar',
-      name: 'Accounts Receivable Report',
-      description: 'Outstanding invoices and aging analysis',
+      name: 'Accounts Receivable',
+      description: 'Outstanding invoices & aging',
       icon: FileText,
-      color: 'bg-blue-50 text-blue-600'
+      color: 'bg-[#476E66]/10 text-[#476E66]'
     },
     {
       id: 'expense',
       name: 'Expense Report',
-      description: 'Detailed breakdown of all expenses by category',
+      description: 'Expenses by category',
       icon: ClipboardList,
-      color: 'bg-orange-50 text-orange-600'
+      color: 'bg-amber-50 text-amber-600'
     },
     {
       id: 'cashflow',
-      name: 'Cash Flow Summary',
-      description: 'Overview of cash inflows and outflows',
+      name: 'Cash Flow',
+      description: 'Cash inflows & outflows',
       icon: DollarSign,
-      color: 'bg-purple-50 text-purple-600'
+      color: 'bg-[#476E66]/10 text-[#476E66]'
     }
   ];
 
@@ -1440,38 +1481,40 @@ function ReportsTab({ monthlyData, invoices, expenses, companyExpenses, payrollD
   };
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white rounded-xl border border-neutral-100 p-6">
-        <h3 className="font-semibold text-neutral-900 mb-2">Generate Financial Reports</h3>
-        <p className="text-sm text-neutral-500 mb-6">Select a report type to generate. Reports will open in a new window for printing or saving as PDF.</p>
+    <div className="space-y-2">
+      {/* Reports Container - Compact */}
+      <div className="bg-white rounded-lg p-3" style={{ boxShadow: 'var(--shadow-card)' }}>
+        <h3 className="text-sm font-semibold text-neutral-900 mb-1">Generate Reports</h3>
+        <p className="text-[10px] text-neutral-500 mb-3">Select a report type. Opens in new window for printing/PDF.</p>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Report Cards - Compact Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {reports.map(report => (
             <div 
               key={report.id}
-              className="border border-neutral-200 rounded-xl p-5 hover:border-[#476E66] hover:shadow-sm transition-all cursor-pointer group"
+              className="border border-neutral-200 rounded-lg p-2.5 hover:border-[#476E66] hover:shadow-sm transition-all cursor-pointer group"
               onClick={() => generateReport(report.id)}
             >
-              <div className="flex items-start gap-4">
-                <div className={`w-12 h-12 rounded-xl ${report.color} flex items-center justify-center flex-shrink-0`}>
-                  <report.icon className="w-6 h-6" />
+              <div className="flex items-center gap-2">
+                <div className={`w-8 h-8 rounded-lg ${report.color} flex items-center justify-center flex-shrink-0`}>
+                  <report.icon className="w-4 h-4" />
                 </div>
-                <div className="flex-1">
-                  <h4 className="font-semibold text-neutral-900 group-hover:text-[#476E66] transition-colors">
+                <div className="flex-1 min-w-0">
+                  <h4 className="text-xs font-semibold text-neutral-900 group-hover:text-[#476E66] transition-colors truncate">
                     {report.name}
                   </h4>
-                  <p className="text-sm text-neutral-500 mt-1">{report.description}</p>
+                  <p className="text-[9px] text-neutral-500 truncate">{report.description}</p>
                 </div>
                 <button
                   disabled={generatingReport === report.id}
-                  className="flex items-center gap-2 px-3 py-2 bg-neutral-100 text-neutral-700 rounded-lg hover:bg-[#476E66] hover:text-white transition-colors text-sm font-medium disabled:opacity-50"
+                  className="flex items-center gap-1 px-2 py-1 bg-neutral-100 text-neutral-700 rounded-md hover:bg-[#476E66] hover:text-white transition-colors text-[10px] font-medium disabled:opacity-50 flex-shrink-0"
                 >
                   {generatingReport === report.id ? (
-                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <RefreshCw className="w-3 h-3 animate-spin" />
                   ) : (
-                    <Printer className="w-4 h-4" />
+                    <Printer className="w-3 h-3" />
                   )}
-                  Generate
+                  <span className="hidden sm:inline">Generate</span>
                 </button>
               </div>
             </div>
@@ -1479,12 +1522,12 @@ function ReportsTab({ monthlyData, invoices, expenses, companyExpenses, payrollD
         </div>
       </div>
 
-      <div className="bg-neutral-50 rounded-xl border border-neutral-200 p-6">
-        <h4 className="font-medium text-neutral-700 mb-2">💡 Tips</h4>
-        <ul className="text-sm text-neutral-600 space-y-1">
-          <li>• Click <strong>Generate</strong> to open a formatted report in a new window</li>
+      {/* Tips - Compact */}
+      <div className="bg-neutral-50 rounded-lg p-2.5" style={{ boxShadow: 'var(--shadow-card)' }}>
+        <h4 className="text-[10px] font-medium text-neutral-700 mb-1">💡 Tips</h4>
+        <ul className="text-[9px] text-neutral-600 space-y-0.5">
+          <li>• Click <strong>Generate</strong> to open a formatted report</li>
           <li>• Use <strong>Ctrl/Cmd + P</strong> to print or save as PDF</li>
-          <li>• Reports include all available data from your Billdora account</li>
         </ul>
       </div>
     </div>
@@ -1773,28 +1816,28 @@ function TaxReportsTab({ invoices, expenses, companyExpenses, payrollData, forma
   };
 
   const reports = [
-    { id: 'pnl', label: 'Profit & Loss', icon: BarChart3 },
-    { id: 'income', label: 'Income Summary', icon: TrendingUp },
-    { id: 'expense', label: 'Expense Summary', icon: TrendingDown },
-    { id: 'receivables', label: 'Outstanding Receivables', icon: FileText }
+    { id: 'pnl', label: 'P&L', icon: BarChart3 },
+    { id: 'income', label: 'Income', icon: TrendingUp },
+    { id: 'expense', label: 'Expense', icon: TrendingDown },
+    { id: 'receivables', label: 'Receivables', icon: FileText }
   ];
 
   return (
-    <div className="space-y-6">
-      {/* Period Selector */}
-      <div className="bg-white rounded-xl border border-neutral-100 p-6">
-        <div className="flex flex-wrap items-center justify-between gap-4">
+    <div className="space-y-2">
+      {/* Period Selector - Compact */}
+      <div className="bg-white rounded-lg p-3" style={{ boxShadow: 'var(--shadow-card)' }}>
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <h3 className="font-semibold text-neutral-900">CPA-Ready Tax Reports</h3>
-            <p className="text-sm text-neutral-500 mt-1">Generate quarterly or annual reports for tax preparation</p>
+            <h3 className="text-sm font-semibold text-neutral-900">Tax Reports</h3>
+            <p className="text-[10px] text-neutral-500">Quarterly or annual for tax prep</p>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="flex gap-1 p-1 bg-neutral-100 rounded-lg">
+          <div className="flex items-center gap-2">
+            <div className="flex gap-0.5 p-0.5 bg-neutral-100 rounded-lg">
               {(['Q1', 'Q2', 'Q3', 'Q4', 'Annual'] as const).map(period => (
                 <button
                   key={period}
                   onClick={() => setSelectedPeriod(period)}
-                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  className={`px-2 py-1 rounded-md text-[10px] font-medium transition-colors ${
                     selectedPeriod === period ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-600 hover:text-neutral-900'
                   }`}
                 >
@@ -1805,7 +1848,7 @@ function TaxReportsTab({ invoices, expenses, companyExpenses, payrollData, forma
             <select
               value={selectedYear}
               onChange={(e) => setSelectedYear(Number(e.target.value))}
-              className="px-3 py-2 border border-neutral-200 rounded-lg text-sm focus:ring-2 focus:ring-[#476E66] focus:border-transparent outline-none bg-white"
+              className="px-2 py-1 border border-neutral-200 rounded-lg text-xs focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none bg-white"
             >
               {[currentYear, currentYear - 1, currentYear - 2, currentYear - 3].map(yr => (
                 <option key={yr} value={yr}>{yr}</option>
@@ -1815,193 +1858,202 @@ function TaxReportsTab({ invoices, expenses, companyExpenses, payrollData, forma
         </div>
       </div>
 
-      {/* Report Type Tabs */}
-      <div className="flex gap-2 flex-wrap">
+      {/* Report Type Tabs - Compact Inline */}
+      <div className="flex gap-1 overflow-x-auto scrollbar-hide">
         {reports.map(report => (
           <button
             key={report.id}
             onClick={() => setActiveReport(report.id as any)}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
               activeReport === report.id 
                 ? 'bg-[#476E66] text-white' 
                 : 'bg-white border border-neutral-200 text-neutral-700 hover:border-[#476E66]'
             }`}
+            style={activeReport !== report.id ? { boxShadow: 'var(--shadow-card)' } : {}}
           >
-            <report.icon className="w-4 h-4" />
+            <report.icon className="w-3 h-3" />
             {report.label}
           </button>
         ))}
       </div>
 
-      {/* Report Content */}
-      <div className="bg-white rounded-xl border border-neutral-100 overflow-hidden">
-        <div className="px-6 py-4 border-b border-neutral-100 flex items-center justify-between">
+      {/* Report Content - Compact */}
+      <div className="bg-white rounded-lg overflow-hidden" style={{ boxShadow: 'var(--shadow-card)' }}>
+        <div className="px-3 py-2 border-b border-neutral-100 flex items-center justify-between">
           <div>
-            <h3 className="font-semibold text-neutral-900">
+            <h3 className="text-xs font-semibold text-neutral-900">
               {reports.find(r => r.id === activeReport)?.label} - {periodLabel}
             </h3>
-            <p className="text-xs text-neutral-500 mt-0.5">
-              {start.toLocaleDateString()} - {end.toLocaleDateString()}
+            <p className="text-[9px] text-neutral-500">
+              {start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             <button
               onClick={() => exportCSV(activeReport)}
-              className="flex items-center gap-1.5 px-3 py-1.5 border border-neutral-200 rounded-lg text-sm font-medium text-neutral-700 hover:bg-neutral-50"
+              className="flex items-center gap-1 px-2 py-1 border border-neutral-200 rounded-md text-[10px] font-medium text-neutral-700 hover:bg-neutral-50"
             >
-              <Download className="w-4 h-4" />
+              <Download className="w-3 h-3" />
               CSV
             </button>
             <button
               onClick={() => exportPDF(activeReport)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-[#476E66] text-white rounded-lg text-sm font-medium hover:bg-[#3A5B54]"
+              className="flex items-center gap-1 px-2 py-1 bg-[#476E66] text-white rounded-md text-[10px] font-medium hover:bg-[#3A5B54]"
             >
-              <Printer className="w-4 h-4" />
+              <Printer className="w-3 h-3" />
               PDF
             </button>
           </div>
         </div>
 
-        {/* P&L Report */}
+        {/* P&L Report - Compact */}
         {activeReport === 'pnl' && (
-          <div className="p-6">
-            <div className="grid grid-cols-3 gap-4 mb-6">
-              <div className="p-4 bg-emerald-50 rounded-lg text-center">
-                <p className="text-xs text-emerald-600 font-medium uppercase">Revenue</p>
-                <p className="text-2xl font-bold text-emerald-700 mt-1">{formatCurrency(pnlData.revenue)}</p>
+          <div className="p-3">
+            <div className="grid grid-cols-3 gap-2 mb-3">
+              <div className="p-2 bg-[#476E66]/10 rounded-lg text-center">
+                <p className="text-[9px] text-[#476E66] font-medium uppercase">Revenue</p>
+                <p className="text-sm font-bold text-[#476E66] mt-0.5">{formatCurrency(pnlData.revenue)}</p>
               </div>
-              <div className="p-4 bg-red-50 rounded-lg text-center">
-                <p className="text-xs text-red-600 font-medium uppercase">Expenses</p>
-                <p className="text-2xl font-bold text-red-700 mt-1">{formatCurrency(pnlData.totalExpenses)}</p>
+              <div className="p-2 bg-red-50 rounded-lg text-center">
+                <p className="text-[9px] text-red-600 font-medium uppercase">Expenses</p>
+                <p className="text-sm font-bold text-red-700 mt-0.5">{formatCurrency(pnlData.totalExpenses)}</p>
               </div>
-              <div className={`p-4 rounded-lg text-center ${pnlData.netProfit >= 0 ? 'bg-blue-50' : 'bg-orange-50'}`}>
-                <p className={`text-xs font-medium uppercase ${pnlData.netProfit >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>Net Profit</p>
-                <p className={`text-2xl font-bold mt-1 ${pnlData.netProfit >= 0 ? 'text-blue-700' : 'text-orange-700'}`}>{formatCurrency(pnlData.netProfit)}</p>
+              <div className={`p-2 rounded-lg text-center ${pnlData.netProfit >= 0 ? 'bg-[#476E66]/10' : 'bg-amber-50'}`}>
+                <p className={`text-[9px] font-medium uppercase ${pnlData.netProfit >= 0 ? 'text-[#476E66]' : 'text-amber-600'}`}>Net Profit</p>
+                <p className={`text-sm font-bold mt-0.5 ${pnlData.netProfit >= 0 ? 'text-[#476E66]' : 'text-amber-700'}`}>{formatCurrency(pnlData.netProfit)}</p>
               </div>
             </div>
-            <table className="w-full text-sm">
-              <thead className="bg-neutral-50">
-                <tr>
-                  <th className="text-left px-4 py-3 font-semibold text-neutral-700">Category</th>
-                  <th className="text-right px-4 py-3 font-semibold text-neutral-700">Amount</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-neutral-100">
-                <tr><td className="px-4 py-3">Revenue (Paid Invoices)</td><td className="px-4 py-3 text-right text-emerald-600 font-medium">{formatCurrency(pnlData.revenue)}</td></tr>
-                <tr><td className="px-4 py-3">Project Expenses</td><td className="px-4 py-3 text-right text-red-600">{formatCurrency(pnlData.projectExp)}</td></tr>
-                <tr><td className="px-4 py-3">Company/Overhead Expenses</td><td className="px-4 py-3 text-right text-red-600">{formatCurrency(pnlData.compExp)}</td></tr>
-                <tr><td className="px-4 py-3">Payroll</td><td className="px-4 py-3 text-right text-red-600">{formatCurrency(pnlData.payroll)}</td></tr>
-                <tr className="bg-neutral-50 font-semibold"><td className="px-4 py-3">Total Expenses</td><td className="px-4 py-3 text-right text-red-700">{formatCurrency(pnlData.totalExpenses)}</td></tr>
-                <tr className="bg-neutral-100 font-bold"><td className="px-4 py-3">Net Profit</td><td className={`px-4 py-3 text-right ${pnlData.netProfit >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>{formatCurrency(pnlData.netProfit)}</td></tr>
-              </tbody>
-            </table>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[300px]">
+                <thead className="bg-neutral-50">
+                  <tr>
+                    <th className="text-left px-2 py-1.5 text-[10px] font-medium text-neutral-600 uppercase tracking-wide">Category</th>
+                    <th className="text-right px-2 py-1.5 text-[10px] font-medium text-neutral-600 uppercase tracking-wide">Amount</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-neutral-50 text-xs">
+                  <tr><td className="px-2 py-1.5">Revenue (Paid Invoices)</td><td className="px-2 py-1.5 text-right text-[#476E66] font-medium">{formatCurrency(pnlData.revenue)}</td></tr>
+                  <tr><td className="px-2 py-1.5">Project Expenses</td><td className="px-2 py-1.5 text-right text-red-600">{formatCurrency(pnlData.projectExp)}</td></tr>
+                  <tr><td className="px-2 py-1.5">Company Expenses</td><td className="px-2 py-1.5 text-right text-red-600">{formatCurrency(pnlData.compExp)}</td></tr>
+                  <tr><td className="px-2 py-1.5">Payroll</td><td className="px-2 py-1.5 text-right text-red-600">{formatCurrency(pnlData.payroll)}</td></tr>
+                  <tr className="bg-neutral-50 font-semibold"><td className="px-2 py-1.5">Total Expenses</td><td className="px-2 py-1.5 text-right text-red-700">{formatCurrency(pnlData.totalExpenses)}</td></tr>
+                  <tr className="bg-neutral-100 font-bold"><td className="px-2 py-1.5">Net Profit</td><td className={`px-2 py-1.5 text-right ${pnlData.netProfit >= 0 ? 'text-[#476E66]' : 'text-red-700'}`}>{formatCurrency(pnlData.netProfit)}</td></tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 
-        {/* Income Summary */}
+        {/* Income Summary - Compact */}
         {activeReport === 'income' && (
-          <div className="p-6">
-            <div className="mb-6 p-4 bg-emerald-50 rounded-lg text-center">
-              <p className="text-xs text-emerald-600 font-medium uppercase">Total Income</p>
-              <p className="text-2xl font-bold text-emerald-700 mt-1">{formatCurrency(incomeByClient.reduce((s, c) => s + c.total, 0))}</p>
+          <div className="p-3">
+            <div className="mb-3 p-2 bg-[#476E66]/10 rounded-lg text-center">
+              <p className="text-[9px] text-[#476E66] font-medium uppercase">Total Income</p>
+              <p className="text-sm font-bold text-[#476E66] mt-0.5">{formatCurrency(incomeByClient.reduce((s, c) => s + c.total, 0))}</p>
             </div>
             {incomeByClient.length === 0 ? (
-              <div className="text-center py-12 text-neutral-500">No paid invoices in this period</div>
+              <div className="text-center py-6 text-neutral-500 text-xs">No paid invoices in this period</div>
             ) : (
-              <table className="w-full text-sm">
-                <thead className="bg-neutral-50">
-                  <tr>
-                    <th className="text-left px-4 py-3 font-semibold text-neutral-700">Client</th>
-                    <th className="text-right px-4 py-3 font-semibold text-neutral-700">Invoices</th>
-                    <th className="text-right px-4 py-3 font-semibold text-neutral-700">Total</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-neutral-100">
-                  {incomeByClient.map((client, idx) => (
-                    <tr key={idx} className="hover:bg-neutral-50">
-                      <td className="px-4 py-3 font-medium text-neutral-900">{client.name}</td>
-                      <td className="px-4 py-3 text-right text-neutral-600">{client.count}</td>
-                      <td className="px-4 py-3 text-right text-emerald-600 font-medium">{formatCurrency(client.total)}</td>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[300px]">
+                  <thead className="bg-neutral-50">
+                    <tr>
+                      <th className="text-left px-2 py-1.5 text-[10px] font-medium text-neutral-600 uppercase tracking-wide">Client</th>
+                      <th className="text-right px-2 py-1.5 text-[10px] font-medium text-neutral-600 uppercase tracking-wide">Inv.</th>
+                      <th className="text-right px-2 py-1.5 text-[10px] font-medium text-neutral-600 uppercase tracking-wide">Total</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-50 text-xs">
+                    {incomeByClient.map((client, idx) => (
+                      <tr key={idx} className="hover:bg-neutral-50">
+                        <td className="px-2 py-1.5 font-medium text-neutral-900 truncate max-w-[150px]">{client.name}</td>
+                        <td className="px-2 py-1.5 text-right text-neutral-600">{client.count}</td>
+                        <td className="px-2 py-1.5 text-right text-[#476E66] font-medium">{formatCurrency(client.total)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
         )}
 
-        {/* Expense Summary */}
+        {/* Expense Summary - Compact */}
         {activeReport === 'expense' && (
-          <div className="p-6">
-            <div className="mb-6 p-4 bg-red-50 rounded-lg text-center">
-              <p className="text-xs text-red-600 font-medium uppercase">Total Expenses</p>
-              <p className="text-2xl font-bold text-red-700 mt-1">{formatCurrency(expenseByCategory.reduce((s, [, amt]) => s + amt, 0))}</p>
+          <div className="p-3">
+            <div className="mb-3 p-2 bg-amber-50 rounded-lg text-center">
+              <p className="text-[9px] text-amber-600 font-medium uppercase">Total Expenses</p>
+              <p className="text-sm font-bold text-amber-700 mt-0.5">{formatCurrency(expenseByCategory.reduce((s, [, amt]) => s + amt, 0))}</p>
             </div>
             {expenseByCategory.length === 0 ? (
-              <div className="text-center py-12 text-neutral-500">No expenses in this period</div>
+              <div className="text-center py-6 text-neutral-500 text-xs">No expenses in this period</div>
             ) : (
-              <table className="w-full text-sm">
-                <thead className="bg-neutral-50">
-                  <tr>
-                    <th className="text-left px-4 py-3 font-semibold text-neutral-700">Category</th>
-                    <th className="text-right px-4 py-3 font-semibold text-neutral-700">Amount</th>
-                    <th className="text-right px-4 py-3 font-semibold text-neutral-700">% of Total</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-neutral-100">
-                  {expenseByCategory.map(([cat, amt], idx) => {
-                    const total = expenseByCategory.reduce((s, [, a]) => s + a, 0);
-                    return (
-                      <tr key={idx} className="hover:bg-neutral-50">
-                        <td className="px-4 py-3 font-medium text-neutral-900">{cat}</td>
-                        <td className="px-4 py-3 text-right text-red-600">{formatCurrency(amt)}</td>
-                        <td className="px-4 py-3 text-right text-neutral-500">{((amt / total) * 100).toFixed(1)}%</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[300px]">
+                  <thead className="bg-neutral-50">
+                    <tr>
+                      <th className="text-left px-2 py-1.5 text-[10px] font-medium text-neutral-600 uppercase tracking-wide">Category</th>
+                      <th className="text-right px-2 py-1.5 text-[10px] font-medium text-neutral-600 uppercase tracking-wide">Amount</th>
+                      <th className="text-right px-2 py-1.5 text-[10px] font-medium text-neutral-600 uppercase tracking-wide hidden sm:table-cell">%</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-50 text-xs">
+                    {expenseByCategory.map(([cat, amt], idx) => {
+                      const total = expenseByCategory.reduce((s, [, a]) => s + a, 0);
+                      return (
+                        <tr key={idx} className="hover:bg-neutral-50">
+                          <td className="px-2 py-1.5 font-medium text-neutral-900 truncate max-w-[120px]">{cat}</td>
+                          <td className="px-2 py-1.5 text-right text-red-600">{formatCurrency(amt)}</td>
+                          <td className="px-2 py-1.5 text-right text-neutral-500 hidden sm:table-cell">{((amt / total) * 100).toFixed(0)}%</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
         )}
 
-        {/* Outstanding Receivables */}
+        {/* Outstanding Receivables - Compact */}
         {activeReport === 'receivables' && (
-          <div className="p-6">
-            <div className="mb-6 p-4 bg-amber-50 rounded-lg text-center">
-              <p className="text-xs text-amber-600 font-medium uppercase">Total Outstanding</p>
-              <p className="text-2xl font-bold text-amber-700 mt-1">{formatCurrency(totalOutstanding)}</p>
+          <div className="p-3">
+            <div className="mb-3 p-2 bg-amber-50 rounded-lg text-center">
+              <p className="text-[9px] text-amber-600 font-medium uppercase">Total Outstanding</p>
+              <p className="text-sm font-bold text-amber-700 mt-0.5">{formatCurrency(totalOutstanding)}</p>
             </div>
             {outstandingReceivables.length === 0 ? (
-              <div className="text-center py-12 text-neutral-500">No outstanding receivables</div>
+              <div className="text-center py-6 text-neutral-500 text-xs">No outstanding receivables</div>
             ) : (
-              <table className="w-full text-sm">
-                <thead className="bg-neutral-50">
-                  <tr>
-                    <th className="text-left px-4 py-3 font-semibold text-neutral-700">Invoice #</th>
-                    <th className="text-left px-4 py-3 font-semibold text-neutral-700">Due Date</th>
-                    <th className="text-left px-4 py-3 font-semibold text-neutral-700">Status</th>
-                    <th className="text-right px-4 py-3 font-semibold text-neutral-700">Amount</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-neutral-100">
-                  {outstandingReceivables.map(inv => {
-                    const isOverdue = inv.status === 'overdue' || (inv.due_date && new Date(inv.due_date) < new Date());
-                    return (
-                      <tr key={inv.id} className="hover:bg-neutral-50">
-                        <td className="px-4 py-3 font-medium text-neutral-900">{inv.invoice_number || '-'}</td>
-                        <td className="px-4 py-3 text-neutral-600">{inv.due_date ? new Date(inv.due_date).toLocaleDateString() : '-'}</td>
-                        <td className="px-4 py-3">
-                          <span className={`px-2 py-1 rounded text-xs font-medium ${isOverdue ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>
-                            {isOverdue ? 'Overdue' : 'Sent'}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-right font-medium text-amber-600">{formatCurrency(Number(inv.total || 0))}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[350px]">
+                  <thead className="bg-neutral-50">
+                    <tr>
+                      <th className="text-left px-2 py-1.5 text-[10px] font-medium text-neutral-600 uppercase tracking-wide">Invoice</th>
+                      <th className="text-left px-2 py-1.5 text-[10px] font-medium text-neutral-600 uppercase tracking-wide">Due</th>
+                      <th className="text-left px-2 py-1.5 text-[10px] font-medium text-neutral-600 uppercase tracking-wide">Status</th>
+                      <th className="text-right px-2 py-1.5 text-[10px] font-medium text-neutral-600 uppercase tracking-wide">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-50 text-xs">
+                    {outstandingReceivables.map(inv => {
+                      const isOverdue = inv.status === 'overdue' || (inv.due_date && new Date(inv.due_date) < new Date());
+                      return (
+                        <tr key={inv.id} className="hover:bg-neutral-50">
+                          <td className="px-2 py-1.5 font-medium text-neutral-900">{inv.invoice_number || '-'}</td>
+                          <td className="px-2 py-1.5 text-neutral-600">{inv.due_date ? new Date(inv.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '-'}</td>
+                          <td className="px-2 py-1.5">
+                            <span className={`px-1.5 py-0.5 rounded text-[9px] font-medium ${isOverdue ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-[#476E66]/10 text-[#476E66]'}`}>
+                              {isOverdue ? 'Overdue' : 'Sent'}
+                            </span>
+                          </td>
+                          <td className="px-2 py-1.5 text-right font-medium text-amber-600">{formatCurrency(Number(inv.total || 0))}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
         )}

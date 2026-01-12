@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { api, Project, TimeEntry, Invoice, Expense } from '../lib/api';
 import { BarChart3, Clock, DollarSign, TrendingUp, Users, Download, ChevronDown, ChevronRight, Building2, FolderOpen } from 'lucide-react';
@@ -157,42 +156,42 @@ function TimeByUserReport({ timeEntries, profiles, formatCurrency }: {
   const utilization = totals.totalHours > 0 ? Math.round((totals.billableHours / totals.totalHours) * 100) : 0;
 
   return (
-    <div className="space-y-4">
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <div className="bg-white rounded-lg p-3" style={{ boxShadow: 'var(--shadow-card)' }}>
-          <p className="text-xs text-neutral-500 font-medium">Total Hours</p>
-          <p className="text-xl sm:text-2xl font-bold text-neutral-900 mt-1">{totals.totalHours.toFixed(1)}h</p>
+    <div className="space-y-2">
+      {/* Summary Cards - 2x2 on mobile, 4 columns on desktop */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 px-1 sm:px-0">
+        <div className="bg-white rounded-lg p-1.5" style={{ boxShadow: 'var(--shadow-card)' }}>
+          <p className="text-[9px] text-neutral-500 font-medium">Total Hours</p>
+          <p className="text-sm font-bold text-neutral-900">{totals.totalHours.toFixed(1)}h</p>
         </div>
-        <div className="bg-white rounded-lg p-3" style={{ boxShadow: 'var(--shadow-card)' }}>
-          <p className="text-xs text-neutral-500 font-medium">Billable Hours</p>
-          <p className="text-xl sm:text-2xl font-bold text-[#476E66] mt-1">{totals.billableHours.toFixed(1)}h</p>
+        <div className="bg-white rounded-lg p-1.5" style={{ boxShadow: 'var(--shadow-card)' }}>
+          <p className="text-[9px] text-neutral-500 font-medium">Billable Hrs</p>
+          <p className="text-sm font-bold text-[#476E66]">{totals.billableHours.toFixed(1)}h</p>
         </div>
-        <div className="bg-white rounded-lg p-3" style={{ boxShadow: 'var(--shadow-card)' }}>
-          <p className="text-xs text-neutral-500 font-medium">Billable Value</p>
-          <p className="text-xl sm:text-2xl font-bold text-neutral-900 mt-1">{formatCurrency(totals.billableValue)}</p>
+        <div className="bg-white rounded-lg p-1.5" style={{ boxShadow: 'var(--shadow-card)' }}>
+          <p className="text-[9px] text-neutral-500 font-medium">Billable Value</p>
+          <p className="text-sm font-bold text-neutral-900">{formatCurrency(totals.billableValue)}</p>
         </div>
-        <div className="bg-white rounded-lg p-3" style={{ boxShadow: 'var(--shadow-card)' }}>
-          <p className="text-xs text-neutral-500 font-medium">Utilization</p>
-          <p className="text-xl sm:text-2xl font-bold text-[#476E66] mt-1">{utilization}%</p>
+        <div className="bg-white rounded-lg p-1.5" style={{ boxShadow: 'var(--shadow-card)' }}>
+          <p className="text-[9px] text-neutral-500 font-medium">Utilization</p>
+          <p className="text-sm font-bold text-[#476E66]">{utilization}%</p>
         </div>
       </div>
 
       {/* Grouped Table */}
       <div className="bg-white rounded-lg overflow-hidden" style={{ boxShadow: 'var(--shadow-card)' }}>
-        <div className="px-3 sm:px-4 py-3 border-b border-neutral-100">
-          <h3 className="text-base sm:text-lg font-semibold text-neutral-900">Time by User</h3>
-          <p className="text-xs sm:text-sm text-neutral-500">Grouped by user, client, and project</p>
+        <div className="px-2.5 py-2 border-b border-neutral-100">
+          <h3 className="text-sm font-semibold text-neutral-900">Time by User</h3>
+          <p className="text-[10px] text-neutral-500">Grouped by user, client, and project</p>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[700px]">
             <thead className="bg-neutral-50 border-b border-neutral-100">
               <tr>
-                <th className="text-left px-3 sm:px-4 py-2 text-xs font-medium text-neutral-600 uppercase w-1/2">User / Client / Project</th>
-                <th className="text-right px-2 sm:px-3 py-2 text-xs font-medium text-neutral-600 uppercase">Total Hours</th>
-                <th className="text-right px-2 sm:px-3 py-2 text-xs font-medium text-neutral-600 uppercase">Billable Hours</th>
-                <th className="text-right px-2 sm:px-3 py-2 text-xs font-medium text-neutral-600 uppercase">Billable Value</th>
-                <th className="text-right px-2 sm:px-3 py-2 text-xs font-medium text-neutral-600 uppercase">Utilization</th>
+                <th className="text-left px-2 py-1 text-[10px] font-medium text-neutral-600 uppercase tracking-wide w-1/2">User / Client / Project</th>
+                <th className="text-right px-1.5 py-1 text-[10px] font-medium text-neutral-600 uppercase tracking-wide">Total Hours</th>
+                <th className="text-right px-1.5 py-1 text-[10px] font-medium text-neutral-600 uppercase tracking-wide">Billable Hours</th>
+                <th className="text-right px-1.5 py-1 text-[10px] font-medium text-neutral-600 uppercase tracking-wide">Billable Value</th>
+                <th className="text-right px-1.5 py-1 text-[10px] font-medium text-neutral-600 uppercase tracking-wide">Utilization</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-50">
@@ -295,7 +294,6 @@ function TimeByUserReport({ timeEntries, profiles, formatCurrency }: {
 }
 
 export default function ReportsPage() {
-  const location = useLocation();
   const { profile, user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [activeReport, setActiveReport] = useState<ReportType>('time_by_project');
@@ -333,7 +331,7 @@ export default function ReportsPage() {
 
   useEffect(() => {
     loadData();
-  }, [profile?.company_id, user?.id, dateRange, location.pathname]);
+  }, [profile?.company_id, user?.id, dateRange]);
 
   async function loadData() {
     if (!profile?.company_id) {
@@ -493,17 +491,17 @@ export default function ReportsPage() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+    <div className="space-y-2.5">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div>
-          <h1 className="text-lg sm:text-xl font-bold text-neutral-900">Reports</h1>
-          <p className="text-xs sm:text-sm text-neutral-500">Business intelligence and analytics</p>
+          <h1 className="text-base sm:text-lg font-bold text-neutral-900">Reports</h1>
+          <p className="text-[10px] text-neutral-500">Business intelligence and analytics</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <select
             value={dateRange}
             onChange={(e) => setDateRange(e.target.value as typeof dateRange)}
-            className="px-3 py-2 text-sm border border-neutral-200 rounded-lg focus:ring-2 focus:ring-[#476E66] focus:border-[#476E66]"
+            className="px-2 py-1.5 text-xs border border-neutral-200 rounded-lg focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66]"
           >
             <option value="week">Last 7 Days</option>
             <option value="month">This Month</option>
@@ -512,29 +510,28 @@ export default function ReportsPage() {
           </select>
           <button
             onClick={exportCSV}
-            className="flex items-center gap-2 px-3 py-2 text-sm border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors"
+            className="flex items-center gap-1.5 px-2 py-1.5 text-xs border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors"
           >
-            <Download className="w-4 h-4 hidden sm:block" />
-            <span className="hidden sm:inline">Export CSV</span>
-            <Download className="w-4 h-4 sm:hidden" />
+            <Download className="w-3 h-3" />
+            <span className="hidden sm:inline">Export</span>
           </button>
         </div>
       </div>
 
       {/* Report Tabs */}
-      <div className="flex gap-2 flex-wrap">
+      <div className="flex gap-1 flex-wrap">
         {reports.map(report => (
           <button
             key={report.id}
             onClick={() => setActiveReport(report.id)}
-            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
               activeReport === report.id
                 ? 'bg-[#476E66] text-white'
                 : 'bg-white text-neutral-700 hover:bg-neutral-50'
             }`}
             style={activeReport === report.id ? {} : { boxShadow: 'var(--shadow-sm)' }}
           >
-            <report.icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <report.icon className="w-3 h-3" />
             <span className="hidden xs:inline">{report.label}</span>
           </button>
         ))}
@@ -543,17 +540,17 @@ export default function ReportsPage() {
       {/* Time by Project Report */}
       {activeReport === 'time_by_project' && (
         <div className="bg-white rounded-lg overflow-hidden" style={{ boxShadow: 'var(--shadow-card)' }}>
-          <div className="px-3 sm:px-4 py-3 border-b border-neutral-100">
-            <h3 className="text-base sm:text-lg font-semibold text-neutral-900">Time by Project</h3>
+          <div className="px-2.5 py-2 border-b border-neutral-100">
+            <h3 className="text-sm font-semibold text-neutral-900">Time by Project</h3>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-neutral-50 border-b border-neutral-100">
                 <tr>
-                  <th className="text-left px-3 sm:px-4 py-2 text-xs font-medium text-neutral-600 uppercase">Project</th>
-                  <th className="text-right px-3 sm:px-4 py-2 text-xs font-medium text-neutral-600 uppercase hidden sm:table-cell">Total Hours</th>
-                  <th className="text-right px-3 sm:px-4 py-2 text-xs font-medium text-neutral-600 uppercase">Billable Hours</th>
-                  <th className="text-right px-3 sm:px-4 py-2 text-xs font-medium text-neutral-600 uppercase">Value</th>
+                  <th className="text-left px-2 py-1 text-[10px] font-medium text-neutral-600 uppercase tracking-wide">Project</th>
+                  <th className="text-right px-2 py-1 text-[10px] font-medium text-neutral-600 uppercase tracking-wide hidden sm:table-cell">Total Hours</th>
+                  <th className="text-right px-2 py-1 text-[10px] font-medium text-neutral-600 uppercase tracking-wide">Billable Hours</th>
+                  <th className="text-right px-2 py-1 text-[10px] font-medium text-neutral-600 uppercase tracking-wide">Value</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-50">
@@ -594,9 +591,9 @@ export default function ReportsPage() {
       {/* Unbilled Time Report */}
       {activeReport === 'unbilled_time' && (
         <div className="bg-white rounded-lg overflow-hidden" style={{ boxShadow: 'var(--shadow-card)' }}>
-          <div className="px-3 sm:px-4 py-3 border-b border-neutral-100">
-            <h3 className="text-base sm:text-lg font-semibold text-neutral-900">Unbilled Time</h3>
-            <p className="text-xs sm:text-sm text-neutral-500">Billable time entries not yet invoiced</p>
+          <div className="px-2.5 py-2 border-b border-neutral-100">
+            <h3 className="text-sm font-semibold text-neutral-900">Unbilled Time</h3>
+            <p className="text-[10px] text-neutral-500">Billable time entries not yet invoiced</p>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -641,8 +638,8 @@ export default function ReportsPage() {
       {/* Profitability Report */}
       {activeReport === 'profitability' && (
         <div className="bg-white rounded-lg overflow-hidden" style={{ boxShadow: 'var(--shadow-card)' }}>
-          <div className="px-3 sm:px-4 py-3 border-b border-neutral-100">
-            <h3 className="text-base sm:text-lg font-semibold text-neutral-900">Project Profitability</h3>
+          <div className="px-2.5 py-2 border-b border-neutral-100">
+            <h3 className="text-sm font-semibold text-neutral-900">Project Profitability</h3>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[600px]">
@@ -683,39 +680,39 @@ export default function ReportsPage() {
 
       {/* Revenue Report */}
       {activeReport === 'revenue' && (
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="bg-white rounded-lg p-3" style={{ boxShadow: 'var(--shadow-card)' }}>
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-8 h-8 rounded-lg bg-[#476E66]/10 flex items-center justify-center">
-                  <DollarSign className="w-4 h-4 text-[#476E66]" />
+        <div className="space-y-2.5">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5 px-2 sm:px-0">
+            <div className="bg-white rounded-lg p-2" style={{ boxShadow: 'var(--shadow-card)' }}>
+              <div className="flex items-center gap-1.5 mb-1">
+                <div className="w-5 h-5 rounded bg-[#476E66]/10 flex items-center justify-center">
+                  <DollarSign className="w-3 h-3 text-[#476E66]" />
                 </div>
-                <span className="text-neutral-500 text-xs font-medium">Total Revenue</span>
+                <span className="text-neutral-500 text-[10px] font-medium">Total Revenue</span>
               </div>
-              <p className="text-xl sm:text-2xl font-bold text-neutral-900">{formatCurrency(revenueData.totalRevenue)}</p>
-              <p className="text-xs text-neutral-500 mt-1">{revenueData.paidCount} paid invoices</p>
+              <p className="text-base font-bold text-neutral-900">{formatCurrency(revenueData.totalRevenue)}</p>
+              <p className="text-[10px] text-neutral-500 mt-0.5">{revenueData.paidCount} paid invoices</p>
             </div>
 
-            <div className="bg-white rounded-lg p-3" style={{ boxShadow: 'var(--shadow-card)' }}>
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-8 h-8 rounded-lg bg-[#476E66]/10 flex items-center justify-center">
-                  <Clock className="w-4 h-4 text-[#476E66]" />
+            <div className="bg-white rounded-lg p-2" style={{ boxShadow: 'var(--shadow-card)' }}>
+              <div className="flex items-center gap-1.5 mb-1">
+                <div className="w-5 h-5 rounded bg-[#476E66]/10 flex items-center justify-center">
+                  <Clock className="w-3 h-3 text-[#476E66]" />
                 </div>
-                <span className="text-neutral-500 text-xs font-medium">Outstanding</span>
+                <span className="text-neutral-500 text-[10px] font-medium">Outstanding</span>
               </div>
-              <p className="text-xl sm:text-2xl font-bold text-neutral-900">{formatCurrency(revenueData.outstanding)}</p>
-              <p className="text-xs text-neutral-500 mt-1">{revenueData.outstandingCount} unpaid invoices</p>
+              <p className="text-base font-bold text-neutral-900">{formatCurrency(revenueData.outstanding)}</p>
+              <p className="text-[10px] text-neutral-500 mt-0.5">{revenueData.outstandingCount} unpaid invoices</p>
             </div>
 
-            <div className="bg-white rounded-lg p-3" style={{ boxShadow: 'var(--shadow-card)' }}>
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-8 h-8 rounded-lg bg-[#476E66]/10 flex items-center justify-center">
-                  <BarChart3 className="w-4 h-4 text-[#476E66]" />
+            <div className="bg-white rounded-lg p-2" style={{ boxShadow: 'var(--shadow-card)' }}>
+              <div className="flex items-center gap-1.5 mb-1">
+                <div className="w-5 h-5 rounded bg-[#476E66]/10 flex items-center justify-center">
+                  <BarChart3 className="w-3 h-3 text-[#476E66]" />
                 </div>
-                <span className="text-neutral-500 text-xs font-medium">Draft Invoices</span>
+                <span className="text-neutral-500 text-[10px] font-medium">Draft Invoices</span>
               </div>
-              <p className="text-xl sm:text-2xl font-bold text-neutral-900">{formatCurrency(revenueData.draft)}</p>
-              <p className="text-xs text-neutral-500 mt-1">Ready to send</p>
+              <p className="text-base font-bold text-neutral-900">{formatCurrency(revenueData.draft)}</p>
+              <p className="text-[10px] text-neutral-500 mt-0.5">Ready to send</p>
             </div>
           </div>
         </div>

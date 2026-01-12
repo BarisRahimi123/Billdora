@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { usePermissions } from '../contexts/PermissionsContext';
 import { api, Project, Task, Client, TimeEntry, Invoice, Expense, ProjectTeamMember, settingsApi, FieldValue, StatusCode, CostCenter } from '../lib/api';
@@ -49,7 +49,6 @@ function getCategoryInfo(category?: string) {
 export default function ProjectsPage() {
   const { projectId } = useParams();
   const navigate = useNavigate();
-  const location = useLocation();
   const { profile, user, loading: authLoading } = useAuth();
   const { canCreate, canEdit, canDelete, canViewFinancials, isAdmin } = usePermissions();
   const [projects, setProjects] = useState<Project[]>([]);
@@ -98,7 +97,7 @@ export default function ProjectsPage() {
 
   useEffect(() => {
     loadData();
-  }, [profile?.company_id, location.pathname]);
+  }, [profile?.company_id]);
 
   useEffect(() => {
     if (projectId && projects.length > 0) {
@@ -3252,81 +3251,81 @@ function ProjectInvoiceModal({ project, tasks, timeEntries, expenses, companyId,
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl w-full max-w-2xl max-h-[92vh] overflow-hidden flex flex-col">
         {/* Header - Fixed */}
-        <div className="flex items-center justify-between px-4 sm:px-5 py-3 sm:py-4 border-b border-neutral-100 flex-shrink-0">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-100 flex-shrink-0">
           <div className="min-w-0 flex-1">
-            <h2 className="text-lg sm:text-xl font-semibold text-neutral-900">Create Invoice</h2>
-            <p className="text-xs sm:text-sm text-neutral-500 truncate">{project.name}</p>
+            <h2 className="text-base font-semibold text-neutral-900">Create Invoice</h2>
+            <p className="text-xs text-neutral-500 truncate mt-0.5">{project.name}</p>
           </div>
-          <button onClick={onClose} className="p-1.5 hover:bg-neutral-100 rounded-lg flex-shrink-0 ml-2">
-            <X className="w-5 h-5" />
+          <button onClick={onClose} className="p-1 hover:bg-neutral-100 rounded-lg flex-shrink-0 ml-2">
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Scrollable Content */}
-        <div className="overflow-y-auto flex-1 px-4 sm:px-5 py-4">
+        <div className="overflow-y-auto flex-1 px-4 py-3">
         {error && (
-            <div className="p-2.5 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm mb-4">{error}</div>
+            <div className="p-2 bg-red-50 border border-red-200 text-red-700 rounded-lg text-xs mb-3">{error}</div>
         )}
 
-          <div className="space-y-3">
+          <div className="space-y-2.5">
           {/* Billing Type Selector - Compact & Modern */}
           <div>
-            <label className="block text-xs font-medium text-neutral-600 mb-2">Billing Method</label>
-            <div className="grid grid-cols-3 gap-2">
+            <label className="block text-[10px] font-semibold text-neutral-600 mb-1.5 uppercase tracking-wide">Billing Method</label>
+            <div className="grid grid-cols-3 gap-1.5">
               <button
                 type="button"
                 onClick={() => { setBillingType('items'); setSelectedTasks(new Set()); }}
-                className={`p-2 rounded-lg text-left transition-all border ${
+                className={`p-1.5 rounded-lg text-left transition-all border ${
                   billingType === 'items' 
                     ? 'bg-[#476E66]/10 border-[#476E66]' 
                     : 'bg-white border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50'
                 }`}
               >
-                <p className={`font-medium text-xs ${billingType === 'items' ? 'text-[#476E66]' : 'text-neutral-900'}`}>By Items</p>
-                <p className="text-xs text-neutral-500 mt-0.5">Select specific items</p>
+                <p className={`font-semibold text-xs ${billingType === 'items' ? 'text-[#476E66]' : 'text-neutral-900'}`}>By Items</p>
+                <p className="text-[10px] text-neutral-500 mt-0.5">Select specific items</p>
               </button>
               <button
                 type="button"
                 onClick={() => { setBillingType('milestone'); setSelectedTasks(new Set()); }}
-                className={`p-2 rounded-lg text-left transition-all border ${
+                className={`p-1.5 rounded-lg text-left transition-all border ${
                   billingType === 'milestone' 
                     ? 'bg-[#476E66]/10 border-[#476E66]' 
                     : 'bg-white border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50'
                 }`}
               >
-                <p className={`font-medium text-xs ${billingType === 'milestone' ? 'text-[#476E66]' : 'text-neutral-900'}`}>By Milestone</p>
-                <p className="text-xs text-neutral-500 mt-0.5">Bill full remaining</p>
+                <p className={`font-semibold text-xs ${billingType === 'milestone' ? 'text-[#476E66]' : 'text-neutral-900'}`}>By Milestone</p>
+                <p className="text-[10px] text-neutral-500 mt-0.5">Bill full remaining</p>
               </button>
               <button
                 type="button"
                 onClick={() => { setBillingType('percentage'); setSelectedTasks(new Set()); }}
-                className={`p-2 rounded-lg text-left transition-all border ${
+                className={`p-1.5 rounded-lg text-left transition-all border ${
                   billingType === 'percentage' 
                     ? 'bg-[#476E66]/10 border-[#476E66]' 
                     : 'bg-white border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50'
                 }`}
               >
-                <p className={`font-medium text-xs ${billingType === 'percentage' ? 'text-[#476E66]' : 'text-neutral-900'}`}>By Percentage</p>
-                <p className="text-xs text-neutral-500 mt-0.5">Bill % of budget</p>
+                <p className={`font-semibold text-xs ${billingType === 'percentage' ? 'text-[#476E66]' : 'text-neutral-900'}`}>By Percentage</p>
+                <p className="text-[10px] text-neutral-500 mt-0.5">Bill % of budget</p>
               </button>
             </div>
           </div>
 
           {/* Allocated Project Fees - Modern Card */}
           {billingType === 'items' && project.budget && project.budget > 0 && (
-            <div className="bg-white rounded-lg p-3" style={{ boxShadow: 'var(--shadow-card)' }}>
-              <label className="flex items-center gap-2.5 cursor-pointer">
+            <div className="bg-white rounded-lg p-2" style={{ boxShadow: 'var(--shadow-card)' }}>
+              <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={includeAllocatedFees}
                   onChange={(e) => setIncludeAllocatedFees(e.target.checked)}
-                  className="w-4 h-4 rounded border-neutral-300 text-[#476E66] focus:ring-[#476E66] flex-shrink-0"
+                  className="w-3.5 h-3.5 rounded border-neutral-300 text-[#476E66] focus:ring-[#476E66] flex-shrink-0"
                 />
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-sm text-neutral-900">Project Budget (Fixed Fee)</p>
-                  <p className="text-xs text-neutral-400">Allocated project budget</p>
+                  <p className="font-semibold text-xs text-neutral-900">Project Budget (Fixed Fee)</p>
+                  <p className="text-[10px] text-neutral-400">Allocated project budget</p>
                 </div>
-                <span className="font-semibold text-sm text-neutral-900 flex-shrink-0">{formatCurrency(project.budget)}</span>
+                <span className="font-semibold text-xs text-neutral-900 flex-shrink-0">{formatCurrency(project.budget)}</span>
               </label>
             </div>
           )}
@@ -3334,17 +3333,17 @@ function ProjectInvoiceModal({ project, tasks, timeEntries, expenses, companyId,
           {/* Tasks - Modern Card Design */}
           {tasks.length > 0 && (
             <div className="bg-white rounded-lg overflow-hidden" style={{ boxShadow: 'var(--shadow-card)' }}>
-              <div className="flex items-center justify-between px-3 py-2.5 bg-neutral-50">
-                <div className="flex items-center gap-2.5">
+              <div className="flex items-center justify-between px-2.5 py-2 bg-neutral-50">
+                <div className="flex items-center gap-2">
                   <input
                     type="checkbox"
                     checked={selectedTasks.size === tasks.length && tasks.length > 0}
                     onChange={selectAllTasks}
-                    className="w-4 h-4 rounded border-neutral-300 text-[#476E66] focus:ring-[#476E66]"
+                    className="w-3.5 h-3.5 rounded border-neutral-300 text-[#476E66] focus:ring-[#476E66]"
                   />
-                  <span className="font-semibold text-sm text-neutral-900">Tasks ({tasks.length})</span>
+                  <span className="font-semibold text-xs text-neutral-900">Tasks ({tasks.length})</span>
                 </div>
-                <span className="text-xs font-medium text-neutral-500">{formatCurrency(taskFeesTotal)} selected</span>
+                <span className="text-[10px] font-semibold text-neutral-500">{formatCurrency(taskFeesTotal)} selected</span>
               </div>
               <div className="divide-y divide-neutral-50 max-h-60 overflow-y-auto">
                 {tasks.map(task => {
@@ -3362,7 +3361,7 @@ function ProjectInvoiceModal({ project, tasks, timeEntries, expenses, companyId,
                   return (
                     <label 
                       key={task.id} 
-                      className={`flex items-center gap-2.5 px-3 py-2 cursor-pointer transition-colors ${isDisabled ? 'bg-neutral-50 opacity-50' : 'hover:bg-neutral-50/50'}`}
+                      className={`flex items-center gap-2 px-2.5 py-1.5 cursor-pointer transition-colors ${isDisabled ? 'bg-neutral-50 opacity-50' : 'hover:bg-neutral-50/50'}`}
                       title={isModeIncompatible ? `Task locked to ${taskMode} billing` : undefined}
                     >
                       <input
@@ -3370,13 +3369,13 @@ function ProjectInvoiceModal({ project, tasks, timeEntries, expenses, companyId,
                         checked={isSelected}
                         disabled={isDisabled}
                         onChange={() => toggleTask(task.id)}
-                        className="w-4 h-4 rounded border-neutral-300 text-[#476E66] focus:ring-[#476E66] flex-shrink-0"
+                        className="w-3.5 h-3.5 rounded border-neutral-300 text-[#476E66] focus:ring-[#476E66] flex-shrink-0"
                       />
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <p className="text-sm font-medium text-neutral-900 truncate leading-5" style={{ fontSize: '14px', fontWeight: '500', lineHeight: '20px' }}>{task.name}</p>
+                        <div className="flex items-center gap-1">
+                          <p className="text-xs font-semibold text-neutral-900 truncate">{task.name}</p>
                           {isModeLocked && (
-                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+                            <span className={`text-[9px] px-1 py-0.5 rounded-full font-semibold ${
                               taskMode === 'time' ? 'bg-blue-100 text-blue-700' : 
                               taskMode === 'percentage' ? 'bg-purple-100 text-purple-700' : 
                               'bg-amber-100 text-amber-700'
@@ -3385,10 +3384,10 @@ function ProjectInvoiceModal({ project, tasks, timeEntries, expenses, companyId,
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-neutral-500">
+                        <p className="text-[10px] text-neutral-500">
                           {task.estimated_hours || 0}h estimated
                           {billedPct > 0 && (
-                            <span className="ml-1.5">• {billedPct}% billed</span>
+                            <span className="ml-1">• {billedPct}% billed</span>
                           )}
                         </p>
                       </div>
@@ -3396,15 +3395,15 @@ function ProjectInvoiceModal({ project, tasks, timeEntries, expenses, companyId,
                       {/* Show different info based on billing type */}
                       {billingType === 'items' ? (
                         <div className="text-right flex-shrink-0">
-                          <span className="font-semibold text-sm text-neutral-900">{formatCurrency(remainingAmt)}</span>
+                          <span className="font-semibold text-xs text-neutral-900">{formatCurrency(remainingAmt)}</span>
                           {billedPct > 0 && (
-                            <p className="text-xs text-neutral-500">{remainingPct}% left</p>
+                            <p className="text-[10px] text-neutral-500">{remainingPct}% left</p>
                           )}
                         </div>
                       ) : billingType === 'milestone' ? (
                         <div className="text-right flex-shrink-0">
-                          <p className="font-semibold text-sm text-neutral-900">{formatCurrency(remainingAmt)}</p>
-                          <p className="text-xs text-neutral-500">{remainingPct}% left</p>
+                          <p className="font-semibold text-xs text-neutral-900">{formatCurrency(remainingAmt)}</p>
+                          <p className="text-[10px] text-neutral-500">{remainingPct}% left</p>
                         </div>
                       ) : (
                         <div className="flex items-center gap-3">
@@ -3558,40 +3557,40 @@ function ProjectInvoiceModal({ project, tasks, timeEntries, expenses, companyId,
           )}
 
           {/* Custom Amount & Due Date - Equal Width Grid */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="block text-xs font-medium text-neutral-600 mb-1.5">Additional Amount</label>
+              <label className="block text-[10px] font-semibold text-neutral-600 mb-1 uppercase tracking-wide">Additional Amount</label>
             <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 text-xs">$</span>
+                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-neutral-400 text-xs">$</span>
               <input
                 type="number"
                 step="0.01"
                 value={customAmount}
                 onChange={(e) => setCustomAmount(e.target.value)}
                 placeholder="0.00"
-                  className="w-full h-[38px] pl-7 pr-3 text-sm rounded-lg border border-neutral-200 focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none"
+                  className="w-full h-9 pl-6 pr-2.5 text-xs rounded-lg border border-neutral-200 focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none"
               />
             </div>
           </div>
 
           <div>
-              <label className="block text-xs font-medium text-neutral-600 mb-1.5">Due Date</label>
+              <label className="block text-[10px] font-semibold text-neutral-600 mb-1 uppercase tracking-wide">Due Date</label>
             <input
               type="date"
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
-                className="w-full h-[38px] px-3 text-sm rounded-lg border border-neutral-200 focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none"
+                className="w-full h-9 px-2.5 text-xs rounded-lg border border-neutral-200 focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66] outline-none"
             />
             </div>
           </div>
 
           {/* Billing Summary for Percentage Type */}
           {billingType === 'percentage' && selectedTasks.size > 0 && (
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-2">
-              <h4 className="font-medium text-blue-900 mb-2">Billing Summary</h4>
-              <div className="flex justify-between text-sm">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-2.5 space-y-1.5">
+              <h4 className="font-semibold text-xs text-blue-900 mb-1">Billing Summary</h4>
+              <div className="flex justify-between text-xs">
                 <span className="text-blue-700">Prior Billed (Total)</span>
-                <span className="font-medium text-blue-900">
+                <span className="font-semibold text-blue-900">
                   {formatCurrency(tasks.filter(t => selectedTasks.has(t.id)).reduce((sum, t) => {
                     const totalBudget = t.total_budget || t.estimated_fees || 0;
                     const billedPct = t.billed_percentage || 0;
@@ -3599,13 +3598,13 @@ function ProjectInvoiceModal({ project, tasks, timeEntries, expenses, companyId,
                   }, 0))}
                 </span>
               </div>
-              <div className="flex justify-between text-sm">
+              <div className="flex justify-between text-xs">
                 <span className="text-green-700">Current Invoice</span>
-                <span className="font-medium text-green-700">{formatCurrency(taskFeesTotal)}</span>
+                <span className="font-semibold text-green-700">{formatCurrency(taskFeesTotal)}</span>
               </div>
-              <div className="flex justify-between text-sm pt-2 border-t border-blue-200">
+              <div className="flex justify-between text-xs pt-1.5 border-t border-blue-200">
                 <span className="text-blue-700">After This Invoice</span>
-                <span className="font-medium text-blue-900">
+                <span className="font-semibold text-blue-900">
                   {formatCurrency(tasks.filter(t => selectedTasks.has(t.id)).reduce((sum, t) => {
                     const totalBudget = t.total_budget || t.estimated_fees || 0;
                     const billedPct = t.billed_percentage || 0;
@@ -3620,20 +3619,20 @@ function ProjectInvoiceModal({ project, tasks, timeEntries, expenses, companyId,
         </div>
 
         {/* Footer - Fixed */}
-        <div className="border-t border-neutral-100 px-4 sm:px-5 py-3 sm:py-4 flex-shrink-0">
+        <div className="border-t border-neutral-100 px-4 py-2.5 flex-shrink-0">
           {/* Total Summary */}
-          <div className="bg-[#476E66] text-white rounded-lg p-3 space-y-1.5 mb-3">
-            <div className="flex justify-between text-xs">
-              <span className="text-white/70">Subtotal</span>
-              <span className="font-medium">{formatCurrency(subtotal)}</span>
+          <div className="bg-[#476E66] text-white rounded-lg p-2.5 space-y-1 mb-2.5">
+            <div className="flex justify-between text-[10px]">
+              <span className="text-white/70 font-medium">Subtotal</span>
+              <span className="font-semibold">{formatCurrency(subtotal)}</span>
             </div>
             {taxAmount > 0 && (
-              <div className="flex justify-between text-xs">
-                <span className="text-white/70">Tax</span>
-                <span className="font-medium">{formatCurrency(taxAmount)}</span>
+              <div className="flex justify-between text-[10px]">
+                <span className="text-white/70 font-medium">Tax</span>
+                <span className="font-semibold">{formatCurrency(taxAmount)}</span>
               </div>
             )}
-            <div className="flex justify-between text-lg font-bold pt-1.5 border-t border-white/20">
+            <div className="flex justify-between text-base font-bold pt-1 border-t border-white/20">
               <span>Total</span>
               <span>{formatCurrency(total)}</span>
             </div>
@@ -3644,14 +3643,14 @@ function ProjectInvoiceModal({ project, tasks, timeEntries, expenses, companyId,
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 text-sm border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors"
+              className="flex-1 px-3 py-2 text-xs border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors font-medium"
             >
               Cancel
             </button>
             <button
               onClick={handleSubmit}
               disabled={saving || total <= 0}
-              className="flex-1 px-4 py-2 text-sm bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54] transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              className="flex-1 px-3 py-2 text-xs bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54] transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
             >
               {saving ? 'Creating...' : 'Create Invoice'}
             </button>

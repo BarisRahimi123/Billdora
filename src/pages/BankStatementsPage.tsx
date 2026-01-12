@@ -180,25 +180,25 @@ export default function BankStatementsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-2.5">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <div className="flex items-center gap-2">
           {viewMode !== 'list' && (
             <button
               onClick={() => { setViewMode('list'); setSelectedStatement(null); }}
-              className="p-2 hover:bg-neutral-100 rounded-lg"
+              className="p-1.5 hover:bg-neutral-100 rounded-lg"
             >
-              <ArrowLeft className="w-5 h-5" />
+              <ArrowLeft className="w-4 h-4" />
             </button>
           )}
           <div>
-            <h1 className="text-2xl font-bold text-neutral-900">
+            <h1 className="text-base sm:text-lg font-bold text-neutral-900">
               {viewMode === 'list' ? 'Bank Statements' : 
                viewMode === 'report' ? 'Reconciliation Report' :
                selectedStatement?.original_filename || 'Statement Details'}
             </h1>
-            <p className="text-neutral-500 text-sm mt-1">
+            <p className="text-neutral-500 text-[10px]">
               {viewMode === 'list' 
                 ? 'Upload and reconcile bank statements with expense records'
                 : viewMode === 'report'
@@ -208,7 +208,7 @@ export default function BankStatementsPage() {
           </div>
         </div>
         
-        <div className="flex gap-2">
+        <div className="flex gap-1.5">
           {viewMode === 'list' && (
             <>
               <input
@@ -221,14 +221,15 @@ export default function BankStatementsPage() {
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploading}
-                className="flex items-center gap-2 px-4 py-2 bg-[#476E66] text-white rounded-xl hover:bg-[#3A5B54] disabled:opacity-50"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54] disabled:opacity-50"
               >
                 {uploading ? (
-                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <RefreshCw className="w-3 h-3 animate-spin" />
                 ) : (
-                  <Upload className="w-4 h-4" />
+                  <Upload className="w-3 h-3" />
                 )}
-                {uploading ? 'Uploading...' : 'Upload Statement'}
+                <span className="hidden sm:inline">{uploading ? 'Uploading...' : 'Upload Statement'}</span>
+                <span className="sm:hidden">{uploading ? '...' : 'Upload'}</span>
               </button>
             </>
           )}
@@ -238,21 +239,21 @@ export default function BankStatementsPage() {
               <button
                 onClick={handleReconcile}
                 disabled={reconciling}
-                className="flex items-center gap-2 px-4 py-2 bg-[#476E66] text-white rounded-xl hover:bg-[#3A5B54] disabled:opacity-50"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54] disabled:opacity-50"
               >
                 {reconciling ? (
-                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <RefreshCw className="w-3 h-3 animate-spin" />
                 ) : (
-                  <RefreshCw className="w-4 h-4" />
+                  <RefreshCw className="w-3 h-3" />
                 )}
-                {reconciling ? 'Reconciling...' : 'Auto-Reconcile'}
+                <span className="hidden sm:inline">{reconciling ? 'Reconciling...' : 'Auto-Reconcile'}</span>
               </button>
               <button
                 onClick={() => setViewMode('report')}
-                className="flex items-center gap-2 px-4 py-2 border border-neutral-200 rounded-xl hover:bg-neutral-50"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-neutral-200 rounded-lg hover:bg-neutral-50"
               >
-                <FileText className="w-4 h-4" />
-                View Report
+                <FileText className="w-3 h-3" />
+                <span className="hidden sm:inline">Report</span>
               </button>
             </>
           )}
@@ -260,10 +261,10 @@ export default function BankStatementsPage() {
           {viewMode === 'report' && (
             <button
               onClick={() => window.print()}
-              className="flex items-center gap-2 px-4 py-2 border border-neutral-200 rounded-xl hover:bg-neutral-50"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-neutral-200 rounded-lg hover:bg-neutral-50"
             >
-              <Printer className="w-4 h-4" />
-              Print Report
+              <Printer className="w-3 h-3" />
+              <span className="hidden sm:inline">Print</span>
             </button>
           )}
         </div>
@@ -271,56 +272,56 @@ export default function BankStatementsPage() {
 
       {/* List View */}
       {viewMode === 'list' && (
-        <div className="space-y-4">
+        <div className="space-y-2.5">
           {/* Stats Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-white rounded-xl border border-neutral-200 p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
-                  <FileText className="w-5 h-5 text-blue-600" />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5 px-2 md:px-0">
+            <div className="bg-white rounded-lg p-2" style={{ boxShadow: 'var(--shadow-card)' }}>
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-lg bg-[#476E66]/10 flex items-center justify-center">
+                  <FileText className="w-3 h-3 text-[#476E66]" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-neutral-900">{statements.length}</p>
-                  <p className="text-sm text-neutral-500">Statements</p>
+                  <p className="text-base font-bold text-neutral-900">{statements.length}</p>
+                  <p className="text-[10px] text-neutral-500">Statements</p>
                 </div>
               </div>
             </div>
-            <div className="bg-white rounded-xl border border-neutral-200 p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center">
-                  <CheckCircle2 className="w-5 h-5 text-green-600" />
+            <div className="bg-white rounded-lg p-2" style={{ boxShadow: 'var(--shadow-card)' }}>
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-lg bg-green-100 flex items-center justify-center">
+                  <CheckCircle2 className="w-3 h-3 text-green-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-neutral-900">
+                  <p className="text-base font-bold text-neutral-900">
                     {statements.filter(s => s.status === 'processed').length}
                   </p>
-                  <p className="text-sm text-neutral-500">Processed</p>
+                  <p className="text-[10px] text-neutral-500">Processed</p>
                 </div>
               </div>
             </div>
-            <div className="bg-white rounded-xl border border-neutral-200 p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center">
-                  <RefreshCw className="w-5 h-5 text-amber-600" />
+            <div className="bg-white rounded-lg p-2" style={{ boxShadow: 'var(--shadow-card)' }}>
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-lg bg-amber-100 flex items-center justify-center">
+                  <RefreshCw className="w-3 h-3 text-amber-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-neutral-900">
+                  <p className="text-base font-bold text-neutral-900">
                     {statements.filter(s => s.status === 'pending' || s.status === 'processing').length}
                   </p>
-                  <p className="text-sm text-neutral-500">Pending</p>
+                  <p className="text-[10px] text-neutral-500">Pending</p>
                 </div>
               </div>
             </div>
-            <div className="bg-white rounded-xl border border-neutral-200 p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center">
-                  <XCircle className="w-5 h-5 text-red-600" />
+            <div className="bg-white rounded-lg p-2" style={{ boxShadow: 'var(--shadow-card)' }}>
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-lg bg-red-100 flex items-center justify-center">
+                  <XCircle className="w-3 h-3 text-red-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-neutral-900">
+                  <p className="text-base font-bold text-neutral-900">
                     {statements.filter(s => s.status === 'error').length}
                   </p>
-                  <p className="text-sm text-neutral-500">Errors</p>
+                  <p className="text-[10px] text-neutral-500">Errors</p>
                 </div>
               </div>
             </div>
@@ -336,100 +337,97 @@ export default function BankStatementsPage() {
           )}
 
           {/* Statements List */}
-          <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
+          <div className="bg-white rounded-lg overflow-hidden" style={{ boxShadow: 'var(--shadow-card)' }}>
             {statements.length === 0 ? (
-              <div className="p-12 text-center">
-                <div className="w-16 h-16 rounded-full bg-neutral-100 flex items-center justify-center mx-auto mb-4">
-                  <Upload className="w-8 h-8 text-neutral-400" />
+              <div className="p-6 text-center">
+                <div className="w-10 h-10 rounded-full bg-neutral-100 flex items-center justify-center mx-auto mb-2">
+                  <Upload className="w-5 h-5 text-neutral-400" />
                 </div>
-                <h3 className="text-lg font-semibold text-neutral-900 mb-2">No statements yet</h3>
-                <p className="text-neutral-500 mb-4">Upload your first bank statement PDF to get started</p>
+                <h3 className="text-sm font-semibold text-neutral-900 mb-1">No statements yet</h3>
+                <p className="text-[10px] text-neutral-500 mb-3">Upload your first bank statement PDF to get started</p>
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="px-4 py-2 bg-[#476E66] text-white rounded-xl hover:bg-[#3A5B54]"
+                  className="px-3 py-1.5 text-xs bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54]"
                 >
                   Upload Statement
                 </button>
               </div>
             ) : (
-              <table className="w-full">
-                <thead>
-                  <tr className="bg-neutral-50 border-b border-neutral-200">
-                    <th className="text-left px-6 py-3 text-xs font-medium text-neutral-500 uppercase tracking-wider">Statement</th>
-                    <th className="text-left px-6 py-3 text-xs font-medium text-neutral-500 uppercase tracking-wider">Period</th>
-                    <th className="text-right px-6 py-3 text-xs font-medium text-neutral-500 uppercase tracking-wider">Balance</th>
-                    <th className="text-center px-6 py-3 text-xs font-medium text-neutral-500 uppercase tracking-wider">Status</th>
-                    <th className="text-right px-6 py-3 text-xs font-medium text-neutral-500 uppercase tracking-wider">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-neutral-100">
-                  {statements.map((statement) => (
-                    <tr key={statement.id} className="hover:bg-neutral-50">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-lg bg-neutral-100 flex items-center justify-center">
-                            <Building2 className="w-5 h-5 text-neutral-600" />
-                          </div>
-                          <div>
-                            <p className="font-medium text-neutral-900">
-                              {statement.account_name || statement.original_filename || 'Bank Statement'}
-                            </p>
-                            {statement.account_number && (
-                              <p className="text-sm text-neutral-500">****{statement.account_number.slice(-4)}</p>
-                            )}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <p className="text-neutral-900">
-                          {formatDate(statement.period_start)} - {formatDate(statement.period_end)}
-                        </p>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <p className="font-medium text-neutral-900">
-                          {statement.ending_balance ? formatCurrency(statement.ending_balance) : '-'}
-                        </p>
-                        {statement.beginning_balance && (
-                          <p className="text-sm text-neutral-500">
-                            From {formatCurrency(statement.beginning_balance)}
-                          </p>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${
-                          statement.status === 'processed' ? 'bg-green-100 text-green-700' :
-                          statement.status === 'error' ? 'bg-red-100 text-red-700' :
-                          statement.status === 'processing' ? 'bg-blue-100 text-blue-700' :
-                          'bg-amber-100 text-amber-700'
-                        }`}>
-                          {statement.status === 'processed' && <CheckCircle2 className="w-3 h-3" />}
-                          {statement.status === 'error' && <XCircle className="w-3 h-3" />}
-                          {statement.status === 'processing' && <RefreshCw className="w-3 h-3 animate-spin" />}
-                          {statement.status.charAt(0).toUpperCase() + statement.status.slice(1)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={() => loadStatementDetails(statement)}
-                            className="p-2 hover:bg-neutral-100 rounded-lg text-neutral-600"
-                            title="View Details"
-                          >
-                            <ChevronRight className="w-5 h-5" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteStatement(statement.id)}
-                            className="p-2 hover:bg-red-50 rounded-lg text-red-500"
-                            title="Delete"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[600px]">
+                  <thead>
+                    <tr className="bg-neutral-50 border-b border-neutral-100">
+                      <th className="text-left px-2 py-1 text-[10px] font-medium text-neutral-500 uppercase tracking-wide">Statement</th>
+                      <th className="text-left px-2 py-1 text-[10px] font-medium text-neutral-500 uppercase tracking-wide hidden sm:table-cell">Period</th>
+                      <th className="text-right px-2 py-1 text-[10px] font-medium text-neutral-500 uppercase tracking-wide">Balance</th>
+                      <th className="text-center px-2 py-1 text-[10px] font-medium text-neutral-500 uppercase tracking-wide">Status</th>
+                      <th className="text-right px-2 py-1 text-[10px] font-medium text-neutral-500 uppercase tracking-wide">Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-50">
+                    {statements.map((statement) => (
+                      <tr key={statement.id} className="hover:bg-neutral-50/50">
+                        <td className="px-2 py-2">
+                          <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 rounded-lg bg-[#476E66]/10 flex items-center justify-center flex-shrink-0">
+                              <Building2 className="w-3.5 h-3.5 text-[#476E66]" />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-xs font-medium text-neutral-900 truncate">
+                                {statement.account_name || statement.original_filename || 'Bank Statement'}
+                              </p>
+                              {statement.account_number && (
+                                <p className="text-[10px] text-neutral-500">****{statement.account_number.slice(-4)}</p>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-2 py-2 hidden sm:table-cell">
+                          <p className="text-xs text-neutral-900">
+                            {formatDate(statement.period_start)} - {formatDate(statement.period_end)}
+                          </p>
+                        </td>
+                        <td className="px-2 py-2 text-right">
+                          <p className="text-xs font-medium text-neutral-900">
+                            {statement.ending_balance ? formatCurrency(statement.ending_balance) : '-'}
+                          </p>
+                        </td>
+                        <td className="px-2 py-2 text-center">
+                          <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium ${
+                            statement.status === 'processed' ? 'bg-green-100 text-green-700' :
+                            statement.status === 'error' ? 'bg-red-100 text-red-700' :
+                            statement.status === 'processing' ? 'bg-blue-100 text-blue-700' :
+                            'bg-amber-100 text-amber-700'
+                          }`}>
+                            {statement.status === 'processed' && <CheckCircle2 className="w-2.5 h-2.5" />}
+                            {statement.status === 'error' && <XCircle className="w-2.5 h-2.5" />}
+                            {statement.status === 'processing' && <RefreshCw className="w-2.5 h-2.5 animate-spin" />}
+                            <span className="hidden sm:inline">{statement.status.charAt(0).toUpperCase() + statement.status.slice(1)}</span>
+                          </span>
+                        </td>
+                        <td className="px-2 py-2 text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <button
+                              onClick={() => loadStatementDetails(statement)}
+                              className="p-1 hover:bg-neutral-100 rounded text-neutral-600"
+                              title="View Details"
+                            >
+                              <ChevronRight className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteStatement(statement.id)}
+                              className="p-1 hover:bg-red-50 rounded text-red-500"
+                              title="Delete"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
         </div>
@@ -437,134 +435,133 @@ export default function BankStatementsPage() {
 
       {/* Detail View */}
       {viewMode === 'detail' && selectedStatement && (
-        <div className="space-y-6">
+        <div className="space-y-2.5">
           {/* Summary Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            <div className="bg-white rounded-xl border border-neutral-200 p-4">
-              <p className="text-sm text-neutral-500 mb-1">Beginning Balance</p>
-              <p className="text-xl font-bold text-neutral-900">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-1.5 px-2 md:px-0">
+            <div className="bg-white rounded-lg p-2" style={{ boxShadow: 'var(--shadow-card)' }}>
+              <p className="text-[10px] text-neutral-500 mb-0.5">Beginning Balance</p>
+              <p className="text-base font-bold text-neutral-900">
                 {formatCurrency(selectedStatement.beginning_balance || 0)}
               </p>
             </div>
-            <div className="bg-white rounded-xl border border-neutral-200 p-4">
-              <p className="text-sm text-neutral-500 mb-1">Ending Balance</p>
-              <p className="text-xl font-bold text-neutral-900">
+            <div className="bg-white rounded-lg p-2" style={{ boxShadow: 'var(--shadow-card)' }}>
+              <p className="text-[10px] text-neutral-500 mb-0.5">Ending Balance</p>
+              <p className="text-base font-bold text-neutral-900">
                 {formatCurrency(selectedStatement.ending_balance || 0)}
               </p>
             </div>
-            <div className="bg-white rounded-xl border border-neutral-200 p-4">
-              <p className="text-sm text-green-600 mb-1">Total Deposits</p>
-              <p className="text-xl font-bold text-green-600">
+            <div className="bg-white rounded-lg p-2" style={{ boxShadow: 'var(--shadow-card)' }}>
+              <p className="text-[10px] text-green-600 mb-0.5">Deposits</p>
+              <p className="text-base font-bold text-green-600">
                 +{formatCurrency(summary.depositsTotal)}
               </p>
             </div>
-            <div className="bg-white rounded-xl border border-neutral-200 p-4">
-              <p className="text-sm text-red-600 mb-1">Total Withdrawals</p>
-              <p className="text-xl font-bold text-red-600">
+            <div className="bg-white rounded-lg p-2" style={{ boxShadow: 'var(--shadow-card)' }}>
+              <p className="text-[10px] text-red-600 mb-0.5">Withdrawals</p>
+              <p className="text-base font-bold text-red-600">
                 -{formatCurrency(summary.withdrawalsTotal)}
               </p>
             </div>
-            <div className="bg-white rounded-xl border border-neutral-200 p-4">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-sm text-neutral-500">Matched</span>
-                <span className="text-sm font-medium text-green-600">{summary.matchedCount}</span>
-              </div>
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-sm text-neutral-500">Unmatched</span>
-                <span className="text-sm font-medium text-amber-600">{summary.unmatchedCount}</span>
+            <div className="bg-white rounded-lg p-2 col-span-2 md:col-span-1" style={{ boxShadow: 'var(--shadow-card)' }}>
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] text-neutral-500">Match</span>
+                <span className="text-[10px] font-medium text-green-600">{summary.matchedCount}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-neutral-500">Discrepancies</span>
-                <span className="text-sm font-medium text-red-600">{summary.discrepancyCount}</span>
+                <span className="text-[10px] text-neutral-500">Unmatch</span>
+                <span className="text-[10px] font-medium text-amber-600">{summary.unmatchedCount}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] text-neutral-500">Issues</span>
+                <span className="text-[10px] font-medium text-red-600">{summary.discrepancyCount}</span>
               </div>
             </div>
           </div>
 
           {/* Filter */}
-          <div className="flex items-center gap-3">
-            <Filter className="w-4 h-4 text-neutral-500" />
+          <div className="flex items-center gap-2">
+            <Filter className="w-3 h-3 text-neutral-500" />
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-3 py-2 border border-neutral-200 rounded-lg text-sm"
+              className="px-2 py-1 border border-neutral-200 rounded-lg text-xs focus:ring-1 focus:ring-[#476E66] focus:border-[#476E66]"
             >
-              <option value="all">All Transactions ({transactions.length})</option>
+              <option value="all">All ({transactions.length})</option>
               <option value="matched">Matched ({summary.matchedCount})</option>
               <option value="unmatched">Unmatched ({summary.unmatchedCount})</option>
-              <option value="discrepancy">Discrepancies ({summary.discrepancyCount})</option>
+              <option value="discrepancy">Issues ({summary.discrepancyCount})</option>
             </select>
           </div>
 
           {/* Transactions Table */}
-          <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-neutral-50 border-b border-neutral-200">
-                  <th className="text-left px-6 py-3 text-xs font-medium text-neutral-500 uppercase tracking-wider">Date</th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-neutral-500 uppercase tracking-wider">Description</th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-neutral-500 uppercase tracking-wider">Type</th>
-                  <th className="text-right px-6 py-3 text-xs font-medium text-neutral-500 uppercase tracking-wider">Amount</th>
-                  <th className="text-center px-6 py-3 text-xs font-medium text-neutral-500 uppercase tracking-wider">Status</th>
-                  <th className="text-right px-6 py-3 text-xs font-medium text-neutral-500 uppercase tracking-wider">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-neutral-100">
-                {filteredTransactions.map((tx) => (
-                  <tr key={tx.id} className="hover:bg-neutral-50">
-                    <td className="px-6 py-4 text-neutral-900">{formatDate(tx.transaction_date)}</td>
-                    <td className="px-6 py-4">
-                      <p className="text-neutral-900">{tx.description || '-'}</p>
-                      {tx.check_number && (
-                        <p className="text-sm text-neutral-500">Check #{tx.check_number}</p>
-                      )}
-                      {tx.match_notes && (
-                        <p className="text-xs text-neutral-400 mt-1">{tx.match_notes}</p>
-                      )}
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${
-                        tx.transaction_type === 'deposit' ? 'bg-green-100 text-green-700' :
-                        tx.transaction_type === 'check' ? 'bg-purple-100 text-purple-700' :
-                        tx.transaction_type === 'fee' ? 'bg-red-100 text-red-700' :
-                        'bg-neutral-100 text-neutral-700'
-                      }`}>
-                        {tx.transaction_type}
-                      </span>
-                    </td>
-                    <td className={`px-6 py-4 text-right font-medium ${tx.amount >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {tx.amount >= 0 ? '+' : ''}{formatCurrency(tx.amount)}
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${
-                        tx.match_status === 'matched' ? 'bg-green-100 text-green-700' :
-                        tx.match_status === 'discrepancy' ? 'bg-red-100 text-red-700' :
-                        tx.match_status === 'ignored' ? 'bg-neutral-100 text-neutral-500' :
-                        'bg-amber-100 text-amber-700'
-                      }`}>
-                        {tx.match_status === 'matched' && <CheckCircle2 className="w-3 h-3" />}
-                        {tx.match_status === 'discrepancy' && <AlertTriangle className="w-3 h-3" />}
-                        {tx.match_status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <select
-                        value={tx.match_status}
-                        onChange={(e) => handleUpdateMatchStatus(tx.id, e.target.value as BankTransaction['match_status'])}
-                        className="px-2 py-1 text-xs border border-neutral-200 rounded"
-                      >
-                        <option value="matched">Matched</option>
-                        <option value="unmatched">Unmatched</option>
-                        <option value="discrepancy">Discrepancy</option>
-                        <option value="ignored">Ignore</option>
-                      </select>
-                    </td>
+          <div className="bg-white rounded-lg overflow-hidden" style={{ boxShadow: 'var(--shadow-card)' }}>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[600px]">
+                <thead>
+                  <tr className="bg-neutral-50 border-b border-neutral-100">
+                    <th className="text-left px-2 py-1 text-[10px] font-medium text-neutral-500 uppercase tracking-wide">Date</th>
+                    <th className="text-left px-2 py-1 text-[10px] font-medium text-neutral-500 uppercase tracking-wide">Description</th>
+                    <th className="text-left px-2 py-1 text-[10px] font-medium text-neutral-500 uppercase tracking-wide hidden sm:table-cell">Type</th>
+                    <th className="text-right px-2 py-1 text-[10px] font-medium text-neutral-500 uppercase tracking-wide">Amount</th>
+                    <th className="text-center px-2 py-1 text-[10px] font-medium text-neutral-500 uppercase tracking-wide">Status</th>
+                    <th className="text-right px-2 py-1 text-[10px] font-medium text-neutral-500 uppercase tracking-wide">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-neutral-50">
+                  {filteredTransactions.map((tx) => (
+                    <tr key={tx.id} className="hover:bg-neutral-50/50">
+                      <td className="px-2 py-1.5 text-xs text-neutral-900">{formatDate(tx.transaction_date)}</td>
+                      <td className="px-2 py-1.5">
+                        <p className="text-xs text-neutral-900 truncate max-w-[150px]">{tx.description || '-'}</p>
+                        {tx.check_number && (
+                          <p className="text-[10px] text-neutral-500">Check #{tx.check_number}</p>
+                        )}
+                      </td>
+                      <td className="px-2 py-1.5 hidden sm:table-cell">
+                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                          tx.transaction_type === 'deposit' ? 'bg-green-100 text-green-700' :
+                          tx.transaction_type === 'check' ? 'bg-purple-100 text-purple-700' :
+                          tx.transaction_type === 'fee' ? 'bg-red-100 text-red-700' :
+                          'bg-neutral-100 text-neutral-700'
+                        }`}>
+                          {tx.transaction_type}
+                        </span>
+                      </td>
+                      <td className={`px-2 py-1.5 text-right text-xs font-medium ${tx.amount >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {tx.amount >= 0 ? '+' : ''}{formatCurrency(tx.amount)}
+                      </td>
+                      <td className="px-2 py-1.5 text-center">
+                        <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium ${
+                          tx.match_status === 'matched' ? 'bg-green-100 text-green-700' :
+                          tx.match_status === 'discrepancy' ? 'bg-red-100 text-red-700' :
+                          tx.match_status === 'ignored' ? 'bg-neutral-100 text-neutral-500' :
+                          'bg-amber-100 text-amber-700'
+                        }`}>
+                          {tx.match_status === 'matched' && <CheckCircle2 className="w-2.5 h-2.5" />}
+                          {tx.match_status === 'discrepancy' && <AlertTriangle className="w-2.5 h-2.5" />}
+                          <span className="hidden sm:inline">{tx.match_status}</span>
+                        </span>
+                      </td>
+                      <td className="px-2 py-1.5 text-right">
+                        <select
+                          value={tx.match_status}
+                          onChange={(e) => handleUpdateMatchStatus(tx.id, e.target.value as BankTransaction['match_status'])}
+                          className="px-1 py-0.5 text-[10px] border border-neutral-200 rounded focus:ring-1 focus:ring-[#476E66]"
+                        >
+                          <option value="matched">Match</option>
+                          <option value="unmatched">Unmatch</option>
+                          <option value="discrepancy">Issue</option>
+                          <option value="ignored">Ignore</option>
+                        </select>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
             
             {filteredTransactions.length === 0 && (
-              <div className="p-12 text-center text-neutral-500">
+              <div className="p-6 text-center text-xs text-neutral-500">
                 No transactions found
               </div>
             )}
@@ -574,219 +571,225 @@ export default function BankStatementsPage() {
 
       {/* Report View */}
       {viewMode === 'report' && selectedStatement && (
-        <div className="bg-white rounded-xl border border-neutral-200 p-8 print:border-0 print:p-0">
+        <div className="bg-white rounded-lg p-4 print:border-0 print:p-0" style={{ boxShadow: 'var(--shadow-card)' }}>
           {/* Report Header */}
-          <div className="border-b border-neutral-200 pb-6 mb-6">
-            <h2 className="text-2xl font-bold text-neutral-900 mb-2">Bank Reconciliation Report</h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+          <div className="border-b border-neutral-100 pb-3 mb-3">
+            <h2 className="text-base font-bold text-neutral-900 mb-2">Bank Reconciliation Report</h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
               <div>
-                <p className="text-neutral-500">Account</p>
+                <p className="text-[10px] text-neutral-500">Account</p>
                 <p className="font-medium">{selectedStatement.account_name || 'N/A'}</p>
               </div>
               <div>
-                <p className="text-neutral-500">Account Number</p>
+                <p className="text-[10px] text-neutral-500">Account Number</p>
                 <p className="font-medium">****{selectedStatement.account_number?.slice(-4) || 'N/A'}</p>
               </div>
               <div>
-                <p className="text-neutral-500">Period</p>
+                <p className="text-[10px] text-neutral-500">Period</p>
                 <p className="font-medium">{formatDate(selectedStatement.period_start)} - {formatDate(selectedStatement.period_end)}</p>
               </div>
               <div>
-                <p className="text-neutral-500">Generated</p>
+                <p className="text-[10px] text-neutral-500">Generated</p>
                 <p className="font-medium">{new Date().toLocaleDateString()}</p>
               </div>
             </div>
           </div>
 
           {/* Summary */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-            <div className="bg-neutral-50 rounded-lg p-4">
-              <p className="text-sm text-neutral-500">Beginning Balance</p>
-              <p className="text-xl font-bold">{formatCurrency(selectedStatement.beginning_balance || 0)}</p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5 mb-4">
+            <div className="bg-neutral-50 rounded-lg p-2">
+              <p className="text-[10px] text-neutral-500">Beginning Balance</p>
+              <p className="text-base font-bold">{formatCurrency(selectedStatement.beginning_balance || 0)}</p>
             </div>
-            <div className="bg-neutral-50 rounded-lg p-4">
-              <p className="text-sm text-neutral-500">Ending Balance</p>
-              <p className="text-xl font-bold">{formatCurrency(selectedStatement.ending_balance || 0)}</p>
+            <div className="bg-neutral-50 rounded-lg p-2">
+              <p className="text-[10px] text-neutral-500">Ending Balance</p>
+              <p className="text-base font-bold">{formatCurrency(selectedStatement.ending_balance || 0)}</p>
             </div>
-            <div className="bg-green-50 rounded-lg p-4">
-              <p className="text-sm text-green-600">Total Deposits</p>
-              <p className="text-xl font-bold text-green-600">+{formatCurrency(summary.depositsTotal)}</p>
+            <div className="bg-green-50 rounded-lg p-2">
+              <p className="text-[10px] text-green-600">Total Deposits</p>
+              <p className="text-base font-bold text-green-600">+{formatCurrency(summary.depositsTotal)}</p>
             </div>
-            <div className="bg-red-50 rounded-lg p-4">
-              <p className="text-sm text-red-600">Total Withdrawals</p>
-              <p className="text-xl font-bold text-red-600">-{formatCurrency(summary.withdrawalsTotal)}</p>
+            <div className="bg-red-50 rounded-lg p-2">
+              <p className="text-[10px] text-red-600">Total Withdrawals</p>
+              <p className="text-base font-bold text-red-600">-{formatCurrency(summary.withdrawalsTotal)}</p>
             </div>
           </div>
 
           {/* Reconciliation Status */}
-          <div className="mb-8">
-            <h3 className="text-lg font-semibold text-neutral-900 mb-4">Reconciliation Summary</h3>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
-                <p className="text-3xl font-bold text-green-600">{summary.matchedCount}</p>
-                <p className="text-sm text-green-700">Matched</p>
+          <div className="mb-4">
+            <h3 className="text-sm font-semibold text-neutral-900 mb-2">Reconciliation Summary</h3>
+            <div className="grid grid-cols-3 gap-1.5">
+              <div className="bg-green-50 border border-green-200 rounded-lg p-2 text-center">
+                <p className="text-xl font-bold text-green-600">{summary.matchedCount}</p>
+                <p className="text-[10px] text-green-700">Matched</p>
               </div>
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-center">
-                <p className="text-3xl font-bold text-amber-600">{summary.unmatchedCount}</p>
-                <p className="text-sm text-amber-700">Unmatched</p>
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 text-center">
+                <p className="text-xl font-bold text-amber-600">{summary.unmatchedCount}</p>
+                <p className="text-[10px] text-amber-700">Unmatched</p>
               </div>
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
-                <p className="text-3xl font-bold text-red-600">{summary.discrepancyCount}</p>
-                <p className="text-sm text-red-700">Discrepancies</p>
+              <div className="bg-red-50 border border-red-200 rounded-lg p-2 text-center">
+                <p className="text-xl font-bold text-red-600">{summary.discrepancyCount}</p>
+                <p className="text-[10px] text-red-700">Discrepancies</p>
               </div>
             </div>
           </div>
 
           {/* Matched Transactions */}
           {summary.matched.length > 0 && (
-            <div className="mb-8">
+            <div className="mb-4">
               <button
                 onClick={() => setExpandedSections(s => ({ ...s, matched: !s.matched }))}
-                className="flex items-center gap-2 text-lg font-semibold text-neutral-900 mb-4"
+                className="flex items-center gap-1.5 text-sm font-semibold text-neutral-900 mb-2"
               >
-                {expandedSections.matched ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+                {expandedSections.matched ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
                 Matched Transactions ({summary.matched.length})
               </button>
               {expandedSections.matched && (
-                <table className="w-full text-sm border border-neutral-200 rounded-lg overflow-hidden">
-                  <thead>
-                    <tr className="bg-green-50">
-                      <th className="text-left px-4 py-2">Date</th>
-                      <th className="text-left px-4 py-2">Description</th>
-                      <th className="text-right px-4 py-2">Amount</th>
-                      <th className="text-left px-4 py-2">Matched With</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-neutral-100">
-                    {summary.matched.map(tx => (
-                      <tr key={tx.id}>
-                        <td className="px-4 py-2">{formatDate(tx.transaction_date)}</td>
-                        <td className="px-4 py-2">{tx.description}</td>
-                        <td className="px-4 py-2 text-right">{formatCurrency(tx.amount)}</td>
-                        <td className="px-4 py-2 text-neutral-500">{tx.match_notes || '-'}</td>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs border border-neutral-200 rounded-lg overflow-hidden min-w-[400px]">
+                    <thead>
+                      <tr className="bg-green-50">
+                        <th className="text-left px-2 py-1">Date</th>
+                        <th className="text-left px-2 py-1">Description</th>
+                        <th className="text-right px-2 py-1">Amount</th>
+                        <th className="text-left px-2 py-1 hidden sm:table-cell">Matched With</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-neutral-100">
+                      {summary.matched.map(tx => (
+                        <tr key={tx.id}>
+                          <td className="px-2 py-1.5">{formatDate(tx.transaction_date)}</td>
+                          <td className="px-2 py-1.5 truncate max-w-[120px]">{tx.description}</td>
+                          <td className="px-2 py-1.5 text-right">{formatCurrency(tx.amount)}</td>
+                          <td className="px-2 py-1.5 text-neutral-500 hidden sm:table-cell">{tx.match_notes || '-'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </div>
           )}
 
           {/* Unmatched Transactions */}
           {summary.unmatched.length > 0 && (
-            <div className="mb-8">
+            <div className="mb-4">
               <button
                 onClick={() => setExpandedSections(s => ({ ...s, unmatched: !s.unmatched }))}
-                className="flex items-center gap-2 text-lg font-semibold text-neutral-900 mb-4"
+                className="flex items-center gap-1.5 text-sm font-semibold text-neutral-900 mb-2"
               >
-                {expandedSections.unmatched ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+                {expandedSections.unmatched ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
                 Unmatched Transactions ({summary.unmatched.length})
               </button>
               {expandedSections.unmatched && (
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
-                  <p className="text-sm text-amber-700">
-                    These bank transactions could not be matched to any expense record. Consider adding expense records for these transactions.
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 mb-2">
+                  <p className="text-[10px] text-amber-700">
+                    These transactions could not be matched to any expense record.
                   </p>
                 </div>
               )}
               {expandedSections.unmatched && (
-                <table className="w-full text-sm border border-neutral-200 rounded-lg overflow-hidden">
-                  <thead>
-                    <tr className="bg-amber-50">
-                      <th className="text-left px-4 py-2">Date</th>
-                      <th className="text-left px-4 py-2">Description</th>
-                      <th className="text-left px-4 py-2">Type</th>
-                      <th className="text-right px-4 py-2">Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-neutral-100">
-                    {summary.unmatched.map(tx => (
-                      <tr key={tx.id}>
-                        <td className="px-4 py-2">{formatDate(tx.transaction_date)}</td>
-                        <td className="px-4 py-2">{tx.description}</td>
-                        <td className="px-4 py-2">{tx.transaction_type}</td>
-                        <td className="px-4 py-2 text-right">{formatCurrency(tx.amount)}</td>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs border border-neutral-200 rounded-lg overflow-hidden min-w-[400px]">
+                    <thead>
+                      <tr className="bg-amber-50">
+                        <th className="text-left px-2 py-1">Date</th>
+                        <th className="text-left px-2 py-1">Description</th>
+                        <th className="text-left px-2 py-1 hidden sm:table-cell">Type</th>
+                        <th className="text-right px-2 py-1">Amount</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-neutral-100">
+                      {summary.unmatched.map(tx => (
+                        <tr key={tx.id}>
+                          <td className="px-2 py-1.5">{formatDate(tx.transaction_date)}</td>
+                          <td className="px-2 py-1.5 truncate max-w-[120px]">{tx.description}</td>
+                          <td className="px-2 py-1.5 hidden sm:table-cell">{tx.transaction_type}</td>
+                          <td className="px-2 py-1.5 text-right">{formatCurrency(tx.amount)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </div>
           )}
 
           {/* Discrepancies */}
           {summary.discrepancies.length > 0 && (
-            <div className="mb-8">
+            <div className="mb-4">
               <button
                 onClick={() => setExpandedSections(s => ({ ...s, discrepancies: !s.discrepancies }))}
-                className="flex items-center gap-2 text-lg font-semibold text-neutral-900 mb-4"
+                className="flex items-center gap-1.5 text-sm font-semibold text-neutral-900 mb-2"
               >
-                {expandedSections.discrepancies ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+                {expandedSections.discrepancies ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
                 Discrepancies ({summary.discrepancies.length})
               </button>
               {expandedSections.discrepancies && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
-                  <p className="text-sm text-red-700">
-                    These transactions have matching dates but different amounts. Review and correct the expense records.
+                <div className="bg-red-50 border border-red-200 rounded-lg p-2 mb-2">
+                  <p className="text-[10px] text-red-700">
+                    These transactions have matching dates but different amounts.
                   </p>
                 </div>
               )}
               {expandedSections.discrepancies && (
-                <table className="w-full text-sm border border-neutral-200 rounded-lg overflow-hidden">
-                  <thead>
-                    <tr className="bg-red-50">
-                      <th className="text-left px-4 py-2">Date</th>
-                      <th className="text-left px-4 py-2">Description</th>
-                      <th className="text-right px-4 py-2">Bank Amount</th>
-                      <th className="text-left px-4 py-2">Notes</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-neutral-100">
-                    {summary.discrepancies.map(tx => (
-                      <tr key={tx.id}>
-                        <td className="px-4 py-2">{formatDate(tx.transaction_date)}</td>
-                        <td className="px-4 py-2">{tx.description}</td>
-                        <td className="px-4 py-2 text-right">{formatCurrency(tx.amount)}</td>
-                        <td className="px-4 py-2 text-red-600">{tx.match_notes}</td>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs border border-neutral-200 rounded-lg overflow-hidden min-w-[400px]">
+                    <thead>
+                      <tr className="bg-red-50">
+                        <th className="text-left px-2 py-1">Date</th>
+                        <th className="text-left px-2 py-1">Description</th>
+                        <th className="text-right px-2 py-1">Amount</th>
+                        <th className="text-left px-2 py-1 hidden sm:table-cell">Notes</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-neutral-100">
+                      {summary.discrepancies.map(tx => (
+                        <tr key={tx.id}>
+                          <td className="px-2 py-1.5">{formatDate(tx.transaction_date)}</td>
+                          <td className="px-2 py-1.5 truncate max-w-[120px]">{tx.description}</td>
+                          <td className="px-2 py-1.5 text-right">{formatCurrency(tx.amount)}</td>
+                          <td className="px-2 py-1.5 text-red-600 hidden sm:table-cell">{tx.match_notes}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </div>
           )}
 
           {/* Variance Analysis */}
-          <div className="border-t border-neutral-200 pt-6 mt-8">
-            <h3 className="text-lg font-semibold text-neutral-900 mb-4">Variance Analysis</h3>
-            <div className="bg-neutral-50 rounded-lg p-4">
-              <table className="w-full text-sm">
+          <div className="border-t border-neutral-100 pt-3 mt-4">
+            <h3 className="text-sm font-semibold text-neutral-900 mb-2">Variance Analysis</h3>
+            <div className="bg-neutral-50 rounded-lg p-2">
+              <table className="w-full text-xs">
                 <tbody>
                   <tr>
-                    <td className="py-2">Beginning Balance</td>
-                    <td className="py-2 text-right">{formatCurrency(selectedStatement.beginning_balance || 0)}</td>
+                    <td className="py-1">Beginning Balance</td>
+                    <td className="py-1 text-right">{formatCurrency(selectedStatement.beginning_balance || 0)}</td>
                   </tr>
                   <tr>
-                    <td className="py-2">+ Deposits</td>
-                    <td className="py-2 text-right text-green-600">+{formatCurrency(summary.depositsTotal)}</td>
+                    <td className="py-1">+ Deposits</td>
+                    <td className="py-1 text-right text-green-600">+{formatCurrency(summary.depositsTotal)}</td>
                   </tr>
                   <tr>
-                    <td className="py-2">- Withdrawals</td>
-                    <td className="py-2 text-right text-red-600">-{formatCurrency(summary.withdrawalsTotal)}</td>
+                    <td className="py-1">- Withdrawals</td>
+                    <td className="py-1 text-right text-red-600">-{formatCurrency(summary.withdrawalsTotal)}</td>
                   </tr>
-                  <tr className="border-t border-neutral-300">
-                    <td className="py-2 font-medium">Calculated Ending Balance</td>
-                    <td className="py-2 text-right font-medium">
+                  <tr className="border-t border-neutral-200">
+                    <td className="py-1 font-medium">Calculated Ending</td>
+                    <td className="py-1 text-right font-medium">
                       {formatCurrency((selectedStatement.beginning_balance || 0) + summary.depositsTotal - summary.withdrawalsTotal)}
                     </td>
                   </tr>
                   <tr>
-                    <td className="py-2 font-medium">Statement Ending Balance</td>
-                    <td className="py-2 text-right font-medium">{formatCurrency(selectedStatement.ending_balance || 0)}</td>
+                    <td className="py-1 font-medium">Statement Ending</td>
+                    <td className="py-1 text-right font-medium">{formatCurrency(selectedStatement.ending_balance || 0)}</td>
                   </tr>
-                  <tr className="border-t border-neutral-300">
-                    <td className="py-2 font-bold">Variance</td>
-                    <td className={`py-2 text-right font-bold ${
+                  <tr className="border-t border-neutral-200">
+                    <td className="py-1 font-bold">Variance</td>
+                    <td className={`py-1 text-right font-bold ${
                       Math.abs((selectedStatement.ending_balance || 0) - ((selectedStatement.beginning_balance || 0) + summary.depositsTotal - summary.withdrawalsTotal)) < 0.01
                         ? 'text-green-600'
                         : 'text-red-600'

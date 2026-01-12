@@ -4792,71 +4792,66 @@ function IntegrationsTab({ companyId }: { companyId: string }) {
   }
 
   return (
-    <div className="space-y-3">
-      <div className="bg-white rounded-lg border border-neutral-100 p-3">
-        <h2 className="text-base font-semibold text-neutral-900 mb-3 leading-tight">Payment Integrations</h2>
+    <div className="space-y-2">
+      <div className="bg-white rounded-lg p-2.5" style={{ boxShadow: 'var(--shadow-card)' }}>
+        <h2 className="text-xs font-semibold text-neutral-900 mb-2">Payment Integrations</h2>
         
-        {/* Stripe Connect Card */}
-        <div className="border border-neutral-200 rounded-lg p-3">
-          <div className="flex items-start gap-3">
-            {/* Stripe Logo */}
-            <div className="w-10 h-10 bg-[#635BFF] rounded-lg flex items-center justify-center flex-shrink-0">
-              <svg viewBox="0 0 24 24" className="w-6 h-6 text-white" fill="currentColor">
+        {/* Stripe Connect Card - Compact */}
+        <div className="border border-neutral-200 rounded-lg p-2">
+          <div className="flex items-start gap-2">
+            {/* Stripe Logo - Smaller */}
+            <div className="w-8 h-8 bg-[#635BFF] rounded-lg flex items-center justify-center flex-shrink-0">
+              <svg viewBox="0 0 24 24" className="w-4 h-4 text-white" fill="currentColor">
                 <path d="M13.976 9.15c-2.172-.806-3.356-1.426-3.356-2.409 0-.831.683-1.305 1.901-1.305 2.227 0 4.515.858 6.09 1.631l.89-5.494C18.252.975 15.697 0 12.165 0 9.667 0 7.589.654 6.104 1.872 4.56 3.147 3.757 4.992 3.757 7.218c0 4.039 2.467 5.76 6.476 7.219 2.585.92 3.445 1.574 3.445 2.583 0 .98-.84 1.545-2.354 1.545-1.875 0-4.965-.921-6.99-2.109l-.9 5.555C5.175 22.99 8.385 24 11.714 24c2.641 0 4.843-.624 6.328-1.813 1.664-1.305 2.525-3.236 2.525-5.732 0-4.128-2.524-5.851-6.591-7.305z"/>
               </svg>
             </div>
             
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
-                <h3 className="text-sm font-semibold text-neutral-900">Stripe</h3>
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <h3 className="text-xs font-semibold text-neutral-900">Stripe</h3>
                 {stripeAccountId ? (
-                  <span className="px-1.5 py-0.5 bg-[#476E66]/10 text-[#476E66] rounded-full text-[10px] font-medium">
+                  <span className="px-1 py-0.5 bg-[#476E66]/10 text-[#476E66] rounded text-[9px] font-medium">
                     Connected
                   </span>
                 ) : (
-                  <span className="px-1.5 py-0.5 bg-neutral-100 text-neutral-600 rounded-full text-[10px] font-medium">
+                  <span className="px-1 py-0.5 bg-neutral-100 text-neutral-500 rounded text-[9px] font-medium">
                     Not Connected
                   </span>
                 )}
               </div>
-              <p className="text-neutral-600 text-[11px] mb-2.5 leading-tight">
-                Connect your Stripe account to accept online payments for invoices. 
-                Clients will be able to pay with credit/debit cards directly from their invoice.
+              <p className="text-neutral-500 text-[10px] mb-2 leading-tight">
+                Accept credit/debit card payments on invoices
               </p>
               
               {stripeAccountId ? (
-                <div className="space-y-1.5">
-                  <div className="flex items-center gap-1.5 text-xs text-neutral-600">
-                    <Check className="w-3 h-3 text-[#476E66]" />
-                    <span>Account ID: {stripeAccountId.substring(0, 12)}...</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-xs text-neutral-600">
-                    <Check className="w-3 h-3 text-[#476E66]" />
-                    <span>Online invoice payments enabled</span>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-1 text-[10px] text-neutral-600">
+                    <Check className="w-2.5 h-2.5 text-[#476E66]" />
+                    <span className="truncate">ID: {stripeAccountId.substring(0, 10)}...</span>
                   </div>
                   <button
                     onClick={handleDisconnectStripe}
                     disabled={disconnecting}
-                    className="mt-2 px-2.5 py-1.5 text-xs font-medium text-neutral-700 border border-neutral-300 rounded-lg hover:bg-neutral-50 transition-colors disabled:opacity-50"
+                    className="mt-1 px-2 py-1 text-[10px] font-medium text-neutral-600 border border-neutral-200 rounded-md hover:bg-neutral-50 transition-colors disabled:opacity-50"
                   >
-                    {disconnecting ? 'Disconnecting...' : 'Disconnect Stripe'}
+                    {disconnecting ? 'Disconnecting...' : 'Disconnect'}
                   </button>
                 </div>
               ) : (
                 <button
                   onClick={handleConnectStripe}
                   disabled={connecting}
-                  className="flex items-center gap-1.5 px-3 py-2 bg-[#635BFF] text-white text-xs font-medium rounded-lg hover:bg-[#5851DB] transition-colors disabled:opacity-50"
+                  className="flex items-center gap-1 px-2 py-1.5 bg-[#635BFF] text-white text-[10px] font-medium rounded-md hover:bg-[#5851DB] transition-colors disabled:opacity-50"
                 >
                   {connecting ? (
                     <>
-                      <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <div className="w-2.5 h-2.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                       Connecting...
                     </>
                   ) : (
                     <>
-                      <Link className="w-3 h-3" />
-                      Connect with Stripe
+                      <Link className="w-2.5 h-2.5" />
+                      Connect Stripe
                     </>
                   )}
                 </button>
@@ -4865,15 +4860,14 @@ function IntegrationsTab({ companyId }: { companyId: string }) {
           </div>
         </div>
 
-        {/* Info Box */}
-        <div className="mt-3 p-2.5 bg-[#635BFF]/5 border border-[#635BFF]/20 rounded-lg">
-          <h4 className="font-semibold text-[#635BFF] text-xs mb-1.5 leading-tight">How it works</h4>
-          <ul className="text-[10px] text-neutral-600 space-y-1 leading-tight">
-            <li>1. Connect your existing Stripe account or create a new one</li>
-            <li>2. When you send invoices, clients see a "Pay Now" button</li>
-            <li>3. Payments go directly to your connected Stripe account</li>
-            <li>4. Invoice status updates automatically when paid</li>
-          </ul>
+        {/* Info Box - Ultra Compact */}
+        <div className="mt-2 p-2 bg-[#635BFF]/5 border border-[#635BFF]/10 rounded-md">
+          <h4 className="font-medium text-[#635BFF] text-[10px] mb-1">How it works</h4>
+          <ol className="text-[9px] text-neutral-600 space-y-0.5 leading-tight list-decimal list-inside">
+            <li>Connect your Stripe account</li>
+            <li>Clients see "Pay Now" on invoices</li>
+            <li>Payments sync automatically</li>
+          </ol>
         </div>
       </div>
 
@@ -5050,155 +5044,150 @@ function BigTimeIntegrationCard({ companyId }: { companyId: string }) {
 
   if (loading) {
     return (
-      <div className="bg-white rounded-lg border border-neutral-100 p-3">
-        <div className="flex justify-center py-4">
-          <div className="animate-spin w-5 h-5 border-2 border-neutral-600 border-t-transparent rounded-full" />
+      <div className="bg-white rounded-lg p-2.5" style={{ boxShadow: 'var(--shadow-card)' }}>
+        <div className="flex justify-center py-3">
+          <div className="animate-spin w-4 h-4 border-2 border-neutral-600 border-t-transparent rounded-full" />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-lg border border-neutral-100 p-3">
-      <h2 className="text-base font-semibold text-neutral-900 mb-3 leading-tight">Data Import</h2>
+    <div className="bg-white rounded-lg p-2.5" style={{ boxShadow: 'var(--shadow-card)' }}>
+      <h2 className="text-xs font-semibold text-neutral-900 mb-2">Data Import</h2>
       
-      {/* BigTime Card */}
-      <div className="border border-neutral-200 rounded-lg p-3">
-        <div className="flex items-start gap-3">
-          {/* BigTime Logo - Clock Icon */}
-          <div className="w-10 h-10 bg-[#0066CC] rounded-lg flex items-center justify-center flex-shrink-0">
-            <svg viewBox="0 0 24 24" className="w-6 h-6 text-white" fill="none" stroke="currentColor" strokeWidth="2">
+      {/* BigTime Card - Compact */}
+      <div className="border border-neutral-200 rounded-lg p-2">
+        <div className="flex items-start gap-2">
+          {/* BigTime Logo - Smaller */}
+          <div className="w-8 h-8 bg-[#0066CC] rounded-lg flex items-center justify-center flex-shrink-0">
+            <svg viewBox="0 0 24 24" className="w-4 h-4 text-white" fill="none" stroke="currentColor" strokeWidth="2">
               <circle cx="12" cy="12" r="10" />
               <polyline points="12,6 12,12 16,14" />
             </svg>
           </div>
           
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <h3 className="text-sm font-semibold text-neutral-900">BigTime</h3>
+            <div className="flex items-center gap-1.5 mb-0.5">
+              <h3 className="text-xs font-semibold text-neutral-900">BigTime</h3>
               {isConnected ? (
-                <span className="px-1.5 py-0.5 bg-[#476E66]/10 text-[#476E66] rounded-full text-[10px] font-medium">
+                <span className="px-1 py-0.5 bg-[#476E66]/10 text-[#476E66] rounded text-[9px] font-medium">
                   Connected
                 </span>
               ) : (
-                <span className="px-1.5 py-0.5 bg-neutral-100 text-neutral-600 rounded-full text-[10px] font-medium">
+                <span className="px-1 py-0.5 bg-neutral-100 text-neutral-500 rounded text-[9px] font-medium">
                   Not Connected
                 </span>
               )}
             </div>
-            <p className="text-neutral-600 text-[11px] mb-2.5 leading-tight">
-              Import your existing clients, projects, tasks, staff, and time entries from BigTime.
+            <p className="text-neutral-500 text-[10px] mb-2 leading-tight">
+              Import clients, projects, tasks & time from BigTime
             </p>
             
             {isConnected ? (
-              <div className="space-y-2.5">
-                <div className="flex items-center gap-1.5 text-xs text-neutral-600">
-                  <Check className="w-3 h-3 text-[#476E66]" />
-                  <span>Firm ID: {firmId}</span>
+              <div className="space-y-2">
+                <div className="flex items-center gap-1 text-[10px] text-neutral-600">
+                  <Check className="w-2.5 h-2.5 text-[#476E66]" />
+                  <span>Firm: {firmId}</span>
                 </div>
                 
-                {/* Import Options */}
-                <div className="border-t border-neutral-100 pt-2.5">
-                  <h4 className="font-medium text-neutral-900 text-xs mb-2">Select data to import:</h4>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {/* Import Options - Compact */}
+                <div className="border-t border-neutral-100 pt-2">
+                  <h4 className="font-medium text-neutral-900 text-[10px] mb-1.5">Select data to import:</h4>
+                  <div className="grid grid-cols-2 gap-1.5">
                     {[
                       { id: 'clients', label: 'Clients', checked: importClients, onChange: setImportClients },
                       { id: 'projects', label: 'Projects', checked: importProjects, onChange: setImportProjects },
                       { id: 'tasks', label: 'Tasks', checked: importTasks, onChange: setImportTasks },
-                      { id: 'staff', label: 'Staff/Users', checked: importStaff, onChange: setImportStaff },
-                      { id: 'timeEntries', label: 'Time Entries', checked: importTimeEntries, onChange: setImportTimeEntries },
+                      { id: 'staff', label: 'Staff', checked: importStaff, onChange: setImportStaff },
+                      { id: 'timeEntries', label: 'Time', checked: importTimeEntries, onChange: setImportTimeEntries },
                     ].map(opt => (
-                      <label key={opt.id} className="flex items-center gap-1.5 cursor-pointer">
+                      <label key={opt.id} className="flex items-center gap-1 cursor-pointer">
                         <input
                           type="checkbox"
                           checked={opt.checked}
                           onChange={(e) => opt.onChange(e.target.checked)}
                           disabled={importing}
-                          className="w-3.5 h-3.5 rounded border-neutral-300 text-[#0066CC] focus:ring-[#0066CC]"
+                          className="w-3 h-3 rounded border-neutral-300 text-[#0066CC] focus:ring-[#0066CC]"
                         />
-                        <span className="text-xs text-neutral-700">{opt.label}</span>
+                        <span className="text-[10px] text-neutral-700">{opt.label}</span>
                       </label>
                     ))}
                   </div>
                 </div>
                 
-                {/* Import Progress */}
+                {/* Import Progress - Compact */}
                 {importing && importProgress && (
-                  <div className="bg-[#0066CC]/5 border border-[#0066CC]/20 rounded-lg p-2.5">
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <div className="animate-spin w-3 h-3 border-2 border-[#0066CC] border-t-transparent rounded-full" />
-                      <span className="text-xs font-medium text-[#0066CC]">
-                        {importProgress.type === 'complete' 
-                          ? 'Import complete!' 
-                          : `Importing ${importProgress.type}...`}
+                  <div className="bg-[#0066CC]/5 border border-[#0066CC]/10 rounded-md p-2">
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <div className="animate-spin w-2.5 h-2.5 border-2 border-[#0066CC] border-t-transparent rounded-full" />
+                      <span className="text-[10px] font-medium text-[#0066CC]">
+                        {importProgress.type === 'complete' ? 'Complete!' : `${importProgress.type}...`}
                       </span>
                     </div>
-                    <div className="w-full bg-[#0066CC]/20 rounded-full h-1.5">
+                    <div className="w-full bg-[#0066CC]/20 rounded-full h-1">
                       <div 
-                        className="bg-[#0066CC] h-1.5 rounded-full transition-all duration-300"
+                        className="bg-[#0066CC] h-1 rounded-full transition-all duration-300"
                         style={{ width: `${(importProgress.current / importProgress.total) * 100}%` }}
                       />
                     </div>
-                    <p className="text-[10px] text-neutral-600 mt-1">
-                      {importProgress.current} of {importProgress.total} data types processed
-                    </p>
                   </div>
                 )}
                 
-                {/* Action Buttons */}
-                <div className="flex items-center gap-2 pt-1">
+                {/* Action Buttons - Compact */}
+                <div className="flex items-center gap-1.5 pt-0.5">
                   <button
                     onClick={handleStartImport}
                     disabled={importing}
-                    className="flex items-center gap-1.5 px-3 py-2 bg-[#0066CC] text-white text-xs font-medium rounded-lg hover:bg-[#0052A3] transition-colors disabled:opacity-50"
+                    className="flex items-center gap-1 px-2 py-1.5 bg-[#0066CC] text-white text-[10px] font-medium rounded-md hover:bg-[#0052A3] transition-colors disabled:opacity-50"
                   >
                     {importing ? (
                       <>
-                        <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        <div className="w-2.5 h-2.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                         Importing...
                       </>
                     ) : (
                       <>
-                        <Upload className="w-3 h-3" />
-                        Start Import
+                        <Upload className="w-2.5 h-2.5" />
+                        Import
                       </>
                     )}
                   </button>
                   <button
                     onClick={handleDisconnect}
                     disabled={disconnecting || importing}
-                    className="px-2.5 py-1.5 text-xs font-medium text-neutral-700 border border-neutral-300 rounded-lg hover:bg-neutral-50 transition-colors disabled:opacity-50"
+                    className="px-2 py-1 text-[10px] font-medium text-neutral-600 border border-neutral-200 rounded-md hover:bg-neutral-50 transition-colors disabled:opacity-50"
                   >
-                    {disconnecting ? 'Disconnecting...' : 'Disconnect'}
+                    {disconnecting ? '...' : 'Disconnect'}
                   </button>
                 </div>
               </div>
             ) : (
-              <div className="space-y-2.5">
-                {/* Credentials Form */}
-                <div className="grid gap-2.5 sm:grid-cols-2">
+              <div className="space-y-2">
+                {/* Credentials Form - Compact */}
+                <div className="grid gap-2 sm:grid-cols-2">
                   <div>
-                    <label className="block text-[11px] font-medium text-neutral-700 mb-1">
+                    <label className="block text-[9px] font-medium text-neutral-600 mb-0.5 uppercase tracking-wide">
                       API Token
                     </label>
                     <input
                       type="password"
                       value={apiToken}
                       onChange={(e) => setApiToken(e.target.value)}
-                      placeholder="Enter API token"
-                      className="w-full px-2.5 py-1.5 text-xs border border-neutral-300 rounded-lg focus:ring-1 focus:ring-[#0066CC] focus:border-transparent outline-none"
+                      placeholder="Enter token"
+                      className="w-full px-2 py-1.5 text-[10px] border border-neutral-200 rounded-md focus:ring-1 focus:ring-[#0066CC] focus:border-[#0066CC] outline-none"
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-medium text-neutral-700 mb-1">
+                    <label className="block text-[9px] font-medium text-neutral-600 mb-0.5 uppercase tracking-wide">
                       Firm ID
                     </label>
                     <input
                       type="text"
                       value={firmId}
                       onChange={(e) => setFirmId(e.target.value)}
-                      placeholder="Enter Firm ID"
-                      className="w-full px-2.5 py-1.5 text-xs border border-neutral-300 rounded-lg focus:ring-1 focus:ring-[#0066CC] focus:border-transparent outline-none"
+                      placeholder="Enter ID"
+                      className="w-full px-2 py-1.5 text-[10px] border border-neutral-200 rounded-md focus:ring-1 focus:ring-[#0066CC] focus:border-[#0066CC] outline-none"
                     />
                   </div>
                 </div>
@@ -5206,23 +5195,23 @@ function BigTimeIntegrationCard({ companyId }: { companyId: string }) {
                 <button
                   onClick={handleConnect}
                   disabled={connecting}
-                  className="flex items-center gap-1.5 px-3 py-2 bg-[#0066CC] text-white text-xs font-medium rounded-lg hover:bg-[#0052A3] transition-colors disabled:opacity-50"
+                  className="flex items-center gap-1 px-2 py-1.5 bg-[#0066CC] text-white text-[10px] font-medium rounded-md hover:bg-[#0052A3] transition-colors disabled:opacity-50"
                 >
                   {connecting ? (
                     <>
-                      <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <div className="w-2.5 h-2.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                       Connecting...
                     </>
                   ) : (
                     <>
-                      <Link className="w-3 h-3" />
-                      Connect BigTime
+                      <Link className="w-2.5 h-2.5" />
+                      Connect
                     </>
                   )}
                 </button>
                 
-                <p className="text-[10px] text-neutral-500 leading-tight">
-                  Find your API credentials in BigTime under My Account → API Settings
+                <p className="text-[9px] text-neutral-500 leading-tight">
+                  Find credentials: My Account → API Settings
                 </p>
               </div>
             )}

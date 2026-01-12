@@ -449,9 +449,21 @@ export default function SalesPage() {
 
       {/* Leads Section */}
       {activeTab === 'leads' && (
-        <div className="space-y-4">
+        <div className="space-y-3">
+          {/* Search Bar */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-neutral-400" />
+            <input
+              type="text"
+              placeholder="Search leads..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#476E66] focus:border-transparent"
+            />
+          </div>
+
           {/* Pipeline Header */}
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-1">
             {PIPELINE_STAGES.map((stage) => {
               const count = stage.key === 'all' 
                 ? leads.length 
@@ -461,14 +473,14 @@ export default function SalesPage() {
                 <button
                   key={stage.key}
                   onClick={() => setSelectedPipelineStage(stage.key)}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                  className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium transition-all ${
                     isSelected 
                       ? `${stage.bgColor} ${stage.color} ring-2 ring-offset-1 ring-current` 
                       : 'bg-white border border-neutral-200 text-neutral-600 hover:bg-neutral-50'
                   }`}
                 >
                   <span>{stage.label}</span>
-                  <span className={`px-1.5 py-0.5 rounded text-xs ${isSelected ? 'bg-white/50' : 'bg-neutral-100'}`}>
+                  <span className={`px-1 py-0.5 rounded text-[10px] ${isSelected ? 'bg-white/50' : 'bg-neutral-100'}`}>
                     {count}
                   </span>
                 </button>
@@ -477,17 +489,17 @@ export default function SalesPage() {
           </div>
 
           {/* Leads List */}
-          <div className="bg-white rounded-2xl border border-neutral-100 overflow-hidden">
+          <div className="bg-white rounded-lg overflow-hidden" style={{ boxShadow: 'var(--shadow-card)' }}>
           {leads.length === 0 ? (
-            <div className="p-12 text-center">
-              <div className="w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                <User className="w-8 h-8 text-amber-600" />
+            <div className="p-8 text-center">
+              <div className="w-12 h-12 bg-amber-50 rounded-full flex items-center justify-center mx-auto mb-3">
+                <User className="w-6 h-6 text-amber-600" />
               </div>
-              <h3 className="text-lg font-semibold text-neutral-900 mb-2">No leads yet</h3>
-              <p className="text-neutral-500 mb-4">Start tracking your potential clients</p>
+              <h3 className="text-base font-semibold text-neutral-900 mb-1">No leads yet</h3>
+              <p className="text-xs text-neutral-500 mb-3">Start tracking your potential clients</p>
               <button
                 onClick={() => { setEditingLead(null); setShowLeadModal(true); }}
-                className="px-4 py-2 bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54]"
+                className="px-3 py-2 text-sm bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54] transition-colors"
               >
                 Add Your First Lead
               </button>
@@ -497,12 +509,12 @@ export default function SalesPage() {
               <table className="w-full">
                 <thead className="bg-neutral-50 border-b border-neutral-100">
                   <tr>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-500 uppercase">Lead</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-500 uppercase">Source</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-500 uppercase">Status</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-500 uppercase">Est. Value</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-500 uppercase">Created</th>
-                    <th className="text-right px-4 py-3 text-xs font-semibold text-neutral-500 uppercase">Actions</th>
+                    <th className="text-left px-3 py-2 text-[10px] font-semibold text-neutral-500 uppercase tracking-wide">Lead</th>
+                    <th className="text-left px-3 py-2 text-[10px] font-semibold text-neutral-500 uppercase tracking-wide">Source</th>
+                    <th className="text-left px-3 py-2 text-[10px] font-semibold text-neutral-500 uppercase tracking-wide">Status</th>
+                    <th className="text-left px-3 py-2 text-[10px] font-semibold text-neutral-500 uppercase tracking-wide hidden sm:table-cell">Est. Value</th>
+                    <th className="text-left px-3 py-2 text-[10px] font-semibold text-neutral-500 uppercase tracking-wide hidden md:table-cell">Created</th>
+                    <th className="text-right px-3 py-2 text-[10px] font-semibold text-neutral-500 uppercase tracking-wide">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -511,23 +523,23 @@ export default function SalesPage() {
                       const matchesStage = selectedPipelineStage === 'all' || l.status === selectedPipelineStage;
                       return matchesSearch && matchesStage;
                     }).map((lead) => (
-                    <tr key={lead.id} className="border-b border-neutral-100 hover:bg-neutral-50">
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center text-amber-700 font-medium text-sm">
+                    <tr key={lead.id} className="border-b border-neutral-100 hover:bg-neutral-50 transition-colors">
+                      <td className="px-3 py-2.5">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center text-amber-700 font-medium text-xs flex-shrink-0">
                             {lead.name.charAt(0)}
                           </div>
-                          <div>
-                            <p className="font-medium text-neutral-900">{lead.name}</p>
-                            <p className="text-sm text-neutral-500">{lead.company_name || lead.email || '-'}</p>
+                          <div className="min-w-0">
+                            <p className="font-medium text-neutral-900 text-sm truncate">{lead.name}</p>
+                            <p className="text-xs text-neutral-500 truncate">{lead.company_name || lead.email || '-'}</p>
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-3">
-                        <span className="text-sm text-neutral-600 capitalize">{lead.source?.replace('_', ' ') || '-'}</span>
-                        {lead.source_details && <p className="text-xs text-neutral-400 truncate max-w-[150px]">{lead.source_details}</p>}
+                      <td className="px-3 py-2.5">
+                        <span className="text-xs text-neutral-600 capitalize">{lead.source?.replace('_', ' ') || '-'}</span>
+                        {lead.source_details && <p className="text-[10px] text-neutral-400 truncate max-w-[120px]">{lead.source_details}</p>}
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-2.5">
                         <select
                           value={lead.status || 'new'}
                           onChange={async (e) => {
@@ -538,7 +550,7 @@ export default function SalesPage() {
                               console.error('Failed to update lead:', error);
                             }
                           }}
-                          className={`text-xs font-medium px-2 py-1 rounded-full border-0 cursor-pointer ${
+                          className={`text-[10px] font-medium px-2 py-1 rounded-full border-0 cursor-pointer ${
                             lead.status === 'new' ? 'bg-blue-50 text-blue-700' :
                             lead.status === 'contacted' ? 'bg-purple-50 text-purple-700' :
                             lead.status === 'qualified' ? 'bg-amber-50 text-amber-700' :
@@ -556,37 +568,37 @@ export default function SalesPage() {
                           <option value="lost">Lost</option>
                         </select>
                       </td>
-                      <td className="px-4 py-3 text-sm text-neutral-600">
+                      <td className="px-3 py-2.5 text-xs text-neutral-600 hidden sm:table-cell">
                         {lead.estimated_value ? `$${lead.estimated_value.toLocaleString()}` : '-'}
                       </td>
-                      <td className="px-4 py-3 text-sm text-neutral-500">
+                      <td className="px-3 py-2.5 text-xs text-neutral-500 hidden md:table-cell">
                         {lead.created_at ? new Date(lead.created_at).toLocaleDateString() : '-'}
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-2.5">
                         <div className="flex items-center justify-end gap-1">
                           {lead.status !== 'won' && lead.status !== 'lost' && (
                             <>
                               <button
                                 onClick={() => navigate(`/quotes/new/document?lead_id=${lead.id}&lead_name=${encodeURIComponent(lead.name)}&lead_email=${encodeURIComponent(lead.email || '')}&lead_company=${encodeURIComponent(lead.company_name || '')}`)}
-                                className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-[#476E66] bg-[#476E66]/10 rounded-lg hover:bg-[#476E66]/20"
+                                className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-[#476E66] bg-[#476E66]/10 rounded-lg hover:bg-[#476E66]/20 transition-colors"
                               >
                                 <Send className="w-3 h-3" />
-                                Proposal
+                                <span className="hidden sm:inline">Proposal</span>
                               </button>
                               <button
                                 onClick={() => { setConvertingLead(lead); setShowConvertModal(true); }}
-                                className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100"
+                                className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
                               >
                                 <User className="w-3 h-3" />
-                                Convert
+                                <span className="hidden sm:inline">Convert</span>
                               </button>
                             </>
                           )}
                           <button
                             onClick={() => { setEditingLead(lead); setShowLeadModal(true); }}
-                            className="p-1.5 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 rounded"
+                            className="p-1 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 rounded transition-colors"
                           >
-                            <Edit2 className="w-4 h-4" />
+                            <Edit2 className="w-3.5 h-3.5" />
                           </button>
                           <button
                             onClick={async () => {
@@ -599,9 +611,9 @@ export default function SalesPage() {
                                 }
                               }
                             }}
-                            className="p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded"
+                            className="p-1 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         </div>
                       </td>
@@ -617,45 +629,59 @@ export default function SalesPage() {
 
       {/* Clients Section - Inline editing */}
       {activeTab === 'clients' && (
-        <div className="flex gap-6">
+        <div className="flex gap-4">
           {/* Client List - Hidden on mobile when client selected */}
-          <div className={`bg-white rounded-2xl border border-neutral-100 overflow-hidden ${
+          <div className={`bg-white rounded-lg overflow-hidden ${
             selectedClient || isAddingNewClient 
-              ? 'hidden lg:block lg:w-80 lg:flex-shrink-0' 
+              ? 'hidden lg:block lg:w-72 lg:flex-shrink-0' 
               : 'flex-1'
-          }`}>
-            <div className="max-h-[calc(100vh-320px)] overflow-y-auto">
+          }`} style={{ boxShadow: 'var(--shadow-card)' }}>
+            {/* Search Bar */}
+            <div className="p-3 border-b border-neutral-100">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 text-neutral-400" />
+                <input
+                  type="text"
+                  placeholder="Search clients..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-9 pr-3 py-1.5 border border-neutral-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#476E66] focus:border-transparent"
+                />
+              </div>
+            </div>
+            
+            <div className="max-h-[calc(100vh-380px)] overflow-y-auto">
               {filteredClients.map((client) => (
                 <div
                   key={client.id}
                   onClick={() => { setSelectedClient(client); setIsAddingNewClient(false); }}
-                  className={`flex items-center gap-3 px-4 py-3 border-b border-neutral-100 cursor-pointer transition-colors ${
+                  className={`flex items-center gap-2 px-3 py-2 border-b border-neutral-100 cursor-pointer transition-colors ${
                     selectedClient?.id === client.id ? 'bg-neutral-100' : 'hover:bg-neutral-50'
                   }`}
                 >
-                  <div className="w-10 h-10 rounded-full bg-[#476E66]/20 flex items-center justify-center text-neutral-600 font-medium flex-shrink-0">
+                  <div className="w-8 h-8 rounded-full bg-[#476E66]/20 flex items-center justify-center text-neutral-600 font-medium text-xs flex-shrink-0">
                     {client.name.charAt(0)}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-neutral-900 truncate">{client.name}</p>
-                    <p className="text-sm text-neutral-500 truncate">{client.email || client.display_name || '-'}</p>
+                    <p className="font-medium text-neutral-900 text-sm truncate">{client.name}</p>
+                    <p className="text-xs text-neutral-500 truncate">{client.email || client.display_name || '-'}</p>
                   </div>
                   {!selectedClient && !isAddingNewClient && (
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(client.lifecycle_stage)}`}>
+                    <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-medium ${getStatusColor(client.lifecycle_stage)}`}>
                       {client.lifecycle_stage || 'active'}
                     </span>
                   )}
                 </div>
               ))}
               {filteredClients.length === 0 && (
-                <div className="text-center py-12 text-neutral-500">No clients found</div>
+                <div className="text-center py-8 text-neutral-500 text-xs">No clients found</div>
               )}
             </div>
           </div>
 
           {/* Client Detail Panel - Full width on mobile */}
           {(selectedClient || isAddingNewClient) && (
-            <div className="flex-1 bg-white rounded-2xl border border-neutral-100 p-4 lg:p-6">
+            <div className="flex-1 bg-white rounded-lg p-3 lg:p-4" style={{ boxShadow: 'var(--shadow-card)' }}>
               <InlineClientEditor
                 client={isAddingNewClient ? null : selectedClient}
                 companyId={profile?.company_id || ''}
