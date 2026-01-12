@@ -7,7 +7,7 @@ import { DEFAULT_HOURLY_RATE, MIN_TIMER_SAVE_SECONDS, NOTIFICATIONS_LIMIT, SEARC
 import { useDebounce } from '../hooks/useDebounce';
 import { 
   LayoutDashboard, Users, FolderKanban, Clock, FileText, Calendar, BarChart3, Settings, LogOut,
-  Search, Bell, ChevronDown, ChevronRight, X, Play, Pause, Square, Menu, PieChart, ArrowLeft, Wallet, FileSpreadsheet
+  Search, Bell, ChevronDown, ChevronRight, X, Play, Pause, Square, Menu, PieChart, ArrowLeft, Wallet, FileSpreadsheet, Camera
 } from 'lucide-react';
 
 const mainNavItems = [
@@ -24,6 +24,7 @@ const financialsSubItems = [
   { path: '/financials', icon: BarChart3, label: 'Overview' },
   { path: '/reports', icon: PieChart, label: 'Reports' },
   { path: '/bank-statements', icon: FileSpreadsheet, label: 'Bank Statements' },
+  { path: '/receipts', icon: Camera, label: 'Receipts' },
 ];
 
 interface SearchResult {
@@ -79,7 +80,7 @@ export default function Layout() {
   useEffect(() => {
     setSidebarOpen(false);
     // Auto-expand financials if on a financials page
-    if (['/financials', '/reports', '/bank-statements'].includes(location.pathname)) {
+    if (['/financials', '/reports', '/bank-statements', '/receipts'].includes(location.pathname)) {
       setFinancialsExpanded(true);
     }
   }, [location.pathname]);
@@ -369,7 +370,7 @@ export default function Layout() {
                 <button
                   onClick={() => setFinancialsExpanded(!financialsExpanded)}
                   className={`flex items-center gap-3 px-4 py-3 mx-2 rounded-xl transition-colors w-[calc(100%-1rem)] ${
-                    ['/financials', '/reports', '/bank-statements'].includes(location.pathname)
+                    ['/financials', '/reports', '/bank-statements', '/receipts'].includes(location.pathname)
                       ? 'bg-white/20 text-white'
                       : 'text-white/70 hover:text-white hover:bg-white/10'
                   }`}

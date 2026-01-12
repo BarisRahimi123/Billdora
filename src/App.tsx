@@ -25,6 +25,7 @@ const ClientPortalPage = lazy(() => import('./pages/ClientPortalPage'));
 const CompanyExpensesPage = lazy(() => import('./pages/CompanyExpensesPage'));
 const BankStatementsPage = lazy(() => import('./pages/BankStatementsPage'));
 const FinancialsPage = lazy(() => import('./pages/FinancialsPage'));
+const ReceiptsPage = lazy(() => import('./pages/ReceiptsPage'));
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
 const LandingPage = lazy(() => import('./pages/LandingPage'));
 const CheckEmailPage = lazy(() => import('./pages/CheckEmailPage'));
@@ -85,6 +86,7 @@ function AppRoutes() {
           <Route path="/financials" element={<ErrorBoundary><FinancialsPage /></ErrorBoundary>} />
           <Route path="/company-expenses" element={<ErrorBoundary><CompanyExpensesPage /></ErrorBoundary>} />
           <Route path="/bank-statements" element={<ErrorBoundary><BankStatementsPage /></ErrorBoundary>} />
+          <Route path="/receipts" element={<ErrorBoundary><ReceiptsPage /></ErrorBoundary>} />
           <Route path="/notifications" element={<ErrorBoundary><NotificationsPage /></ErrorBoundary>} />
           <Route path="/settings" element={<ErrorBoundary><SettingsPage /></ErrorBoundary>} />
         </Route>
