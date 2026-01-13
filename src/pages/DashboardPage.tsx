@@ -69,12 +69,18 @@ export default function DashboardPage() {
   const [subscriptionNotice, setSubscriptionNotice] = useState<{ type: 'success' | 'canceled'; message: string } | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'health'>('overview');
   const [showTargetsModal, setShowTargetsModal] = useState(false);
-  const [healthTargets, setHealthTargets] = useState({
-    cashFlow: 80,
-    utilization: 75,
-    winRate: 30,
-    momentum: 10,
-    profitMargin: 20,
+  const [healthTargets, setHealthTargets] = useState(() => {
+    const saved = localStorage.getItem('billdora_health_targets');
+    if (saved) {
+      try { return JSON.parse(saved); } catch { /* ignore */ }
+    }
+    return {
+      cashFlow: 80,
+      utilization: 75,
+      winRate: 30,
+      momentum: 10,
+      profitMargin: 20,
+    };
   });
   const [healthMetrics, setHealthMetrics] = useState({
     cashFlow: 0,
@@ -87,10 +93,15 @@ export default function DashboardPage() {
     const saved = localStorage.getItem('billdora_profit_target');
     return saved ? Number(saved) : 10000;
   });
+  const [targetPeriod, setTargetPeriod] = useState<'monthly' | 'quarterly' | 'yearly'>(() => {
+    const saved = localStorage.getItem('billdora_target_period');
+    return (saved as 'monthly' | 'quarterly' | 'yearly') || 'monthly';
+  });
   const [actualProfit, setActualProfit] = useState(0);
   const [totalExpenses, setTotalExpenses] = useState(0);
   const [showProfitTargetModal, setShowProfitTargetModal] = useState(false);
   const [tempProfitTarget, setTempProfitTarget] = useState(profitTarget);
+  const [tempTargetPeriod, setTempTargetPeriod] = useState(targetPeriod);
 
   // Handle subscription success/cancel URL params
   useEffect(() => {
@@ -491,7 +502,7 @@ export default function DashboardPage() {
                 </div>
               </div>
               <button 
-                onClick={() => { setTempProfitTarget(profitTarget); setShowProfitTargetModal(true); }}
+                onClick={() => { setTempProfitTarget(profitTarget); setTempTargetPeriod(targetPeriod); setShowProfitTargetModal(true); }}
                 className="p-1.5 hover:bg-neutral-100 rounded-lg transition-colors"
               >
                 <Settings2 className="w-4 h-4 text-neutral-400" />
@@ -507,7 +518,7 @@ export default function DashboardPage() {
               </div>
               <div className="text-right">
                 <p className="text-sm font-medium text-neutral-600">{formatCurrency(profitTarget)}</p>
-                <p className="text-[10px] text-neutral-400">Target</p>
+                <p className="text-[10px] text-neutral-400 capitalize">{targetPeriod} Target</p>
               </div>
             </div>
             
@@ -782,11 +793,33 @@ export default function DashboardPage() {
               </button>
             </div>
             <div className="space-y-4">
+              {/* Time Period Selector */}
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1">Time Period</label>
+                <div className="flex gap-1 p-1 bg-neutral-100 rounded-lg">
+                  {(['monthly', 'quarterly', 'yearly'] as const).map((period) => (
+                    <button
+                      key={period}
+                      onClick={() => {
+                        setTargetPeriod(period);
+                        localStorage.setItem('billdora_target_period', period);
+                      }}
+                      className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                        targetPeriod === period
+                          ? 'bg-white text-neutral-900 shadow-sm'
+                          : 'text-neutral-600 hover:text-neutral-900'
+                      }`}
+                    >
+                      {period.charAt(0).toUpperCase() + period.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              </div>
               {[
                 { key: 'cashFlow', label: 'Cash Flow Target', suffix: '%' },
                 { key: 'utilization', label: 'Utilization Target', suffix: '%' },
                 { key: 'winRate', label: 'Win Rate Target', suffix: '%' },
-                { key: 'momentum', label: 'Monthly Quotes Target', suffix: '' },
+                { key: 'momentum', label: `${targetPeriod.charAt(0).toUpperCase() + targetPeriod.slice(1)} Quotes Target`, suffix: '' },
                 { key: 'profitMargin', label: 'Profit Margin Target', suffix: '%' },
               ].map(({ key, label, suffix }) => (
                 <div key={key}>
@@ -807,7 +840,13 @@ export default function DashboardPage() {
               <button onClick={() => setShowTargetsModal(false)} className="px-4 py-2 text-neutral-700 hover:bg-neutral-100 rounded-lg">
                 Cancel
               </button>
-              <button onClick={() => setShowTargetsModal(false)} className="px-4 py-2 bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54]">
+              <button 
+                onClick={() => {
+                  localStorage.setItem('billdora_health_targets', JSON.stringify(healthTargets));
+                  setShowTargetsModal(false);
+                }} 
+                className="px-4 py-2 bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54]"
+              >
                 Save Targets
               </button>
             </div>
@@ -826,10 +865,30 @@ export default function DashboardPage() {
               </button>
             </div>
             <p className="text-sm text-neutral-500 mb-4">
-              Set your profit target. The card will flash yellow when below target, and red when below 50%.
+              Set your profit target and period. The card will flash yellow when below target, and red when below 50%.
             </p>
             <div className="mb-4">
-              <label className="block text-sm font-medium text-neutral-700 mb-1">Target Amount</label>
+              <label className="block text-sm font-medium text-neutral-700 mb-1">Time Period</label>
+              <div className="flex gap-1 p-1 bg-neutral-100 rounded-lg">
+                {(['monthly', 'quarterly', 'yearly'] as const).map((period) => (
+                  <button
+                    key={period}
+                    onClick={() => setTempTargetPeriod(period)}
+                    className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                      tempTargetPeriod === period
+                        ? 'bg-white text-neutral-900 shadow-sm'
+                        : 'text-neutral-600 hover:text-neutral-900'
+                    }`}
+                  >
+                    {period.charAt(0).toUpperCase() + period.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-neutral-700 mb-1">
+                {tempTargetPeriod.charAt(0).toUpperCase() + tempTargetPeriod.slice(1)} Target Amount
+              </label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400">$</span>
                 <input
@@ -860,7 +919,9 @@ export default function DashboardPage() {
               <button 
                 onClick={() => {
                   setProfitTarget(tempProfitTarget);
+                  setTargetPeriod(tempTargetPeriod);
                   localStorage.setItem('billdora_profit_target', String(tempProfitTarget));
+                  localStorage.setItem('billdora_target_period', tempTargetPeriod);
                   setShowProfitTargetModal(false);
                 }} 
                 className="px-4 py-2 bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54]"

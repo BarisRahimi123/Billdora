@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Download, Send, Upload, Plus, Trash2, Check, Save, X, Package, UserPlus, Settings, Eye, EyeOff, Image, Users, FileText, Calendar, ClipboardList, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Download, Send, Upload, Plus, Trash2, Check, Save, X, Package, UserPlus, Settings, Eye, EyeOff, Image, Users, FileText, Calendar, ClipboardList, ChevronRight, Bookmark } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { api, Quote, Client, QuoteLineItem, CompanySettings, Service, Lead, leadsApi } from '../lib/api';
+import { api, Quote, Client, QuoteLineItem, CompanySettings, Service, Lead, leadsApi, ProposalTemplate } from '../lib/api';
+import SaveAsTemplateModal from '../components/SaveAsTemplateModal';
+import TemplatePickerModal from '../components/TemplatePickerModal';
 import { useToast } from '../components/Toast';
 
 interface LineItem {
@@ -42,6 +44,8 @@ export default function QuoteDocumentPage() {
   const leadName = searchParams.get('lead_name') || '';
   const leadEmail = searchParams.get('lead_email') || '';
   const leadCompany = searchParams.get('lead_company') || '';
+  const templateId = searchParams.get('template_id');
+  const showTemplatesParam = searchParams.get('show_templates') === 'true';
 
   const [quote, setQuote] = useState<Quote | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
@@ -51,6 +55,7 @@ export default function QuoteDocumentPage() {
   const [recipientType, setRecipientType] = useState<'client' | 'lead' | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [showTemplatePickerModal, setShowTemplatePickerModal] = useState(false);
 
   // Editable fields
   const [documentTitle, setDocumentTitle] = useState('New Quote');
@@ -156,6 +161,8 @@ export default function QuoteDocumentPage() {
   // Send Proposal Modal
   const [showSendModal, setShowSendModal] = useState(false);
   const [sendingProposal, setSendingProposal] = useState(false);
+  // Save as Template Modal
+  const [showSaveAsTemplateModal, setShowSaveAsTemplateModal] = useState(false);
   const [sentAccessCode, setSentAccessCode] = useState('');
   const [showEmailPreview, setShowEmailPreview] = useState(false);
 
@@ -282,6 +289,39 @@ export default function QuoteDocumentPage() {
         }
       }
 
+      // If creating from a template, load template data
+      if (isNewQuote && templateId) {
+        try {
+          const template = await api.getProposalTemplate(templateId);
+          if (template?.template_data) {
+            const data = template.template_data;
+            if (data.title) setDocumentTitle(data.title);
+            if (data.description) setDescription(data.description);
+            if (data.scope_of_work) setScopeOfWork(data.scope_of_work);
+            if (data.cover_background_url) setCoverBgUrl(data.cover_background_url);
+            if (data.line_items && data.line_items.length > 0) {
+              setLineItems(data.line_items.map((item: any, idx: number) => ({
+                id: `template-${idx}`,
+                description: item.description || '',
+                unitPrice: item.unit_price || 0,
+                qty: item.quantity || 1,
+                unit: item.unit || 'each',
+                taxed: item.taxed ?? true,
+                estimatedDays: item.estimated_days || 1,
+                startOffset: item.start_offset || 0,
+                dependsOn: item.depends_on || '',
+                startType: item.start_type || 'parallel',
+                overlapDays: item.overlap_days || 0
+              })));
+            }
+            // Increment template use count
+            api.incrementTemplateUseCount(templateId);
+          }
+        } catch (e) {
+          console.error('Failed to load template:', e);
+        }
+      }
+
       if (!isNewQuote && quoteId) {
         // Load existing quote
         const quotes = await api.getQuotes(profile.company_id);
@@ -336,7 +376,42 @@ export default function QuoteDocumentPage() {
       console.error('Failed to load data:', error);
     }
     setLoading(false);
+    
+    // Show template picker if requested via URL param (and no template already selected)
+    if (showTemplatesParam && !templateId) {
+      setShowTemplatePickerModal(true);
+    }
   }
+
+  // Apply template data to the current document
+  const applyTemplate = (template: ProposalTemplate) => {
+    if (template?.template_data) {
+      const data = template.template_data;
+      if (data.title) setDocumentTitle(data.title);
+      if (data.description) setDescription(data.description);
+      if (data.scope_of_work) setScopeOfWork(data.scope_of_work);
+      if (data.cover_background_url) setCoverBgUrl(data.cover_background_url);
+      if (data.line_items && data.line_items.length > 0) {
+        setLineItems(data.line_items.map((item: any, idx: number) => ({
+          id: `template-${idx}`,
+          description: item.description || '',
+          unitPrice: item.unit_price || 0,
+          qty: item.quantity || 1,
+          unit: item.unit || 'each',
+          taxed: item.taxed ?? true,
+          estimatedDays: item.estimated_days || 1,
+          startOffset: item.start_offset || 0,
+          dependsOn: item.depends_on || '',
+          startType: item.start_type || 'parallel',
+          overlapDays: item.overlap_days || 0
+        })));
+      }
+      // Increment template use count
+      api.incrementTemplateUseCount(template.id);
+      showToast(`Template "${template.name}" applied!`, 'success');
+    }
+    setShowTemplatePickerModal(false);
+  };
 
   // Update client when selection changes
   useEffect(() => {
@@ -1513,11 +1588,19 @@ export default function QuoteDocumentPage() {
             <div className="flex gap-2 sticky top-0 bg-neutral-50 py-2 z-10">
               <button
                 onClick={handlePrint}
-                className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 border border-neutral-200 bg-white rounded-lg hover:bg-neutral-50 transition-colors text-sm font-medium"
+                className="flex items-center justify-center gap-1 px-2 py-1.5 border border-neutral-200 bg-white rounded-lg hover:bg-neutral-50 transition-colors text-sm font-medium"
               >
                 <Download className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Download</span>
-                <span className="sm:hidden">PDF</span>
+                <span className="hidden sm:inline">PDF</span>
+              </button>
+              <button
+                onClick={() => setShowSaveAsTemplateModal(true)}
+                disabled={!lineItems.some(i => i.description.trim())}
+                className="flex items-center justify-center gap-1 px-2 py-1.5 border border-neutral-200 bg-white rounded-lg hover:bg-neutral-50 transition-colors text-sm font-medium disabled:opacity-50"
+                title="Save as Template"
+              >
+                <Bookmark className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Template</span>
               </button>
               <button
                 onClick={saveChanges}
@@ -3406,6 +3489,45 @@ export default function QuoteDocumentPage() {
           )}
         </div>
       </div>
+      )}
+
+      {/* Save as Template Modal */}
+      {showSaveAsTemplateModal && profile?.company_id && (
+        <SaveAsTemplateModal
+          companyId={profile.company_id}
+          templateData={{
+            title: documentTitle,
+            description: description,
+            scope_of_work: scopeOfWork,
+            cover_background_url: coverBgUrl,
+            line_items: lineItems.filter(i => i.description.trim()).map(item => ({
+              description: item.description,
+              unit_price: item.unitPrice,
+              quantity: item.qty,
+              unit: item.unit,
+              taxed: item.taxed,
+              estimated_days: item.estimatedDays,
+              start_offset: item.startOffset,
+              start_type: item.startType,
+              depends_on: item.dependsOn,
+              overlap_days: item.overlapDays
+            }))
+          }}
+          onSave={(template) => {
+            showToast(`Template "${template.name}" saved!`, 'success');
+            setShowSaveAsTemplateModal(false);
+          }}
+          onClose={() => setShowSaveAsTemplateModal(false)}
+        />
+      )}
+
+      {/* Template Picker Modal */}
+      {showTemplatePickerModal && profile?.company_id && (
+        <TemplatePickerModal
+          companyId={profile.company_id}
+          onSelect={applyTemplate}
+          onClose={() => setShowTemplatePickerModal(false)}
+        />
       )}
     </div>
   );

@@ -251,6 +251,39 @@ export interface QuoteLineItem {
   created_at?: string;
 }
 
+export interface TemplateLineItem {
+  description: string;
+  unit_price: number;
+  quantity: number;
+  unit?: string;
+  taxed?: boolean;
+  estimated_days?: number;
+  start_offset?: number;
+  start_type?: string;
+  depends_on?: string;
+  overlap_days?: number;
+}
+
+export interface ProposalTemplate {
+  id: string;
+  company_id: string;
+  name: string;
+  description?: string;
+  category?: string;
+  subcategory?: string;
+  client_type?: string;
+  template_data: {
+    title?: string;
+    description?: string;
+    scope_of_work?: string;
+    cover_background_url?: string;
+    line_items?: TemplateLineItem[];
+  };
+  use_count: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface CompanySettings {
   id: string;
   company_id: string;
@@ -1312,6 +1345,75 @@ export const api = {
     }
     return response.json();
   },
+
+  // === PROPOSAL TEMPLATES ===
+  async getProposalTemplates(companyId: string): Promise<ProposalTemplate[]> {
+    const { data, error } = await supabase
+      .from('proposal_templates')
+      .select('*')
+      .eq('company_id', companyId)
+      .order('use_count', { ascending: false });
+    if (error) throw error;
+    return data || [];
+  },
+
+  async getProposalTemplate(id: string): Promise<ProposalTemplate> {
+    const { data, error } = await supabase
+      .from('proposal_templates')
+      .select('*')
+      .eq('id', id)
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async createProposalTemplate(template: Omit<ProposalTemplate, 'id' | 'use_count' | 'created_at' | 'updated_at'>): Promise<ProposalTemplate> {
+    const { data, error } = await supabase
+      .from('proposal_templates')
+      .insert({ ...template, use_count: 0 })
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async updateProposalTemplate(id: string, updates: Partial<ProposalTemplate>): Promise<ProposalTemplate> {
+    const { data, error } = await supabase
+      .from('proposal_templates')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async deleteProposalTemplate(id: string): Promise<void> {
+    const { error } = await supabase.from('proposal_templates').delete().eq('id', id);
+    if (error) throw error;
+  },
+
+  async incrementTemplateUseCount(id: string): Promise<void> {
+    const { error } = await supabase.rpc('increment_template_use_count', { template_id: id });
+    if (error) {
+      // Fallback if RPC doesn't exist
+      const { data } = await supabase.from('proposal_templates').select('use_count').eq('id', id).single();
+      if (data) {
+        await supabase.from('proposal_templates').update({ use_count: (data.use_count || 0) + 1 }).eq('id', id);
+      }
+    }
+  },
+
+  async getTemplateCategories(companyId: string): Promise<{ categories: string[]; clientTypes: string[] }> {
+    const { data, error } = await supabase
+      .from('proposal_templates')
+      .select('category, client_type')
+      .eq('company_id', companyId);
+    if (error) throw error;
+    const categories = [...new Set((data || []).map(t => t.category).filter(Boolean))] as string[];
+    const clientTypes = [...new Set((data || []).map(t => t.client_type).filter(Boolean))] as string[];
+    return { categories, clientTypes };
+  },
 };
 
 
@@ -2340,7 +2442,7 @@ export const bankStatementsApi = {
       deposits,
       withdrawals
     };
-  }
+  },
 };
 
 // Leads API

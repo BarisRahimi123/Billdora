@@ -1,15 +1,15 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Plus, Search, Filter, Download, MoreHorizontal, X, FileText, ArrowRight, Eye, Printer, Send, Check, XCircle, Mail, Trash2, List, LayoutGrid, ChevronDown, ChevronRight, ArrowLeft, Edit2, Loader2, Link2, Copy, User } from 'lucide-react';
+import { Plus, Search, Filter, Download, MoreHorizontal, X, FileText, ArrowRight, Eye, Printer, Send, Check, XCircle, Mail, Trash2, List, LayoutGrid, ChevronDown, ChevronRight, ArrowLeft, Edit2, Loader2, Link2, Copy, User, Tag } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { usePermissions } from '../contexts/PermissionsContext';
-import { api, Client, Quote, Lead, leadsApi, clientPortalApi } from '../lib/api';
+import { api, Client, Quote, Lead, leadsApi, clientPortalApi, ProposalTemplate } from '../lib/api';
 import { NotificationService } from '../lib/notificationService';
 import { useToast } from '../components/Toast';
 import { FieldError } from '../components/ErrorBoundary';
 import { validateEmail } from '../lib/validation';
 
-type Tab = 'leads' | 'clients' | 'quotes' | 'responses';
+type Tab = 'leads' | 'clients' | 'quotes' | 'responses' | 'templates';
 type LeadStage = 'all' | 'new' | 'contacted' | 'qualified' | 'proposal_sent' | 'won' | 'lost';
 
 const PIPELINE_STAGES: { key: LeadStage; label: string; color: string; bgColor: string }[] = [
@@ -47,7 +47,12 @@ export default function SalesPage() {
   const [convertingLead, setConvertingLead] = useState<Lead | null>(null);
   const [selectedPipelineStage, setSelectedPipelineStage] = useState<LeadStage>('all');
   const [responses, setResponses] = useState<any[]>([]);
+  const [templates, setTemplates] = useState<ProposalTemplate[]>([]);
+  const [editingTemplate, setEditingTemplate] = useState<ProposalTemplate | null>(null);
+  const [showDeleteTemplateConfirm, setShowDeleteTemplateConfirm] = useState<string | null>(null);
+  const [previewTemplate, setPreviewTemplate] = useState<ProposalTemplate | null>(null);
   const [selectedSignature, setSelectedSignature] = useState<any>(null);
+  const [showProposalChoiceModal, setShowProposalChoiceModal] = useState<{ type: 'client' | 'lead'; id?: string; name?: string; email?: string; company?: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showClientModal, setShowClientModal] = useState(false);
@@ -134,6 +139,12 @@ export default function SalesPage() {
       setResponses(responsesData);
     } catch (error) {
       console.error('Failed to load responses:', error);
+    }
+    try {
+      const templatesData = await api.getProposalTemplates(profile.company_id);
+      setTemplates(templatesData);
+    } catch (error) {
+      console.error('Failed to load templates:', error);
     }
     setLoading(false);
   }
@@ -339,6 +350,8 @@ export default function SalesPage() {
             } else if (activeTab === 'clients') {
               setSelectedClient(null);
               setIsAddingNewClient(true);
+            } else if (activeTab === 'quotes') {
+              setShowProposalChoiceModal({ type: 'client' });
             } else {
               navigate('/quotes/new/document');
             }
@@ -388,6 +401,14 @@ export default function SalesPage() {
           }`}
         >
           Responses ({responses.length})
+        </button>
+        <button
+          onClick={() => setActiveTab('templates')}
+          className={`px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
+            activeTab === 'templates' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-600 hover:text-neutral-900'
+          }`}
+        >
+          Templates ({templates.length})
         </button>
       </div>
 
@@ -567,7 +588,13 @@ export default function SalesPage() {
                           {lead.status !== 'won' && lead.status !== 'lost' && (
                             <>
                               <button
-                                onClick={() => navigate(`/quotes/new/document?lead_id=${lead.id}&lead_name=${encodeURIComponent(lead.name)}&lead_email=${encodeURIComponent(lead.email || '')}&lead_company=${encodeURIComponent(lead.company_name || '')}`)}
+                                onClick={() => setShowProposalChoiceModal({
+                                  type: 'lead',
+                                  id: lead.id,
+                                  name: lead.name,
+                                  email: lead.email || '',
+                                  company: lead.company_name || ''
+                                })}
                                 className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-[#476E66] bg-[#476E66]/10 rounded-lg hover:bg-[#476E66]/20 transition-colors"
                               >
                                 <Send className="w-3 h-3" />
@@ -1274,6 +1301,111 @@ export default function SalesPage() {
         </div>
       )}
 
+      {/* Templates Section */}
+      {activeTab === 'templates' && (
+        <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
+          {templates.length === 0 ? (
+            <div className="text-center py-16 px-4">
+              <FileText className="w-12 h-12 text-neutral-300 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-neutral-900 mb-2">No Templates Yet</h3>
+              <p className="text-neutral-500 text-sm mb-6 max-w-md mx-auto">
+                Templates help you quickly create proposals. Create a proposal and click "Save as Template" to get started.
+              </p>
+              <button
+                onClick={() => setShowProposalChoiceModal({ type: 'client' })}
+                className="px-4 py-2 bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54] transition-colors text-sm font-medium"
+              >
+                Create Your First Proposal
+              </button>
+            </div>
+          ) : (
+            <div className="divide-y">
+              {templates.filter(t => 
+                t.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                t.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                t.category?.toLowerCase().includes(searchTerm.toLowerCase())
+              ).map(template => (
+                <div key={template.id} className="p-4 hover:bg-neutral-50 transition-colors">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-3 flex-1 min-w-0">
+                      <div className="w-10 h-10 bg-[#476E66]/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <FileText className="w-5 h-5 text-[#476E66]" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-medium text-neutral-900">{template.name}</h3>
+                        {template.description && (
+                          <p className="text-sm text-neutral-500 mt-0.5 line-clamp-1">{template.description}</p>
+                        )}
+                        <div className="flex items-center gap-3 mt-2 flex-wrap">
+                          {template.category && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-neutral-100 rounded text-xs text-neutral-600">
+                              <Tag className="w-3 h-3" />
+                              {template.category}
+                            </span>
+                          )}
+                          {template.client_type && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-neutral-100 rounded text-xs text-neutral-600">
+                              <User className="w-3 h-3" />
+                              {template.client_type}
+                            </span>
+                          )}
+                          <span className="text-xs text-neutral-400">
+                            Used {template.use_count}x
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <button
+                        onClick={() => setPreviewTemplate(template)}
+                        className="px-3 py-1.5 border border-neutral-300 text-neutral-700 rounded-lg hover:bg-neutral-50 transition-colors text-sm font-medium"
+                      >
+                        Preview
+                      </button>
+                      <button
+                        onClick={() => navigate(`/quotes/new/document?template_id=${template.id}`)}
+                        className="px-3 py-1.5 bg-[#476E66] text-white rounded-lg hover:bg-[#3A5B54] transition-colors text-sm font-medium"
+                      >
+                        Use Template
+                      </button>
+                      <div className="relative">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setActiveQuoteMenu(activeQuoteMenu === template.id ? null : template.id); }}
+                          className="p-2 hover:bg-neutral-100 rounded-lg"
+                        >
+                          <MoreHorizontal className="w-4 h-4" />
+                        </button>
+                        {activeQuoteMenu === template.id && (
+                          <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-lg border border-neutral-200 py-1 z-10 min-w-[120px]">
+                            <button
+                              onClick={async () => {
+                                setActiveQuoteMenu(null);
+                                if (confirm('Delete this template?')) {
+                                  try {
+                                    await api.deleteProposalTemplate(template.id);
+                                    setTemplates(templates.filter(t => t.id !== template.id));
+                                  } catch (e) {
+                                    console.error('Failed to delete template:', e);
+                                  }
+                                }
+                              }}
+                              className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                              Delete
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Signature Modal */}
       {selectedSignature && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setSelectedSignature(null)}>
@@ -1334,6 +1466,211 @@ export default function SalesPage() {
           onClose={() => { setShowConvertModal(false); setConvertingLead(null); }}
           onSave={() => { loadData(); setShowConvertModal(false); setConvertingLead(null); }}
         />
+      )}
+
+      {/* Proposal Choice Modal - Select Template or Create New */}
+      {showProposalChoiceModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-xl overflow-hidden">
+            <div className="p-6 border-b border-neutral-100">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-neutral-900">Create Proposal</h2>
+                <button 
+                  onClick={() => setShowProposalChoiceModal(null)} 
+                  className="p-2 hover:bg-neutral-100 rounded-lg"
+                >
+                  <X className="w-5 h-5 text-neutral-400" />
+                </button>
+              </div>
+              <p className="text-sm text-neutral-500 mt-1">How would you like to create your proposal?</p>
+            </div>
+            <div className="p-4 space-y-3">
+              {/* Use Template Option */}
+              <button
+                onClick={() => {
+                  const params = new URLSearchParams();
+                  if (showProposalChoiceModal.type === 'lead' && showProposalChoiceModal.id) {
+                    params.set('lead_id', showProposalChoiceModal.id);
+                    if (showProposalChoiceModal.name) params.set('lead_name', showProposalChoiceModal.name);
+                    if (showProposalChoiceModal.email) params.set('lead_email', showProposalChoiceModal.email);
+                    if (showProposalChoiceModal.company) params.set('lead_company', showProposalChoiceModal.company);
+                  }
+                  params.set('show_templates', 'true');
+                  navigate(`/quotes/new/document?${params.toString()}`);
+                  setShowProposalChoiceModal(null);
+                }}
+                className="w-full flex items-center gap-4 p-4 border-2 border-neutral-200 rounded-xl hover:border-[#476E66] hover:bg-[#476E66]/5 transition-all group"
+              >
+                <div className="w-12 h-12 rounded-xl bg-[#476E66]/10 flex items-center justify-center flex-shrink-0 group-hover:bg-[#476E66]/20 transition-colors">
+                  <FileText className="w-6 h-6 text-[#476E66]" />
+                </div>
+                <div className="text-left flex-1">
+                  <h3 className="font-semibold text-neutral-900">Use a Template</h3>
+                  <p className="text-sm text-neutral-500">Start from a saved template for faster creation</p>
+                </div>
+                <ArrowRight className="w-5 h-5 text-neutral-400 group-hover:text-[#476E66] transition-colors" />
+              </button>
+
+              {/* Create Blank Option */}
+              <button
+                onClick={() => {
+                  const params = new URLSearchParams();
+                  if (showProposalChoiceModal.type === 'lead' && showProposalChoiceModal.id) {
+                    params.set('lead_id', showProposalChoiceModal.id);
+                    if (showProposalChoiceModal.name) params.set('lead_name', showProposalChoiceModal.name);
+                    if (showProposalChoiceModal.email) params.set('lead_email', showProposalChoiceModal.email);
+                    if (showProposalChoiceModal.company) params.set('lead_company', showProposalChoiceModal.company);
+                  }
+                  navigate(`/quotes/new/document${params.toString() ? '?' + params.toString() : ''}`);
+                  setShowProposalChoiceModal(null);
+                }}
+                className="w-full flex items-center gap-4 p-4 border-2 border-neutral-200 rounded-xl hover:border-[#476E66] hover:bg-[#476E66]/5 transition-all group"
+              >
+                <div className="w-12 h-12 rounded-xl bg-neutral-100 flex items-center justify-center flex-shrink-0 group-hover:bg-[#476E66]/10 transition-colors">
+                  <Plus className="w-6 h-6 text-neutral-600 group-hover:text-[#476E66]" />
+                </div>
+                <div className="text-left flex-1">
+                  <h3 className="font-semibold text-neutral-900">Create from Scratch</h3>
+                  <p className="text-sm text-neutral-500">Start with a blank proposal</p>
+                </div>
+                <ArrowRight className="w-5 h-5 text-neutral-400 group-hover:text-[#476E66] transition-colors" />
+              </button>
+            </div>
+            {templates.length > 0 && (
+              <div className="px-4 pb-4">
+                <p className="text-xs text-neutral-400 text-center">{templates.length} template{templates.length !== 1 ? 's' : ''} available</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Template Preview Modal */}
+      {previewTemplate && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
+            <div className="p-6 border-b border-neutral-100 flex items-center justify-between flex-shrink-0">
+              <div>
+                <h2 className="text-lg font-semibold text-neutral-900">{previewTemplate.name}</h2>
+                {previewTemplate.description && (
+                  <p className="text-sm text-neutral-500 mt-1">{previewTemplate.description}</p>
+                )}
+              </div>
+              <button 
+                onClick={() => setPreviewTemplate(null)} 
+                className="p-2 hover:bg-neutral-100 rounded-lg"
+              >
+                <X className="w-5 h-5 text-neutral-400" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              {/* Template Info */}
+              <div className="flex items-center gap-4 flex-wrap text-sm">
+                {previewTemplate.category && (
+                  <span className="inline-flex items-center gap-1 px-2 py-1 bg-neutral-100 rounded text-neutral-600">
+                    <Tag className="w-3.5 h-3.5" />
+                    {previewTemplate.category}
+                  </span>
+                )}
+                {previewTemplate.client_type && (
+                  <span className="inline-flex items-center gap-1 px-2 py-1 bg-neutral-100 rounded text-neutral-600">
+                    <User className="w-3.5 h-3.5" />
+                    {previewTemplate.client_type}
+                  </span>
+                )}
+                <span className="text-neutral-400">Used {previewTemplate.use_count}x</span>
+              </div>
+
+              {/* Template Data Preview */}
+              {previewTemplate.template_data && (
+                <>
+                  {/* Title */}
+                  {previewTemplate.template_data.title && (
+                    <div>
+                      <h3 className="text-sm font-semibold text-neutral-500 uppercase tracking-wider mb-2">Proposal Title</h3>
+                      <p className="text-neutral-900 font-medium">{previewTemplate.template_data.title}</p>
+                    </div>
+                  )}
+
+                  {/* Scope of Work */}
+                  {previewTemplate.template_data.scope_of_work && (
+                    <div>
+                      <h3 className="text-sm font-semibold text-neutral-500 uppercase tracking-wider mb-2">Scope of Work</h3>
+                      <p className="text-neutral-700 text-sm whitespace-pre-wrap bg-neutral-50 p-3 rounded-lg border border-neutral-100">
+                        {previewTemplate.template_data.scope_of_work}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Line Items / Tasks */}
+                  {previewTemplate.template_data.line_items && previewTemplate.template_data.line_items.length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-semibold text-neutral-500 uppercase tracking-wider mb-2">
+                        Tasks / Line Items ({previewTemplate.template_data.line_items.length})
+                      </h3>
+                      <div className="space-y-2">
+                        {previewTemplate.template_data.line_items.map((item: any, idx: number) => (
+                          <div key={idx} className="flex items-start gap-3 p-3 bg-neutral-50 rounded-lg border border-neutral-100">
+                            <div className="w-6 h-6 rounded-full bg-[#476E66]/20 flex items-center justify-center text-[#476E66] text-xs font-medium flex-shrink-0">
+                              {idx + 1}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-neutral-900 text-sm">{item.description || 'Untitled Task'}</p>
+                              <div className="flex items-center gap-3 mt-1 text-xs text-neutral-500 flex-wrap">
+                                {item.estimated_days && (
+                                  <span>{item.estimated_days} day{item.estimated_days !== 1 ? 's' : ''}</span>
+                                )}
+                                {item.unit_price > 0 && (
+                                  <span>${item.unit_price.toLocaleString()} × {item.quantity || 1} {item.unit || 'each'}</span>
+                                )}
+                                {item.start_type && item.start_type !== 'parallel' && (
+                                  <span className="text-amber-600">
+                                    {item.start_type === 'sequential' ? 'Sequential' : `Overlap ${item.overlap_days}d`}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      {/* Total estimate */}
+                      {(() => {
+                        const totalDays = previewTemplate.template_data.line_items.reduce((sum: number, item: any) => sum + (item.estimated_days || 0), 0);
+                        const totalAmount = previewTemplate.template_data.line_items.reduce((sum: number, item: any) => sum + ((item.unit_price || 0) * (item.quantity || 1)), 0);
+                        return (
+                          <div className="mt-3 pt-3 border-t border-neutral-200 flex items-center justify-between text-sm">
+                            <span className="text-neutral-500">Estimated Total</span>
+                            <div className="text-right">
+                              <span className="font-semibold text-neutral-900">${totalAmount.toLocaleString()}</span>
+                              <span className="text-neutral-400 ml-2">• {totalDays} total days</span>
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+            <div className="p-4 border-t border-neutral-100 flex gap-3 flex-shrink-0">
+              <button
+                onClick={() => setPreviewTemplate(null)}
+                className="flex-1 px-4 py-2.5 border border-neutral-300 text-neutral-700 rounded-xl hover:bg-neutral-50 transition-colors"
+              >
+                Close
+              </button>
+              <button
+                onClick={() => {
+                  navigate(`/quotes/new/document?template_id=${previewTemplate.id}`);
+                  setPreviewTemplate(null);
+                }}
+                className="flex-1 px-4 py-2.5 bg-[#476E66] text-white rounded-xl hover:bg-[#3A5B54] transition-colors"
+              >
+                Use This Template
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
