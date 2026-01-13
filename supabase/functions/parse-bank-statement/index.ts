@@ -12,7 +12,7 @@ Deno.serve(async (req) => {
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-  const geminiKey = 'AIzaSyDPWb0oRLVvQrwFErxkq2Fjw6t4Y6cCJb4';
+  const geminiKey = Deno.env.get('GEMINI_API_KEY')!;
 
   let statementId = '';
   
