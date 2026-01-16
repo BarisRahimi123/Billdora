@@ -1518,9 +1518,9 @@ class _QuotesTabState extends State<_QuotesTab> with SingleTickerProviderStateMi
             padding: const EdgeInsets.symmetric(horizontal: 12),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 2,
-              crossAxisSpacing: 10,
-              mainAxisSpacing: 10,
-              childAspectRatio: 0.85,
+              crossAxisSpacing: 8,
+              mainAxisSpacing: 8,
+              childAspectRatio: 1.15,
             ),
             itemCount: _templates.length,
             itemBuilder: (context, index) {
@@ -1529,7 +1529,7 @@ class _QuotesTabState extends State<_QuotesTab> with SingleTickerProviderStateMi
               return Container(
                 decoration: BoxDecoration(
                   color: AppColors.cardBackground,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(10),
                   boxShadow: AppShadows.sm,
                 ),
                 child: Column(
@@ -1537,21 +1537,21 @@ class _QuotesTabState extends State<_QuotesTab> with SingleTickerProviderStateMi
                   children: [
                     // Template Preview
                     Container(
-                      height: 80,
+                      height: 55,
                       decoration: BoxDecoration(
                         color: AppColors.accent.withOpacity(0.1),
-                        borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                        borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
                       ),
                       child: Stack(
                         children: [
                           Center(
-                            child: Icon(Icons.description_outlined, size: 32, color: AppColors.accent.withOpacity(0.5)),
+                            child: Icon(Icons.description_outlined, size: 26, color: AppColors.accent.withOpacity(0.5)),
                           ),
                           Positioned(
-                            top: 8,
-                            right: 8,
+                            top: 4,
+                            right: 4,
                             child: PopupMenuButton(
-                              icon: Icon(Icons.more_vert, size: 18, color: AppColors.textSecondary),
+                              icon: Icon(Icons.more_vert, size: 16, color: AppColors.textSecondary),
                               padding: EdgeInsets.zero,
                               itemBuilder: (context) => [
                                 const PopupMenuItem(value: 'use', child: Text('Use Template')),
@@ -1566,43 +1566,47 @@ class _QuotesTabState extends State<_QuotesTab> with SingleTickerProviderStateMi
                     ),
                     // Template Info
                     Padding(
-                      padding: const EdgeInsets.all(12),
+                      padding: const EdgeInsets.all(10),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             template['name'] as String,
-                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
-                          const SizedBox(height: 4),
+                          const SizedBox(height: 3),
                           Text(
                             template['description'] as String,
-                            style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                            style: TextStyle(fontSize: 10, color: AppColors.textSecondary),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 6),
                           Row(
                             children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: AppColors.neutral100,
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  template['category'] as String,
-                                  style: TextStyle(fontSize: 9, color: AppColors.textSecondary),
+                              Flexible(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.neutral100,
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    template['category'] as String,
+                                    style: TextStyle(fontSize: 9, color: AppColors.textSecondary),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ),
                               ),
-                              const Spacer(),
+                              const SizedBox(width: 6),
                               Icon(Icons.copy_outlined, size: 10, color: AppColors.textTertiary),
-                              const SizedBox(width: 4),
+                              const SizedBox(width: 3),
                               Text(
                                 '${template['usedCount']}x',
-                                style: TextStyle(fontSize: 10, color: AppColors.textTertiary),
+                                style: TextStyle(fontSize: 9, color: AppColors.textTertiary),
                               ),
                             ],
                           ),
