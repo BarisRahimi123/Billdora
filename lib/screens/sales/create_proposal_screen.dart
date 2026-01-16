@@ -3418,9 +3418,23 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
   Widget _buildStep5Preview() {
     final currencyFormat = NumberFormat.currency(symbol: '\$');
     final dateFormat = DateFormat('MMMM d, yyyy');
+    
+    // Collaborator analysis for status banner
+    final hasCollaborators = _collaborators.isNotEmpty;
+    final pendingCollaborators = _collaborators.where((c) => 
+      c['status'] == 'invited' || c['status'] == 'accepted' || c['status'] == 'revision_requested'
+    ).toList();
+    final submittedCollaborators = _collaborators.where((c) => 
+      c['status'] == 'submitted' || c['status'] == 'locked'
+    ).toList();
+    final allSubmitted = hasCollaborators && pendingCollaborators.isEmpty;
 
     return Column(
       children: [
+        // Collaborator Status Banner (if applicable)
+        if (hasCollaborators)
+          _buildCollaboratorStatusBanner(pendingCollaborators, submittedCollaborators, allSubmitted),
+        
         // Sticky Action Bar at Top
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -3852,6 +3866,114 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
     );
   }
 
+  Widget _buildCollaboratorStatusBanner(
+    List<Map<String, dynamic>> pendingCollaborators,
+    List<Map<String, dynamic>> submittedCollaborators,
+    bool allSubmitted,
+  ) {
+    if (allSubmitted) {
+      // All collaborators submitted - ready to send merged
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: AppColors.success.withOpacity(0.08),
+          border: Border(bottom: BorderSide(color: AppColors.success.withOpacity(0.2))),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: AppColors.success.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(Icons.check_circle, color: AppColors.success, size: 18),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'All collaborators submitted!',
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.success),
+                  ),
+                  Text(
+                    '${submittedCollaborators.length} submission${submittedCollaborators.length > 1 ? 's' : ''} ready to merge',
+                    style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                  ),
+                ],
+              ),
+            ),
+            TextButton(
+              onPressed: () => _goToStep(3), // Go to Collaborators step
+              child: const Text('Review', style: TextStyle(fontSize: 12)),
+            ),
+          ],
+        ),
+      );
+    } else {
+      // Some collaborators still pending
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: AppColors.warning.withOpacity(0.08),
+          border: Border(bottom: BorderSide(color: AppColors.warning.withOpacity(0.2))),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: AppColors.warning.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(Icons.hourglass_empty, color: AppColors.warning, size: 18),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${pendingCollaborators.length} collaborator${pendingCollaborators.length > 1 ? 's' : ''} pending',
+                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.warning),
+                  ),
+                  Row(
+                    children: [
+                      ...pendingCollaborators.take(3).map((c) => Padding(
+                        padding: const EdgeInsets.only(right: 4),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.cardBackground,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(c['name'].split(' ')[0], style: const TextStyle(fontSize: 10)),
+                        ),
+                      )),
+                      if (pendingCollaborators.length > 3)
+                        Text('+${pendingCollaborators.length - 3} more', style: TextStyle(fontSize: 10, color: AppColors.textTertiary)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: () => _goToStep(3), // Go to Collaborators step
+                  child: const Text('Manage', style: TextStyle(fontSize: 12)),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
   Widget _buildProposalSection({
     required IconData icon,
     required String title,
@@ -4049,6 +4171,21 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
       text: 'Proposal: ${_projectNameController.text.isNotEmpty ? _projectNameController.text : "for $_recipientName"}',
     );
     bool sendCopy = true;
+    
+    // Collaborator status analysis
+    final hasCollaborators = _collaborators.isNotEmpty;
+    final pendingCollaborators = _collaborators.where((c) => 
+      c['status'] == 'invited' || c['status'] == 'accepted' || c['status'] == 'revision_requested'
+    ).toList();
+    final submittedCollaborators = _collaborators.where((c) => 
+      c['status'] == 'submitted' || c['status'] == 'locked'
+    ).toList();
+    final allSubmitted = hasCollaborators && pendingCollaborators.isEmpty;
+    
+    // Default send mode: 'merged' if all submitted, 'wait' if pending, 'none' if no collaborators
+    String sendMode = hasCollaborators 
+        ? (allSubmitted ? 'merged' : 'wait') 
+        : 'none';
 
     showModalBottomSheet(
       context: context,
@@ -4058,164 +4195,507 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) => StatefulBuilder(
-        builder: (context, setModalState) => Padding(
-          padding: EdgeInsets.only(
-            left: 20,
-            right: 20,
-            top: 20,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppColors.border,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  Container(
-                    width: 44,
-                    height: 44,
+        builder: (context, setModalState) => DraggableScrollableSheet(
+          initialChildSize: hasCollaborators ? 0.85 : 0.55,
+          minChildSize: 0.4,
+          maxChildSize: 0.95,
+          expand: false,
+          builder: (context, scrollController) => SingleChildScrollView(
+            controller: scrollController,
+            padding: EdgeInsets.only(
+              left: 20,
+              right: 20,
+              top: 20,
+              bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
                     decoration: BoxDecoration(
-                      color: AppColors.accent.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
+                      color: AppColors.border,
+                      borderRadius: BorderRadius.circular(2),
                     ),
-                    child: const Icon(Icons.send_rounded, color: AppColors.accent),
                   ),
-                  const SizedBox(width: 12),
-                  const Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Send Proposal', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-                      Text('Send to client\'s primary contact', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              
-              // Recipient Card
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppColors.neutral50,
-                  borderRadius: BorderRadius.circular(10),
                 ),
-                child: Row(
+                const SizedBox(height: 20),
+                Row(
                   children: [
                     Container(
-                      width: 36,
-                      height: 36,
+                      width: 44,
+                      height: 44,
                       decoration: BoxDecoration(
-                        color: AppColors.accent.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(8),
+                        color: AppColors.accent.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Center(
-                        child: Text(
-                          _recipientName.isNotEmpty ? _recipientName[0].toUpperCase() : 'C',
-                          style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.accent),
+                      child: const Icon(Icons.send_rounded, color: AppColors.accent),
+                    ),
+                    const SizedBox(width: 12),
+                    const Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Send Proposal', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                        Text('Send to client\'s primary contact', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                
+                // ========== COLLABORATOR STATUS SECTION ==========
+                if (hasCollaborators) ...[
+                  // Collaborator Status Summary
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: allSubmitted 
+                          ? AppColors.success.withOpacity(0.08)
+                          : AppColors.warning.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: allSubmitted 
+                            ? AppColors.success.withOpacity(0.3)
+                            : AppColors.warning.withOpacity(0.3),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              allSubmitted ? Icons.check_circle_outline : Icons.hourglass_empty,
+                              size: 20,
+                              color: allSubmitted ? AppColors.success : AppColors.warning,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                allSubmitted 
+                                    ? 'All collaborators have submitted!'
+                                    : '${pendingCollaborators.length} collaborator${pendingCollaborators.length > 1 ? 's' : ''} pending',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: allSubmitted ? AppColors.success : AppColors.warning,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (!allSubmitted) ...[
+                          const SizedBox(height: 10),
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 6,
+                            children: pendingCollaborators.map((c) => Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: AppColors.cardBackground,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  _buildCollaboratorStatusIcon(c['status']),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    c['name'],
+                                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
+                                  ),
+                                ],
+                              ),
+                            )).toList(),
+                          ),
+                        ],
+                        if (submittedCollaborators.isNotEmpty && !allSubmitted) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            '${submittedCollaborators.length} already submitted',
+                            style: TextStyle(fontSize: 11, color: AppColors.success),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // ========== SEND MODE OPTIONS ==========
+                  Text('Send Options', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                  const SizedBox(height: 12),
+
+                  // Option 1: Merged Proposal (only if all submitted)
+                  _buildSendModeOption(
+                    setModalState,
+                    sendMode,
+                    'merged',
+                    Icons.merge_type,
+                    'Send Merged Proposal',
+                    'Include all collaborator line items in one proposal',
+                    AppColors.success,
+                    enabled: allSubmitted,
+                    disabledReason: !allSubmitted ? 'Wait for all submissions' : null,
+                    (val) => setModalState(() => sendMode = val),
+                  ),
+                  const SizedBox(height: 10),
+
+                  // Option 2: Send Without Collaborators
+                  _buildSendModeOption(
+                    setModalState,
+                    sendMode,
+                    'without',
+                    Icons.person,
+                    'Send Without Collaborators',
+                    'Send only your services, exclude pending collaborators',
+                    AppColors.info,
+                    enabled: true,
+                    (val) => setModalState(() => sendMode = val),
+                  ),
+                  const SizedBox(height: 10),
+
+                  // Option 3: Wait for Submissions
+                  if (pendingCollaborators.isNotEmpty)
+                    _buildSendModeOption(
+                      setModalState,
+                      sendMode,
+                      'wait',
+                      Icons.schedule,
+                      'Wait for All Submissions',
+                      'Save as draft, send automatically when all submit',
+                      AppColors.warning,
+                      enabled: true,
+                      (val) => setModalState(() => sendMode = val),
+                    ),
+                  if (pendingCollaborators.isNotEmpty)
+                    const SizedBox(height: 10),
+
+                  // Option 4: Independent Sending
+                  _buildSendModeOption(
+                    setModalState,
+                    sendMode,
+                    'independent',
+                    Icons.call_split,
+                    'Send Independently',
+                    'You send yours, collaborators send theirs directly',
+                    AppColors.purple,
+                    enabled: true,
+                    (val) => setModalState(() => sendMode = val),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Warning/Info based on selected mode
+                  if (sendMode == 'without' && pendingCollaborators.isNotEmpty)
+                    _buildModeWarning(
+                      Icons.warning_amber_rounded,
+                      AppColors.warning,
+                      '${pendingCollaborators.length} collaborator${pendingCollaborators.length > 1 ? 's' : ''} will be excluded from this proposal.',
+                    ),
+                  if (sendMode == 'wait')
+                    _buildModeWarning(
+                      Icons.info_outline,
+                      AppColors.info,
+                      'Proposal will be saved as draft. You\'ll be notified when all collaborators submit, then you can review and send.',
+                    ),
+                  if (sendMode == 'independent')
+                    _buildModeWarning(
+                      Icons.info_outline,
+                      AppColors.purple,
+                      'Client will receive separate proposals from each collaborator. A note will be included informing them of additional incoming proposals.',
+                    ),
+                  if (sendMode == 'without' || sendMode == 'wait' || sendMode == 'independent')
+                    const SizedBox(height: 16),
+
+                  const Divider(height: 32),
+                ],
+                
+                // ========== RECIPIENT SECTION ==========
+                // Recipient Card
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.neutral50,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: AppColors.accent.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Center(
+                          child: Text(
+                            _recipientName.isNotEmpty ? _recipientName[0].toUpperCase() : 'C',
+                            style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.accent),
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(_recipientName, style: const TextStyle(fontWeight: FontWeight.w600)),
-                          Text(_recipientType == 'client' ? 'Client' : 'Lead', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
-                        ],
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(_recipientName, style: const TextStyle(fontWeight: FontWeight.w600)),
+                            Text(_recipientType == 'client' ? 'Client' : 'Lead', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                          ],
+                        ),
                       ),
-                    ),
-                    const Icon(Icons.check_circle, color: AppColors.success, size: 20),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Email Field
-              TextField(
-                controller: emailController,
-                decoration: InputDecoration(
-                  labelText: 'Recipient Email',
-                  prefixIcon: const Icon(Icons.email_outlined, size: 20),
-                  filled: true,
-                  fillColor: AppColors.neutral50,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              // Subject Field
-              TextField(
-                controller: subjectController,
-                decoration: InputDecoration(
-                  labelText: 'Email Subject',
-                  prefixIcon: const Icon(Icons.subject, size: 20),
-                  filled: true,
-                  fillColor: AppColors.neutral50,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              // Send Copy Checkbox
-              GestureDetector(
-                onTap: () => setModalState(() => sendCopy = !sendCopy),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 22,
-                      height: 22,
-                      decoration: BoxDecoration(
-                        color: sendCopy ? AppColors.accent : Colors.transparent,
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: sendCopy ? AppColors.accent : AppColors.border, width: 2),
-                      ),
-                      child: sendCopy ? const Icon(Icons.check, color: Colors.white, size: 14) : null,
-                    ),
-                    const SizedBox(width: 10),
-                    const Text('Send me a copy', style: TextStyle(fontSize: 14)),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // Send Button
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Proposal sent to ${emailController.text}'),
-                        backgroundColor: AppColors.success,
-                      ),
-                    );
-                    context.go('/sales');
-                  },
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
+                      const Icon(Icons.check_circle, color: AppColors.success, size: 20),
+                    ],
                   ),
-                  icon: const Icon(Icons.send_rounded, size: 18),
-                  label: const Text('Send Proposal'),
+                ),
+                const SizedBox(height: 16),
+
+                // Email Field
+                TextField(
+                  controller: emailController,
+                  decoration: InputDecoration(
+                    labelText: 'Recipient Email',
+                    prefixIcon: const Icon(Icons.email_outlined, size: 20),
+                    filled: true,
+                    fillColor: AppColors.neutral50,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // Subject Field
+                TextField(
+                  controller: subjectController,
+                  decoration: InputDecoration(
+                    labelText: 'Email Subject',
+                    prefixIcon: const Icon(Icons.subject, size: 20),
+                    filled: true,
+                    fillColor: AppColors.neutral50,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // Send Copy Checkbox
+                GestureDetector(
+                  onTap: () => setModalState(() => sendCopy = !sendCopy),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 22,
+                        height: 22,
+                        decoration: BoxDecoration(
+                          color: sendCopy ? AppColors.accent : Colors.transparent,
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: sendCopy ? AppColors.accent : AppColors.border, width: 2),
+                        ),
+                        child: sendCopy ? const Icon(Icons.check, color: Colors.white, size: 14) : null,
+                      ),
+                      const SizedBox(width: 10),
+                      const Text('Send me a copy', style: TextStyle(fontSize: 14)),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Send Button - changes based on mode
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _executeSendMode(sendMode, emailController.text, sendCopy);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      backgroundColor: _getSendModeColor(sendMode),
+                    ),
+                    icon: Icon(_getSendModeIcon(sendMode), size: 18),
+                    label: Text(_getSendModeButtonText(sendMode)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCollaboratorStatusIcon(String status) {
+    switch (status) {
+      case 'invited':
+        return Icon(Icons.mail_outline, size: 12, color: AppColors.info);
+      case 'accepted':
+        return Icon(Icons.pending_outlined, size: 12, color: AppColors.warning);
+      case 'revision_requested':
+        return Icon(Icons.edit_outlined, size: 12, color: AppColors.warning);
+      case 'submitted':
+        return Icon(Icons.check, size: 12, color: AppColors.success);
+      case 'locked':
+        return Icon(Icons.lock, size: 12, color: AppColors.success);
+      default:
+        return Icon(Icons.help_outline, size: 12, color: AppColors.textTertiary);
+    }
+  }
+
+  Widget _buildSendModeOption(
+    StateSetter setModalState,
+    String currentMode,
+    String mode,
+    IconData icon,
+    String title,
+    String subtitle,
+    Color color, {
+    bool enabled = true,
+    String? disabledReason,
+    required Function(String) onSelect,
+  }) {
+    final isSelected = currentMode == mode;
+    
+    return GestureDetector(
+      onTap: enabled ? () => onSelect(mode) : null,
+      child: Opacity(
+        opacity: enabled ? 1.0 : 0.5,
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: isSelected ? color.withOpacity(0.08) : AppColors.neutral50,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isSelected ? color : AppColors.border,
+              width: isSelected ? 2 : 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: isSelected ? color.withOpacity(0.15) : AppColors.neutral100,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: isSelected ? color : AppColors.textSecondary, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: isSelected ? color : AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      enabled ? subtitle : (disabledReason ?? subtitle),
+                      style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                    ),
+                  ],
                 ),
               ),
+              if (isSelected)
+                Icon(Icons.check_circle, color: color, size: 22)
+              else if (!enabled)
+                Icon(Icons.lock_outline, color: AppColors.textTertiary, size: 18),
             ],
           ),
         ),
       ),
     );
+  }
+
+  Widget _buildModeWarning(IconData icon, Color color, String message) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withOpacity(0.2)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 18, color: color),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(fontSize: 12, color: color, height: 1.4),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _getSendModeColor(String mode) {
+    switch (mode) {
+      case 'merged': return AppColors.success;
+      case 'without': return AppColors.info;
+      case 'wait': return AppColors.warning;
+      case 'independent': return AppColors.purple;
+      default: return AppColors.accent;
+    }
+  }
+
+  IconData _getSendModeIcon(String mode) {
+    switch (mode) {
+      case 'merged': return Icons.merge_type;
+      case 'without': return Icons.send_rounded;
+      case 'wait': return Icons.schedule;
+      case 'independent': return Icons.call_split;
+      default: return Icons.send_rounded;
+    }
+  }
+
+  String _getSendModeButtonText(String mode) {
+    switch (mode) {
+      case 'merged': return 'Send Merged Proposal';
+      case 'without': return 'Send Without Collaborators';
+      case 'wait': return 'Save & Wait for Submissions';
+      case 'independent': return 'Send Independently';
+      default: return 'Send Proposal';
+    }
+  }
+
+  void _executeSendMode(String mode, String email, bool sendCopy) {
+    String message;
+    
+    switch (mode) {
+      case 'merged':
+        message = 'Merged proposal sent to $email';
+        // Logic: Include all collaborator line items
+        break;
+      case 'without':
+        message = 'Proposal sent to $email (without pending collaborators)';
+        // Logic: Exclude pending collaborators
+        break;
+      case 'wait':
+        message = 'Proposal saved as draft. You\'ll be notified when all collaborators submit.';
+        // Logic: Save as draft, set up auto-send trigger
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message), backgroundColor: AppColors.warning, duration: const Duration(seconds: 4)),
+        );
+        // Don't navigate away - stay on proposal
+        return;
+      case 'independent':
+        message = 'Your proposal sent to $email. Collaborators have been notified to send their proposals.';
+        // Logic: Send your part, notify collaborators to send directly
+        break;
+      default:
+        message = 'Proposal sent to $email';
+    }
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: AppColors.success, duration: const Duration(seconds: 3)),
+    );
+    context.go('/sales');
   }
 
   // Show Save as Template Modal
