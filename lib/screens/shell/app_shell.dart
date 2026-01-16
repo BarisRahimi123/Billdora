@@ -38,22 +38,10 @@ class AppShell extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _NavItem(
-                  icon: Icons.grid_view_rounded,
-                  label: 'Dashboard',
-                  isSelected: _isSelected(context, '/dashboard'),
-                  onTap: () => context.go('/dashboard'),
-                ),
-                _NavItem(
                   icon: Icons.trending_up_rounded,
                   label: 'Sales',
                   isSelected: _isSelected(context, '/sales'),
                   onTap: () => context.go('/sales'),
-                ),
-                _NavItem(
-                  icon: Icons.schedule_rounded,
-                  label: 'Time',
-                  isSelected: _isSelected(context, '/time'),
-                  onTap: () => context.go('/time'),
                 ),
                 _NavItem(
                   icon: Icons.folder_outlined,
@@ -62,10 +50,16 @@ class AppShell extends StatelessWidget {
                   onTap: () => context.go('/projects'),
                 ),
                 _NavItem(
-                  icon: Icons.person_outline_rounded,
-                  label: 'Me',
-                  isSelected: _isSelected(context, '/settings'),
-                  onTap: () => context.go('/settings'),
+                  icon: Icons.schedule_rounded,
+                  label: 'Time',
+                  isSelected: _isSelected(context, '/time'),
+                  onTap: () => context.go('/time'),
+                ),
+                _NavItem(
+                  icon: Icons.receipt_long_outlined,
+                  label: 'Invoice',
+                  isSelected: _isSelected(context, '/invoices'),
+                  onTap: () => context.go('/invoices'),
                 ),
               ],
             ),
@@ -77,9 +71,10 @@ class AppShell extends StatelessWidget {
 
   bool _isSelected(BuildContext context, String path) {
     final location = GoRouterState.of(context).matchedLocation;
-    if (path == '/dashboard') return location.startsWith('/dashboard') || location == '/';
-    if (path == '/sales') return location.startsWith('/sales') || location.startsWith('/invoices') || location.startsWith('/clients');
+    if (path == '/sales') return location.startsWith('/sales') || location.startsWith('/clients');
     if (path == '/time') return location.startsWith('/expenses') || location.startsWith('/time');
+    if (path == '/invoices') return location.startsWith('/invoices');
+    if (path == '/projects') return location.startsWith('/projects');
     return location.startsWith(path);
   }
 }
@@ -138,6 +133,7 @@ class AppDrawer extends StatelessWidget {
                       context.go('/dashboard');
                     },
                   ),
+                  const Divider(color: Colors.white24, height: 24),
                   _DrawerItem(
                     icon: Icons.people_outline,
                     label: 'Sales',
