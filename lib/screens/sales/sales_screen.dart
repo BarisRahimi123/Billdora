@@ -912,8 +912,10 @@ final List<Map<String, dynamic>> clientsList = [
     'type': 'Retail',
     'notes': 'Premium client, prefers email communication',
     'quotes': 16,
+    'projects': 5,
     'value': 12150.0,
     'created': DateTime(2025, 3, 15),
+    'lastActivity': DateTime.now().subtract(const Duration(days: 5)),
   },
   {
     'id': '2',
@@ -929,8 +931,10 @@ final List<Map<String, dynamic>> clientsList = [
     'type': 'Consulting',
     'notes': '',
     'quotes': 1,
+    'projects': 0,
     'value': 2000.0,
     'created': DateTime(2025, 8, 20),
+    'lastActivity': DateTime.now().subtract(const Duration(days: 120)), // Inactive
   },
   {
     'id': '3',
@@ -946,8 +950,67 @@ final List<Map<String, dynamic>> clientsList = [
     'type': 'Finance',
     'notes': 'Key account, requires quarterly reviews',
     'quotes': 8,
+    'projects': 3,
     'value': 6400.0,
     'created': DateTime(2025, 1, 10),
+    'lastActivity': DateTime.now().subtract(const Duration(days: 15)),
+  },
+  {
+    'id': '4',
+    'name': 'TechStart Inc',
+    'company': 'TechStart Innovation Labs',
+    'email': 'team@techstart.io',
+    'phone': '+1 (555) 456-7890',
+    'address': '100 Innovation Way',
+    'city': 'Austin',
+    'state': 'TX',
+    'zip': '73301',
+    'website': 'www.techstart.io',
+    'type': 'Technology',
+    'notes': 'Fast-growing startup, potential for large projects',
+    'quotes': 12,
+    'projects': 4,
+    'value': 28500.0,
+    'created': DateTime(2024, 11, 5),
+    'lastActivity': DateTime.now().subtract(const Duration(days: 2)),
+  },
+  {
+    'id': '5',
+    'name': 'MedCare Solutions',
+    'company': 'MedCare Health Systems',
+    'email': 'admin@medcare.health',
+    'phone': '+1 (555) 567-8901',
+    'address': '500 Health Plaza',
+    'city': 'Boston',
+    'state': 'MA',
+    'zip': '02101',
+    'website': 'www.medcare.health',
+    'type': 'Healthcare',
+    'notes': 'Requires HIPAA compliance documentation',
+    'quotes': 4,
+    'projects': 2,
+    'value': 15800.0,
+    'created': DateTime(2025, 2, 18),
+    'lastActivity': DateTime.now().subtract(const Duration(days: 45)),
+  },
+  {
+    'id': '6',
+    'name': 'Green Build Co',
+    'company': 'Green Build Construction',
+    'email': 'projects@greenbuild.co',
+    'phone': '+1 (555) 678-9012',
+    'address': '250 Builder Lane',
+    'city': 'Denver',
+    'state': 'CO',
+    'zip': '80201',
+    'website': 'www.greenbuild.co',
+    'type': 'Other',
+    'notes': 'Sustainable construction focus',
+    'quotes': 6,
+    'projects': 1,
+    'value': 8900.0,
+    'created': DateTime(2025, 5, 22),
+    'lastActivity': DateTime.now().subtract(const Duration(days: 180)), // Inactive
   },
 ];
 
@@ -961,14 +1024,39 @@ class _ClientsTab extends StatefulWidget {
 class _ClientsTabState extends State<_ClientsTab> {
   String _searchQuery = '';
   String _typeFilter = 'all';
+  String _statusFilter = 'all'; // all, active, inactive
+  String _sortBy = 'revenue'; // revenue, activity, name, recent
 
   final List<String> _clientTypes = ['all', 'Retail', 'Consulting', 'Finance', 'Technology', 'Healthcare', 'Other'];
 
+  // Determine if client is active (had activity in last 90 days)
+  bool _isClientActive(Map<String, dynamic> client) {
+    final lastActivity = client['lastActivity'] as DateTime?;
+    if (lastActivity == null) return false;
+    return DateTime.now().difference(lastActivity).inDays <= 90;
+  }
+
+  // Calculate activity score (quotes + projects)
+  int _getActivityCount(Map<String, dynamic> client) {
+    return (client['quotes'] as int? ?? 0) + (client['projects'] as int? ?? 0);
+  }
+
   List<Map<String, dynamic>> get _filteredClients {
     var filtered = clientsList;
+    
+    // Type filter
     if (_typeFilter != 'all') {
       filtered = filtered.where((c) => c['type'] == _typeFilter).toList();
     }
+    
+    // Status filter
+    if (_statusFilter == 'active') {
+      filtered = filtered.where((c) => _isClientActive(c)).toList();
+    } else if (_statusFilter == 'inactive') {
+      filtered = filtered.where((c) => !_isClientActive(c)).toList();
+    }
+    
+    // Search filter
     if (_searchQuery.isNotEmpty) {
       filtered = filtered.where((c) =>
         c['name'].toLowerCase().contains(_searchQuery.toLowerCase()) ||
@@ -976,7 +1064,35 @@ class _ClientsTabState extends State<_ClientsTab> {
         c['email'].toLowerCase().contains(_searchQuery.toLowerCase())
       ).toList();
     }
+    
+    // Sort
+    switch (_sortBy) {
+      case 'revenue':
+        filtered.sort((a, b) => ((b['value'] as double?) ?? 0).compareTo((a['value'] as double?) ?? 0));
+        break;
+      case 'activity':
+        filtered.sort((a, b) => _getActivityCount(b).compareTo(_getActivityCount(a)));
+        break;
+      case 'name':
+        filtered.sort((a, b) => (a['name'] as String).compareTo(b['name'] as String));
+        break;
+      case 'recent':
+        filtered.sort((a, b) {
+          final aDate = a['lastActivity'] as DateTime? ?? a['created'] as DateTime? ?? DateTime(2000);
+          final bDate = b['lastActivity'] as DateTime? ?? b['created'] as DateTime? ?? DateTime(2000);
+          return bDate.compareTo(aDate);
+        });
+        break;
+    }
+    
     return filtered;
+  }
+  
+  // Get top clients (top 3 by revenue)
+  List<String> get _topClientIds {
+    final sorted = List<Map<String, dynamic>>.from(clientsList);
+    sorted.sort((a, b) => ((b['value'] as double?) ?? 0).compareTo((a['value'] as double?) ?? 0));
+    return sorted.take(3).map((c) => c['id'] as String).toList();
   }
 
   void showAddClientModal({Map<String, dynamic>? clientToEdit}) {
@@ -1031,17 +1147,19 @@ class _ClientsTabState extends State<_ClientsTab> {
   @override
   Widget build(BuildContext context) {
     final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 0);
+    final activeCount = clientsList.where((c) => _isClientActive(c)).length;
+    final inactiveCount = clientsList.length - activeCount;
     
     return Column(
       children: [
-        // Search & Filter
+        // Search Row
         Padding(
-          padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
           child: Row(
             children: [
               Expanded(
                 child: Container(
-                  height: 40,
+                  height: 38,
                   decoration: BoxDecoration(
                     color: AppColors.cardBackground,
                     borderRadius: BorderRadius.circular(8),
@@ -1053,7 +1171,7 @@ class _ClientsTabState extends State<_ClientsTab> {
                     decoration: InputDecoration(
                       hintText: 'Search clients...',
                       hintStyle: TextStyle(fontSize: 13, color: AppColors.textSecondary),
-                      prefixIcon: Icon(Icons.search, size: 18, color: AppColors.textSecondary),
+                      prefixIcon: Icon(Icons.search, size: 16, color: AppColors.textSecondary),
                       border: InputBorder.none,
                       contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                     ),
@@ -1061,29 +1179,40 @@ class _ClientsTabState extends State<_ClientsTab> {
                 ),
               ),
               const SizedBox(width: 8),
-              PopupMenuButton<String>(
-                onSelected: (value) => setState(() => _typeFilter = value),
-                child: Container(
-                  height: 40,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    color: AppColors.cardBackground,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.filter_list, size: 16, color: AppColors.textSecondary),
-                      const SizedBox(width: 4),
-                      Text(_typeFilter == 'all' ? 'Type' : _typeFilter, 
-                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                    ],
-                  ),
-                ),
-                itemBuilder: (context) => _clientTypes.map((t) => PopupMenuItem(
-                  value: t,
-                  child: Text(t == 'all' ? 'All Types' : t),
-                )).toList(),
+              // Sort Button
+              _buildFilterButton(
+                icon: Icons.sort,
+                label: _getSortLabel(),
+                onTap: () => _showSortOptions(context),
+                isActive: _sortBy != 'revenue',
+              ),
+              const SizedBox(width: 6),
+              // Type Filter
+              _buildFilterButton(
+                icon: Icons.business_outlined,
+                label: _typeFilter == 'all' ? 'Type' : _typeFilter,
+                onTap: () => _showTypeFilter(context),
+                isActive: _typeFilter != 'all',
+              ),
+            ],
+          ),
+        ),
+        
+        // Status Filter Chips
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+          child: Row(
+            children: [
+              _buildStatusChip('All', 'all', clientsList.length),
+              const SizedBox(width: 8),
+              _buildStatusChip('Active', 'active', activeCount),
+              const SizedBox(width: 8),
+              _buildStatusChip('Inactive', 'inactive', inactiveCount),
+              const Spacer(),
+              // Quick stats
+              Text(
+                '${_filteredClients.length} client${_filteredClients.length != 1 ? 's' : ''}',
+                style: TextStyle(fontSize: 11, color: AppColors.textTertiary),
               ),
             ],
           ),
@@ -1099,6 +1228,8 @@ class _ClientsTabState extends State<_ClientsTab> {
                       Icon(Icons.business_outlined, size: 48, color: AppColors.textTertiary),
                       const SizedBox(height: 16),
                       Text('No clients found', style: TextStyle(color: AppColors.textSecondary)),
+                      const SizedBox(height: 8),
+                      Text('Try adjusting your filters', style: TextStyle(fontSize: 12, color: AppColors.textTertiary)),
                     ],
                   ),
                 )
@@ -1115,13 +1246,208 @@ class _ClientsTabState extends State<_ClientsTab> {
     );
   }
 
+  Widget _buildFilterButton({required IconData icon, required String label, required VoidCallback onTap, bool isActive = false}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 38,
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        decoration: BoxDecoration(
+          color: isActive ? AppColors.accent.withOpacity(0.1) : AppColors.cardBackground,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: isActive ? AppColors.accent.withOpacity(0.3) : AppColors.border),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: isActive ? AppColors.accent : AppColors.textSecondary),
+            const SizedBox(width: 4),
+            Text(label, style: TextStyle(fontSize: 11, color: isActive ? AppColors.accent : AppColors.textSecondary)),
+            const SizedBox(width: 2),
+            Icon(Icons.arrow_drop_down, size: 14, color: isActive ? AppColors.accent : AppColors.textSecondary),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusChip(String label, String value, int count) {
+    final isSelected = _statusFilter == value;
+    return GestureDetector(
+      onTap: () => setState(() => _statusFilter = value),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.accent : AppColors.neutral100,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                color: isSelected ? Colors.white : AppColors.textSecondary,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+              decoration: BoxDecoration(
+                color: isSelected ? Colors.white.withOpacity(0.2) : AppColors.neutral200,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                '$count',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  color: isSelected ? Colors.white : AppColors.textTertiary,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _getSortLabel() {
+    switch (_sortBy) {
+      case 'revenue': return 'Revenue';
+      case 'activity': return 'Activity';
+      case 'name': return 'Name';
+      case 'recent': return 'Recent';
+      default: return 'Sort';
+    }
+  }
+
+  void _showSortOptions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.cardBackground,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (context) => Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Sort Clients By', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 16),
+            _buildSortOption('revenue', 'Revenue', 'Highest revenue first', Icons.attach_money),
+            _buildSortOption('activity', 'Activity', 'Most quotes & projects', Icons.trending_up),
+            _buildSortOption('name', 'Name', 'Alphabetical order', Icons.sort_by_alpha),
+            _buildSortOption('recent', 'Recent Activity', 'Most recently active', Icons.access_time),
+            const SizedBox(height: 12),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSortOption(String value, String title, String subtitle, IconData icon) {
+    final isSelected = _sortBy == value;
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.accent.withOpacity(0.1) : AppColors.neutral100,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Icon(icon, size: 20, color: isSelected ? AppColors.accent : AppColors.textSecondary),
+      ),
+      title: Text(title, style: TextStyle(fontSize: 14, fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500)),
+      subtitle: Text(subtitle, style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+      trailing: isSelected ? Icon(Icons.check_circle, color: AppColors.accent, size: 20) : null,
+      onTap: () {
+        setState(() => _sortBy = value);
+        Navigator.pop(context);
+      },
+    );
+  }
+
+  void _showTypeFilter(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.cardBackground,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (context) => Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Filter by Type', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                if (_typeFilter != 'all')
+                  TextButton(
+                    onPressed: () {
+                      setState(() => _typeFilter = 'all');
+                      Navigator.pop(context);
+                    },
+                    child: const Text('Clear', style: TextStyle(fontSize: 13)),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _clientTypes.map((type) {
+                final isSelected = _typeFilter == type;
+                final count = type == 'all' 
+                    ? clientsList.length 
+                    : clientsList.where((c) => c['type'] == type).length;
+                return GestureDetector(
+                  onTap: () {
+                    setState(() => _typeFilter = type);
+                    Navigator.pop(context);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: isSelected ? AppColors.accent : AppColors.neutral100,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      '${type == 'all' ? 'All Types' : type} ($count)',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: isSelected ? Colors.white : AppColors.textPrimary,
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildClientCard(Map<String, dynamic> client, NumberFormat currencyFormat) {
+    final isTopClient = _topClientIds.contains(client['id']);
+    final isActive = _isClientActive(client);
+    final activityCount = _getActivityCount(client);
+    final revenue = (client['value'] as double?) ?? 0;
+    
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
         color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(12),
         boxShadow: AppShadows.sm,
+        border: isTopClient ? Border.all(color: AppColors.warning.withOpacity(0.4), width: 1.5) : null,
       ),
       child: Material(
         color: Colors.transparent,
@@ -1132,20 +1458,44 @@ class _ClientsTabState extends State<_ClientsTab> {
             padding: const EdgeInsets.all(14),
             child: Row(
               children: [
-                // Avatar
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: AppColors.accent.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Center(
-                    child: Text(
-                      client['name'].toString()[0],
-                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: AppColors.accent),
+                // Avatar with status indicator
+                Stack(
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: isTopClient 
+                            ? AppColors.warning.withOpacity(0.15) 
+                            : AppColors.accent.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Center(
+                        child: Text(
+                          client['name'].toString()[0],
+                          style: TextStyle(
+                            fontSize: 20, 
+                            fontWeight: FontWeight.w700, 
+                            color: isTopClient ? AppColors.warning : AppColors.accent,
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
+                    // Active indicator
+                    Positioned(
+                      right: 0,
+                      bottom: 0,
+                      child: Container(
+                        width: 12,
+                        height: 12,
+                        decoration: BoxDecoration(
+                          color: isActive ? AppColors.success : AppColors.neutral300,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: AppColors.cardBackground, width: 2),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(width: 14),
                 
@@ -1156,42 +1506,62 @@ class _ClientsTabState extends State<_ClientsTab> {
                     children: [
                       Row(
                         children: [
-                          Expanded(
+                          Flexible(
                             child: Text(client['name'] as String, 
                               style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: AppColors.neutral100,
-                              borderRadius: BorderRadius.circular(4),
+                          if (isTopClient) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [AppColors.warning, AppColors.warning.withOpacity(0.8)],
+                                ),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.star, size: 10, color: Colors.white),
+                                  const SizedBox(width: 2),
+                                  Text('TOP', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: Colors.white)),
+                                ],
+                              ),
                             ),
-                            child: Text(client['type'] as String, 
-                              style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
-                          ),
+                          ],
                         ],
                       ),
                       const SizedBox(height: 2),
                       Text(client['company'] as String,
-                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                      const SizedBox(height: 4),
+                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 6),
+                      // Stats Row
                       Row(
                         children: [
-                          Icon(Icons.email_outlined, size: 12, color: AppColors.textTertiary),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: Text(client['email'] as String,
-                              style: TextStyle(fontSize: 11, color: AppColors.textTertiary),
-                              overflow: TextOverflow.ellipsis,
+                          _buildMiniStat(Icons.attach_money, currencyFormat.format(revenue), AppColors.success),
+                          const SizedBox(width: 10),
+                          _buildMiniStat(Icons.description_outlined, '${client['quotes']} quotes', AppColors.info),
+                          const SizedBox(width: 10),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: isActive ? AppColors.success.withOpacity(0.1) : AppColors.neutral100,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              isActive ? 'Active' : 'Inactive',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w500,
+                                color: isActive ? AppColors.success : AppColors.textTertiary,
+                              ),
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          Icon(Icons.description_outlined, size: 12, color: AppColors.textTertiary),
-                          const SizedBox(width: 4),
-                          Text('${client['quotes']} quotes',
-                            style: TextStyle(fontSize: 11, color: AppColors.textTertiary)),
                         ],
                       ),
                     ],
@@ -1206,8 +1576,12 @@ class _ClientsTabState extends State<_ClientsTab> {
                   onSelected: (value) {
                     if (value == 'edit') showAddClientModal(clientToEdit: client);
                     else if (value == 'delete') _deleteClient(client);
+                    else if (value == 'proposal') {
+                      // Navigate to create proposal with client pre-selected
+                    }
                   },
                   itemBuilder: (context) => [
+                    const PopupMenuItem(value: 'proposal', child: Text('Send Proposal', style: TextStyle(fontSize: 13))),
                     const PopupMenuItem(value: 'edit', child: Text('Edit Client', style: TextStyle(fontSize: 13))),
                     const PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(fontSize: 13, color: AppColors.error))),
                   ],
@@ -1217,6 +1591,17 @@ class _ClientsTabState extends State<_ClientsTab> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildMiniStat(IconData icon, String value, Color color) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 12, color: color.withOpacity(0.7)),
+        const SizedBox(width: 3),
+        Text(value, style: TextStyle(fontSize: 11, color: AppColors.textSecondary, fontWeight: FontWeight.w500)),
+      ],
     );
   }
 
