@@ -268,29 +268,29 @@ class _LeadsTabState extends State<_LeadsTab> {
   String _statusFilter = 'all';
   String _searchQuery = '';
 
+  // Leads with proposal tracking
+  // proposalStatus: 'none' | 'draft' | 'sent' | 'approved' | 'declined'
   final List<Map<String, dynamic>> _leads = [
-    {'id': '1', 'name': 'Testing', 'company': 'Wgcc', 'source': 'Other', 'status': 'new', 'value': 5009.0, 'created': DateTime(2026, 1, 13)},
-    {'id': '2', 'name': 'John', 'company': '', 'source': 'Other', 'status': 'new', 'value': 4000.0, 'created': DateTime(2026, 1, 13)},
-    {'id': '3', 'name': 'Sarah Miller', 'company': 'Tech Solutions', 'source': 'Referral', 'status': 'contacted', 'value': 8500.0, 'created': DateTime(2026, 1, 10)},
-    {'id': '4', 'name': 'Mike Johnson', 'company': 'StartupXYZ', 'source': 'Website', 'status': 'won', 'value': 12000.0, 'created': DateTime(2026, 1, 5)},
+    {'id': '1', 'name': 'Testing', 'company': 'Wgcc', 'source': 'Other', 'status': 'new', 'value': 5009.0, 'created': DateTime(2026, 1, 13), 'proposalStatus': 'none'},
+    {'id': '2', 'name': 'John', 'company': '', 'source': 'Other', 'status': 'new', 'value': 4000.0, 'created': DateTime(2026, 1, 13), 'proposalStatus': 'none'},
+    {'id': '3', 'name': 'Sarah Miller', 'company': 'Tech Solutions', 'source': 'Referral', 'status': 'proposal', 'value': 8500.0, 'created': DateTime(2026, 1, 10), 'proposalStatus': 'sent'},
+    {'id': '4', 'name': 'Mike Johnson', 'company': 'StartupXYZ', 'source': 'Website', 'status': 'proposal', 'value': 12000.0, 'created': DateTime(2026, 1, 5), 'proposalStatus': 'approved'},
+    {'id': '5', 'name': 'Emily Chen', 'company': 'Design Co', 'source': 'Website', 'status': 'contacted', 'value': 6500.0, 'created': DateTime(2026, 1, 8), 'proposalStatus': 'none'},
   ];
 
   final List<String> _statuses = ['all', 'new', 'contacted', 'qualified', 'proposal', 'won', 'lost'];
 
   List<Map<String, dynamic>> get _filteredLeads {
     var filtered = _leads;
-    
     if (_statusFilter != 'all') {
       filtered = filtered.where((l) => l['status'] == _statusFilter).toList();
     }
-    
     if (_searchQuery.isNotEmpty) {
       filtered = filtered.where((l) =>
         l['name'].toLowerCase().contains(_searchQuery.toLowerCase()) ||
         l['company'].toLowerCase().contains(_searchQuery.toLowerCase())
       ).toList();
     }
-    
     return filtered;
   }
 
@@ -301,50 +301,48 @@ class _LeadsTabState extends State<_LeadsTab> {
 
   @override
   Widget build(BuildContext context) {
-    final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 0);
-    final dateFormat = DateFormat('M/d/yyyy');
-    
     return Column(
       children: [
-        // Search
+        // Compact Search & Filter Row
         Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
           child: Row(
             children: [
               Expanded(
                 child: Container(
-                  height: 44,
+                  height: 40,
                   decoration: BoxDecoration(
                     color: AppColors.cardBackground,
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(8),
                     border: Border.all(color: AppColors.border),
                   ),
                   child: TextField(
                     onChanged: (value) => setState(() => _searchQuery = value),
+                    style: const TextStyle(fontSize: 13),
                     decoration: InputDecoration(
                       hintText: 'Search leads...',
-                      hintStyle: TextStyle(fontSize: 14, color: AppColors.textSecondary),
-                      prefixIcon: Icon(Icons.search, size: 20, color: AppColors.textSecondary),
+                      hintStyle: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                      prefixIcon: Icon(Icons.search, size: 18, color: AppColors.textSecondary),
                       border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                     ),
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 8),
               Container(
-                height: 44,
-                padding: const EdgeInsets.symmetric(horizontal: 14),
+                height: 40,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
                 decoration: BoxDecoration(
                   color: AppColors.cardBackground,
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: AppColors.border),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.filter_list, size: 18, color: AppColors.textSecondary),
-                    const SizedBox(width: 6),
-                    const Text('Filters'),
+                    Icon(Icons.filter_list, size: 16, color: AppColors.textSecondary),
+                    const SizedBox(width: 4),
+                    Text('Filters', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                   ],
                 ),
               ),
@@ -352,44 +350,42 @@ class _LeadsTabState extends State<_LeadsTab> {
           ),
         ),
 
-        // Status Filter Pills
+        // Status Filter Pills (more compact)
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 12),
           child: Row(
             children: _statuses.map((status) {
               final isSelected = _statusFilter == status;
               final count = _getStatusCount(status);
               
               return Padding(
-                padding: const EdgeInsets.only(right: 8),
+                padding: const EdgeInsets.only(right: 6),
                 child: GestureDetector(
                   onTap: () => setState(() => _statusFilter = status),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                     decoration: BoxDecoration(
-                      color: isSelected ? AppColors.accent.withOpacity(0.1) : AppColors.cardBackground,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: isSelected ? AppColors.accent : AppColors.border,
-                      ),
+                      color: isSelected ? AppColors.textPrimary : AppColors.cardBackground,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: isSelected ? AppColors.textPrimary : AppColors.border),
                     ),
                     child: Row(
                       children: [
                         Text(
                           status[0].toUpperCase() + status.substring(1),
                           style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                            color: isSelected ? AppColors.accent : AppColors.textSecondary,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            color: isSelected ? Colors.white : AppColors.textSecondary,
                           ),
                         ),
                         const SizedBox(width: 4),
                         Text(
                           '$count',
                           style: TextStyle(
-                            fontSize: 11,
-                            color: isSelected ? AppColors.accent : AppColors.textTertiary,
+                            fontSize: 10,
+                            color: isSelected ? Colors.white70 : AppColors.textTertiary,
                           ),
                         ),
                       ],
@@ -400,167 +396,18 @@ class _LeadsTabState extends State<_LeadsTab> {
             }).toList(),
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 10),
 
-        // Leads List
+        // Leads List (compact cards)
         Expanded(
           child: _filteredLeads.isEmpty
               ? const Center(child: Text('No leads found', style: TextStyle(color: AppColors.textSecondary)))
               : ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
                   itemCount: _filteredLeads.length,
                   itemBuilder: (context, index) {
                     final lead = _filteredLeads[index];
-                    
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: AppColors.cardBackground,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: AppShadows.sm,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Header Row
-                          Row(
-                            children: [
-                              // Avatar
-                              Container(
-                                width: 48,
-                                height: 48,
-                                decoration: BoxDecoration(
-                                  color: _getLeadColor(lead['name']),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    lead['name'][0].toUpperCase(),
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 18,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              
-                              // Name and Company
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      lead['name'],
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 16,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    if (lead['company'].isNotEmpty)
-                                      Text(
-                                        lead['company'],
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          color: AppColors.textSecondary,
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                              ),
-                              
-                              // More Menu
-                              PopupMenuButton(
-                                icon: Icon(Icons.more_vert, color: AppColors.textSecondary, size: 20),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                itemBuilder: (context) => [
-                                  const PopupMenuItem(
-                                    value: 'edit',
-                                    child: Row(
-                                      children: [
-                                        Icon(Icons.edit_outlined, size: 18),
-                                        SizedBox(width: 12),
-                                        Text('Edit Lead'),
-                                      ],
-                                    ),
-                                  ),
-                                  const PopupMenuItem(
-                                    value: 'delete',
-                                    child: Row(
-                                      children: [
-                                        Icon(Icons.delete_outline, size: 18, color: AppColors.error),
-                                        SizedBox(width: 12),
-                                        Text('Delete', style: TextStyle(color: AppColors.error)),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                                onSelected: (value) {
-                                  // Handle menu actions
-                                },
-                              ),
-                            ],
-                          ),
-                          
-                          const SizedBox(height: 16),
-                          
-                          // Details Row
-                          Wrap(
-                            spacing: 16,
-                            runSpacing: 8,
-                            children: [
-                              _buildInfoChip(Icons.source_outlined, lead['source']),
-                              _buildStatusDropdown(lead),
-                              _buildInfoChip(Icons.attach_money, currencyFormat.format(lead['value'])),
-                              _buildInfoChip(Icons.calendar_today_outlined, dateFormat.format(lead['created'])),
-                            ],
-                          ),
-                          
-                          const SizedBox(height: 16),
-                          
-                          // Action Buttons
-                          Row(
-                            children: [
-                              Expanded(
-                                child: OutlinedButton.icon(
-                                  onPressed: () {},
-                                  icon: const Icon(Icons.send_outlined, size: 16),
-                                  label: const Text('Proposal'),
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: AppColors.accent,
-                                    side: BorderSide(color: AppColors.accent.withOpacity(0.3)),
-                                    padding: const EdgeInsets.symmetric(vertical: 12),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: ElevatedButton.icon(
-                                  onPressed: () {},
-                                  icon: const Icon(Icons.person_add_outlined, size: 16),
-                                  label: const Text('Convert'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppColors.success,
-                                    foregroundColor: Colors.white,
-                                    elevation: 0,
-                                    padding: const EdgeInsets.symmetric(vertical: 12),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    );
+                    return _buildLeadCard(lead);
                   },
                 ),
         ),
@@ -568,77 +415,346 @@ class _LeadsTabState extends State<_LeadsTab> {
     );
   }
 
+  Widget _buildLeadCard(Map<String, dynamic> lead) {
+    final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 0);
+    final dateFormat = DateFormat('M/d/yy');
+    final proposalStatus = lead['proposalStatus'] as String;
+    final canConvert = proposalStatus == 'approved';
+    final hasProposal = proposalStatus != 'none';
+    
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: AppShadows.sm,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header Row
+          Row(
+            children: [
+              // Avatar (smaller, muted colors)
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: _getLeadColor(lead['name']).withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Center(
+                  child: Text(
+                    lead['name'][0].toUpperCase(),
+                    style: TextStyle(
+                      color: _getLeadColor(lead['name']),
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              
+              // Name, Company & Value
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            lead['name'],
+                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        Text(
+                          currencyFormat.format(lead['value']),
+                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                        ),
+                      ],
+                    ),
+                    if (lead['company'].isNotEmpty)
+                      Text(
+                        lead['company'],
+                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                      ),
+                  ],
+                ),
+              ),
+              
+              // More Menu
+              PopupMenuButton(
+                icon: Icon(Icons.more_vert, color: AppColors.textTertiary, size: 18),
+                padding: EdgeInsets.zero,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                itemBuilder: (context) => [
+                  const PopupMenuItem(value: 'edit', child: Text('Edit Lead', style: TextStyle(fontSize: 13))),
+                  const PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(fontSize: 13, color: AppColors.error))),
+                ],
+              ),
+            ],
+          ),
+          
+          const SizedBox(height: 10),
+          
+          // Compact Info Row
+          Row(
+            children: [
+              _buildMiniChip(lead['source']),
+              const SizedBox(width: 6),
+              _buildStatusBadge(lead['status']),
+              const SizedBox(width: 6),
+              if (hasProposal) ...[
+                _buildProposalBadge(proposalStatus),
+                const SizedBox(width: 6),
+              ],
+              const Spacer(),
+              Icon(Icons.calendar_today_outlined, size: 11, color: AppColors.textTertiary),
+              const SizedBox(width: 4),
+              Text(dateFormat.format(lead['created']), style: TextStyle(fontSize: 11, color: AppColors.textTertiary)),
+            ],
+          ),
+          
+          const SizedBox(height: 10),
+          
+          // Action Buttons (conditional)
+          Row(
+            children: [
+              // Proposal Button - always show unless already approved
+              if (!canConvert)
+                Expanded(
+                  child: SizedBox(
+                    height: 34,
+                    child: OutlinedButton.icon(
+                      onPressed: () => _createProposal(lead),
+                      icon: Icon(hasProposal ? Icons.visibility_outlined : Icons.send_outlined, size: 14),
+                      label: Text(hasProposal ? 'View' : 'Proposal', style: const TextStyle(fontSize: 12)),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.textPrimary,
+                        side: BorderSide(color: AppColors.border),
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                    ),
+                  ),
+                ),
+              
+              // Convert Button - only when proposal is approved
+              if (canConvert) ...[
+                Expanded(
+                  child: SizedBox(
+                    height: 34,
+                    child: OutlinedButton.icon(
+                      onPressed: () {},
+                      icon: const Icon(Icons.visibility_outlined, size: 14),
+                      label: const Text('View Proposal', style: TextStyle(fontSize: 12)),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.textPrimary,
+                        side: BorderSide(color: AppColors.border),
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: SizedBox(
+                    height: 34,
+                    child: ElevatedButton.icon(
+                      onPressed: () => _convertToProject(lead),
+                      icon: const Icon(Icons.rocket_launch_outlined, size: 14),
+                      label: const Text('Convert', style: TextStyle(fontSize: 12)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.accent,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMiniChip(String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      decoration: BoxDecoration(
+        color: AppColors.neutral100,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(label, style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
+    );
+  }
+
+  Widget _buildStatusBadge(String status) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      decoration: BoxDecoration(
+        color: _getStatusColor(status).withOpacity(0.1),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        status[0].toUpperCase() + status.substring(1),
+        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w500, color: _getStatusColor(status)),
+      ),
+    );
+  }
+
+  Widget _buildProposalBadge(String proposalStatus) {
+    Color color;
+    String label;
+    IconData icon;
+    
+    switch (proposalStatus) {
+      case 'draft':
+        color = AppColors.neutral500;
+        label = 'Draft';
+        icon = Icons.edit_outlined;
+        break;
+      case 'sent':
+        color = AppColors.info;
+        label = 'Sent';
+        icon = Icons.send;
+        break;
+      case 'approved':
+        color = AppColors.success;
+        label = 'Approved';
+        icon = Icons.check_circle_outline;
+        break;
+      case 'declined':
+        color = AppColors.error;
+        label = 'Declined';
+        icon = Icons.cancel_outlined;
+        break;
+      default:
+        return const SizedBox.shrink();
+    }
+    
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 10, color: color),
+          const SizedBox(width: 3),
+          Text(label, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w500, color: color)),
+        ],
+      ),
+    );
+  }
+
+  void _createProposal(Map<String, dynamic> lead) {
+    // Navigate to create proposal with lead pre-selected
+    context.push('/sales/proposal/create?leadId=${lead['id']}');
+  }
+
+  void _convertToProject(Map<String, dynamic> lead) {
+    // Show conversion dialog
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        title: const Text('Convert to Project'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Convert "${lead['name']}" to a project?'),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.neutral50,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('This will:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 8),
+                  _buildCheckItem('Create a new project'),
+                  _buildCheckItem('Convert line items to tasks'),
+                  _buildCheckItem('Add lead as client'),
+                  _buildCheckItem('Archive the proposal'),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              // Navigate to projects or show success
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Project created successfully!'),
+                  backgroundColor: AppColors.success,
+                ),
+              );
+            },
+            child: const Text('Convert'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCheckItem(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        children: [
+          Icon(Icons.check, size: 14, color: AppColors.success),
+          const SizedBox(width: 8),
+          Text(text, style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+        ],
+      ),
+    );
+  }
+
   Color _getLeadColor(String name) {
+    // Muted, professional colors
     final colors = [
-      const Color(0xFFE6B325), // Yellow
-      const Color(0xFF3B82F6), // Blue
-      const Color(0xFF10B981), // Green
-      const Color(0xFFEF4444), // Red
-      const Color(0xFF8B5CF6), // Purple
+      const Color(0xFF6B7280), // Gray
+      const Color(0xFF64748B), // Slate
+      const Color(0xFF71717A), // Zinc
+      const Color(0xFF78716C), // Stone
+      const Color(0xFF737373), // Neutral
     ];
     return colors[name.hashCode % colors.length];
   }
 
-  Widget _buildStatusDropdown(Map<String, dynamic> lead) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: _getStatusColor(lead['status']).withOpacity(0.1),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: _getStatusColor(lead['status']).withOpacity(0.3)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            lead['status'][0].toUpperCase() + lead['status'].substring(1),
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
-              color: _getStatusColor(lead['status']),
-            ),
-          ),
-          const SizedBox(width: 4),
-          Icon(Icons.unfold_more, size: 12, color: _getStatusColor(lead['status'])),
-        ],
-      ),
-    );
-  }
-
   Color _getStatusColor(String status) {
     switch (status) {
-      case 'new': return AppColors.info;
-      case 'contacted': return AppColors.warning;
-      case 'qualified': return const Color(0xFF8B5CF6);
+      case 'new': return const Color(0xFF6B7280);
+      case 'contacted': return const Color(0xFF92400E);
+      case 'qualified': return const Color(0xFF7C3AED);
       case 'proposal': return AppColors.accent;
       case 'won': return AppColors.success;
-      case 'lost': return AppColors.error;
+      case 'lost': return const Color(0xFF991B1B);
       default: return AppColors.textSecondary;
     }
-  }
-
-  Widget _buildInfoChip(IconData icon, String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: AppColors.neutral50,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: AppColors.textSecondary),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              color: AppColors.textPrimary,
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }
 
