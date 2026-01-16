@@ -80,8 +80,8 @@ class _SalesScreenState extends State<SalesScreen> with SingleTickerProviderStat
     switch (_tabController.index) {
       case 0: return 'Add Lead';
       case 1: return 'Add Client';
-      case 2: return 'Add Quote';
-      case 3: return 'Add Consultant';
+      case 2: return 'Add Consultant';
+      case 3: return 'Add Quote';
       default: return 'Add';
     }
   }
@@ -156,8 +156,8 @@ class _SalesScreenState extends State<SalesScreen> with SingleTickerProviderStat
                 children: [
                   _LeadsTab(key: _leadsTabKey),
                   const _ClientsTab(),
-                  const _QuotesTab(),
                   _ConsultantsTab(key: _consultantsTabKey),
+                  const _QuotesTab(),
                 ],
               ),
             ),
@@ -170,17 +170,17 @@ class _SalesScreenState extends State<SalesScreen> with SingleTickerProviderStat
   Widget _buildTabBar() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(4),
+      padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
         color: AppColors.neutral100,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
         children: [
           _buildTab(0, 'Leads', 4),
           _buildTab(1, 'Clients', 3),
-          _buildTab(2, 'Quotes', 31),
-          _buildTab(3, 'Consultants', consultantsList.length),
+          _buildTab(2, 'Team', consultantsList.length),
+          _buildTab(3, 'Quotes', 31),
         ],
       ),
     );
@@ -194,41 +194,43 @@ class _SalesScreenState extends State<SalesScreen> with SingleTickerProviderStat
         onTap: () => _tabController.animateTo(index),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(vertical: 12),
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 2),
           decoration: BoxDecoration(
             color: isSelected ? AppColors.cardBackground : Colors.transparent,
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(8),
             boxShadow: isSelected ? [
               BoxShadow(
-                color: Colors.black.withOpacity(0.08),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
+                color: Colors.black.withOpacity(0.06),
+                blurRadius: 4,
+                offset: const Offset(0, 1),
               ),
             ] : null,
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
               Text(
                 label,
                 style: TextStyle(
-                  fontSize: 15,
+                  fontSize: 13,
                   fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                   color: isSelected ? AppColors.textPrimary : AppColors.textTertiary,
-                  letterSpacing: -0.3,
+                  letterSpacing: -0.2,
                 ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-              const SizedBox(width: 6),
+              const SizedBox(height: 2),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: isSelected ? AppColors.accent : AppColors.neutral200,
-                  borderRadius: BorderRadius.circular(6),
+                  color: isSelected ? AppColors.accent : Colors.transparent,
+                  borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
                   '$count',
                   style: TextStyle(
-                    fontSize: 11,
+                    fontSize: 10,
                     fontWeight: FontWeight.w600,
                     color: isSelected ? Colors.white : AppColors.textTertiary,
                   ),
@@ -250,10 +252,10 @@ class _SalesScreenState extends State<SalesScreen> with SingleTickerProviderStat
         _showAddClientModal();
         break;
       case 2:
-        _showCreateProposalDialog();
+        _showAddConsultantModal();
         break;
       case 3:
-        _showAddConsultantModal();
+        _showCreateProposalDialog();
         break;
     }
   }
