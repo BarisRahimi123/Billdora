@@ -32,6 +32,15 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
     'emergencyRelationship': '',
   };
 
+  // Categories data
+  List<Map<String, dynamic>> _categories = [
+    {'id': '1', 'name': 'Development', 'color': 0xFF3B82F6, 'icon': 'code'},
+    {'id': '2', 'name': 'Design', 'color': 0xFF8B5CF6, 'icon': 'palette'},
+    {'id': '3', 'name': 'Consulting', 'color': 0xFF10B981, 'icon': 'lightbulb'},
+    {'id': '4', 'name': 'Management', 'color': 0xFFF59E0B, 'icon': 'work'},
+    {'id': '5', 'name': 'Other', 'color': 0xFF6B7280, 'icon': 'category'},
+  ];
+
   // Services data
   List<Map<String, dynamic>> _services = [
     {
@@ -139,7 +148,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                   _buildPlaceholderTab('Billing', 'Subscription and payment methods'),
                   _buildPlaceholderTab('Team', 'Team member permissions'),
                   _buildServicesTab(),
-                  _buildPlaceholderTab('Tags', 'Project and invoice tags'),
+                  _buildCategoriesTab(),
                   _buildPlaceholderTab('Clients', 'Client defaults and settings'),
                   _buildPlaceholderTab('Documents', 'Document templates'),
                   _buildPlaceholderTab('Notifications', 'Email and push notification settings'),
@@ -497,7 +506,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
     final descriptionController = TextEditingController();
     final rateController = TextEditingController();
     String selectedUnit = 'hour';
-    String selectedCategory = 'Development';
+    String selectedCategory = _categories.isNotEmpty ? _categories.first['name'] as String : 'Other';
     
     showModalBottomSheet(
       context: context,
@@ -596,8 +605,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                         child: DropdownButton<String>(
                           value: selectedCategory,
                           isExpanded: true,
-                          items: ['Development', 'Design', 'Consulting', 'Management', 'Other']
-                              .map((cat) => DropdownMenuItem(value: cat, child: Text(cat)))
+                          items: _categories
+                              .map((cat) => DropdownMenuItem(value: cat['name'] as String, child: Text(cat['name'] as String)))
                               .toList(),
                           onChanged: (value) {
                             setModalState(() => selectedCategory = value!);
@@ -857,8 +866,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                         child: DropdownButton<String>(
                           value: selectedCategory,
                           isExpanded: true,
-                          items: ['Development', 'Design', 'Consulting', 'Management', 'Other']
-                              .map((cat) => DropdownMenuItem(value: cat, child: Text(cat)))
+                          items: _categories
+                              .map((cat) => DropdownMenuItem(value: cat['name'] as String, child: Text(cat['name'] as String)))
                               .toList(),
                           onChanged: (value) {
                             setModalState(() => selectedCategory = value!);
@@ -1038,6 +1047,520 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text('Service deleted successfully'),
+                  backgroundColor: AppColors.success,
+                ),
+              );
+            },
+            child: const Text('Delete', style: TextStyle(color: AppColors.error)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCategoriesTab() {
+    return Column(
+      children: [
+        // Header with Add Button
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Categories',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${_categories.length} categories configured',
+                    style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                  ),
+                ],
+              ),
+              ElevatedButton.icon(
+                onPressed: () => _showAddCategoryModal(),
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text('Add Category'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.accent,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        
+        // Categories List
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: _categories.length,
+            itemBuilder: (context, index) {
+              final category = _categories[index];
+              
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.cardBackground,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: AppShadows.sm,
+                ),
+                child: Row(
+                  children: [
+                    // Color Circle
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: Color(category['color'] as int).withOpacity(0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Center(
+                        child: Container(
+                          width: 16,
+                          height: 16,
+                          decoration: BoxDecoration(
+                            color: Color(category['color'] as int),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    
+                    // Category Name
+                    Expanded(
+                      child: Text(
+                        category['name'],
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ),
+                    
+                    // Service Count
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: AppColors.neutral50,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        '${_services.where((s) => s['category'] == category['name']).length} services',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    
+                    // More Menu
+                    PopupMenuButton(
+                      icon: Icon(Icons.more_vert, size: 18, color: AppColors.textSecondary),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      itemBuilder: (context) => [
+                        const PopupMenuItem(
+                          value: 'edit',
+                          child: Row(
+                            children: [
+                              Icon(Icons.edit_outlined, size: 18),
+                              SizedBox(width: 12),
+                              Text('Edit'),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuItem(
+                          value: 'delete',
+                          child: Row(
+                            children: [
+                              Icon(Icons.delete_outline, size: 18, color: AppColors.error),
+                              SizedBox(width: 12),
+                              Text('Delete', style: TextStyle(color: AppColors.error)),
+                            ],
+                          ),
+                        ),
+                      ],
+                      onSelected: (value) {
+                        if (value == 'edit') {
+                          _showEditCategoryModal(category);
+                        } else if (value == 'delete') {
+                          _deleteCategory(category['id']);
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showAddCategoryModal() {
+    final nameController = TextEditingController();
+    int selectedColor = 0xFF3B82F6; // Default blue
+    
+    final colorOptions = [
+      0xFF3B82F6, // Blue
+      0xFF8B5CF6, // Purple
+      0xFF10B981, // Green
+      0xFFF59E0B, // Orange
+      0xFFEF4444, // Red
+      0xFF06B6D4, // Cyan
+      0xFFEC4899, // Pink
+      0xFF6B7280, // Gray
+    ];
+    
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => Container(
+          height: MediaQuery.of(context).size.height * 0.6,
+          decoration: BoxDecoration(
+            color: AppColors.cardBackground,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            children: [
+              // Handle
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.border,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              
+              // Header
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+                child: Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'Add Category',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+              ),
+              
+              const Divider(height: 1),
+              
+              // Form
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.all(20),
+                  children: [
+                    // Category Name
+                    const Text(
+                      'Category Name *',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: nameController,
+                      decoration: InputDecoration(
+                        hintText: 'e.g., Development',
+                        filled: true,
+                        fillColor: AppColors.neutral50,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide(color: AppColors.border),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide(color: AppColors.border),
+                        ),
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 24),
+                    
+                    // Color Selection
+                    const Text(
+                      'Color',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: colorOptions.map((color) {
+                        final isSelected = selectedColor == color;
+                        return GestureDetector(
+                          onTap: () {
+                            setModalState(() => selectedColor = color);
+                          },
+                          child: Container(
+                            width: 50,
+                            height: 50,
+                            decoration: BoxDecoration(
+                              color: Color(color),
+                              shape: BoxShape.circle,
+                              border: isSelected ? Border.all(color: AppColors.textPrimary, width: 3) : null,
+                            ),
+                            child: isSelected
+                                ? const Icon(Icons.check, color: Colors.white, size: 24)
+                                : null,
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    
+                    const SizedBox(height: 32),
+                    
+                    // Add Button
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          if (nameController.text.isNotEmpty) {
+                            setState(() {
+                              _categories.add({
+                                'id': DateTime.now().millisecondsSinceEpoch.toString(),
+                                'name': nameController.text,
+                                'color': selectedColor,
+                                'icon': 'category',
+                              });
+                            });
+                            Navigator.pop(context);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Category "${nameController.text}" added successfully'),
+                                backgroundColor: AppColors.success,
+                              ),
+                            );
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.accent,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        child: const Text('Add Category'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showEditCategoryModal(Map<String, dynamic> category) {
+    final nameController = TextEditingController(text: category['name']);
+    int selectedColor = category['color'] as int;
+    
+    final colorOptions = [
+      0xFF3B82F6, 0xFF8B5CF6, 0xFF10B981, 0xFFF59E0B,
+      0xFFEF4444, 0xFF06B6D4, 0xFFEC4899, 0xFF6B7280,
+    ];
+    
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => Container(
+          height: MediaQuery.of(context).size.height * 0.6,
+          decoration: BoxDecoration(
+            color: AppColors.cardBackground,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.border,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+                child: Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'Edit Category',
+                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.all(20),
+                  children: [
+                    const Text('Category Name *', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: nameController,
+                      decoration: InputDecoration(
+                        filled: true,
+                        fillColor: AppColors.neutral50,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide(color: AppColors.border),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    const Text('Color', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: colorOptions.map((color) {
+                        final isSelected = selectedColor == color;
+                        return GestureDetector(
+                          onTap: () => setModalState(() => selectedColor = color),
+                          child: Container(
+                            width: 50,
+                            height: 50,
+                            decoration: BoxDecoration(
+                              color: Color(color),
+                              shape: BoxShape.circle,
+                              border: isSelected ? Border.all(color: AppColors.textPrimary, width: 3) : null,
+                            ),
+                            child: isSelected ? const Icon(Icons.check, color: Colors.white, size: 24) : null,
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 32),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          if (nameController.text.isNotEmpty) {
+                            setState(() {
+                              final index = _categories.indexWhere((c) => c['id'] == category['id']);
+                              if (index != -1) {
+                                final oldName = _categories[index]['name'];
+                                _categories[index] = {
+                                  'id': category['id'],
+                                  'name': nameController.text,
+                                  'color': selectedColor,
+                                  'icon': category['icon'],
+                                };
+                                // Update services with old category name
+                                for (var service in _services) {
+                                  if (service['category'] == oldName) {
+                                    service['category'] = nameController.text;
+                                  }
+                                }
+                              }
+                            });
+                            Navigator.pop(context);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Category updated successfully'),
+                                backgroundColor: AppColors.success,
+                              ),
+                            );
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.accent,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        child: const Text('Update Category'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _deleteCategory(String id) {
+    final category = _categories.firstWhere((c) => c['id'] == id);
+    final hasServices = _services.any((s) => s['category'] == category['name']);
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Delete Category'),
+        content: Text(
+          hasServices
+              ? 'This category has services assigned to it. Deleting it will set those services to "Other". Continue?'
+              : 'Are you sure you want to delete this category?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              setState(() {
+                // Update services with this category to "Other"
+                if (hasServices) {
+                  for (var service in _services) {
+                    if (service['category'] == category['name']) {
+                      service['category'] = 'Other';
+                    }
+                  }
+                }
+                _categories.removeWhere((c) => c['id'] == id);
+              });
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Category deleted successfully'),
                   backgroundColor: AppColors.success,
                 ),
               );
