@@ -204,36 +204,61 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> with SingleTi
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
-          // Controls
+          // Controls - Compact Row
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
                   color: AppColors.cardBackground,
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: AppColors.border),
                 ),
                 child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(_invoice['billingType']),
-                    const SizedBox(width: 8),
-                    const Icon(Icons.unfold_more, size: 16),
+                    Text(_invoice['billingType'], style: const TextStyle(fontSize: 13)),
+                    const SizedBox(width: 6),
+                    const Icon(Icons.unfold_more, size: 14),
                   ],
                 ),
               ),
-              const SizedBox(width: 12),
-              TextButton(onPressed: () {}, child: const Text('Edit')),
-              OutlinedButton(onPressed: () {}, child: const Text('Refresh')),
               const SizedBox(width: 8),
-              OutlinedButton(onPressed: () {}, child: const Text('Snapshot')),
+              TextButton(
+                onPressed: () {}, 
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: const Text('Edit', style: TextStyle(fontSize: 13)),
+              ),
+              OutlinedButton(
+                onPressed: () {},
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: const Text('Refresh', style: TextStyle(fontSize: 13)),
+              ),
+              const SizedBox(width: 8),
+              OutlinedButton(
+                onPressed: () {},
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: const Text('Snapshot', style: TextStyle(fontSize: 13)),
+              ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
 
           // Invoice Preview
           Container(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: AppColors.cardBackground,
               borderRadius: BorderRadius.circular(12),
@@ -242,77 +267,96 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> with SingleTi
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header
+                // Header - Compact Layout
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Logo
+                    // Logo - Smaller
                     Container(
-                      width: 60,
-                      height: 60,
+                      width: 40,
+                      height: 40,
                       decoration: BoxDecoration(
                         color: AppColors.neutral100,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Center(
-                        child: Text('P', style: TextStyle(fontSize: 32, fontWeight: FontWeight.w700)),
+                        child: Text('P', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
                       ),
                     ),
-                    const Spacer(),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        const Text('INVOICE', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
-                        const SizedBox(height: 8),
-                        Text('Invoice Date:', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                        Text(dateFormat.format(_invoice['draftDate']), style: const TextStyle(fontWeight: FontWeight.w500)),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            Text('Total Amount: ', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                            Text(currencyFormat.format(_invoice['amount']), style: const TextStyle(fontWeight: FontWeight.w700)),
-                          ],
-                        ),
-                        Row(
-                          children: [
-                            Text('Number: ', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                            Text(_invoice['number'], style: const TextStyle(fontWeight: FontWeight.w500)),
-                          ],
-                        ),
-                        Row(
-                          children: [
-                            Text('Terms: ', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                            Text(_invoice['terms'], style: const TextStyle(fontWeight: FontWeight.w500)),
-                          ],
-                        ),
-                      ],
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('INVOICE', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, letterSpacing: 1)),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Text('Date: ', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                              Text(dateFormat.format(_invoice['draftDate']), style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500)),
+                              const SizedBox(width: 12),
+                              Text('Total: ', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                              Text(currencyFormat.format(_invoice['amount']), style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          Row(
+                            children: [
+                              Text('Number: ', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                              Text(_invoice['number'], style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500)),
+                              const SizedBox(width: 12),
+                              Text('Terms: ', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                              Text(_invoice['terms'], style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500)),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 16),
 
-                // Company Info
-                Text(_invoice['company']['name'], style: const TextStyle(fontWeight: FontWeight.w600)),
-                Text(_invoice['company']['address']),
-                Text(_invoice['company']['city']),
-                Text(_invoice['company']['phone']),
-                const SizedBox(height: 24),
+                // Company and Bill To - Side by Side
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Company Info
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(_invoice['company']['name'], style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 2),
+                          Text(_invoice['company']['address'], style: const TextStyle(fontSize: 11)),
+                          Text(_invoice['company']['city'], style: const TextStyle(fontSize: 11)),
+                          Text(_invoice['company']['phone'], style: const TextStyle(fontSize: 11)),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    // Bill To
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Bill To:', style: TextStyle(fontSize: 11, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 2),
+                          Text(_invoice['client'], style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                          Text(_invoice['clientAddress'], style: const TextStyle(fontSize: 11)),
+                          Text(_invoice['clientPhone'], style: const TextStyle(fontSize: 11)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
 
-                // Bill To
-                Text('Bill To:', style: TextStyle(color: AppColors.textSecondary)),
-                const SizedBox(height: 4),
-                Text(_invoice['client'], style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                Text(_invoice['clientAddress']),
-                Text(_invoice['clientPhone']),
-                const SizedBox(height: 24),
-
-                // Divider
-                const Divider(),
                 const SizedBox(height: 16),
-
-                // Milestone Billing Table
-                const Text('Milestone Billing', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                const Divider(height: 1),
                 const SizedBox(height: 12),
+
+                // Milestone Billing Table - Compact
+                const Text('Milestone Billing', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 8),
                 Table(
                   columnWidths: const {
                     0: FlexColumnWidth(2),
@@ -324,20 +368,35 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> with SingleTi
                   children: [
                     TableRow(
                       children: [
-                        Text('Task', style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                        Text('Prior', style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                        Text('Current', style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                        Text('Budget', style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                        Text('Amount', style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Text('Task', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Text('Prior', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Text('Current', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Text('Budget', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Text('Amount', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                        ),
                       ],
                     ),
                     ...(_invoice['tasks'] as List).map((task) => TableRow(
                       children: [
-                        Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: Text(task['name'])),
-                        Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: Text(currencyFormat.format(task['prior']))),
-                        Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: Text(currencyFormat.format(task['current']))),
-                        Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: Text(currencyFormat.format(task['budget']))),
-                        Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: Text(currencyFormat.format(task['amount']))),
+                        Padding(padding: const EdgeInsets.symmetric(vertical: 6), child: Text(task['name'], style: const TextStyle(fontSize: 11))),
+                        Padding(padding: const EdgeInsets.symmetric(vertical: 6), child: Text(currencyFormat.format(task['prior']), style: const TextStyle(fontSize: 11))),
+                        Padding(padding: const EdgeInsets.symmetric(vertical: 6), child: Text(currencyFormat.format(task['current']), style: const TextStyle(fontSize: 11))),
+                        Padding(padding: const EdgeInsets.symmetric(vertical: 6), child: Text(currencyFormat.format(task['budget']), style: const TextStyle(fontSize: 11))),
+                        Padding(padding: const EdgeInsets.symmetric(vertical: 6), child: Text(currencyFormat.format(task['amount']), style: const TextStyle(fontSize: 11))),
                       ],
                     )),
                   ],
