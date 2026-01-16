@@ -88,11 +88,17 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 function AppRoutes() {
   const { user, loading } = useAuth();
 
+  // If loading, show loader for auth-dependent routes
+  if (loading) {
+    return <PageLoader />;
+  }
+
   return (
     <Suspense fallback={<PageLoader />}>
       <Routes>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/login" element={loading ? <PageLoader /> : (user ? <Navigate to="/dashboard" replace /> : <LoginPage />)} />
+        {/* Redirect logged-in users directly to dashboard, show landing page for guests */}
+        <Route path="/" element={user ? <Navigate to="/dashboard" replace /> : <LandingPage />} />
+        <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <LoginPage />} />
         <Route path="/check-email" element={<CheckEmailPage />} />
         <Route path="/terms" element={<TermsPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />
