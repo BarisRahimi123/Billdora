@@ -14,6 +14,7 @@ class SalesScreen extends StatefulWidget {
 
 class _SalesScreenState extends State<SalesScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  final GlobalKey<_LeadsTabState> _leadsTabKey = GlobalKey<_LeadsTabState>();
   
   @override
   void initState() {
@@ -104,10 +105,10 @@ class _SalesScreenState extends State<SalesScreen> with SingleTickerProviderStat
             Expanded(
               child: TabBarView(
                 controller: _tabController,
-                children: const [
-                  _LeadsTab(),
-                  _ClientsTab(),
-                  _QuotesTab(),
+                children: [
+                  _LeadsTab(key: _leadsTabKey),
+                  const _ClientsTab(),
+                  const _QuotesTab(),
                 ],
               ),
             ),
@@ -205,15 +206,7 @@ class _SalesScreenState extends State<SalesScreen> with SingleTickerProviderStat
   }
 
   void _showAddLeadModal() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: AppColors.cardBackground,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => const _AddLeadModal(),
-    );
+    _leadsTabKey.currentState?.showAddLeadModal();
   }
 
   void _showAddClientModal() {
@@ -268,7 +261,7 @@ class _SalesScreenState extends State<SalesScreen> with SingleTickerProviderStat
 
 // ============ LEADS TAB ============
 class _LeadsTab extends StatefulWidget {
-  const _LeadsTab();
+  const _LeadsTab({super.key});
 
   @override
   State<_LeadsTab> createState() => _LeadsTabState();
@@ -307,6 +300,77 @@ class _LeadsTabState extends State<_LeadsTab> {
   int _getStatusCount(String status) {
     if (status == 'all') return _leads.length;
     return _leads.where((l) => l['status'] == status).length;
+  }
+
+  // Public method to show add lead modal (called from parent)
+  void showAddLeadModal() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.cardBackground,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => _AddLeadModal(
+        onLeadAdded: (newLead) {
+          setState(() {
+            _leads.insert(0, newLead);
+          });
+        },
+      ),
+    );
+  }
+
+  void _showEditLeadModal(Map<String, dynamic> lead) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.cardBackground,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => _EditLeadModal(
+        lead: lead,
+        onLeadUpdated: (updatedLead) {
+          setState(() {
+            final index = _leads.indexWhere((l) => l['id'] == updatedLead['id']);
+            if (index != -1) {
+              _leads[index] = updatedLead;
+            }
+          });
+        },
+      ),
+    );
+  }
+
+  void _deleteLead(Map<String, dynamic> lead) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        title: const Text('Delete Lead?'),
+        content: Text('Are you sure you want to delete "${lead['name']}"? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              setState(() {
+                _leads.removeWhere((l) => l['id'] == lead['id']);
+              });
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Lead deleted'), backgroundColor: AppColors.success),
+              );
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -497,10 +561,17 @@ class _LeadsTabState extends State<_LeadsTab> {
               ),
               
               // More Menu
-              PopupMenuButton(
+              PopupMenuButton<String>(
                 icon: Icon(Icons.more_vert, color: AppColors.textTertiary, size: 18),
                 padding: EdgeInsets.zero,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                onSelected: (value) {
+                  if (value == 'edit') {
+                    _showEditLeadModal(lead);
+                  } else if (value == 'delete') {
+                    _deleteLead(lead);
+                  }
+                },
                 itemBuilder: (context) => [
                   const PopupMenuItem(value: 'edit', child: Text('Edit Lead', style: TextStyle(fontSize: 13))),
                   const PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(fontSize: 13, color: AppColors.error))),
@@ -1751,20 +1822,82 @@ class _QuotesTabState extends State<_QuotesTab> with SingleTickerProviderStateMi
 }
 
 // ============ MODALS & DIALOGS ============
-class _AddLeadModal extends StatelessWidget {
-  const _AddLeadModal();
+class _AddLeadModal extends StatefulWidget {
+  final Function(Map<String, dynamic>) onLeadAdded;
+  
+  const _AddLeadModal({required this.onLeadAdded});
+
+  @override
+  State<_AddLeadModal> createState() => _AddLeadModalState();
+}
+
+class _AddLeadModalState extends State<_AddLeadModal> {
+  final _nameController = TextEditingController();
+  final _companyController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _valueController = TextEditingController();
+  String _selectedSource = 'Website';
+  
+  final List<String> _sources = ['Website', 'Referral', 'Cold Call', 'Social Media', 'Other'];
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _companyController.dispose();
+    _emailController.dispose();
+    _phoneController.dispose();
+    _valueController.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    if (_nameController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a lead name'), backgroundColor: AppColors.error),
+      );
+      return;
+    }
+
+    final valueText = _valueController.text.replaceAll(RegExp(r'[^\d.]'), '');
+    final value = double.tryParse(valueText) ?? 0.0;
+
+    final newLead = {
+      'id': DateTime.now().millisecondsSinceEpoch.toString(),
+      'name': _nameController.text.trim(),
+      'company': _companyController.text.trim(),
+      'email': _emailController.text.trim(),
+      'phone': _phoneController.text.trim(),
+      'source': _selectedSource,
+      'status': 'new',
+      'value': value,
+      'created': DateTime.now(),
+      'proposalStatus': 'none',
+    };
+
+    widget.onLeadAdded(newLead);
+    Navigator.pop(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Lead added successfully!'), backgroundColor: AppColors.success),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return DraggableScrollableSheet(
-      initialChildSize: 0.7,
+      initialChildSize: 0.75,
       minChildSize: 0.5,
-      maxChildSize: 0.9,
+      maxChildSize: 0.95,
       expand: false,
       builder: (context, scrollController) {
         return SingleChildScrollView(
           controller: scrollController,
-          padding: const EdgeInsets.all(20),
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 20,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1772,31 +1905,29 @@ class _AddLeadModal extends StatelessWidget {
                 child: Container(
                   width: 40,
                   height: 4,
-                  decoration: BoxDecoration(
-                    color: AppColors.border,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
+                  decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(2)),
                 ),
               ),
               const SizedBox(height: 20),
               const Text('Add Lead', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
-              const SizedBox(height: 24),
-              _buildTextField('Lead Name *', 'Enter lead name'),
-              const SizedBox(height: 16),
-              _buildTextField('Company', 'Company name'),
-              const SizedBox(height: 16),
-              _buildTextField('Email', 'email@example.com'),
-              const SizedBox(height: 16),
-              _buildTextField('Phone', '+1 (555) 000-0000'),
-              const SizedBox(height: 16),
-              _buildTextField('Estimated Value', '\$0.00'),
-              const SizedBox(height: 16),
-              _buildDropdown('Source', ['Website', 'Referral', 'Cold Call', 'Social Media', 'Other']),
+              const SizedBox(height: 20),
+              _buildTextField('Lead Name *', 'Enter lead name', _nameController),
+              const SizedBox(height: 14),
+              _buildTextField('Company', 'Company name', _companyController),
+              const SizedBox(height: 14),
+              _buildTextField('Email', 'email@example.com', _emailController, TextInputType.emailAddress),
+              const SizedBox(height: 14),
+              _buildTextField('Phone', '+1 (555) 000-0000', _phoneController, TextInputType.phone),
+              const SizedBox(height: 14),
+              _buildTextField('Estimated Value', '\$0.00', _valueController, TextInputType.number),
+              const SizedBox(height: 14),
+              _buildDropdown(),
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
+                height: 48,
                 child: ElevatedButton(
-                  onPressed: () => Navigator.pop(context),
+                  onPressed: _submit,
                   child: const Text('Add Lead'),
                 ),
               ),
@@ -1807,32 +1938,34 @@ class _AddLeadModal extends StatelessWidget {
     );
   }
 
-  Widget _buildTextField(String label, String hint) {
+  Widget _buildTextField(String label, String hint, TextEditingController controller, [TextInputType? keyboardType]) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
         const SizedBox(height: 6),
         TextField(
+          controller: controller,
+          keyboardType: keyboardType,
           decoration: InputDecoration(
             hintText: hint,
             filled: true,
             fillColor: AppColors.neutral50,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: BorderSide(color: AppColors.border),
-            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AppColors.border)),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AppColors.accent)),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildDropdown(String label, List<String> options) {
+  Widget _buildDropdown() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+        const Text('Source', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
         const SizedBox(height: 6),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 14),
@@ -1843,10 +1976,225 @@ class _AddLeadModal extends StatelessWidget {
           ),
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
-              value: options.first,
+              value: _selectedSource,
               isExpanded: true,
-              items: options.map((o) => DropdownMenuItem(value: o, child: Text(o))).toList(),
-              onChanged: (_) {},
+              items: _sources.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+              onChanged: (val) => setState(() => _selectedSource = val ?? 'Website'),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// Edit Lead Modal
+class _EditLeadModal extends StatefulWidget {
+  final Map<String, dynamic> lead;
+  final Function(Map<String, dynamic>) onLeadUpdated;
+  
+  const _EditLeadModal({required this.lead, required this.onLeadUpdated});
+
+  @override
+  State<_EditLeadModal> createState() => _EditLeadModalState();
+}
+
+class _EditLeadModalState extends State<_EditLeadModal> {
+  late TextEditingController _nameController;
+  late TextEditingController _companyController;
+  late TextEditingController _emailController;
+  late TextEditingController _phoneController;
+  late TextEditingController _valueController;
+  late String _selectedSource;
+  late String _selectedStatus;
+  
+  final List<String> _sources = ['Website', 'Referral', 'Cold Call', 'Social Media', 'Other'];
+  final List<String> _statuses = ['new', 'contacted', 'qualified', 'proposal', 'won', 'lost'];
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.lead['name']);
+    _companyController = TextEditingController(text: widget.lead['company'] ?? '');
+    _emailController = TextEditingController(text: widget.lead['email'] ?? '');
+    _phoneController = TextEditingController(text: widget.lead['phone'] ?? '');
+    _valueController = TextEditingController(text: widget.lead['value']?.toString() ?? '0');
+    _selectedSource = widget.lead['source'] ?? 'Website';
+    _selectedStatus = widget.lead['status'] ?? 'new';
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _companyController.dispose();
+    _emailController.dispose();
+    _phoneController.dispose();
+    _valueController.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    if (_nameController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a lead name'), backgroundColor: AppColors.error),
+      );
+      return;
+    }
+
+    final valueText = _valueController.text.replaceAll(RegExp(r'[^\d.]'), '');
+    final value = double.tryParse(valueText) ?? 0.0;
+
+    final updatedLead = {
+      ...widget.lead,
+      'name': _nameController.text.trim(),
+      'company': _companyController.text.trim(),
+      'email': _emailController.text.trim(),
+      'phone': _phoneController.text.trim(),
+      'source': _selectedSource,
+      'status': _selectedStatus,
+      'value': value,
+    };
+
+    widget.onLeadUpdated(updatedLead);
+    Navigator.pop(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Lead updated successfully!'), backgroundColor: AppColors.success),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.8,
+      minChildSize: 0.5,
+      maxChildSize: 0.95,
+      expand: false,
+      builder: (context, scrollController) {
+        return SingleChildScrollView(
+          controller: scrollController,
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 20,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(2)),
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text('Edit Lead', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 20),
+              _buildTextField('Lead Name *', 'Enter lead name', _nameController),
+              const SizedBox(height: 14),
+              _buildTextField('Company', 'Company name', _companyController),
+              const SizedBox(height: 14),
+              _buildTextField('Email', 'email@example.com', _emailController, TextInputType.emailAddress),
+              const SizedBox(height: 14),
+              _buildTextField('Phone', '+1 (555) 000-0000', _phoneController, TextInputType.phone),
+              const SizedBox(height: 14),
+              _buildTextField('Estimated Value', '\$0.00', _valueController, TextInputType.number),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  Expanded(child: _buildSourceDropdown()),
+                  const SizedBox(width: 12),
+                  Expanded(child: _buildStatusDropdown()),
+                ],
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  onPressed: _submit,
+                  child: const Text('Save Changes'),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildTextField(String label, String hint, TextEditingController controller, [TextInputType? keyboardType]) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+        const SizedBox(height: 6),
+        TextField(
+          controller: controller,
+          keyboardType: keyboardType,
+          decoration: InputDecoration(
+            hintText: hint,
+            filled: true,
+            fillColor: AppColors.neutral50,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AppColors.border)),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AppColors.accent)),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSourceDropdown() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Source', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+        const SizedBox(height: 6),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            color: AppColors.neutral50,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: _selectedSource,
+              isExpanded: true,
+              items: _sources.map((s) => DropdownMenuItem(value: s, child: Text(s, style: const TextStyle(fontSize: 14)))).toList(),
+              onChanged: (val) => setState(() => _selectedSource = val ?? 'Website'),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatusDropdown() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Status', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+        const SizedBox(height: 6),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            color: AppColors.neutral50,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: _selectedStatus,
+              isExpanded: true,
+              items: _statuses.map((s) => DropdownMenuItem(
+                value: s,
+                child: Text(s[0].toUpperCase() + s.substring(1), style: const TextStyle(fontSize: 14)),
+              )).toList(),
+              onChanged: (val) => setState(() => _selectedStatus = val ?? 'new'),
             ),
           ),
         ),
