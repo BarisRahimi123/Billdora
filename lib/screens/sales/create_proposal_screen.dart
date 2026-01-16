@@ -1938,6 +1938,10 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
     );
   }
 
+  // Tags for the proposal
+  List<String> _selectedTags = [];
+  final List<String> _availableTags = ['Urgent', 'VIP Client', 'Follow-up', 'New Business', 'Renewal', 'High Priority'];
+
   // ============ STEP 4: PREVIEW ============
   Widget _buildStep4Preview() {
     final currencyFormat = NumberFormat.currency(symbol: '\$');
@@ -1946,45 +1950,105 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
-          // Action Buttons
+          // Primary Actions Row (Save & Send)
           Row(
             children: [
-              _buildIconButton(Icons.download_outlined),
-              const SizedBox(width: 8),
-              _buildIconButton(Icons.bookmark_outline),
-              const SizedBox(width: 8),
               Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () {},
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.neutral300,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
+                child: OutlinedButton.icon(
+                  onPressed: _saveProposalAsDraft,
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    side: const BorderSide(color: AppColors.border),
                   ),
-                  icon: const Icon(Icons.save_outlined),
-                  label: const Text('Save'),
+                  icon: const Icon(Icons.save_outlined, size: 18),
+                  label: const Text('Save Draft'),
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 10),
               Expanded(
+                flex: 2,
                 child: ElevatedButton.icon(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Proposal sent!'), backgroundColor: AppColors.success),
-                    );
-                    context.go('/sales');
-                  },
+                  onPressed: _recipientEmail.isNotEmpty ? _showSendProposalModal : null,
                   style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    disabledBackgroundColor: AppColors.neutral100,
                   ),
-                  icon: const Icon(Icons.send_outlined),
-                  label: const Text('Send'),
+                  icon: const Icon(Icons.send_rounded, size: 18),
+                  label: const Text('Send Proposal'),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 10),
 
-          // Preview Card
+          // Secondary Actions Row
+          Row(
+            children: [
+              Expanded(
+                child: _buildCompactActionButton(
+                  icon: Icons.download_outlined,
+                  label: 'Download',
+                  onTap: _downloadProposal,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildCompactActionButton(
+                  icon: Icons.copy_outlined,
+                  label: 'Template',
+                  onTap: _showSaveAsTemplateModal,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildCompactActionButton(
+                  icon: Icons.local_offer_outlined,
+                  label: 'Tags',
+                  onTap: _showTagsModal,
+                  badge: _selectedTags.isNotEmpty ? _selectedTags.length.toString() : null,
+                ),
+              ),
+            ],
+          ),
+
+          // Selected Tags Display
+          if (_selectedTags.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppColors.cardBackground,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: _selectedTags.map((tag) => Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.accent.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(tag, style: const TextStyle(fontSize: 12, color: AppColors.accent)),
+                      const SizedBox(width: 4),
+                      GestureDetector(
+                        onTap: () => setState(() => _selectedTags.remove(tag)),
+                        child: const Icon(Icons.close, size: 14, color: AppColors.accent),
+                      ),
+                    ],
+                  ),
+                )).toList(),
+              ),
+            ),
+          ],
+          const SizedBox(height: 12),
+
+          // Preview Card (Compact)
           Container(
             decoration: BoxDecoration(
               color: AppColors.cardBackground,
@@ -1993,9 +2057,9 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
             ),
             child: Column(
               children: [
-                // Cover Image
+                // Cover Image (Smaller)
                 Container(
-                  height: 400,
+                  height: 280,
                   decoration: BoxDecoration(
                     color: const Color(0xFF1F2937),
                     borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
@@ -2008,55 +2072,63 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
                   child: Stack(
                     children: [
                       Positioned(
-                        left: 20,
-                        top: 20,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Container(
-                              width: 40,
-                              height: 40,
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: const Center(
-                                child: Text('P', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w700)),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            const Text('https://plansrow.com', style: TextStyle(color: Colors.white70, fontSize: 11)),
-                          ],
+                        left: 16,
+                        top: 16,
+                        child: Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Center(
+                            child: Text('P', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700)),
+                          ),
                         ),
                       ),
                       Positioned(
-                        left: 20,
-                        bottom: 30,
-                        right: 20,
+                        left: 16,
+                        bottom: 16,
+                        right: 16,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('PREPARED FOR', style: TextStyle(color: Colors.white60, fontSize: 10, letterSpacing: 1)),
-                            const SizedBox(height: 4),
-                            Text(_recipientName, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700)),
-                            Text(DateFormat('M/d/yyyy').format(DateTime.now()), style: const TextStyle(color: Colors.white70, fontSize: 12)),
-                            const SizedBox(height: 24),
+                            const Text('PREPARED FOR', style: TextStyle(color: Colors.white60, fontSize: 9, letterSpacing: 1)),
+                            const SizedBox(height: 2),
+                            Text(_recipientName, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700)),
+                            const SizedBox(height: 12),
                             Text(
                               _projectNameController.text.isNotEmpty 
                                   ? _projectNameController.text 
                                   : 'Proposal for $_recipientName',
-                              style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w700, height: 1.2),
+                              style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w700, height: 1.2),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            const SizedBox(height: 8),
-                            const Text('Professional Services Proposal', style: TextStyle(color: Colors.white70, fontSize: 14)),
-                            const SizedBox(height: 4),
-                            Text('PROPOSAL #DRAFT', style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 11, letterSpacing: 1)),
-                            const SizedBox(height: 24),
-                            Text(
-                              currencyFormat.format(_total),
-                              style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w700),
+                            const SizedBox(height: 16),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      currencyFormat.format(_total),
+                                      style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w700),
+                                    ),
+                                    const Text('Proposed Investment', style: TextStyle(color: Colors.white60, fontSize: 10)),
+                                  ],
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.2),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text('$_totalDuration days', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
+                                ),
+                              ],
                             ),
-                            const Text('Proposed Investment', style: TextStyle(color: Colors.white60, fontSize: 12)),
                           ],
                         ),
                       ),
@@ -2064,16 +2136,62 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
                   ),
                 ),
 
-                // Details
+                // Recipient Details
                 Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  padding: const EdgeInsets.all(14),
+                  child: Row(
                     children: [
-                      Text(DateFormat('M/d/yyyy').format(DateTime.now()), style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
-                      Text(_recipientName, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
-                      if (_recipientEmail.isNotEmpty)
-                        Text(_recipientEmail, style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: AppColors.accent.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Center(
+                          child: Text(
+                            _recipientName.isNotEmpty ? _recipientName[0].toUpperCase() : 'C',
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.accent),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(_recipientName, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                            if (_recipientEmail.isNotEmpty)
+                              Text(_recipientEmail, style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                          ],
+                        ),
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(DateFormat('M/d/yyyy').format(DateTime.now()), style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                          const Text('DRAFT', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.warning)),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Summary Stats
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: AppColors.neutral50,
+                    borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _buildStatItem('Items', '${_lineItems.length}'),
+                      _buildStatDivider(),
+                      _buildStatItem('Duration', '$_totalDuration days'),
+                      _buildStatDivider(),
+                      _buildStatItem('Tax', '${_taxRate.toStringAsFixed(2)}%'),
                     ],
                   ),
                 ),
@@ -2085,16 +2203,509 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
     );
   }
 
-  Widget _buildIconButton(IconData icon) {
-    return Container(
-      width: 44,
-      height: 44,
-      decoration: BoxDecoration(
-        color: AppColors.cardBackground,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.border),
+  Widget _buildCompactActionButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+    String? badge,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: AppColors.cardBackground,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Icon(icon, size: 18, color: AppColors.textSecondary),
+                if (badge != null)
+                  Positioned(
+                    right: -8,
+                    top: -6,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: AppColors.accent,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(badge, style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w600)),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(width: 6),
+            Text(label, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+          ],
+        ),
       ),
-      child: Icon(icon, size: 20, color: AppColors.textSecondary),
+    );
+  }
+
+  Widget _buildStatItem(String label, String value) {
+    return Column(
+      children: [
+        Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+        Text(label, style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
+      ],
+    );
+  }
+
+  Widget _buildStatDivider() {
+    return Container(width: 1, height: 30, color: AppColors.border);
+  }
+
+  // Save as Draft
+  void _saveProposalAsDraft() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Proposal saved as draft'), backgroundColor: AppColors.success),
+    );
+  }
+
+  // Download Proposal
+  void _downloadProposal() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Downloading proposal as PDF...'), backgroundColor: AppColors.info),
+    );
+  }
+
+  // Show Send Proposal Modal
+  void _showSendProposalModal() {
+    final emailController = TextEditingController(text: _recipientEmail);
+    final subjectController = TextEditingController(
+      text: 'Proposal: ${_projectNameController.text.isNotEmpty ? _projectNameController.text : "for $_recipientName"}',
+    );
+    bool sendCopy = true;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.cardBackground,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => Padding(
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 20,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.border,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: AppColors.accent.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.send_rounded, color: AppColors.accent),
+                  ),
+                  const SizedBox(width: 12),
+                  const Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Send Proposal', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                      Text('Send to client\'s primary contact', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              
+              // Recipient Card
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.neutral50,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: AppColors.accent.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Center(
+                        child: Text(
+                          _recipientName.isNotEmpty ? _recipientName[0].toUpperCase() : 'C',
+                          style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.accent),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(_recipientName, style: const TextStyle(fontWeight: FontWeight.w600)),
+                          Text(_recipientType == 'client' ? 'Client' : 'Lead', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.check_circle, color: AppColors.success, size: 20),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Email Field
+              TextField(
+                controller: emailController,
+                decoration: InputDecoration(
+                  labelText: 'Recipient Email',
+                  prefixIcon: const Icon(Icons.email_outlined, size: 20),
+                  filled: true,
+                  fillColor: AppColors.neutral50,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Subject Field
+              TextField(
+                controller: subjectController,
+                decoration: InputDecoration(
+                  labelText: 'Email Subject',
+                  prefixIcon: const Icon(Icons.subject, size: 20),
+                  filled: true,
+                  fillColor: AppColors.neutral50,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Send Copy Checkbox
+              GestureDetector(
+                onTap: () => setModalState(() => sendCopy = !sendCopy),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 22,
+                      height: 22,
+                      decoration: BoxDecoration(
+                        color: sendCopy ? AppColors.accent : Colors.transparent,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: sendCopy ? AppColors.accent : AppColors.border, width: 2),
+                      ),
+                      child: sendCopy ? const Icon(Icons.check, color: Colors.white, size: 14) : null,
+                    ),
+                    const SizedBox(width: 10),
+                    const Text('Send me a copy', style: TextStyle(fontSize: 14)),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Send Button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Proposal sent to ${emailController.text}'),
+                        backgroundColor: AppColors.success,
+                      ),
+                    );
+                    context.go('/sales');
+                  },
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  icon: const Icon(Icons.send_rounded, size: 18),
+                  label: const Text('Send Proposal'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Show Save as Template Modal
+  void _showSaveAsTemplateModal() {
+    final templateNameController = TextEditingController(
+      text: _projectNameController.text.isNotEmpty ? _projectNameController.text : 'My Template',
+    );
+    String selectedCategory = 'General';
+    final categories = ['General', 'Web Development', 'Design', 'Consulting', 'Marketing', 'Other'];
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.cardBackground,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => Padding(
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 20,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.border,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: AppColors.info.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.copy_outlined, color: AppColors.info),
+                  ),
+                  const SizedBox(width: 12),
+                  const Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Save as Template', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                      Text('Reuse this proposal structure', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+
+              // Template Name
+              TextField(
+                controller: templateNameController,
+                decoration: InputDecoration(
+                  labelText: 'Template Name',
+                  prefixIcon: const Icon(Icons.description_outlined, size: 20),
+                  filled: true,
+                  fillColor: AppColors.neutral50,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Category
+              const Text('Category', style: TextStyle(fontWeight: FontWeight.w500)),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: categories.map((cat) {
+                  final isSelected = selectedCategory == cat;
+                  return GestureDetector(
+                    onTap: () => setModalState(() => selectedCategory = cat),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: isSelected ? AppColors.accent : AppColors.neutral50,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: isSelected ? AppColors.accent : AppColors.border),
+                      ),
+                      child: Text(
+                        cat,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: isSelected ? Colors.white : AppColors.textPrimary,
+                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 16),
+
+              // What's included
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.neutral50,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Template will include:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 8),
+                    _buildIncludedItem('${_lineItems.length} line items'),
+                    _buildIncludedItem('Cover image selection'),
+                    _buildIncludedItem('Scope of work'),
+                    _buildIncludedItem('Timeline settings'),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Save Button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Template "${templateNameController.text}" saved'),
+                        backgroundColor: AppColors.success,
+                      ),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.info,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  icon: const Icon(Icons.save_outlined, size: 18),
+                  label: const Text('Save Template'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildIncludedItem(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        children: [
+          const Icon(Icons.check_circle, color: AppColors.success, size: 16),
+          const SizedBox(width: 8),
+          Text(text, style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+        ],
+      ),
+    );
+  }
+
+  // Show Tags Modal
+  void _showTagsModal() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.cardBackground,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.border,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text('Add Tags', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 4),
+              Text('Tag this proposal for easy filtering', style: TextStyle(color: AppColors.textSecondary)),
+              const SizedBox(height: 20),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: _availableTags.map((tag) {
+                  final isSelected = _selectedTags.contains(tag);
+                  return GestureDetector(
+                    onTap: () {
+                      setModalState(() {
+                        if (isSelected) {
+                          _selectedTags.remove(tag);
+                        } else {
+                          _selectedTags.add(tag);
+                        }
+                      });
+                      setState(() {}); // Update parent
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: isSelected ? AppColors.accent : AppColors.neutral50,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: isSelected ? AppColors.accent : AppColors.border),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (isSelected) ...[
+                            const Icon(Icons.check, color: Colors.white, size: 16),
+                            const SizedBox(width: 6),
+                          ],
+                          Text(
+                            tag,
+                            style: TextStyle(
+                              color: isSelected ? Colors.white : AppColors.textPrimary,
+                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  child: const Text('Done'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
