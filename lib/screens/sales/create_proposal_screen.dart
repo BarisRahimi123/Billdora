@@ -2999,11 +2999,13 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
     final companyController = TextEditingController();
     final roleController = TextEditingController();
     final notesController = TextEditingController();
+    final linkController = TextEditingController();
     bool showPricing = false;
     String paymentMode = 'client'; // 'owner' or 'client'
     String displayMode = 'transparent'; // 'transparent' or 'anonymous'
     DateTime deadline = DateTime.now().add(const Duration(days: 7));
     String? selectedConsultantId;
+    List<Map<String, String>> projectLinks = [];
 
     showModalBottomSheet(
       context: context,
@@ -3255,7 +3257,156 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
                     enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AppColors.border)),
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
+
+                // Project Documents/Links Section
+                _buildSectionHeader('Project Documents & Links'),
+                const SizedBox(height: 8),
+                Text(
+                  'Share files to help collaborators prepare accurate proposals',
+                  style: TextStyle(fontSize: 12, color: AppColors.textTertiary),
+                ),
+                const SizedBox(height: 12),
+                
+                // Link Input
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: linkController,
+                        decoration: InputDecoration(
+                          hintText: 'Paste Dropbox, Drive, OneDrive URL...',
+                          hintStyle: TextStyle(fontSize: 13),
+                          filled: true,
+                          fillColor: AppColors.neutral50,
+                          prefixIcon: Icon(Icons.link, size: 18, color: AppColors.textSecondary),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AppColors.border)),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    SizedBox(
+                      height: 46,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          if (linkController.text.trim().isNotEmpty) {
+                            setModalState(() {
+                              // Detect link type
+                              final url = linkController.text.trim();
+                              String type = 'link';
+                              String icon = 'link';
+                              if (url.contains('dropbox.com')) {
+                                type = 'Dropbox';
+                                icon = 'dropbox';
+                              } else if (url.contains('drive.google.com')) {
+                                type = 'Google Drive';
+                                icon = 'gdrive';
+                              } else if (url.contains('onedrive') || url.contains('sharepoint')) {
+                                type = 'OneDrive';
+                                icon = 'onedrive';
+                              } else if (url.contains('box.com')) {
+                                type = 'Box';
+                                icon = 'box';
+                              }
+                              projectLinks.add({'url': url, 'type': type, 'icon': icon});
+                              linkController.clear();
+                            });
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                        ),
+                        child: const Text('Add'),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                // Quick Cloud Storage Buttons
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _buildCloudStorageChip('Dropbox', Icons.cloud_outlined, const Color(0xFF0061FF)),
+                    _buildCloudStorageChip('Google Drive', Icons.add_to_drive, const Color(0xFF4285F4)),
+                    _buildCloudStorageChip('OneDrive', Icons.cloud_queue, const Color(0xFF0078D4)),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                // Added Links List
+                if (projectLinks.isNotEmpty) ...[
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.neutral50,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.folder_shared_outlined, size: 16, color: AppColors.textSecondary),
+                            const SizedBox(width: 8),
+                            Text('${projectLinks.length} file${projectLinks.length > 1 ? 's' : ''} attached', 
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        ...projectLinks.asMap().entries.map((entry) {
+                          final index = entry.key;
+                          final link = entry.value;
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 28,
+                                  height: 28,
+                                  decoration: BoxDecoration(
+                                    color: _getLinkColor(link['type']!).withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Icon(
+                                    _getLinkIcon(link['type']!),
+                                    size: 14,
+                                    color: _getLinkColor(link['type']!),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(link['type']!, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+                                      Text(
+                                        link['url']!,
+                                        style: TextStyle(fontSize: 10, color: AppColors.textTertiary),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                GestureDetector(
+                                  onTap: () => setModalState(() => projectLinks.removeAt(index)),
+                                  child: Icon(Icons.close, size: 16, color: AppColors.textTertiary),
+                                ),
+                              ],
+                            ),
+                          );
+                        }),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                const SizedBox(height: 12),
 
                 // Submit Button
                 SizedBox(
@@ -3284,6 +3435,7 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
                           'displayMode': displayMode,
                           'status': 'invited',
                           'lineItems': null,
+                          'projectLinks': List<Map<String, String>>.from(projectLinks),
                         });
                       });
 
@@ -3336,6 +3488,56 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       ),
     );
+  }
+
+  Widget _buildCloudStorageChip(String label, IconData icon, Color color) {
+    return GestureDetector(
+      onTap: () {
+        // In a real app, this would open the respective cloud storage picker
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Open $label picker - paste your shared link above'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: color.withOpacity(0.3)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: color),
+            const SizedBox(width: 6),
+            Text(label, style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w500)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  IconData _getLinkIcon(String type) {
+    switch (type) {
+      case 'Dropbox': return Icons.cloud_outlined;
+      case 'Google Drive': return Icons.add_to_drive;
+      case 'OneDrive': return Icons.cloud_queue;
+      case 'Box': return Icons.inventory_2_outlined;
+      default: return Icons.link;
+    }
+  }
+
+  Color _getLinkColor(String type) {
+    switch (type) {
+      case 'Dropbox': return const Color(0xFF0061FF);
+      case 'Google Drive': return const Color(0xFF4285F4);
+      case 'OneDrive': return const Color(0xFF0078D4);
+      case 'Box': return const Color(0xFF0061D5);
+      default: return AppColors.accent;
+    }
   }
 
   Widget _buildToggleOption(String title, String subtitle, bool value, Function(bool) onChanged) {
@@ -3437,41 +3639,45 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
         
         // Sticky Action Bar at Top
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
             color: AppColors.cardBackground,
             boxShadow: AppShadows.sm,
           ),
           child: Row(
             children: [
-              // Quick Actions
-              _buildQuickAction(Icons.download_outlined, 'PDF', _downloadProposal),
-              const SizedBox(width: 8),
-              _buildQuickAction(Icons.copy_outlined, 'Template', _showSaveAsTemplateModal),
-              const SizedBox(width: 8),
-              _buildQuickAction(
-                Icons.local_offer_outlined, 
-                _selectedTags.isEmpty ? 'Tags' : '${_selectedTags.length}', 
+              // Quick Actions - Icon only for compact fit
+              _buildIconAction(Icons.download_outlined, 'Download PDF', _downloadProposal),
+              _buildIconAction(Icons.bookmark_add_outlined, 'Save as Template', _showSaveAsTemplateModal),
+              _buildIconAction(
+                _selectedTags.isEmpty ? Icons.label_outline : Icons.label,
+                'Tags${_selectedTags.isNotEmpty ? ' (${_selectedTags.length})' : ''}', 
                 _showTagsModal,
               ),
               const Spacer(),
-              // Main Actions
-              OutlinedButton(
-                onPressed: _saveProposalAsDraft,
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                  side: const BorderSide(color: AppColors.border),
+              // Main Actions - Compact
+              SizedBox(
+                height: 36,
+                child: OutlinedButton(
+                  onPressed: _saveProposalAsDraft,
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    side: const BorderSide(color: AppColors.border),
+                  ),
+                  child: const Text('Save', style: TextStyle(fontSize: 13)),
                 ),
-                child: const Text('Save'),
               ),
-              const SizedBox(width: 8),
-              ElevatedButton.icon(
-                onPressed: _recipientEmail.isNotEmpty ? _showSendProposalModal : null,
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              const SizedBox(width: 6),
+              SizedBox(
+                height: 36,
+                child: ElevatedButton.icon(
+                  onPressed: _recipientEmail.isNotEmpty ? _showSendProposalModal : null,
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                  ),
+                  icon: const Icon(Icons.send_rounded, size: 14),
+                  label: const Text('Send', style: TextStyle(fontSize: 13)),
                 ),
-                icon: const Icon(Icons.send_rounded, size: 16),
-                label: const Text('Send'),
               ),
             ],
           ),
@@ -3861,6 +4067,28 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
             const SizedBox(width: 4),
             Text(label, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildIconAction(IconData icon, String tooltip, VoidCallback onTap) {
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: AppColors.neutral50,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, size: 18, color: AppColors.textSecondary),
+          ),
         ),
       ),
     );
