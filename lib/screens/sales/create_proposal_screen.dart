@@ -46,6 +46,22 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
   final _emailSubjectController = TextEditingController();
   final _emailBodyController = TextEditingController();
 
+  // Step 4: Collaborators
+  final List<Map<String, dynamic>> _collaborators = [];
+  
+  // Collaborator status options
+  static const Map<String, Map<String, dynamic>> _collaboratorStatuses = {
+    'invited': {'label': 'Invited', 'color': 0xFF6B7280, 'icon': Icons.mail_outline},
+    'viewed': {'label': 'Viewed', 'color': 0xFF3B82F6, 'icon': Icons.visibility_outlined},
+    'in_progress': {'label': 'In Progress', 'color': 0xFFF59E0B, 'icon': Icons.edit_outlined},
+    'submitted': {'label': 'Submitted', 'color': 0xFF10B981, 'icon': Icons.check_circle_outline},
+    'revision_requested': {'label': 'Revision Requested', 'color': 0xFFF97316, 'icon': Icons.refresh},
+    'revision_approved': {'label': 'Revision Approved', 'color': 0xFFFBBF24, 'icon': Icons.lock_open},
+    'revision_denied': {'label': 'Revision Denied', 'color': 0xFFEF4444, 'icon': Icons.lock},
+    'accepted': {'label': 'Accepted', 'color': 0xFF059669, 'icon': Icons.check_circle},
+    'locked': {'label': 'Locked', 'color': 0xFF6B7280, 'icon': Icons.lock},
+  };
+
   // Cover image options
   final List<Map<String, String>> _coverImages = [
     {'url': 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=800', 'name': 'Modern Office'},
@@ -361,7 +377,7 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
         ),
         title: const Text('New Proposal'),
         actions: [
-          if (_currentStep == 3)
+          if (_currentStep == 4)
             IconButton(
               icon: const Icon(Icons.close),
               onPressed: () => context.pop(),
@@ -382,7 +398,8 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
                 _buildStep1ServicesScope(),
                 _buildStep2Timeline(),
                 _buildStep3CoverTerms(),
-                _buildStep4Preview(),
+                _buildStep4Collaborators(),
+                _buildStep5Preview(),
               ],
             ),
           ),
@@ -393,36 +410,63 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
 
   Widget _buildProgressSteps() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       color: AppColors.cardBackground,
-      child: Row(
+      child: Column(
         children: [
-          _buildStepIndicator(0, '1', 'Services & Scope'),
-          _buildStepConnector(0),
-          _buildStepIndicator(1, '2', 'Timeline'),
-          _buildStepConnector(1),
-          _buildStepIndicator(2, '3', 'Cover & Terms'),
-          _buildStepConnector(2),
-          _buildStepIndicator(3, '4', 'Preview'),
-          const Spacer(),
-          if (_currentStep > 0)
-            TextButton(
-              onPressed: () => _goToStep(_currentStep - 1),
-              child: const Text('Back'),
+          // Step indicators row (scrollable for mobile)
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _buildStepIndicator(0, '1', 'Scope'),
+                _buildStepConnector(0),
+                _buildStepIndicator(1, '2', 'Timeline'),
+                _buildStepConnector(1),
+                _buildStepIndicator(2, '3', 'Terms'),
+                _buildStepConnector(2),
+                _buildStepIndicator(3, '4', 'Team'),
+                _buildStepConnector(3),
+                _buildStepIndicator(4, '5', 'Preview'),
+              ],
             ),
-          const SizedBox(width: 8),
-          if (_currentStep < 3)
-            ElevatedButton(
-              onPressed: () => _goToStep(_currentStep + 1),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text('Next'),
-                  const SizedBox(width: 4),
-                  const Icon(Icons.chevron_right, size: 18),
-                ],
+          ),
+          const SizedBox(height: 10),
+          // Navigation buttons
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              if (_currentStep > 0)
+                TextButton.icon(
+                  onPressed: () => _goToStep(_currentStep - 1),
+                  icon: const Icon(Icons.chevron_left, size: 18),
+                  label: const Text('Back'),
+                )
+              else
+                const SizedBox(width: 80),
+              Text(
+                'Step ${_currentStep + 1} of 5',
+                style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
               ),
-            ),
+              if (_currentStep < 4)
+                ElevatedButton(
+                  onPressed: () => _goToStep(_currentStep + 1),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(_currentStep == 3 ? 'Skip' : 'Next'),
+                      const SizedBox(width: 4),
+                      const Icon(Icons.chevron_right, size: 18),
+                    ],
+                  ),
+                )
+              else
+                const SizedBox(width: 80),
+            ],
+          ),
         ],
       ),
     );
@@ -2358,8 +2402,918 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
     super.dispose();
   }
 
-  // ============ STEP 4: PREVIEW ============
-  Widget _buildStep4Preview() {
+  // ============ STEP 4: COLLABORATORS ============
+  Widget _buildStep4Collaborators() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header Card
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [AppColors.accent.withOpacity(0.1), AppColors.purple.withOpacity(0.1)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.accent.withOpacity(0.2)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: AppColors.accent.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.people_outline, color: AppColors.accent, size: 24),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Invite Collaborators',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Invite sub-consultants to add their services and pricing to this proposal.',
+                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary, height: 1.4),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Add Collaborator Button
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: _showAddCollaboratorModal,
+              icon: const Icon(Icons.person_add_outlined, size: 20),
+              label: const Text('Add Collaborator'),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                side: BorderSide(color: AppColors.accent, width: 1.5),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Collaborators List
+          if (_collaborators.isEmpty)
+            _buildEmptyCollaboratorsState()
+          else
+            _buildCollaboratorsList(),
+
+          const SizedBox(height: 20),
+
+          // Skip Info
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.neutral50,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, size: 18, color: AppColors.textSecondary),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'This step is optional. You can skip it if you don\'t need collaborators.',
+                    style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyCollaboratorsState() {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 40),
+      child: Column(
+        children: [
+          Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              color: AppColors.neutral100,
+              borderRadius: BorderRadius.circular(40),
+            ),
+            child: Icon(Icons.group_add_outlined, size: 36, color: AppColors.textTertiary),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'No collaborators yet',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Invite sub-consultants to contribute their\nservices and pricing to this proposal.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.5),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCollaboratorsList() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Collaborators (${_collaborators.length})',
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+            ),
+            if (_collaborators.any((c) => c['status'] == 'submitted'))
+              TextButton.icon(
+                onPressed: () {
+                  // Lock all collaborators
+                  setState(() {
+                    for (var c in _collaborators) {
+                      if (c['status'] == 'submitted' || c['status'] == 'accepted') {
+                        c['status'] = 'locked';
+                      }
+                    }
+                  });
+                },
+                icon: const Icon(Icons.lock_outline, size: 16),
+                label: const Text('Lock All'),
+                style: TextButton.styleFrom(foregroundColor: AppColors.warning),
+              ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        ..._collaborators.asMap().entries.map((entry) {
+          final index = entry.key;
+          final collaborator = entry.value;
+          return _buildCollaboratorCard(collaborator, index);
+        }),
+      ],
+    );
+  }
+
+  Widget _buildCollaboratorCard(Map<String, dynamic> collaborator, int index) {
+    final status = collaborator['status'] as String;
+    final statusInfo = _collaboratorStatuses[status]!;
+    final statusColor = Color(statusInfo['color'] as int);
+    final hasSubmission = status == 'submitted' || status == 'accepted' || status == 'locked';
+    final isRevisionRequested = status == 'revision_requested';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isRevisionRequested ? AppColors.warning.withOpacity(0.5) : AppColors.border,
+          width: isRevisionRequested ? 2 : 1,
+        ),
+        boxShadow: AppShadows.sm,
+      ),
+      child: Column(
+        children: [
+          // Header
+          Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              children: [
+                // Avatar
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: statusColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Center(
+                    child: Text(
+                      (collaborator['name'] as String)[0].toUpperCase(),
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: statusColor,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // Info
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        collaborator['name'] as String,
+                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        collaborator['company'] as String,
+                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(statusInfo['icon'] as IconData, size: 12, color: statusColor),
+                          const SizedBox(width: 4),
+                          Text(
+                            statusInfo['label'] as String,
+                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: statusColor),
+                          ),
+                          if (collaborator['deadline'] != null) ...[
+                            const SizedBox(width: 10),
+                            Icon(Icons.schedule, size: 11, color: AppColors.textTertiary),
+                            const SizedBox(width: 3),
+                            Text(
+                              'Due ${DateFormat('M/d').format(collaborator['deadline'] as DateTime)}',
+                              style: TextStyle(fontSize: 11, color: AppColors.textTertiary),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                // Actions
+                PopupMenuButton<String>(
+                  icon: Icon(Icons.more_vert, color: AppColors.textSecondary, size: 20),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  onSelected: (value) => _handleCollaboratorAction(value, index),
+                  itemBuilder: (context) => [
+                    if (isRevisionRequested) ...[
+                      const PopupMenuItem(value: 'approve_revision', child: Text('Approve Revision')),
+                      const PopupMenuItem(value: 'deny_revision', child: Text('Deny Revision')),
+                      const PopupMenuDivider(),
+                    ],
+                    if (hasSubmission)
+                      const PopupMenuItem(value: 'view_submission', child: Text('View Submission')),
+                    const PopupMenuItem(value: 'resend_invite', child: Text('Resend Invitation')),
+                    const PopupMenuItem(value: 'edit', child: Text('Edit Settings')),
+                    const PopupMenuItem(
+                      value: 'remove',
+                      child: Text('Remove', style: TextStyle(color: AppColors.error)),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          // Revision Request Banner
+          if (isRevisionRequested)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: AppColors.warning.withOpacity(0.1),
+                border: Border(top: BorderSide(color: AppColors.warning.withOpacity(0.3))),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.edit_note, size: 18, color: AppColors.warning),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Revision Requested',
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                        ),
+                        Text(
+                          collaborator['revisionReason'] ?? 'No reason provided',
+                          style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                        ),
+                      ],
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => _handleCollaboratorAction('approve_revision', index),
+                    style: TextButton.styleFrom(
+                      backgroundColor: AppColors.success.withOpacity(0.1),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    ),
+                    child: const Text('Approve', style: TextStyle(fontSize: 12)),
+                  ),
+                ],
+              ),
+            ),
+
+          // Submission Preview
+          if (hasSubmission && collaborator['lineItems'] != null)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: AppColors.neutral50,
+                border: Border(top: BorderSide(color: AppColors.border)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        '${(collaborator['lineItems'] as List).length} items submitted',
+                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                      ),
+                      Text(
+                        NumberFormat.currency(symbol: '\$').format(
+                          (collaborator['lineItems'] as List).fold(0.0, (sum, item) => sum + (item['total'] as double)),
+                        ),
+                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                      ),
+                    ],
+                  ),
+                  if (status != 'accepted' && status != 'locked') ...[
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => _handleCollaboratorAction('view_submission', index),
+                            style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 10)),
+                            child: const Text('Review', style: TextStyle(fontSize: 12)),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () {
+                              setState(() => collaborator['status'] = 'accepted');
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.success,
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                            ),
+                            child: const Text('Accept', style: TextStyle(fontSize: 12)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
+
+          // Settings Preview (collapsed)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              border: Border(top: BorderSide(color: AppColors.border)),
+            ),
+            child: Row(
+              children: [
+                _buildSettingChip(
+                  collaborator['showPricing'] == true ? 'Pricing Visible' : 'Pricing Hidden',
+                  collaborator['showPricing'] == true ? Icons.visibility : Icons.visibility_off,
+                ),
+                const SizedBox(width: 8),
+                _buildSettingChip(
+                  collaborator['paymentMode'] == 'owner' ? 'You Pay' : 'Client Pays',
+                  Icons.payments_outlined,
+                ),
+                const SizedBox(width: 8),
+                _buildSettingChip(
+                  collaborator['displayMode'] == 'transparent' ? 'Named' : 'Anonymous',
+                  Icons.badge_outlined,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSettingChip(String label, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppColors.neutral100,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: AppColors.textSecondary),
+          const SizedBox(width: 4),
+          Text(label, style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
+        ],
+      ),
+    );
+  }
+
+  void _handleCollaboratorAction(String action, int index) {
+    final collaborator = _collaborators[index];
+    
+    switch (action) {
+      case 'approve_revision':
+        setState(() => collaborator['status'] = 'revision_approved');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Revision approved'), backgroundColor: AppColors.success),
+        );
+        break;
+      case 'deny_revision':
+        setState(() => collaborator['status'] = 'submitted');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Revision denied')),
+        );
+        break;
+      case 'view_submission':
+        _showSubmissionPreview(collaborator);
+        break;
+      case 'resend_invite':
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Invitation resent to ${collaborator['email']}')),
+        );
+        break;
+      case 'edit':
+        _showEditCollaboratorModal(collaborator, index);
+        break;
+      case 'remove':
+        _confirmRemoveCollaborator(index);
+        break;
+    }
+  }
+
+  void _showSubmissionPreview(Map<String, dynamic> collaborator) {
+    final lineItems = collaborator['lineItems'] as List? ?? [];
+    final total = lineItems.fold(0.0, (sum, item) => sum + (item['total'] as double));
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.cardBackground,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        minChildSize: 0.4,
+        maxChildSize: 0.9,
+        expand: false,
+        builder: (context, scrollController) => Column(
+          children: [
+            // Header
+            Container(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(2)),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: AppColors.accent.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Center(
+                          child: Text(
+                            (collaborator['name'] as String)[0].toUpperCase(),
+                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.accent),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(collaborator['name'] as String, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                            Text(collaborator['company'] as String, style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                          ],
+                        ),
+                      ),
+                      Text(
+                        NumberFormat.currency(symbol: '\$').format(total),
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+            // Line Items
+            Expanded(
+              child: ListView.separated(
+                controller: scrollController,
+                padding: const EdgeInsets.all(16),
+                itemCount: lineItems.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 10),
+                itemBuilder: (context, index) {
+                  final item = lineItems[index];
+                  return Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.neutral50,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(item['description'] as String, style: const TextStyle(fontWeight: FontWeight.w500)),
+                              Text(
+                                '${item['qty']} × ${NumberFormat.currency(symbol: '\$').format(item['rate'])}',
+                                style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Text(
+                          NumberFormat.currency(symbol: '\$').format(item['total']),
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _confirmRemoveCollaborator(int index) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        title: const Text('Remove Collaborator?'),
+        content: Text('Are you sure you want to remove ${_collaborators[index]['name']}?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () {
+              setState(() => _collaborators.removeAt(index));
+              Navigator.pop(context);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAddCollaboratorModal() {
+    final nameController = TextEditingController();
+    final emailController = TextEditingController();
+    final companyController = TextEditingController();
+    final roleController = TextEditingController();
+    final notesController = TextEditingController();
+    bool showPricing = false;
+    String paymentMode = 'client'; // 'owner' or 'client'
+    String displayMode = 'transparent'; // 'transparent' or 'anonymous'
+    DateTime deadline = DateTime.now().add(const Duration(days: 7));
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.cardBackground,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => DraggableScrollableSheet(
+          initialChildSize: 0.85,
+          minChildSize: 0.5,
+          maxChildSize: 0.95,
+          expand: false,
+          builder: (context, scrollController) => SingleChildScrollView(
+            controller: scrollController,
+            padding: EdgeInsets.only(
+              left: 20,
+              right: 20,
+              top: 20,
+              bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(2)),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                const Text('Add Collaborator', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+                const SizedBox(height: 6),
+                Text(
+                  'Invite a sub-consultant to contribute to this proposal',
+                  style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                ),
+                const SizedBox(height: 24),
+
+                // Contact Info Section
+                _buildSectionHeader('Contact Information'),
+                const SizedBox(height: 12),
+                _buildModalTextField('Name *', 'Contact name', nameController),
+                const SizedBox(height: 12),
+                _buildModalTextField('Email *', 'email@company.com', emailController, TextInputType.emailAddress),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(child: _buildModalTextField('Company', 'Company name', companyController)),
+                    const SizedBox(width: 12),
+                    Expanded(child: _buildModalTextField('Role', 'e.g., Engineer', roleController)),
+                  ],
+                ),
+                const SizedBox(height: 20),
+
+                // Deadline Section
+                _buildSectionHeader('Deadline'),
+                const SizedBox(height: 12),
+                GestureDetector(
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: deadline,
+                      firstDate: DateTime.now(),
+                      lastDate: DateTime.now().add(const Duration(days: 90)),
+                    );
+                    if (picked != null) setModalState(() => deadline = picked);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                    decoration: BoxDecoration(
+                      color: AppColors.neutral50,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.calendar_today_outlined, size: 18, color: AppColors.textSecondary),
+                        const SizedBox(width: 10),
+                        Text(DateFormat('MMMM d, yyyy').format(deadline)),
+                        const Spacer(),
+                        Icon(Icons.chevron_right, size: 18, color: AppColors.textTertiary),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // Visibility Settings
+                _buildSectionHeader('Visibility Settings'),
+                const SizedBox(height: 12),
+                _buildToggleOption(
+                  'Show my pricing',
+                  'Collaborator can see your line items and pricing',
+                  showPricing,
+                  (val) => setModalState(() => showPricing = val),
+                ),
+                const SizedBox(height: 20),
+
+                // Payment Structure
+                _buildSectionHeader('Payment Structure'),
+                const SizedBox(height: 12),
+                _buildRadioOption(
+                  'I will pay this collaborator',
+                  'Their fee will be hidden from the client',
+                  paymentMode == 'owner',
+                  () => setModalState(() => paymentMode = 'owner'),
+                ),
+                const SizedBox(height: 8),
+                _buildRadioOption(
+                  'Client pays directly',
+                  'Their fee will be visible on the proposal',
+                  paymentMode == 'client',
+                  () => setModalState(() => paymentMode = 'client'),
+                ),
+                const SizedBox(height: 20),
+
+                // Display Mode
+                _buildSectionHeader('Client Display'),
+                const SizedBox(height: 12),
+                _buildRadioOption(
+                  'Show with name & company',
+                  'Transparent - Client sees who the collaborator is',
+                  displayMode == 'transparent',
+                  () => setModalState(() => displayMode = 'transparent'),
+                ),
+                const SizedBox(height: 8),
+                _buildRadioOption(
+                  'Show as anonymous line items',
+                  'Hidden - Only pricing shown, no collaborator info',
+                  displayMode == 'anonymous',
+                  () => setModalState(() => displayMode = 'anonymous'),
+                ),
+                const SizedBox(height: 20),
+
+                // Notes
+                _buildSectionHeader('Notes for Collaborator'),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: notesController,
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    hintText: 'Instructions or scope details...',
+                    filled: true,
+                    fillColor: AppColors.neutral50,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AppColors.border)),
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Submit Button
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      if (nameController.text.isEmpty || emailController.text.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Please enter name and email'), backgroundColor: AppColors.error),
+                        );
+                        return;
+                      }
+
+                      setState(() {
+                        _collaborators.add({
+                          'id': DateTime.now().millisecondsSinceEpoch.toString(),
+                          'name': nameController.text,
+                          'email': emailController.text,
+                          'company': companyController.text.isNotEmpty ? companyController.text : 'Independent',
+                          'role': roleController.text,
+                          'notes': notesController.text,
+                          'deadline': deadline,
+                          'showPricing': showPricing,
+                          'paymentMode': paymentMode,
+                          'displayMode': displayMode,
+                          'status': 'invited',
+                          'lineItems': null,
+                        });
+                      });
+
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Invitation sent to ${emailController.text}'),
+                          backgroundColor: AppColors.success,
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.send_outlined, size: 18),
+                    label: const Text('Send Invitation'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showEditCollaboratorModal(Map<String, dynamic> collaborator, int index) {
+    // Similar to add modal but pre-filled - simplified for now
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Edit collaborator settings')),
+    );
+  }
+
+  Widget _buildSectionHeader(String title) {
+    return Text(
+      title,
+      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+    );
+  }
+
+  Widget _buildModalTextField(String label, String hint, TextEditingController controller, [TextInputType? keyboardType]) {
+    return TextField(
+      controller: controller,
+      keyboardType: keyboardType,
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hint,
+        filled: true,
+        fillColor: AppColors.neutral50,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AppColors.border)),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AppColors.accent)),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      ),
+    );
+  }
+
+  Widget _buildToggleOption(String title, String subtitle, bool value, Function(bool) onChanged) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.neutral50,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: value ? AppColors.accent.withOpacity(0.3) : AppColors.border),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: const TextStyle(fontWeight: FontWeight.w500)),
+                const SizedBox(height: 2),
+                Text(subtitle, style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+              ],
+            ),
+          ),
+          Switch(
+            value: value,
+            onChanged: onChanged,
+            activeColor: AppColors.accent,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRadioOption(String title, String subtitle, bool selected, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.accent.withOpacity(0.05) : AppColors.neutral50,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: selected ? AppColors.accent : AppColors.border),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 20,
+              height: 20,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: selected ? AppColors.accent : AppColors.border, width: 2),
+              ),
+              child: selected
+                  ? Center(
+                      child: Container(
+                        width: 10,
+                        height: 10,
+                        decoration: const BoxDecoration(shape: BoxShape.circle, color: AppColors.accent),
+                      ),
+                    )
+                  : null,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: TextStyle(fontWeight: FontWeight.w500, color: selected ? AppColors.accent : AppColors.textPrimary)),
+                  const SizedBox(height: 2),
+                  Text(subtitle, style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ============ STEP 5: PREVIEW ============
+  Widget _buildStep5Preview() {
     final currencyFormat = NumberFormat.currency(symbol: '\$');
     final dateFormat = DateFormat('MMMM d, yyyy');
 
