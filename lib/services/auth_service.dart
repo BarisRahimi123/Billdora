@@ -1,82 +1,65 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import '../config/env.dart';
 
 class AuthService {
+  final SupabaseClient _supabase = Supabase.instance.client;
   final _storage = const FlutterSecureStorage();
-  static const String _tokenKey = 'clerk_session_token';
-  static const String _userKey = 'clerk_user';
+  static const String _sessionKey = 'billdora_session';
 
-  // Clerk Frontend API base URL (derived from publishable key)
-  String get _clerkFrontendApi {
-    // Extract domain from publishable key
-    final decoded = utf8.decode(base64.decode(
-      Env.clerkPublishableKey.replaceFirst('pk_test_', '').replaceFirst('pk_live_', '')
-    ));
-    return 'https://$decoded';
-  }
-
-  // Sign in with email
+  // Sign in with email and password
   Future<AuthResult> signInWithEmail(String email, String password) async {
     try {
-      // Create sign-in attempt
-      final response = await http.post(
-        Uri.parse('$_clerkFrontendApi/v1/client/sign_ins'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${Env.clerkPublishableKey}',
-        },
-        body: jsonEncode({
-          'identifier': email,
-          'password': password,
-        }),
+      final AuthResponse response = await _supabase.auth.signInWithPassword(
+        email: email,
+        password: password,
       );
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final sessionToken = data['response']['session_token'];
-        final user = data['response']['user'];
-        
-        await _saveSession(sessionToken, user);
-        return AuthResult.success(user);
+      if (response.user != null && response.session != null) {
+        await _saveSession(response.session!.accessToken);
+        return AuthResult.success(_userToMap(response.user!));
       } else {
-        final error = jsonDecode(response.body);
-        return AuthResult.failure(error['errors']?[0]?['message'] ?? 'Sign in failed');
+        return AuthResult.failure('Sign in failed. Please check your credentials.');
       }
+    } on AuthException catch (e) {
+      return AuthResult.failure(e.message);
     } catch (e) {
       return AuthResult.failure('Network error: ${e.toString()}');
     }
   }
 
-  // Sign up with email
-  Future<AuthResult> signUpWithEmail(String email, String password, String firstName, String lastName) async {
+  // Sign up with email and password
+  Future<AuthResult> signUpWithEmail(
+    String email,
+    String password,
+    String firstName,
+    String lastName,
+  ) async {
     try {
-      final response = await http.post(
-        Uri.parse('$_clerkFrontendApi/v1/client/sign_ups'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${Env.clerkPublishableKey}',
-        },
-        body: jsonEncode({
-          'email_address': email,
-          'password': password,
+      final AuthResponse response = await _supabase.auth.signUp(
+        email: email,
+        password: password,
+        data: {
           'first_name': firstName,
           'last_name': lastName,
-        }),
+          'full_name': '$firstName $lastName',
+        },
       );
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        // Handle email verification if required
-        if (data['response']['status'] == 'missing_requirements') {
-          return AuthResult.verificationRequired(data['response']['id']);
+      if (response.user != null) {
+        // Check if email confirmation is required
+        if (response.user!.emailConfirmedAt == null) {
+          return AuthResult.verificationRequired(response.user!.id);
         }
-        return AuthResult.success(data['response']);
+        
+        if (response.session != null) {
+          await _saveSession(response.session!.accessToken);
+        }
+        return AuthResult.success(_userToMap(response.user!));
       } else {
-        final error = jsonDecode(response.body);
-        return AuthResult.failure(error['errors']?[0]?['message'] ?? 'Sign up failed');
+        return AuthResult.failure('Sign up failed. Please try again.');
       }
+    } on AuthException catch (e) {
+      return AuthResult.failure(e.message);
     } catch (e) {
       return AuthResult.failure('Network error: ${e.toString()}');
     }
@@ -84,67 +67,121 @@ class AuthService {
 
   // Sign out
   Future<void> signOut() async {
-    final token = await getSessionToken();
-    if (token != null) {
-      try {
-        await http.delete(
-          Uri.parse('$_clerkFrontendApi/v1/client/sessions'),
-          headers: {
-            'Authorization': 'Bearer $token',
-          },
-        );
-      } catch (_) {}
-    }
+    try {
+      await _supabase.auth.signOut();
+    } catch (_) {}
     await _clearSession();
   }
 
-  // Get current session token
-  Future<String?> getSessionToken() async {
-    return await _storage.read(key: _tokenKey);
+  // Get current session
+  Session? getCurrentSession() {
+    return _supabase.auth.currentSession;
   }
 
   // Get current user
-  Future<Map<String, dynamic>?> getCurrentUser() async {
-    final userJson = await _storage.read(key: _userKey);
-    if (userJson != null) {
-      return jsonDecode(userJson);
+  User? getCurrentUser() {
+    return _supabase.auth.currentUser;
+  }
+
+  // Get current user as Map
+  Map<String, dynamic>? getCurrentUserMap() {
+    final user = _supabase.auth.currentUser;
+    if (user != null) {
+      return _userToMap(user);
     }
     return null;
   }
 
   // Check if user is authenticated
-  Future<bool> isAuthenticated() async {
-    final token = await getSessionToken();
-    return token != null;
+  bool isAuthenticated() {
+    return _supabase.auth.currentSession != null;
   }
 
-  // Refresh session
-  Future<bool> refreshSession() async {
-    final token = await getSessionToken();
-    if (token == null) return false;
+  // Listen to auth state changes
+  Stream<AuthState> onAuthStateChange() {
+    return _supabase.auth.onAuthStateChange;
+  }
 
+  // Request password reset
+  Future<AuthResult> resetPassword(String email) async {
     try {
-      final response = await http.post(
-        Uri.parse('$_clerkFrontendApi/v1/client/sessions/refresh'),
-        headers: {
-          'Authorization': 'Bearer $token',
-        },
-      );
-      return response.statusCode == 200;
-    } catch (_) {
-      return false;
+      await _supabase.auth.resetPasswordForEmail(email);
+      return AuthResult.success({'message': 'Password reset email sent'});
+    } on AuthException catch (e) {
+      return AuthResult.failure(e.message);
+    } catch (e) {
+      return AuthResult.failure('Failed to send reset email');
     }
   }
 
+  // Update password
+  Future<AuthResult> updatePassword(String newPassword) async {
+    try {
+      await _supabase.auth.updateUser(
+        UserAttributes(password: newPassword),
+      );
+      return AuthResult.success({'message': 'Password updated successfully'});
+    } on AuthException catch (e) {
+      return AuthResult.failure(e.message);
+    } catch (e) {
+      return AuthResult.failure('Failed to update password');
+    }
+  }
+
+  // Sign in with Google
+  Future<AuthResult> signInWithGoogle() async {
+    try {
+      final response = await _supabase.auth.signInWithOAuth(
+        OAuthProvider.google,
+        redirectTo: 'io.supabase.billdora://login-callback/',
+      );
+      
+      if (response) {
+        return AuthResult.success({'message': 'Google sign-in initiated'});
+      }
+      return AuthResult.failure('Google sign-in failed');
+    } catch (e) {
+      return AuthResult.failure('Google sign-in error: ${e.toString()}');
+    }
+  }
+
+  // Sign in with Apple
+  Future<AuthResult> signInWithApple() async {
+    try {
+      final response = await _supabase.auth.signInWithOAuth(
+        OAuthProvider.apple,
+        redirectTo: 'io.supabase.billdora://login-callback/',
+      );
+      
+      if (response) {
+        return AuthResult.success({'message': 'Apple sign-in initiated'});
+      }
+      return AuthResult.failure('Apple sign-in failed');
+    } catch (e) {
+      return AuthResult.failure('Apple sign-in error: ${e.toString()}');
+    }
+  }
+
+  // Helper to convert User to Map
+  Map<String, dynamic> _userToMap(User user) {
+    return {
+      'id': user.id,
+      'email': user.email,
+      'first_name': user.userMetadata?['first_name'] ?? '',
+      'last_name': user.userMetadata?['last_name'] ?? '',
+      'full_name': user.userMetadata?['full_name'] ?? user.email?.split('@').first ?? '',
+      'avatar_url': user.userMetadata?['avatar_url'],
+      'created_at': user.createdAt,
+    };
+  }
+
   // Private methods
-  Future<void> _saveSession(String token, Map<String, dynamic> user) async {
-    await _storage.write(key: _tokenKey, value: token);
-    await _storage.write(key: _userKey, value: jsonEncode(user));
+  Future<void> _saveSession(String token) async {
+    await _storage.write(key: _sessionKey, value: token);
   }
 
   Future<void> _clearSession() async {
-    await _storage.delete(key: _tokenKey);
-    await _storage.delete(key: _userKey);
+    await _storage.delete(key: _sessionKey);
   }
 }
 
@@ -176,6 +213,7 @@ class AuthResult {
       success: false,
       verificationRequired: true,
       signUpId: signUpId,
+      errorMessage: 'Please check your email to verify your account.',
     );
   }
 }

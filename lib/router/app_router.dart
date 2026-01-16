@@ -12,8 +12,13 @@ import '../screens/invoices/invoice_detail_screen.dart';
 import '../screens/invoices/create_invoice_screen.dart';
 import '../screens/clients/clients_screen.dart';
 import '../screens/projects/projects_screen.dart';
+import '../screens/projects/project_detail_screen.dart';
 import '../screens/expenses/expenses_screen.dart';
+import '../screens/time_expense/time_expense_screen.dart';
+import '../screens/sales/sales_screen.dart';
+import '../screens/sales/create_proposal_screen.dart';
 import '../screens/receipts/receipts_screen.dart';
+import '../screens/team/team_screen.dart';
 import '../screens/reports/reports_screen.dart';
 import '../screens/settings/settings_screen.dart';
 import '../screens/shell/app_shell.dart';
@@ -60,6 +65,19 @@ class AppRouter {
             builder: (context, state) => const DashboardScreen(),
           ),
           GoRoute(
+            path: '/sales',
+            builder: (context, state) => const SalesScreen(),
+            routes: [
+              GoRoute(
+                path: 'proposal/create',
+                builder: (context, state) {
+                  final templateId = state.uri.queryParameters['template'];
+                  return CreateProposalScreen(templateId: templateId);
+                },
+              ),
+            ],
+          ),
+          GoRoute(
             path: '/invoices',
             builder: (context, state) => const InvoicesScreen(),
             routes: [
@@ -82,14 +100,30 @@ class AppRouter {
           GoRoute(
             path: '/projects',
             builder: (context, state) => const ProjectsScreen(),
+            routes: [
+              GoRoute(
+                path: ':id',
+                builder: (context, state) => ProjectDetailScreen(
+                  projectId: state.pathParameters['id']!,
+                ),
+              ),
+            ],
           ),
           GoRoute(
             path: '/expenses',
             builder: (context, state) => const ExpensesScreen(),
           ),
           GoRoute(
+            path: '/time',
+            builder: (context, state) => const TimeExpenseScreen(),
+          ),
+          GoRoute(
             path: '/receipts',
             builder: (context, state) => const ReceiptsScreen(),
+          ),
+          GoRoute(
+            path: '/team',
+            builder: (context, state) => const TeamScreen(),
           ),
           GoRoute(
             path: '/reports',

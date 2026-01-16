@@ -1,8 +1,11 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/auth_service.dart';
 
 class AuthProvider extends ChangeNotifier {
   final AuthService _authService = AuthService();
+  StreamSubscription<AuthState>? _authSubscription;
   
   bool _isLoading = false;
   bool _isAuthenticated = false;
@@ -15,20 +18,59 @@ class AuthProvider extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
   
   String get userId => _user?['id'] ?? '';
-  String get userEmail => _user?['email_addresses']?[0]?['email_address'] ?? '';
-  String get userName => '${_user?['first_name'] ?? ''} ${_user?['last_name'] ?? ''}'.trim();
-
-  AuthProvider() {
-    _checkAuthStatus();
+  String get userEmail => _user?['email'] ?? '';
+  String get userName {
+    final firstName = _user?['first_name'] ?? '';
+    final lastName = _user?['last_name'] ?? '';
+    final fullName = '$firstName $lastName'.trim();
+    return fullName.isNotEmpty ? fullName : _user?['full_name'] ?? '';
   }
 
-  Future<void> _checkAuthStatus() async {
+  AuthProvider() {
+    _init();
+  }
+
+  void _init() {
+    _checkAuthStatus();
+    _listenToAuthChanges();
+  }
+
+  void _listenToAuthChanges() {
+    _authSubscription = _authService.onAuthStateChange().listen((authState) {
+      final event = authState.event;
+      final session = authState.session;
+
+      switch (event) {
+        case AuthChangeEvent.signedIn:
+        case AuthChangeEvent.tokenRefreshed:
+          if (session?.user != null) {
+            _isAuthenticated = true;
+            _user = _authService.getCurrentUserMap();
+            notifyListeners();
+          }
+          break;
+        case AuthChangeEvent.signedOut:
+          _isAuthenticated = false;
+          _user = null;
+          notifyListeners();
+          break;
+        case AuthChangeEvent.userUpdated:
+          _user = _authService.getCurrentUserMap();
+          notifyListeners();
+          break;
+        default:
+          break;
+      }
+    });
+  }
+
+  void _checkAuthStatus() {
     _isLoading = true;
     notifyListeners();
 
-    _isAuthenticated = await _authService.isAuthenticated();
+    _isAuthenticated = _authService.isAuthenticated();
     if (_isAuthenticated) {
-      _user = await _authService.getCurrentUser();
+      _user = _authService.getCurrentUserMap();
     }
 
     _isLoading = false;
@@ -66,13 +108,61 @@ class AuthProvider extends ChangeNotifier {
     if (result.success) {
       _isAuthenticated = true;
       _user = result.user;
-    } else if (!result.verificationRequired) {
+    } else {
       _errorMessage = result.errorMessage;
     }
 
     _isLoading = false;
     notifyListeners();
     return result;
+  }
+
+  Future<bool> signInWithGoogle() async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    final result = await _authService.signInWithGoogle();
+    
+    if (!result.success) {
+      _errorMessage = result.errorMessage;
+    }
+
+    _isLoading = false;
+    notifyListeners();
+    return result.success;
+  }
+
+  Future<bool> signInWithApple() async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    final result = await _authService.signInWithApple();
+    
+    if (!result.success) {
+      _errorMessage = result.errorMessage;
+    }
+
+    _isLoading = false;
+    notifyListeners();
+    return result.success;
+  }
+
+  Future<bool> resetPassword(String email) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    final result = await _authService.resetPassword(email);
+    
+    if (!result.success) {
+      _errorMessage = result.errorMessage;
+    }
+
+    _isLoading = false;
+    notifyListeners();
+    return result.success;
   }
 
   Future<void> signOut() async {
@@ -92,5 +182,11 @@ class AuthProvider extends ChangeNotifier {
   void clearError() {
     _errorMessage = null;
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _authSubscription?.cancel();
+    super.dispose();
   }
 }
