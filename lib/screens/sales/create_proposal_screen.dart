@@ -8,8 +8,19 @@ class CreateProposalScreen extends StatefulWidget {
   final String? templateId;
   final String? leadId;
   final String? clientId;
+  final String? leadName;
+  final String? leadEmail;
+  final String? leadCompany;
 
-  const CreateProposalScreen({super.key, this.templateId, this.leadId, this.clientId});
+  const CreateProposalScreen({
+    super.key, 
+    this.templateId, 
+    this.leadId, 
+    this.clientId,
+    this.leadName,
+    this.leadEmail,
+    this.leadCompany,
+  });
 
   @override
   State<CreateProposalScreen> createState() => _CreateProposalScreenState();
@@ -2309,8 +2320,22 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
     
     // Pre-select lead if leadId was passed
     if (widget.leadId != null) {
+      // Check if lead exists in list, if not add it
+      final leadExists = _leads.any((l) => l['id'] == widget.leadId);
+      if (!leadExists && widget.leadName != null) {
+        _leads.add({
+          'id': widget.leadId,
+          'name': widget.leadName ?? 'Lead',
+          'email': widget.leadEmail ?? '',
+          'phone': '',
+          'company': widget.leadCompany ?? '',
+        });
+      }
+      
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _selectLead(widget.leadId);
+        if (_leads.any((l) => l['id'] == widget.leadId)) {
+          _selectLead(widget.leadId);
+        }
       });
     }
     

@@ -741,8 +741,12 @@ class _LeadsTabState extends State<_LeadsTab> {
   }
 
   void _createProposal(Map<String, dynamic> lead) {
-    // Navigate to create proposal with lead pre-selected
-    context.push('/sales/proposal/create?leadId=${lead['id']}');
+    // Navigate to create proposal with lead pre-selected and all lead data
+    final leadId = lead['id'];
+    final leadName = Uri.encodeComponent(lead['name'] ?? '');
+    final leadEmail = Uri.encodeComponent(lead['email'] ?? '');
+    final leadCompany = Uri.encodeComponent(lead['company'] ?? '');
+    context.push('/sales/proposal/create?leadId=$leadId&leadName=$leadName&leadEmail=$leadEmail&leadCompany=$leadCompany');
   }
 
   void _convertToProject(Map<String, dynamic> lead) {

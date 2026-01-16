@@ -74,10 +74,16 @@ class AppRouter {
                   final templateId = state.uri.queryParameters['template'];
                   final leadId = state.uri.queryParameters['leadId'];
                   final clientId = state.uri.queryParameters['clientId'];
+                  final leadName = state.uri.queryParameters['leadName'];
+                  final leadEmail = state.uri.queryParameters['leadEmail'];
+                  final leadCompany = state.uri.queryParameters['leadCompany'];
                   return CreateProposalScreen(
                     templateId: templateId,
                     leadId: leadId,
                     clientId: clientId,
+                    leadName: leadName != null ? Uri.decodeComponent(leadName) : null,
+                    leadEmail: leadEmail != null ? Uri.decodeComponent(leadEmail) : null,
+                    leadCompany: leadCompany != null ? Uri.decodeComponent(leadCompany) : null,
                   );
                 },
               ),
