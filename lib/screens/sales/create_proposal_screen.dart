@@ -29,9 +29,23 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
   final _scopeController = TextEditingController(text: 'Testing the template');
 
   // Step 3: Cover & Terms
-  String _coverImageUrl = '';
+  int _selectedCoverIndex = 0;
   final _emailSubjectController = TextEditingController();
   final _emailBodyController = TextEditingController();
+
+  // Cover image options
+  final List<Map<String, String>> _coverImages = [
+    {'url': 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=800', 'name': 'Modern Office'},
+    {'url': 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800', 'name': 'Skyscraper'},
+    {'url': 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=800', 'name': 'Business Meeting'},
+    {'url': 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=800', 'name': 'Architecture'},
+    {'url': 'https://images.unsplash.com/photo-1553877522-43269d4ea984?w=800', 'name': 'Workspace'},
+    {'url': 'https://images.unsplash.com/photo-1497215842964-222b430dc094?w=800', 'name': 'Creative Studio'},
+    {'url': 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=800', 'name': 'Team Work'},
+    {'url': 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=800', 'name': 'Collaboration'},
+  ];
+
+  String get _selectedCoverUrl => _coverImages[_selectedCoverIndex]['url']!;
 
   // Mock data - Clients with full info
   final List<Map<String, dynamic>> _clients = [
@@ -1463,7 +1477,7 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
-          // Cover Page Card
+          // Cover Preview Card (Compact)
           Container(
             decoration: BoxDecoration(
               color: AppColors.cardBackground,
@@ -1473,230 +1487,453 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Header with Change Button
                 Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(12),
                   child: Row(
                     children: [
                       Container(
-                        width: 40,
-                        height: 40,
+                        width: 36,
+                        height: 36,
                         decoration: BoxDecoration(
                           color: AppColors.accent.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                        child: const Icon(Icons.image_outlined, color: AppColors.accent, size: 20),
+                        child: const Icon(Icons.image_outlined, color: AppColors.accent, size: 18),
                       ),
-                      const SizedBox(width: 12),
-                      const Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Cover Page', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                          Text("Your proposal's first impression", style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Cover Preview
-                Container(
-                  height: 300,
-                  margin: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1F2937),
-                    borderRadius: BorderRadius.circular(12),
-                    image: const DecorationImage(
-                      image: NetworkImage('https://images.unsplash.com/photo-1497366216548-37526070297c?w=800'),
-                      fit: BoxFit.cover,
-                      opacity: 0.6,
-                    ),
-                  ),
-                  child: Stack(
-                    children: [
-                      Positioned(
-                        top: 16,
-                        right: 16,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Row(
-                            children: [
-                              Icon(Icons.upload, color: Colors.white, size: 16),
-                              SizedBox(width: 6),
-                              Text('Change Image', style: TextStyle(color: Colors.white, fontSize: 12)),
-                            ],
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        left: 20,
-                        bottom: 30,
+                      const SizedBox(width: 10),
+                      const Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Container(
-                              width: 40,
-                              height: 40,
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: const Center(
-                                child: Text('P', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w700)),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            const Text('https://plansrow.com', style: TextStyle(color: Colors.white70, fontSize: 11)),
-                            const SizedBox(height: 16),
-                            const Text('PREPARED FOR', style: TextStyle(color: Colors.white60, fontSize: 10, letterSpacing: 1)),
-                            const SizedBox(height: 4),
-                            Text(_recipientName, style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w700)),
-                            Text(DateFormat('M/d/yyyy').format(DateTime.now()), style: const TextStyle(color: Colors.white70, fontSize: 12)),
-                            const SizedBox(height: 24),
-                            Text(
-                              _projectNameController.text.isNotEmpty 
-                                  ? _projectNameController.text 
-                                  : 'Proposal for $_recipientName',
-                              style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w700, height: 1.2),
-                            ),
-                            const SizedBox(height: 8),
-                            const Text('Proposal #New', style: TextStyle(color: Colors.white60, fontSize: 13)),
+                            Text('Cover Page', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                            Text("First impression matters", style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
                           ],
                         ),
                       ),
+                      TextButton.icon(
+                        onPressed: _showCoverImagePicker,
+                        icon: const Icon(Icons.photo_library_outlined, size: 16),
+                        label: const Text('Change'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppColors.accent,
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        ),
+                      ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 16),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
 
-          // Company Info Card
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.cardBackground,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: AppShadows.card,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: AppColors.neutral100,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Center(
-                        child: Text('P', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                // Cover Preview (Compact)
+                GestureDetector(
+                  onTap: _showCoverImagePicker,
+                  child: Container(
+                    height: 220,
+                    margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1F2937),
+                      borderRadius: BorderRadius.circular(12),
+                      image: DecorationImage(
+                        image: NetworkImage(_selectedCoverUrl),
+                        fit: BoxFit.cover,
+                        opacity: 0.6,
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    const Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Plansrow LLC', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                          Text('2469 N Pearwood ave\nFresno, CA 93727', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                        ],
-                      ),
-                    ),
-                    const Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
+                    child: Stack(
                       children: [
-                        Text('1/16/2026', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                        Text('5128396700', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                        Text('https://plansrow.com', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                        // Tap to change overlay
+                        Positioned(
+                          top: 10,
+                          right: 10,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.4),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.touch_app, color: Colors.white70, size: 14),
+                                SizedBox(width: 4),
+                                Text('Tap to change', style: TextStyle(color: Colors.white70, fontSize: 10)),
+                              ],
+                            ),
+                          ),
+                        ),
+                        // Content
+                        Positioned(
+                          left: 16,
+                          bottom: 16,
+                          right: 16,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('PREPARED FOR', style: TextStyle(color: Colors.white60, fontSize: 9, letterSpacing: 1)),
+                              const SizedBox(height: 2),
+                              Text(
+                                _recipientName,
+                                style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              Text(DateFormat('M/d/yyyy').format(DateTime.now()), style: const TextStyle(color: Colors.white70, fontSize: 11)),
+                              const SizedBox(height: 12),
+                              Text(
+                                _projectNameController.text.isNotEmpty 
+                                    ? _projectNameController.text 
+                                    : 'Proposal for $_recipientName',
+                                style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w700, height: 1.2),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
                       ],
                     ),
-                  ],
+                  ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
 
-          // Signature Card
+          // Company Info Card (Compact)
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.cardBackground,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: AppShadows.sm,
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: AppColors.neutral100,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Center(
+                    child: Text('P', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Plansrow LLC', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                      Text('2469 N Pearwood ave, Fresno, CA', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                    ],
+                  ),
+                ),
+                Icon(Icons.business_outlined, size: 18, color: AppColors.textTertiary),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Terms & Signature Card (Compact)
           Container(
             decoration: BoxDecoration(
               color: AppColors.cardBackground,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: AppShadows.card,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: AppShadows.sm,
             ),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Signature Section
                 Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(12),
                   child: Row(
                     children: [
                       Container(
-                        width: 40,
-                        height: 40,
+                        width: 36,
+                        height: 36,
                         decoration: BoxDecoration(
                           color: AppColors.success.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                        child: const Icon(Icons.check, color: AppColors.success, size: 20),
+                        child: const Icon(Icons.draw_outlined, color: AppColors.success, size: 18),
                       ),
-                      const SizedBox(width: 12),
-                      const Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Customer Signature', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                          Text('Signature fields for acceptance', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                        ],
+                      const SizedBox(width: 10),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('E-Signature', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                            Text('Client signs digitally', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.success.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: const Text('Enabled', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.success)),
                       ),
                     ],
                   ),
                 ),
+                const Divider(height: 1),
+
+                // Payment Terms
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: AppColors.neutral50,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('Customer Acceptance (sign below):', style: TextStyle(fontSize: 12)),
-                        const SizedBox(height: 12),
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            border: Border(bottom: BorderSide(color: AppColors.border)),
-                          ),
-                          child: Text('X', style: TextStyle(fontSize: 24, color: AppColors.textTertiary)),
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: AppColors.info.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                        const Text('Signature', style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
-                        const SizedBox(height: 16),
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            border: Border(bottom: BorderSide(color: AppColors.border)),
-                          ),
-                          child: Text('Print Name', style: TextStyle(fontSize: 14, color: AppColors.textTertiary)),
+                        child: const Icon(Icons.payments_outlined, color: AppColors.info, size: 18),
+                      ),
+                      const SizedBox(width: 10),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Payment Terms', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                            Text('Due upon receipt', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                          ],
                         ),
-                        const Text('Print Name', style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
-                      ],
-                    ),
+                      ),
+                      Icon(Icons.chevron_right, size: 20, color: AppColors.textTertiary),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1),
+
+                // Validity
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: AppColors.warning.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(Icons.timer_outlined, color: AppColors.warning, size: 18),
+                      ),
+                      const SizedBox(width: 10),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Proposal Validity', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                            Text('Valid for 30 days', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                          ],
+                        ),
+                      ),
+                      Icon(Icons.chevron_right, size: 20, color: AppColors.textTertiary),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Quick Summary Card
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.accent.withOpacity(0.05),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.accent.withOpacity(0.2)),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('TOTAL AMOUNT', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.textSecondary, letterSpacing: 0.5)),
+                      const SizedBox(height: 4),
+                      Text(
+                        NumberFormat.currency(symbol: '\$').format(_total),
+                        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.accent),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.accent,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Text(
+                        '$_totalDuration days',
+                        style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(Icons.schedule, color: Colors.white, size: 14),
+                    ],
                   ),
                 ),
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // Show cover image picker modal
+  void _showCoverImagePicker() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.cardBackground,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.7,
+        minChildSize: 0.5,
+        maxChildSize: 0.9,
+        expand: false,
+        builder: (context, scrollController) {
+          return Column(
+            children: [
+              // Header
+              Container(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: AppColors.border,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Choose Cover Image', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text('Select a background image for your proposal cover', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                  ],
+                ),
+              ),
+              
+              // Image Grid
+              Expanded(
+                child: GridView.builder(
+                  controller: scrollController,
+                  padding: const EdgeInsets.all(16),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                    childAspectRatio: 1.4,
+                  ),
+                  itemCount: _coverImages.length,
+                  itemBuilder: (context, index) {
+                    final isSelected = index == _selectedCoverIndex;
+                    return GestureDetector(
+                      onTap: () {
+                        setState(() => _selectedCoverIndex = index);
+                        Navigator.pop(context);
+                      },
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: isSelected ? AppColors.accent : Colors.transparent,
+                            width: 3,
+                          ),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(9),
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              Image.network(
+                                _coverImages[index]['url']!,
+                                fit: BoxFit.cover,
+                                loadingBuilder: (context, child, loadingProgress) {
+                                  if (loadingProgress == null) return child;
+                                  return Container(
+                                    color: AppColors.neutral100,
+                                    child: const Center(
+                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                    ),
+                                  );
+                                },
+                              ),
+                              // Gradient overlay
+                              Container(
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                    colors: [
+                                      Colors.transparent,
+                                      Colors.black.withOpacity(0.6),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              // Name label
+                              Positioned(
+                                left: 8,
+                                bottom: 8,
+                                child: Text(
+                                  _coverImages[index]['name']!,
+                                  style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500),
+                                ),
+                              ),
+                              // Selected checkmark
+                              if (isSelected)
+                                Positioned(
+                                  top: 8,
+                                  right: 8,
+                                  child: Container(
+                                    width: 24,
+                                    height: 24,
+                                    decoration: BoxDecoration(
+                                      color: AppColors.accent,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: const Icon(Icons.check, color: Colors.white, size: 16),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -1762,8 +1999,8 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
                   decoration: BoxDecoration(
                     color: const Color(0xFF1F2937),
                     borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                    image: const DecorationImage(
-                      image: NetworkImage('https://images.unsplash.com/photo-1497366216548-37526070297c?w=800'),
+                    image: DecorationImage(
+                      image: NetworkImage(_selectedCoverUrl),
                       fit: BoxFit.cover,
                       opacity: 0.6,
                     ),
