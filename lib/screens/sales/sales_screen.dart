@@ -48,9 +48,9 @@ class _SalesScreenState extends State<SalesScreen> with SingleTickerProviderStat
             // App Header with Hamburger Menu
             const AppHeader(showSearch: true),
 
-            // Title and Actions
+            // Title and Actions (more compact)
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -60,13 +60,10 @@ class _SalesScreenState extends State<SalesScreen> with SingleTickerProviderStat
                       Text(
                         'Sales',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w700,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 24,
+                          letterSpacing: -0.5,
                         ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Manage clients and quotes',
-                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                       ),
                     ],
                   ),
@@ -74,7 +71,7 @@ class _SalesScreenState extends State<SalesScreen> with SingleTickerProviderStat
                     GestureDetector(
                       onTap: () => _handleAddButton(),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                         decoration: BoxDecoration(
                           color: AppColors.accent,
                           borderRadius: BorderRadius.circular(10),
@@ -89,7 +86,7 @@ class _SalesScreenState extends State<SalesScreen> with SingleTickerProviderStat
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 13,
-                                fontWeight: FontWeight.w500,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                           ],
@@ -121,15 +118,17 @@ class _SalesScreenState extends State<SalesScreen> with SingleTickerProviderStat
   }
 
   Widget _buildTabBar() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: AppColors.neutral100,
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: Row(
         children: [
           _buildTab(0, 'Leads', 4),
-          const SizedBox(width: 8),
           _buildTab(1, 'Clients', 3),
-          const SizedBox(width: 8),
           _buildTab(2, 'Quotes', 31),
         ],
       ),
@@ -139,42 +138,53 @@ class _SalesScreenState extends State<SalesScreen> with SingleTickerProviderStat
   Widget _buildTab(int index, String label, int count) {
     final isSelected = _tabController.index == index;
     
-    return GestureDetector(
-      onTap: () => _tabController.animateTo(index),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          color: isSelected ? AppColors.cardBackground : Colors.transparent,
-          borderRadius: BorderRadius.circular(10),
-          boxShadow: isSelected ? AppShadows.sm : null,
-        ),
-        child: Row(
-          children: [
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                color: isSelected ? AppColors.textPrimary : AppColors.textSecondary,
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => _tabController.animateTo(index),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: isSelected ? AppColors.cardBackground : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+            boxShadow: isSelected ? [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.08),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
               ),
-            ),
-            const SizedBox(width: 6),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: isSelected ? AppColors.accent.withOpacity(0.1) : AppColors.neutral100,
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Text(
-                '$count',
+            ] : null,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                label,
                 style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: isSelected ? AppColors.accent : AppColors.textSecondary,
+                  fontSize: 15,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                  color: isSelected ? AppColors.textPrimary : AppColors.textTertiary,
+                  letterSpacing: -0.3,
                 ),
               ),
-            ),
-          ],
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                decoration: BoxDecoration(
+                  color: isSelected ? AppColors.accent : AppColors.neutral200,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  '$count',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: isSelected ? Colors.white : AppColors.textTertiary,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -350,7 +360,7 @@ class _LeadsTabState extends State<_LeadsTab> {
           ),
         ),
 
-        // Status Filter Pills (more compact)
+        // Status Filter Pills (minimal, secondary)
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -364,28 +374,28 @@ class _LeadsTabState extends State<_LeadsTab> {
                 child: GestureDetector(
                   onTap: () => setState(() => _statusFilter = status),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
-                      color: isSelected ? AppColors.textPrimary : AppColors.cardBackground,
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: isSelected ? AppColors.textPrimary : AppColors.border),
+                      color: isSelected ? AppColors.textPrimary.withOpacity(0.08) : Colors.transparent,
+                      borderRadius: BorderRadius.circular(20),
                     ),
                     child: Row(
                       children: [
                         Text(
                           status[0].toUpperCase() + status.substring(1),
                           style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                            color: isSelected ? Colors.white : AppColors.textSecondary,
+                            fontSize: 12,
+                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                            color: isSelected ? AppColors.textPrimary : AppColors.textTertiary,
                           ),
                         ),
                         const SizedBox(width: 4),
                         Text(
                           '$count',
                           style: TextStyle(
-                            fontSize: 10,
-                            color: isSelected ? Colors.white70 : AppColors.textTertiary,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            color: isSelected ? AppColors.textSecondary : AppColors.textTertiary,
                           ),
                         ),
                       ],
@@ -396,7 +406,7 @@ class _LeadsTabState extends State<_LeadsTab> {
             }).toList(),
           ),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 8),
 
         // Leads List (compact cards)
         Expanded(
