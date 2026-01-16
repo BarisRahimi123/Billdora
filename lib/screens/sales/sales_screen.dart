@@ -5,6 +5,52 @@ import 'package:intl/intl.dart';
 import '../../main.dart';
 import '../shell/app_header.dart';
 
+// Global consultants list - accessible from Sales page and Proposal creation
+final List<Map<String, dynamic>> consultantsList = [
+  {
+    'id': '1',
+    'name': 'Sarah Miller',
+    'company': 'SM Consulting',
+    'email': 'sarah@smconsulting.com',
+    'phone': '+1 (555) 234-5678',
+    'specialty': 'Landscape Architecture',
+    'rate': 150.0,
+    'rateType': 'hourly',
+    'status': 'active',
+    'projects': 12,
+    'totalBilled': 45000.0,
+    'created': DateTime(2025, 6, 15),
+  },
+  {
+    'id': '2',
+    'name': 'Michael Chen',
+    'company': 'Chen Engineering',
+    'email': 'michael@cheneng.com',
+    'phone': '+1 (555) 345-6789',
+    'specialty': 'Structural Engineering',
+    'rate': 200.0,
+    'rateType': 'hourly',
+    'status': 'active',
+    'projects': 8,
+    'totalBilled': 32000.0,
+    'created': DateTime(2025, 8, 22),
+  },
+  {
+    'id': '3',
+    'name': 'Emily Rodriguez',
+    'company': 'ER Design Studio',
+    'email': 'emily@erdesign.com',
+    'phone': '+1 (555) 456-7890',
+    'specialty': 'Interior Design',
+    'rate': 5000.0,
+    'rateType': 'project',
+    'status': 'active',
+    'projects': 5,
+    'totalBilled': 25000.0,
+    'created': DateTime(2025, 10, 5),
+  },
+];
+
 class SalesScreen extends StatefulWidget {
   const SalesScreen({super.key});
 
@@ -15,11 +61,12 @@ class SalesScreen extends StatefulWidget {
 class _SalesScreenState extends State<SalesScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final GlobalKey<_LeadsTabState> _leadsTabKey = GlobalKey<_LeadsTabState>();
+  final GlobalKey<_ConsultantsTabState> _consultantsTabKey = GlobalKey<_ConsultantsTabState>();
   
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     _tabController.addListener(() => setState(() {}));
   }
 
@@ -34,6 +81,7 @@ class _SalesScreenState extends State<SalesScreen> with SingleTickerProviderStat
       case 0: return 'Add Lead';
       case 1: return 'Add Client';
       case 2: return 'Add Quote';
+      case 3: return 'Add Consultant';
       default: return 'Add';
     }
   }
@@ -68,7 +116,7 @@ class _SalesScreenState extends State<SalesScreen> with SingleTickerProviderStat
                       ),
                     ],
                   ),
-                  if (_tabController.index < 3)
+                  if (_tabController.index < 4)
                     GestureDetector(
                       onTap: () => _handleAddButton(),
                       child: Container(
@@ -109,6 +157,7 @@ class _SalesScreenState extends State<SalesScreen> with SingleTickerProviderStat
                   _LeadsTab(key: _leadsTabKey),
                   const _ClientsTab(),
                   const _QuotesTab(),
+                  _ConsultantsTab(key: _consultantsTabKey),
                 ],
               ),
             ),
@@ -131,6 +180,7 @@ class _SalesScreenState extends State<SalesScreen> with SingleTickerProviderStat
           _buildTab(0, 'Leads', 4),
           _buildTab(1, 'Clients', 3),
           _buildTab(2, 'Quotes', 31),
+          _buildTab(3, 'Consultants', consultantsList.length),
         ],
       ),
     );
@@ -202,7 +252,14 @@ class _SalesScreenState extends State<SalesScreen> with SingleTickerProviderStat
       case 2:
         _showCreateProposalDialog();
         break;
+      case 3:
+        _showAddConsultantModal();
+        break;
     }
+  }
+
+  void _showAddConsultantModal() {
+    _consultantsTabKey.currentState?.showAddConsultantModal();
   }
 
   void _showAddLeadModal() {
@@ -2554,6 +2611,1167 @@ class _TemplateSelector extends StatelessWidget {
           Text(label, style: const TextStyle(fontSize: 13)),
           const SizedBox(width: 4),
           const Icon(Icons.keyboard_arrow_down, size: 18),
+        ],
+      ),
+    );
+  }
+}
+
+// ============ CONSULTANTS TAB ============
+class _ConsultantsTab extends StatefulWidget {
+  const _ConsultantsTab({super.key});
+
+  @override
+  State<_ConsultantsTab> createState() => _ConsultantsTabState();
+}
+
+class _ConsultantsTabState extends State<_ConsultantsTab> {
+  String _searchQuery = '';
+  String _statusFilter = 'all';
+  
+  List<Map<String, dynamic>> get _filteredConsultants {
+    var filtered = consultantsList;
+    if (_statusFilter != 'all') {
+      filtered = filtered.where((c) => c['status'] == _statusFilter).toList();
+    }
+    if (_searchQuery.isNotEmpty) {
+      filtered = filtered.where((c) =>
+        c['name'].toLowerCase().contains(_searchQuery.toLowerCase()) ||
+        c['company'].toLowerCase().contains(_searchQuery.toLowerCase()) ||
+        c['specialty'].toLowerCase().contains(_searchQuery.toLowerCase())
+      ).toList();
+    }
+    return filtered;
+  }
+
+  void showAddConsultantModal() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.cardBackground,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => _AddConsultantModal(
+        onConsultantAdded: (newConsultant) {
+          setState(() {
+            consultantsList.insert(0, newConsultant);
+          });
+        },
+      ),
+    );
+  }
+
+  void _showEditConsultantModal(Map<String, dynamic> consultant) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.cardBackground,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => _EditConsultantModal(
+        consultant: consultant,
+        onConsultantUpdated: (updatedConsultant) {
+          setState(() {
+            final index = consultantsList.indexWhere((c) => c['id'] == updatedConsultant['id']);
+            if (index != -1) {
+              consultantsList[index] = updatedConsultant;
+            }
+          });
+        },
+      ),
+    );
+  }
+
+  void _deleteConsultant(Map<String, dynamic> consultant) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        title: const Text('Delete Consultant?'),
+        content: Text('Are you sure you want to delete "${consultant['name']}"? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              setState(() {
+                consultantsList.removeWhere((c) => c['id'] == consultant['id']);
+              });
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Consultant deleted'), backgroundColor: AppColors.success),
+              );
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showConsultantDetail(Map<String, dynamic> consultant) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _ConsultantDetailModal(
+        consultant: consultant,
+        onEdit: () {
+          Navigator.pop(context);
+          _showEditConsultantModal(consultant);
+        },
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 0);
+    
+    return Column(
+      children: [
+        // Search & Filter
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+          child: Row(
+            children: [
+              Expanded(
+                child: Container(
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: AppColors.cardBackground,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: TextField(
+                    onChanged: (value) => setState(() => _searchQuery = value),
+                    style: const TextStyle(fontSize: 13),
+                    decoration: InputDecoration(
+                      hintText: 'Search consultants...',
+                      hintStyle: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                      prefixIcon: Icon(Icons.search, size: 18, color: AppColors.textSecondary),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              PopupMenuButton<String>(
+                onSelected: (value) => setState(() => _statusFilter = value),
+                child: Container(
+                  height: 40,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: AppColors.cardBackground,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.filter_list, size: 16, color: AppColors.textSecondary),
+                      const SizedBox(width: 4),
+                      Text(_statusFilter == 'all' ? 'All' : _statusFilter[0].toUpperCase() + _statusFilter.substring(1), 
+                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                    ],
+                  ),
+                ),
+                itemBuilder: (context) => [
+                  const PopupMenuItem(value: 'all', child: Text('All')),
+                  const PopupMenuItem(value: 'active', child: Text('Active')),
+                  const PopupMenuItem(value: 'inactive', child: Text('Inactive')),
+                ],
+              ),
+            ],
+          ),
+        ),
+        
+        // Stats Cards
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Row(
+            children: [
+              Expanded(
+                child: _buildStatCard(
+                  'Total Consultants',
+                  '${consultantsList.length}',
+                  Icons.people_outline,
+                  AppColors.accent,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildStatCard(
+                  'Active Projects',
+                  '${consultantsList.fold(0, (sum, c) => sum + (c['projects'] as int))}',
+                  Icons.work_outline,
+                  AppColors.info,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildStatCard(
+                  'Total Billed',
+                  currencyFormat.format(consultantsList.fold(0.0, (sum, c) => sum + (c['totalBilled'] as double))),
+                  Icons.attach_money,
+                  AppColors.success,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        
+        // Consultants List
+        Expanded(
+          child: _filteredConsultants.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.people_outline, size: 48, color: AppColors.textTertiary),
+                      const SizedBox(height: 16),
+                      Text('No consultants found', style: TextStyle(color: AppColors.textSecondary)),
+                      const SizedBox(height: 8),
+                      ElevatedButton.icon(
+                        onPressed: showAddConsultantModal,
+                        icon: const Icon(Icons.add, size: 18),
+                        label: const Text('Add Consultant'),
+                      ),
+                    ],
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  itemCount: _filteredConsultants.length,
+                  itemBuilder: (context, index) {
+                    final consultant = _filteredConsultants[index];
+                    return _buildConsultantCard(consultant);
+                  },
+                ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatCard(String label, String value, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withOpacity(0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 18, color: color),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: color),
+          ),
+          Text(
+            label,
+            style: TextStyle(fontSize: 9, color: AppColors.textSecondary),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildConsultantCard(Map<String, dynamic> consultant) {
+    final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 0);
+    final isActive = consultant['status'] == 'active';
+    
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: AppShadows.sm,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () => _showConsultantDetail(consultant),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              children: [
+                // Avatar
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [AppColors.accent.withOpacity(0.2), AppColors.accent.withOpacity(0.1)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Center(
+                    child: Text(
+                      consultant['name'][0].toUpperCase(),
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.accent,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                
+                // Info
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              consultant['name'],
+                              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: isActive ? AppColors.success.withOpacity(0.1) : AppColors.neutral200,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              isActive ? 'Active' : 'Inactive',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w500,
+                                color: isActive ? AppColors.success : AppColors.textTertiary,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        consultant['company'],
+                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          _buildMiniInfo(Icons.build_outlined, consultant['specialty']),
+                          const SizedBox(width: 12),
+                          _buildMiniInfo(
+                            Icons.attach_money,
+                            '${currencyFormat.format(consultant['rate'])}/${consultant['rateType'] == 'hourly' ? 'hr' : 'project'}',
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                
+                // Actions
+                PopupMenuButton<String>(
+                  icon: Icon(Icons.more_vert, color: AppColors.textTertiary, size: 18),
+                  padding: EdgeInsets.zero,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  onSelected: (value) {
+                    if (value == 'edit') {
+                      _showEditConsultantModal(consultant);
+                    } else if (value == 'delete') {
+                      _deleteConsultant(consultant);
+                    } else if (value == 'invite') {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Invite sent to consultant')),
+                      );
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(value: 'edit', child: Text('Edit', style: TextStyle(fontSize: 13))),
+                    const PopupMenuItem(value: 'invite', child: Text('Invite to Project', style: TextStyle(fontSize: 13))),
+                    const PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(fontSize: 13, color: AppColors.error))),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMiniInfo(IconData icon, String text) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 12, color: AppColors.textTertiary),
+        const SizedBox(width: 4),
+        Text(text, style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+      ],
+    );
+  }
+}
+
+// ============ ADD CONSULTANT MODAL ============
+class _AddConsultantModal extends StatefulWidget {
+  final Function(Map<String, dynamic>) onConsultantAdded;
+  
+  const _AddConsultantModal({required this.onConsultantAdded});
+
+  @override
+  State<_AddConsultantModal> createState() => _AddConsultantModalState();
+}
+
+class _AddConsultantModalState extends State<_AddConsultantModal> {
+  final _nameController = TextEditingController();
+  final _companyController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _specialtyController = TextEditingController();
+  final _rateController = TextEditingController();
+  String _rateType = 'hourly';
+  
+  final List<String> _specialties = [
+    'Landscape Architecture',
+    'Structural Engineering',
+    'Civil Engineering',
+    'Interior Design',
+    'MEP Engineering',
+    'Project Management',
+    'Other',
+  ];
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _companyController.dispose();
+    _emailController.dispose();
+    _phoneController.dispose();
+    _specialtyController.dispose();
+    _rateController.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    if (_nameController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter consultant name'), backgroundColor: AppColors.error),
+      );
+      return;
+    }
+    if (_emailController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter email address'), backgroundColor: AppColors.error),
+      );
+      return;
+    }
+
+    final rateText = _rateController.text.replaceAll(RegExp(r'[^\d.]'), '');
+    final rate = double.tryParse(rateText) ?? 0.0;
+
+    final newConsultant = {
+      'id': DateTime.now().millisecondsSinceEpoch.toString(),
+      'name': _nameController.text.trim(),
+      'company': _companyController.text.trim(),
+      'email': _emailController.text.trim(),
+      'phone': _phoneController.text.trim(),
+      'specialty': _specialtyController.text.isEmpty ? 'Other' : _specialtyController.text.trim(),
+      'rate': rate,
+      'rateType': _rateType,
+      'status': 'active',
+      'projects': 0,
+      'totalBilled': 0.0,
+      'created': DateTime.now(),
+    };
+
+    widget.onConsultantAdded(newConsultant);
+    Navigator.pop(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Consultant added successfully!'), backgroundColor: AppColors.success),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.85,
+      minChildSize: 0.5,
+      maxChildSize: 0.95,
+      expand: false,
+      builder: (context, scrollController) {
+        return SingleChildScrollView(
+          controller: scrollController,
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 20,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(2)),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Add Consultant', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text('Add a sub-consultant to collaborate on projects', style: TextStyle(color: AppColors.textSecondary)),
+              const SizedBox(height: 24),
+              
+              // Contact Information Section
+              _buildSectionHeader('Contact Information'),
+              const SizedBox(height: 12),
+              _buildTextField('Full Name *', 'Enter consultant name', _nameController),
+              const SizedBox(height: 12),
+              _buildTextField('Company', 'Company or firm name', _companyController),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(child: _buildTextField('Email *', 'email@example.com', _emailController, TextInputType.emailAddress)),
+                  const SizedBox(width: 12),
+                  Expanded(child: _buildTextField('Phone', '+1 (555) 000-0000', _phoneController, TextInputType.phone)),
+                ],
+              ),
+              
+              const SizedBox(height: 24),
+              
+              // Professional Details Section
+              _buildSectionHeader('Professional Details'),
+              const SizedBox(height: 12),
+              _buildSpecialtyDropdown(),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(child: _buildTextField('Rate', '\$0.00', _rateController, TextInputType.number)),
+                  const SizedBox(width: 12),
+                  Expanded(child: _buildRateTypeDropdown()),
+                ],
+              ),
+              
+              const SizedBox(height: 32),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  onPressed: _submit,
+                  child: const Text('Add Consultant'),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSectionHeader(String title) {
+    return Text(
+      title,
+      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+    );
+  }
+
+  Widget _buildTextField(String label, String hint, TextEditingController controller, [TextInputType? keyboardType]) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+        const SizedBox(height: 6),
+        TextField(
+          controller: controller,
+          keyboardType: keyboardType,
+          decoration: InputDecoration(
+            hintText: hint,
+            filled: true,
+            fillColor: AppColors.neutral50,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AppColors.border)),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AppColors.accent)),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSpecialtyDropdown() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Specialty', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+        const SizedBox(height: 6),
+        Autocomplete<String>(
+          optionsBuilder: (TextEditingValue textEditingValue) {
+            if (textEditingValue.text.isEmpty) {
+              return _specialties;
+            }
+            return _specialties.where((option) =>
+              option.toLowerCase().contains(textEditingValue.text.toLowerCase())
+            );
+          },
+          onSelected: (String selection) {
+            _specialtyController.text = selection;
+          },
+          fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+            return TextField(
+              controller: controller,
+              focusNode: focusNode,
+              decoration: InputDecoration(
+                hintText: 'Select or type specialty',
+                filled: true,
+                fillColor: AppColors.neutral50,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AppColors.border)),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AppColors.accent)),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                suffixIcon: const Icon(Icons.arrow_drop_down),
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRateTypeDropdown() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Rate Type', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+        const SizedBox(height: 6),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          decoration: BoxDecoration(
+            color: AppColors.neutral50,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: _rateType,
+              isExpanded: true,
+              items: const [
+                DropdownMenuItem(value: 'hourly', child: Text('Per Hour')),
+                DropdownMenuItem(value: 'project', child: Text('Per Project')),
+                DropdownMenuItem(value: 'day', child: Text('Per Day')),
+              ],
+              onChanged: (val) => setState(() => _rateType = val ?? 'hourly'),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ============ EDIT CONSULTANT MODAL ============
+class _EditConsultantModal extends StatefulWidget {
+  final Map<String, dynamic> consultant;
+  final Function(Map<String, dynamic>) onConsultantUpdated;
+  
+  const _EditConsultantModal({required this.consultant, required this.onConsultantUpdated});
+
+  @override
+  State<_EditConsultantModal> createState() => _EditConsultantModalState();
+}
+
+class _EditConsultantModalState extends State<_EditConsultantModal> {
+  late TextEditingController _nameController;
+  late TextEditingController _companyController;
+  late TextEditingController _emailController;
+  late TextEditingController _phoneController;
+  late TextEditingController _specialtyController;
+  late TextEditingController _rateController;
+  late String _rateType;
+  late String _status;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.consultant['name']);
+    _companyController = TextEditingController(text: widget.consultant['company']);
+    _emailController = TextEditingController(text: widget.consultant['email']);
+    _phoneController = TextEditingController(text: widget.consultant['phone'] ?? '');
+    _specialtyController = TextEditingController(text: widget.consultant['specialty']);
+    _rateController = TextEditingController(text: widget.consultant['rate'].toString());
+    _rateType = widget.consultant['rateType'] ?? 'hourly';
+    _status = widget.consultant['status'] ?? 'active';
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _companyController.dispose();
+    _emailController.dispose();
+    _phoneController.dispose();
+    _specialtyController.dispose();
+    _rateController.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    if (_nameController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter consultant name'), backgroundColor: AppColors.error),
+      );
+      return;
+    }
+
+    final rateText = _rateController.text.replaceAll(RegExp(r'[^\d.]'), '');
+    final rate = double.tryParse(rateText) ?? 0.0;
+
+    final updatedConsultant = {
+      ...widget.consultant,
+      'name': _nameController.text.trim(),
+      'company': _companyController.text.trim(),
+      'email': _emailController.text.trim(),
+      'phone': _phoneController.text.trim(),
+      'specialty': _specialtyController.text.trim(),
+      'rate': rate,
+      'rateType': _rateType,
+      'status': _status,
+    };
+
+    widget.onConsultantUpdated(updatedConsultant);
+    Navigator.pop(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Consultant updated successfully!'), backgroundColor: AppColors.success),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.85,
+      minChildSize: 0.5,
+      maxChildSize: 0.95,
+      expand: false,
+      builder: (context, scrollController) {
+        return SingleChildScrollView(
+          controller: scrollController,
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 20,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(2)),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Edit Consultant', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              
+              _buildTextField('Full Name *', 'Enter consultant name', _nameController),
+              const SizedBox(height: 12),
+              _buildTextField('Company', 'Company or firm name', _companyController),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(child: _buildTextField('Email *', 'email@example.com', _emailController, TextInputType.emailAddress)),
+                  const SizedBox(width: 12),
+                  Expanded(child: _buildTextField('Phone', '+1 (555) 000-0000', _phoneController, TextInputType.phone)),
+                ],
+              ),
+              const SizedBox(height: 12),
+              _buildTextField('Specialty', 'Enter specialty', _specialtyController),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(child: _buildTextField('Rate', '\$0.00', _rateController, TextInputType.number)),
+                  const SizedBox(width: 12),
+                  Expanded(child: _buildRateTypeDropdown()),
+                ],
+              ),
+              const SizedBox(height: 12),
+              _buildStatusDropdown(),
+              
+              const SizedBox(height: 32),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  onPressed: _submit,
+                  child: const Text('Save Changes'),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildTextField(String label, String hint, TextEditingController controller, [TextInputType? keyboardType]) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+        const SizedBox(height: 6),
+        TextField(
+          controller: controller,
+          keyboardType: keyboardType,
+          decoration: InputDecoration(
+            hintText: hint,
+            filled: true,
+            fillColor: AppColors.neutral50,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AppColors.border)),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AppColors.accent)),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRateTypeDropdown() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Rate Type', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+        const SizedBox(height: 6),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          decoration: BoxDecoration(
+            color: AppColors.neutral50,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: _rateType,
+              isExpanded: true,
+              items: const [
+                DropdownMenuItem(value: 'hourly', child: Text('Per Hour')),
+                DropdownMenuItem(value: 'project', child: Text('Per Project')),
+                DropdownMenuItem(value: 'day', child: Text('Per Day')),
+              ],
+              onChanged: (val) => setState(() => _rateType = val ?? 'hourly'),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatusDropdown() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Status', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+        const SizedBox(height: 6),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          decoration: BoxDecoration(
+            color: AppColors.neutral50,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: _status,
+              isExpanded: true,
+              items: const [
+                DropdownMenuItem(value: 'active', child: Text('Active')),
+                DropdownMenuItem(value: 'inactive', child: Text('Inactive')),
+              ],
+              onChanged: (val) => setState(() => _status = val ?? 'active'),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ============ CONSULTANT DETAIL MODAL ============
+class _ConsultantDetailModal extends StatelessWidget {
+  final Map<String, dynamic> consultant;
+  final VoidCallback onEdit;
+  
+  const _ConsultantDetailModal({required this.consultant, required this.onEdit});
+
+  @override
+  Widget build(BuildContext context) {
+    final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 0);
+    final dateFormat = DateFormat('MMM d, yyyy');
+    
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.75,
+      decoration: const BoxDecoration(
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        children: [
+          // Handle
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.border,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          
+          // Header
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+            child: Row(
+              children: [
+                Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [AppColors.accent.withOpacity(0.2), AppColors.accent.withOpacity(0.1)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Center(
+                    child: Text(
+                      consultant['name'][0].toUpperCase(),
+                      style: const TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.accent,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              consultant['name'],
+                              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: consultant['status'] == 'active' 
+                                ? AppColors.success.withOpacity(0.1) 
+                                : AppColors.neutral200,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              consultant['status'] == 'active' ? 'Active' : 'Inactive',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: consultant['status'] == 'active' ? AppColors.success : AppColors.textTertiary,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        consultant['company'],
+                        style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        consultant['specialty'],
+                        style: TextStyle(fontSize: 12, color: AppColors.accent),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          
+          const Divider(height: 1),
+          
+          // Content
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.all(20),
+              children: [
+                // Contact Info
+                _buildSection('Contact', [
+                  _buildInfoRow(Icons.email_outlined, consultant['email']),
+                  if (consultant['phone']?.isNotEmpty ?? false)
+                    _buildInfoRow(Icons.phone_outlined, consultant['phone']),
+                ]),
+                
+                const SizedBox(height: 20),
+                
+                // Stats
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildStatCard(
+                        'Rate',
+                        '${currencyFormat.format(consultant['rate'])}/${consultant['rateType'] == 'hourly' ? 'hr' : 'proj'}',
+                        Icons.attach_money,
+                        AppColors.accent,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildStatCard(
+                        'Projects',
+                        '${consultant['projects']}',
+                        Icons.work_outline,
+                        AppColors.info,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildStatCard(
+                        'Total Billed',
+                        currencyFormat.format(consultant['totalBilled']),
+                        Icons.receipt_long_outlined,
+                        AppColors.success,
+                      ),
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(height: 20),
+                
+                // Additional Info
+                _buildSection('Additional Info', [
+                  _buildInfoRow(Icons.calendar_today_outlined, 'Added ${dateFormat.format(consultant['created'])}'),
+                ]),
+                
+                const SizedBox(height: 24),
+                
+                // Actions
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: onEdit,
+                        icon: const Icon(Icons.edit_outlined, size: 18),
+                        label: const Text('Edit'),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Invitation sent to consultant')),
+                          );
+                        },
+                        icon: const Icon(Icons.send_outlined, size: 18),
+                        label: const Text('Invite'),
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSection(String title, List<Widget> children) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+        const SizedBox(height: 12),
+        ...children,
+      ],
+    );
+  }
+
+  Widget _buildInfoRow(IconData icon, String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: AppColors.textSecondary),
+          const SizedBox(width: 12),
+          Expanded(child: Text(text, style: const TextStyle(fontSize: 14))),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatCard(String label, String value, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.2)),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 22),
+          const SizedBox(height: 8),
+          Text(value, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: color)),
+          const SizedBox(height: 2),
+          Text(label, style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
         ],
       ),
     );

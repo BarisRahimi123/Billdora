@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../main.dart';
+import 'sales_screen.dart' show consultantsList;
 
 class CreateProposalScreen extends StatefulWidget {
   final String? templateId;
@@ -3002,6 +3003,7 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
     String paymentMode = 'client'; // 'owner' or 'client'
     String displayMode = 'transparent'; // 'transparent' or 'anonymous'
     DateTime deadline = DateTime.now().add(const Duration(days: 7));
+    String? selectedConsultantId;
 
     showModalBottomSheet(
       context: context,
@@ -3043,6 +3045,106 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
                 ),
                 const SizedBox(height: 24),
 
+                // Select from existing consultants
+                if (consultantsList.isNotEmpty) ...[
+                  _buildSectionHeader('Select Existing Consultant'),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    decoration: BoxDecoration(
+                      color: AppColors.neutral50,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: selectedConsultantId != null ? AppColors.accent : AppColors.border),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String?>(
+                        value: selectedConsultantId,
+                        isExpanded: true,
+                        hint: Row(
+                          children: [
+                            Icon(Icons.people_outline, size: 18, color: AppColors.textSecondary),
+                            const SizedBox(width: 10),
+                            Text('Select from your consultants', style: TextStyle(color: AppColors.textSecondary)),
+                          ],
+                        ),
+                        items: [
+                          const DropdownMenuItem<String?>(
+                            value: null,
+                            child: Text('Enter new consultant', style: TextStyle(fontStyle: FontStyle.italic)),
+                          ),
+                          ...consultantsList.map((c) => DropdownMenuItem<String?>(
+                            value: c['id'] as String,
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 32,
+                                  height: 32,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.accent.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      c['name'][0].toUpperCase(),
+                                      style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.accent),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(c['name'] as String, style: const TextStyle(fontWeight: FontWeight.w500)),
+                                      Text(
+                                        '${c['company']} • ${c['specialty']}',
+                                        style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )),
+                        ],
+                        onChanged: (val) {
+                          setModalState(() {
+                            selectedConsultantId = val;
+                            if (val != null) {
+                              final consultant = consultantsList.firstWhere((c) => c['id'] == val);
+                              nameController.text = consultant['name'] ?? '';
+                              emailController.text = consultant['email'] ?? '';
+                              companyController.text = consultant['company'] ?? '';
+                              roleController.text = consultant['specialty'] ?? '';
+                            } else {
+                              nameController.clear();
+                              emailController.clear();
+                              companyController.clear();
+                              roleController.clear();
+                            }
+                          });
+                        },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Divider with "OR"
+                  Row(
+                    children: [
+                      Expanded(child: Divider(color: AppColors.border)),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Text('OR', style: TextStyle(fontSize: 12, color: AppColors.textTertiary, fontWeight: FontWeight.w500)),
+                      ),
+                      Expanded(child: Divider(color: AppColors.border)),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                ],
+
                 // Contact Info Section
                 _buildSectionHeader('Contact Information'),
                 const SizedBox(height: 12),
@@ -3054,7 +3156,7 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
                   children: [
                     Expanded(child: _buildModalTextField('Company', 'Company name', companyController)),
                     const SizedBox(width: 12),
-                    Expanded(child: _buildModalTextField('Role', 'e.g., Engineer', roleController)),
+                    Expanded(child: _buildModalTextField('Role / Specialty', 'e.g., Engineer', roleController)),
                   ],
                 ),
                 const SizedBox(height: 20),
