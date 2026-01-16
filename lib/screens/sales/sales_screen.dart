@@ -61,6 +61,7 @@ class SalesScreen extends StatefulWidget {
 class _SalesScreenState extends State<SalesScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final GlobalKey<_LeadsTabState> _leadsTabKey = GlobalKey<_LeadsTabState>();
+  final GlobalKey<_ClientsTabState> _clientsTabKey = GlobalKey<_ClientsTabState>();
   final GlobalKey<_ConsultantsTabState> _consultantsTabKey = GlobalKey<_ConsultantsTabState>();
   
   @override
@@ -155,7 +156,7 @@ class _SalesScreenState extends State<SalesScreen> with SingleTickerProviderStat
                 controller: _tabController,
                 children: [
                   _LeadsTab(key: _leadsTabKey),
-                  const _ClientsTab(),
+                  _ClientsTab(key: _clientsTabKey),
                   _ConsultantsTab(key: _consultantsTabKey),
                   const _QuotesTab(),
                 ],
@@ -177,8 +178,8 @@ class _SalesScreenState extends State<SalesScreen> with SingleTickerProviderStat
       ),
       child: Row(
         children: [
-          _buildTab(0, 'Leads', 4),
-          _buildTab(1, 'Clients', 3),
+          _buildTab(0, 'Leads', 5),
+          _buildTab(1, 'Clients', clientsList.length),
           _buildTab(2, 'Team', consultantsList.length),
           _buildTab(3, 'Quotes', 31),
         ],
@@ -269,15 +270,7 @@ class _SalesScreenState extends State<SalesScreen> with SingleTickerProviderStat
   }
 
   void _showAddClientModal() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: AppColors.cardBackground,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => const _AddClientModal(),
-    );
+    _clientsTabKey.currentState?.showAddClientModal();
   }
 
   void _showCreateProposalDialog() {
@@ -903,123 +896,343 @@ class _LeadsTabState extends State<_LeadsTab> {
 }
 
 // ============ CLIENTS TAB ============
-class _ClientsTab extends StatelessWidget {
-  const _ClientsTab();
+// Global clients list for shared access
+final List<Map<String, dynamic>> clientsList = [
+  {
+    'id': '1',
+    'name': 'Barzan Shop',
+    'company': 'Barzan Retail LLC',
+    'email': 'contact@barzanshop.com',
+    'phone': '+1 (555) 123-4567',
+    'address': '123 Main Street',
+    'city': 'Los Angeles',
+    'state': 'CA',
+    'zip': '90001',
+    'website': 'www.barzanshop.com',
+    'type': 'Retail',
+    'notes': 'Premium client, prefers email communication',
+    'quotes': 16,
+    'value': 12150.0,
+    'created': DateTime(2025, 3, 15),
+  },
+  {
+    'id': '2',
+    'name': 'Sequoia Consulting',
+    'company': 'Sequoia Consulting Group',
+    'email': 'hello@sequoia.com',
+    'phone': '+1 (555) 234-5678',
+    'address': '456 Business Ave',
+    'city': 'San Francisco',
+    'state': 'CA',
+    'zip': '94102',
+    'website': 'www.sequoiaconsulting.com',
+    'type': 'Consulting',
+    'notes': '',
+    'quotes': 1,
+    'value': 2000.0,
+    'created': DateTime(2025, 8, 20),
+  },
+  {
+    'id': '3',
+    'name': 'Wall Street Global',
+    'company': 'Wall Street Global Inc',
+    'email': 'info@wallstreet.com',
+    'phone': '+1 (555) 345-6789',
+    'address': '789 Finance Blvd',
+    'city': 'New York',
+    'state': 'NY',
+    'zip': '10001',
+    'website': 'www.wallstreetglobal.com',
+    'type': 'Finance',
+    'notes': 'Key account, requires quarterly reviews',
+    'quotes': 8,
+    'value': 6400.0,
+    'created': DateTime(2025, 1, 10),
+  },
+];
+
+class _ClientsTab extends StatefulWidget {
+  const _ClientsTab({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final clients = [
-      {'id': '1', 'name': 'Barzan Shop', 'email': 'contact@barzanshop.com', 'quotes': 16, 'value': 12150.0},
-      {'id': '2', 'name': 'Sequoia Consulting', 'email': 'hello@sequoia.com', 'quotes': 1, 'value': 2000.0},
-      {'id': '3', 'name': 'Wall Street Global', 'email': 'info@wallstreet.com', 'quotes': 8, 'value': 6400.0},
-    ];
+  State<_ClientsTab> createState() => _ClientsTabState();
+}
+
+class _ClientsTabState extends State<_ClientsTab> {
+  String _searchQuery = '';
+  String _typeFilter = 'all';
+
+  final List<String> _clientTypes = ['all', 'Retail', 'Consulting', 'Finance', 'Technology', 'Healthcare', 'Other'];
+
+  List<Map<String, dynamic>> get _filteredClients {
+    var filtered = clientsList;
+    if (_typeFilter != 'all') {
+      filtered = filtered.where((c) => c['type'] == _typeFilter).toList();
+    }
+    if (_searchQuery.isNotEmpty) {
+      filtered = filtered.where((c) =>
+        c['name'].toLowerCase().contains(_searchQuery.toLowerCase()) ||
+        c['company'].toLowerCase().contains(_searchQuery.toLowerCase()) ||
+        c['email'].toLowerCase().contains(_searchQuery.toLowerCase())
+      ).toList();
+    }
+    return filtered;
+  }
+
+  void showAddClientModal({Map<String, dynamic>? clientToEdit}) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.cardBackground,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => _AddClientModalFull(
+        client: clientToEdit,
+        onClientSaved: (client) {
+          setState(() {
+            if (clientToEdit != null) {
+              final index = clientsList.indexWhere((c) => c['id'] == client['id']);
+              if (index != -1) clientsList[index] = client;
+            } else {
+              clientsList.insert(0, client);
+            }
+          });
+        },
+      ),
+    );
+  }
+
+  void _deleteClient(Map<String, dynamic> client) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        title: const Text('Delete Client?'),
+        content: Text('Are you sure you want to delete "${client['name']}"? This action cannot be undone.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () {
+              setState(() => clientsList.removeWhere((c) => c['id'] == client['id']));
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Client deleted'), backgroundColor: AppColors.success),
+              );
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
     
+  @override
+  Widget build(BuildContext context) {
     final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 0);
     
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: clients.length,
-      itemBuilder: (context, index) {
-        final client = clients[index];
-        
-        return Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          decoration: BoxDecoration(
-            color: AppColors.cardBackground,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: AppShadows.card,
-          ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(12),
-              onTap: () {
-                // Navigate to client detail
-                _showClientDetail(context, client);
-              },
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    // Avatar
-                    Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: AppColors.accent.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Center(
-                        child: Text(
-                          client['name'].toString()[0],
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.accent,
-                          ),
-                        ),
-                      ),
+    return Column(
+      children: [
+        // Search & Filter
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+          child: Row(
+            children: [
+              Expanded(
+                child: Container(
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: AppColors.cardBackground,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: TextField(
+                    onChanged: (value) => setState(() => _searchQuery = value),
+                    style: const TextStyle(fontSize: 13),
+                    decoration: InputDecoration(
+                      hintText: 'Search clients...',
+                      hintStyle: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                      prefixIcon: Icon(Icons.search, size: 18, color: AppColors.textSecondary),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                     ),
-                    const SizedBox(width: 16),
-                    
-                    // Client Info
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              PopupMenuButton<String>(
+                onSelected: (value) => setState(() => _typeFilter = value),
+                child: Container(
+                  height: 40,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: AppColors.cardBackground,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.filter_list, size: 16, color: AppColors.textSecondary),
+                      const SizedBox(width: 4),
+                      Text(_typeFilter == 'all' ? 'Type' : _typeFilter, 
+                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                    ],
+                  ),
+                ),
+                itemBuilder: (context) => _clientTypes.map((t) => PopupMenuItem(
+                  value: t,
+                  child: Text(t == 'all' ? 'All Types' : t),
+                )).toList(),
+              ),
+            ],
+          ),
+        ),
+
+        // Clients List
+        Expanded(
+          child: _filteredClients.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.business_outlined, size: 48, color: AppColors.textTertiary),
+                      const SizedBox(height: 16),
+                      Text('No clients found', style: TextStyle(color: AppColors.textSecondary)),
+                    ],
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  itemCount: _filteredClients.length,
+                  itemBuilder: (context, index) {
+                    final client = _filteredClients[index];
+                    return _buildClientCard(client, currencyFormat);
+                  },
+                ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildClientCard(Map<String, dynamic> client, NumberFormat currencyFormat) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: AppShadows.sm,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () => _showClientDetail(context, client),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              children: [
+                // Avatar
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: AppColors.accent.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Center(
+                    child: Text(
+                      client['name'].toString()[0],
+                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: AppColors.accent),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 14),
+                
+                // Client Info
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
                         children: [
-                          Text(
-                            client['name'] as String,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 16,
+                          Expanded(
+                            child: Text(client['name'] as String, 
+                              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            client['email'] as String,
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: AppColors.textSecondary,
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppColors.neutral100,
+                              borderRadius: BorderRadius.circular(4),
                             ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            '${client['quotes']} quotes • ${currencyFormat.format(client['value'])}',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: AppColors.textSecondary,
-                              fontWeight: FontWeight.w500,
-                            ),
+                            child: Text(client['type'] as String, 
+                              style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
                           ),
                         ],
                       ),
-                    ),
-                    
-                    // Chevron
-                    Icon(
-                      Icons.chevron_right,
-                      color: AppColors.textSecondary,
-                    ),
+                      const SizedBox(height: 2),
+                      Text(client['company'] as String,
+                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(Icons.email_outlined, size: 12, color: AppColors.textTertiary),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(client['email'] as String,
+                              style: TextStyle(fontSize: 11, color: AppColors.textTertiary),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Icon(Icons.description_outlined, size: 12, color: AppColors.textTertiary),
+                          const SizedBox(width: 4),
+                          Text('${client['quotes']} quotes',
+                            style: TextStyle(fontSize: 11, color: AppColors.textTertiary)),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                
+                // Actions
+                PopupMenuButton<String>(
+                  icon: Icon(Icons.more_vert, color: AppColors.textTertiary, size: 18),
+                  padding: EdgeInsets.zero,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  onSelected: (value) {
+                    if (value == 'edit') showAddClientModal(clientToEdit: client);
+                    else if (value == 'delete') _deleteClient(client);
+                  },
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(value: 'edit', child: Text('Edit Client', style: TextStyle(fontSize: 13))),
+                    const PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(fontSize: 13, color: AppColors.error))),
                   ],
                 ),
-              ),
+              ],
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
   void _showClientDetail(BuildContext context, Map<String, dynamic> client) {
+    final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 0);
+    final dateFormat = DateFormat('MMM d, yyyy');
+    
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.85,
-        decoration: BoxDecoration(
+        height: MediaQuery.of(context).size.height * 0.9,
+        decoration: const BoxDecoration(
           color: AppColors.cardBackground,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: Column(
           children: [
@@ -1038,7 +1251,7 @@ class _ClientsTab extends StatelessWidget {
             
             // Header
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
               child: Row(
                 children: [
                   Container(
@@ -1051,11 +1264,7 @@ class _ClientsTab extends StatelessWidget {
                     child: Center(
                       child: Text(
                         client['name'].toString()[0],
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.accent,
-                        ),
+                        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: AppColors.accent),
                       ),
                     ),
                   ),
@@ -1064,28 +1273,22 @@ class _ClientsTab extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          client['name'] as String,
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
+                        Text(client['name'] as String, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+                        const SizedBox(height: 2),
+                        Text(client['company'] as String, style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
                         const SizedBox(height: 4),
-                        Text(
-                          client['email'] as String,
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: AppColors.textSecondary,
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.accent.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(4),
                           ),
+                          child: Text(client['type'] as String, style: TextStyle(fontSize: 10, color: AppColors.accent, fontWeight: FontWeight.w500)),
                         ),
                       ],
                     ),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.pop(context),
-                  ),
+                  IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
                 ],
               ),
             ),
@@ -1097,64 +1300,138 @@ class _ClientsTab extends StatelessWidget {
               child: ListView(
                 padding: const EdgeInsets.all(20),
                 children: [
-                  // Stats
+                  // Stats Row
                   Row(
                     children: [
-                      Expanded(
-                        child: _buildStatCard(
-                          'Total Quotes',
-                          '${client['quotes']}',
-                          Icons.description_outlined,
-                          AppColors.info,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildStatCard(
-                          'Total Value',
-                          NumberFormat.currency(symbol: '\$', decimalDigits: 0).format(client['value']),
-                          Icons.attach_money,
-                          AppColors.success,
-                        ),
-                      ),
+                      Expanded(child: _buildStatCard('Quotes', '${client['quotes']}', Icons.description_outlined, AppColors.info)),
+                      const SizedBox(width: 10),
+                      Expanded(child: _buildStatCard('Value', currencyFormat.format(client['value']), Icons.attach_money, AppColors.success)),
                     ],
                   ),
+                  const SizedBox(height: 20),
                   
+                  // Contact Information
+                  _buildDetailSection('Contact Information', [
+                    _buildDetailRow(Icons.email_outlined, 'Email', client['email'] as String),
+                    _buildDetailRow(Icons.phone_outlined, 'Phone', client['phone'] as String),
+                    if ((client['website'] as String?)?.isNotEmpty ?? false)
+                      _buildDetailRow(Icons.language, 'Website', client['website'] as String),
+                  ]),
+                  const SizedBox(height: 16),
+                  
+                  // Address
+                  _buildDetailSection('Address', [
+                    _buildDetailRow(Icons.location_on_outlined, 'Street', client['address'] as String),
+                    _buildDetailRow(Icons.location_city_outlined, 'City/State', '${client['city']}, ${client['state']} ${client['zip']}'),
+                  ]),
+                  const SizedBox(height: 16),
+                  
+                  // Notes
+                  if ((client['notes'] as String?)?.isNotEmpty ?? false) ...[
+                    _buildDetailSection('Notes', [
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppColors.neutral50,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(client['notes'] as String, style: TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.5)),
+                      ),
+                    ]),
+                    const SizedBox(height: 16),
+                  ],
+                  
+                  // Client Since
+                  if (client['created'] != null)
+                    _buildDetailSection('Account Info', [
+                      _buildDetailRow(Icons.calendar_today_outlined, 'Client Since', dateFormat.format(client['created'] as DateTime)),
+                    ]),
                   const SizedBox(height: 24),
                   
                   // Quick Actions
-                  const Text(
-                    'Quick Actions',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+                  const Text('Quick Actions', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
                   const SizedBox(height: 12),
-                  
-                  _buildActionTile(
-                    Icons.send_outlined,
-                    'Create Quote',
-                    'Send a new quote to this client',
-                    () => Navigator.pop(context),
-                  ),
-                  const SizedBox(height: 8),
-                  _buildActionTile(
-                    Icons.email_outlined,
-                    'Send Email',
-                    'Send an email to ${client['email']}',
-                    () => Navigator.pop(context),
-                  ),
-                  const SizedBox(height: 8),
-                  _buildActionTile(
-                    Icons.edit_outlined,
-                    'Edit Client',
-                    'Update client information',
-                    () => Navigator.pop(context),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildActionButton(Icons.send_outlined, 'New Quote', AppColors.accent, () {
+                          Navigator.pop(context);
+                        }),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _buildActionButton(Icons.email_outlined, 'Email', AppColors.info, () {
+                          Navigator.pop(context);
+                        }),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _buildActionButton(Icons.edit_outlined, 'Edit', AppColors.textSecondary, () {
+                          Navigator.pop(context);
+                          showAddClientModal(clientToEdit: client);
+                        }),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailSection(String title, List<Widget> children) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+        const SizedBox(height: 10),
+        ...children,
+      ],
+    );
+  }
+
+  Widget _buildDetailRow(IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 18, color: AppColors.textSecondary),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: TextStyle(fontSize: 11, color: AppColors.textTertiary)),
+                const SizedBox(height: 2),
+                Text(value, style: const TextStyle(fontSize: 14)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionButton(IconData icon, String label, Color color, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: color.withOpacity(0.3)),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 20),
+            const SizedBox(height: 4),
+            Text(label, style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w500)),
           ],
         ),
       ),
@@ -2271,45 +2548,274 @@ class _AddClientModal extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // This is a legacy placeholder - use _AddClientModalFull instead
+    return const SizedBox.shrink();
+  }
+}
+
+// Full Add/Edit Client Modal
+class _AddClientModalFull extends StatefulWidget {
+  final Map<String, dynamic>? client;
+  final Function(Map<String, dynamic>) onClientSaved;
+  
+  const _AddClientModalFull({this.client, required this.onClientSaved});
+
+  @override
+  State<_AddClientModalFull> createState() => _AddClientModalFullState();
+}
+
+class _AddClientModalFullState extends State<_AddClientModalFull> {
+  late TextEditingController _nameController;
+  late TextEditingController _companyController;
+  late TextEditingController _emailController;
+  late TextEditingController _phoneController;
+  late TextEditingController _addressController;
+  late TextEditingController _cityController;
+  late TextEditingController _stateController;
+  late TextEditingController _zipController;
+  late TextEditingController _websiteController;
+  late TextEditingController _notesController;
+  String _selectedType = 'Retail';
+  
+  final List<String> _clientTypes = ['Retail', 'Consulting', 'Finance', 'Technology', 'Healthcare', 'Construction', 'Real Estate', 'Other'];
+
+  bool get _isEditing => widget.client != null;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.client?['name'] ?? '');
+    _companyController = TextEditingController(text: widget.client?['company'] ?? '');
+    _emailController = TextEditingController(text: widget.client?['email'] ?? '');
+    _phoneController = TextEditingController(text: widget.client?['phone'] ?? '');
+    _addressController = TextEditingController(text: widget.client?['address'] ?? '');
+    _cityController = TextEditingController(text: widget.client?['city'] ?? '');
+    _stateController = TextEditingController(text: widget.client?['state'] ?? '');
+    _zipController = TextEditingController(text: widget.client?['zip'] ?? '');
+    _websiteController = TextEditingController(text: widget.client?['website'] ?? '');
+    _notesController = TextEditingController(text: widget.client?['notes'] ?? '');
+    _selectedType = widget.client?['type'] ?? 'Retail';
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _companyController.dispose();
+    _emailController.dispose();
+    _phoneController.dispose();
+    _addressController.dispose();
+    _cityController.dispose();
+    _stateController.dispose();
+    _zipController.dispose();
+    _websiteController.dispose();
+    _notesController.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    if (_nameController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter client name'), backgroundColor: AppColors.error),
+      );
+      return;
+    }
+    if (_emailController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter email address'), backgroundColor: AppColors.error),
+      );
+      return;
+    }
+
+    final clientData = {
+      'id': widget.client?['id'] ?? DateTime.now().millisecondsSinceEpoch.toString(),
+      'name': _nameController.text.trim(),
+      'company': _companyController.text.trim().isNotEmpty ? _companyController.text.trim() : _nameController.text.trim(),
+      'email': _emailController.text.trim(),
+      'phone': _phoneController.text.trim(),
+      'address': _addressController.text.trim(),
+      'city': _cityController.text.trim(),
+      'state': _stateController.text.trim(),
+      'zip': _zipController.text.trim(),
+      'website': _websiteController.text.trim(),
+      'notes': _notesController.text.trim(),
+      'type': _selectedType,
+      'quotes': widget.client?['quotes'] ?? 0,
+      'value': widget.client?['value'] ?? 0.0,
+      'created': widget.client?['created'] ?? DateTime.now(),
+    };
+
+    widget.onClientSaved(clientData);
+    Navigator.pop(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(_isEditing ? 'Client updated successfully!' : 'Client added successfully!'),
+        backgroundColor: AppColors.success,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return DraggableScrollableSheet(
-      initialChildSize: 0.7,
+      initialChildSize: 0.9,
       minChildSize: 0.5,
-      maxChildSize: 0.9,
+      maxChildSize: 0.95,
       expand: false,
       builder: (context, scrollController) {
         return SingleChildScrollView(
           controller: scrollController,
-          padding: const EdgeInsets.all(20),
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 20,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Handle
               Center(
                 child: Container(
                   width: 40,
                   height: 4,
-                  decoration: BoxDecoration(
-                    color: AppColors.border,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
+                  decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(2)),
                 ),
               ),
               const SizedBox(height: 20),
-              const Text('Add Client', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+              
+              // Header
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(_isEditing ? 'Edit Client' : 'Add Client', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+                  IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close)),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _isEditing ? 'Update client information' : 'Enter client details to add them to your list',
+                style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+              ),
               const SizedBox(height: 24),
-              // Form fields would go here
-              const Text('Client Name, Email, Phone, Address fields...'),
-              const SizedBox(height: 24),
+
+              // Basic Info Section
+              _buildSectionHeader('Basic Information'),
+              const SizedBox(height: 12),
+              _buildTextField('Contact Name *', 'Full name', _nameController),
+              const SizedBox(height: 12),
+              _buildTextField('Company Name', 'Company or business name', _companyController),
+              const SizedBox(height: 12),
+              _buildTypeDropdown(),
+              const SizedBox(height: 20),
+
+              // Contact Info Section
+              _buildSectionHeader('Contact Information'),
+              const SizedBox(height: 12),
+              _buildTextField('Email *', 'email@company.com', _emailController, TextInputType.emailAddress),
+              const SizedBox(height: 12),
+              _buildTextField('Phone', '+1 (555) 000-0000', _phoneController, TextInputType.phone),
+              const SizedBox(height: 12),
+              _buildTextField('Website', 'www.company.com', _websiteController, TextInputType.url),
+              const SizedBox(height: 20),
+
+              // Address Section
+              _buildSectionHeader('Address'),
+              const SizedBox(height: 12),
+              _buildTextField('Street Address', '123 Main Street', _addressController),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(flex: 2, child: _buildTextField('City', 'City', _cityController)),
+                  const SizedBox(width: 12),
+                  Expanded(child: _buildTextField('State', 'CA', _stateController)),
+                  const SizedBox(width: 12),
+                  Expanded(child: _buildTextField('ZIP', '90001', _zipController, TextInputType.number)),
+                ],
+              ),
+              const SizedBox(height: 20),
+
+              // Notes Section
+              _buildSectionHeader('Notes'),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _notesController,
+                maxLines: 3,
+                decoration: InputDecoration(
+                  hintText: 'Additional notes about this client...',
+                  filled: true,
+                  fillColor: AppColors.neutral50,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AppColors.border)),
+                ),
+              ),
+              const SizedBox(height: 32),
+
+              // Submit Button
               SizedBox(
                 width: double.infinity,
+                height: 50,
                 child: ElevatedButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Add Client'),
+                  onPressed: _submit,
+                  child: Text(_isEditing ? 'Save Changes' : 'Add Client'),
                 ),
               ),
             ],
           ),
         );
       },
+    );
+  }
+
+  Widget _buildSectionHeader(String title) {
+    return Text(title, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary));
+  }
+
+  Widget _buildTextField(String label, String hint, TextEditingController controller, [TextInputType? keyboardType]) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+        const SizedBox(height: 6),
+        TextField(
+          controller: controller,
+          keyboardType: keyboardType,
+          decoration: InputDecoration(
+            hintText: hint,
+            filled: true,
+            fillColor: AppColors.neutral50,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AppColors.border)),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AppColors.accent)),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTypeDropdown() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Client Type', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+        const SizedBox(height: 6),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          decoration: BoxDecoration(
+            color: AppColors.neutral50,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: _selectedType,
+              isExpanded: true,
+              items: _clientTypes.map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
+              onChanged: (val) => setState(() => _selectedType = val ?? 'Retail'),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
