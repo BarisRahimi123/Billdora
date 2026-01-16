@@ -34,10 +34,17 @@ class _SignupScreenState extends State<SignupScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     final authProvider = context.read<AuthProvider>();
+    // Split full name into first and last name
+    final fullName = _nameController.text.trim();
+    final nameParts = fullName.split(' ');
+    final firstName = nameParts.isNotEmpty ? nameParts.first : '';
+    final lastName = nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
+    
     final result = await authProvider.signUp(
       _emailController.text.trim(),
       _passwordController.text,
-      _nameController.text.trim(),
+      firstName,
+      lastName,
     );
 
     if (result.success && mounted) {

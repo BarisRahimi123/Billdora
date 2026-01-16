@@ -292,6 +292,15 @@ class AppColors {
   static const Color info = Color(0xFF3B82F6);
   static const Color infoLight = Color(0xFFEFF6FF);
   
+  // Color Aliases (for compatibility)
+  static const Color blue = info;
+  static const Color red = error;
+  static const Color green = success;
+  static const Color orange = warning;
+  static const Color purple = Color(0xFF8B5CF6);
+  static const Color purpleLight = Color(0xFFF5F3FF);
+  static const Color cardBorder = border;
+  
   // Neutral Colors
   static const Color neutral50 = Color(0xFFF9FAFB);
   static const Color neutral100 = Color(0xFFF3F4F6);

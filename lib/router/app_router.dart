@@ -21,7 +21,6 @@ import '../screens/receipts/receipts_screen.dart';
 import '../screens/team/team_screen.dart';
 import '../screens/reports/reports_screen.dart';
 import '../screens/settings/settings_screen.dart';
-import '../screens/notifications/notifications_screen.dart';
 import '../screens/shell/app_shell.dart';
 
 class AppRouter {
@@ -133,10 +132,6 @@ class AppRouter {
           GoRoute(
             path: '/settings',
             builder: (context, state) => const SettingsScreen(),
-          ),
-          GoRoute(
-            path: '/notifications',
-            builder: (context, state) => const NotificationsScreen(),
           ),
         ],
       ),

@@ -1,0 +1,10 @@
+{
+	"appId": "com.plansrow.billdora",
+	"appName": "BillDora",
+	"webDir": "dist",
+	"packageClassList": [
+		"AppPlugin",
+		"LocalNotificationsPlugin",
+		"PushNotificationsPlugin"
+	]
+}
