@@ -70,13 +70,6 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
     {'id': '6', 'name': 'TSM Map', 'description': 'Tentative map services', 'rate': 50.0, 'unit': 'hour', 'category': 'Development'},
   ];
 
-  @override
-  void initState() {
-    super.initState();
-    // Start with empty line items - user will add from services
-    _lineItems.clear();
-  }
-
   // Get selected recipient info
   Map<String, dynamic>? get _selectedRecipient {
     if (_recipientType == 'client' && _selectedClientId != null) {
@@ -278,16 +271,6 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
         ),
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    _pageController.dispose();
-    _projectNameController.dispose();
-    _scopeController.dispose();
-    _emailSubjectController.dispose();
-    _emailBodyController.dispose();
-    super.dispose();
   }
 
   double get _subtotal => _lineItems.fold(0.0, (sum, item) => sum + item.amount);
@@ -1942,263 +1925,590 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
   List<String> _selectedTags = [];
   final List<String> _availableTags = ['Urgent', 'VIP Client', 'Follow-up', 'New Business', 'Renewal', 'High Priority'];
 
+  // Payment schedule
+  String _paymentSchedule = '100_completion'; // Options: 100_completion, 50_50, milestone
+  final Map<String, String> _paymentOptions = {
+    '100_completion': '100% upon completion',
+    '50_50': '50% upfront, 50% on completion',
+    'milestone': 'Milestone-based payments',
+    'net_30': 'Net 30 days',
+  };
+
+  // Email message
+  late TextEditingController _emailMessageController;
+
+  @override
+  void initState() {
+    super.initState();
+    _lineItems.clear();
+    _emailMessageController = TextEditingController(
+      text: 'Thank you for the opportunity to work together. I have attached the proposal for your consideration which includes a detailed Scope of Work, deliverable schedule, and investment summary.\n\nPlease review and let me know if you have any questions.',
+    );
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    _projectNameController.dispose();
+    _scopeController.dispose();
+    _emailSubjectController.dispose();
+    _emailBodyController.dispose();
+    _emailMessageController.dispose();
+    super.dispose();
+  }
+
   // ============ STEP 4: PREVIEW ============
   Widget _buildStep4Preview() {
     final currencyFormat = NumberFormat.currency(symbol: '\$');
+    final dateFormat = DateFormat('MMMM d, yyyy');
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          // Primary Actions Row (Save & Send)
-          Row(
+    return Column(
+      children: [
+        // Sticky Action Bar at Top
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            color: AppColors.cardBackground,
+            boxShadow: AppShadows.sm,
+          ),
+          child: Row(
             children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: _saveProposalAsDraft,
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    side: const BorderSide(color: AppColors.border),
-                  ),
-                  icon: const Icon(Icons.save_outlined, size: 18),
-                  label: const Text('Save Draft'),
-                ),
+              // Quick Actions
+              _buildQuickAction(Icons.download_outlined, 'PDF', _downloadProposal),
+              const SizedBox(width: 8),
+              _buildQuickAction(Icons.copy_outlined, 'Template', _showSaveAsTemplateModal),
+              const SizedBox(width: 8),
+              _buildQuickAction(
+                Icons.local_offer_outlined, 
+                _selectedTags.isEmpty ? 'Tags' : '${_selectedTags.length}', 
+                _showTagsModal,
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                flex: 2,
-                child: ElevatedButton.icon(
-                  onPressed: _recipientEmail.isNotEmpty ? _showSendProposalModal : null,
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    disabledBackgroundColor: AppColors.neutral100,
-                  ),
-                  icon: const Icon(Icons.send_rounded, size: 18),
-                  label: const Text('Send Proposal'),
+              const Spacer(),
+              // Main Actions
+              OutlinedButton(
+                onPressed: _saveProposalAsDraft,
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  side: const BorderSide(color: AppColors.border),
                 ),
+                child: const Text('Save'),
+              ),
+              const SizedBox(width: 8),
+              ElevatedButton.icon(
+                onPressed: _recipientEmail.isNotEmpty ? _showSendProposalModal : null,
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                ),
+                icon: const Icon(Icons.send_rounded, size: 16),
+                label: const Text('Send'),
               ),
             ],
           ),
-          const SizedBox(height: 10),
+        ),
 
-          // Secondary Actions Row
-          Row(
-            children: [
-              Expanded(
-                child: _buildCompactActionButton(
-                  icon: Icons.download_outlined,
-                  label: 'Download',
-                  onTap: _downloadProposal,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildCompactActionButton(
-                  icon: Icons.copy_outlined,
-                  label: 'Template',
-                  onTap: _showSaveAsTemplateModal,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildCompactActionButton(
-                  icon: Icons.local_offer_outlined,
-                  label: 'Tags',
-                  onTap: _showTagsModal,
-                  badge: _selectedTags.isNotEmpty ? _selectedTags.length.toString() : null,
-                ),
-              ),
-            ],
-          ),
-
-          // Selected Tags Display
-          if (_selectedTags.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: AppColors.cardBackground,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: AppColors.border),
-              ),
-              child: Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: _selectedTags.map((tag) => Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        // Scrollable Proposal Document
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                // ============ COVER PAGE ============
+                Container(
                   decoration: BoxDecoration(
-                    color: AppColors.accent.withOpacity(0.1),
+                    color: AppColors.cardBackground,
                     borderRadius: BorderRadius.circular(12),
+                    boxShadow: AppShadows.card,
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
+                  child: Column(
                     children: [
-                      Text(tag, style: const TextStyle(fontSize: 12, color: AppColors.accent)),
-                      const SizedBox(width: 4),
-                      GestureDetector(
-                        onTap: () => setState(() => _selectedTags.remove(tag)),
-                        child: const Icon(Icons.close, size: 14, color: AppColors.accent),
+                      // Cover Image
+                      Container(
+                        height: 200,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1F2937),
+                          borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                          image: DecorationImage(
+                            image: NetworkImage(_selectedCoverUrl),
+                            fit: BoxFit.cover,
+                            opacity: 0.6,
+                          ),
+                        ),
+                        child: Stack(
+                          children: [
+                            Positioned(
+                              left: 16,
+                              bottom: 16,
+                              right: 16,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    _projectNameController.text.isNotEmpty 
+                                        ? _projectNameController.text 
+                                        : 'Proposal for $_recipientName',
+                                    style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w700, height: 1.2),
+                                    maxLines: 2,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    children: [
+                                      Text('Prepared for ', style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 13)),
+                                      Text(_recipientName, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Company Info
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: AppColors.accent.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Center(child: Text('P', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.accent))),
+                            ),
+                            const SizedBox(width: 12),
+                            const Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('Plansrow LLC', style: TextStyle(fontWeight: FontWeight.w600)),
+                                  Text('2469 N Pearwood Ave, Fresno, CA 93727', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                                ],
+                              ),
+                            ),
+                            Text(dateFormat.format(DateTime.now()), style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                          ],
+                        ),
                       ),
                     ],
                   ),
-                )).toList(),
-              ),
-            ),
-          ],
-          const SizedBox(height: 12),
+                ),
+                const SizedBox(height: 16),
 
-          // Preview Card (Compact)
-          Container(
-            decoration: BoxDecoration(
-              color: AppColors.cardBackground,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: AppShadows.elevated,
-            ),
-            child: Column(
-              children: [
-                // Cover Image (Smaller)
+                // ============ EMAIL MESSAGE (Editable) ============
                 Container(
-                  height: 280,
+                  padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF1F2937),
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                    image: DecorationImage(
-                      image: NetworkImage(_selectedCoverUrl),
-                      fit: BoxFit.cover,
-                      opacity: 0.6,
-                    ),
+                    color: AppColors.cardBackground,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: AppShadows.card,
                   ),
-                  child: Stack(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Positioned(
-                        left: 16,
-                        top: 16,
-                        child: Container(
-                          width: 32,
-                          height: 32,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(6),
+                      Row(
+                        children: [
+                          Icon(Icons.email_outlined, size: 18, color: AppColors.textSecondary),
+                          const SizedBox(width: 8),
+                          const Text('Email Message', style: TextStyle(fontWeight: FontWeight.w600)),
+                          const Spacer(),
+                          TextButton(
+                            onPressed: () => _showEditEmailModal(),
+                            child: const Text('Edit', style: TextStyle(fontSize: 13)),
                           ),
-                          child: const Center(
-                            child: Text('P', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700)),
-                          ),
-                        ),
+                        ],
                       ),
-                      Positioned(
-                        left: 16,
-                        bottom: 16,
-                        right: 16,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text('PREPARED FOR', style: TextStyle(color: Colors.white60, fontSize: 9, letterSpacing: 1)),
-                            const SizedBox(height: 2),
-                            Text(_recipientName, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700)),
-                            const SizedBox(height: 12),
-                            Text(
-                              _projectNameController.text.isNotEmpty 
-                                  ? _projectNameController.text 
-                                  : 'Proposal for $_recipientName',
-                              style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w700, height: 1.2),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 16),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      const SizedBox(height: 8),
+                      Text(
+                        'Dear $_recipientName,\n\n${_emailMessageController.text}\n\nSincerely,\nPlansrow LLC',
+                        style: TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.5),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // ============ SCOPE OF WORK ============
+                _buildProposalSection(
+                  icon: Icons.description_outlined,
+                  title: 'Scope of Work',
+                  child: Text(
+                    _scopeController.text.isNotEmpty ? _scopeController.text : 'No scope defined yet.',
+                    style: const TextStyle(fontSize: 13, height: 1.6),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // ============ PROJECT TIMELINE ============
+                if (_lineItems.isNotEmpty)
+                  _buildProposalSection(
+                    icon: Icons.timeline_outlined,
+                    title: 'Project Timeline',
+                    child: Column(
+                      children: [
+                        ...List.generate(_lineItems.length, (index) {
+                          final item = _lineItems[index];
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: Row(
                               children: [
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      currencyFormat.format(_total),
-                                      style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w700),
-                                    ),
-                                    const Text('Proposed Investment', style: TextStyle(color: Colors.white60, fontSize: 10)),
-                                  ],
-                                ),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  width: 8,
+                                  height: 8,
                                   decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.2),
-                                    borderRadius: BorderRadius.circular(12),
+                                    color: _getTaskColor(index),
+                                    borderRadius: BorderRadius.circular(4),
                                   ),
-                                  child: Text('$_totalDuration days', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(child: Text(item.description, style: const TextStyle(fontSize: 13))),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: _getTaskColor(index).withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text('${item.days} days', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: _getTaskColor(index))),
                                 ),
                               ],
                             ),
+                          );
+                        }),
+                        const Divider(height: 24),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Total Duration', style: TextStyle(fontWeight: FontWeight.w600)),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: AppColors.accent.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text('$_totalDuration days', style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.accent)),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                if (_lineItems.isNotEmpty) const SizedBox(height: 16),
+
+                // ============ INVESTMENT SUMMARY ============
+                _buildProposalSection(
+                  icon: Icons.payments_outlined,
+                  title: 'Investment Summary',
+                  child: Column(
+                    children: [
+                      // Line Items
+                      ..._lineItems.map((item) => Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              flex: 3,
+                              child: Text(item.description, style: const TextStyle(fontSize: 13)),
+                            ),
+                            Expanded(
+                              child: Text('${item.quantity} ${item.unit}', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                            ),
+                            Expanded(
+                              child: Text(currencyFormat.format(item.amount), textAlign: TextAlign.right, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+                            ),
+                          ],
+                        ),
+                      )),
+                      const Divider(height: 24),
+                      _buildSummaryRow('Subtotal', currencyFormat.format(_subtotal)),
+                      _buildSummaryRow('Tax (${_taxRate}%)', currencyFormat.format(_taxAmount)),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppColors.accent.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Total Investment', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+                            Text(currencyFormat.format(_total), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 18, color: AppColors.accent)),
                           ],
                         ),
                       ),
                     ],
                   ),
                 ),
+                const SizedBox(height: 16),
 
-                // Recipient Details
-                Padding(
-                  padding: const EdgeInsets.all(14),
-                  child: Row(
+                // ============ PAYMENT TERMS ============
+                _buildProposalSection(
+                  icon: Icons.account_balance_wallet_outlined,
+                  title: 'Payment Terms',
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: AppColors.accent.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Center(
-                          child: Text(
-                            _recipientName.isNotEmpty ? _recipientName[0].toUpperCase() : 'C',
-                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.accent),
+                      ..._paymentOptions.entries.map((entry) {
+                        final isSelected = _paymentSchedule == entry.key;
+                        return GestureDetector(
+                          onTap: () => setState(() => _paymentSchedule = entry.key),
+                          child: Container(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: isSelected ? AppColors.accent.withOpacity(0.1) : AppColors.neutral50,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: isSelected ? AppColors.accent : AppColors.border),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 20,
+                                  height: 20,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: isSelected ? AppColors.accent : Colors.transparent,
+                                    border: Border.all(color: isSelected ? AppColors.accent : AppColors.border, width: 2),
+                                  ),
+                                  child: isSelected ? const Icon(Icons.check, size: 12, color: Colors.white) : null,
+                                ),
+                                const SizedBox(width: 12),
+                                Text(entry.value, style: TextStyle(fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400)),
+                              ],
+                            ),
                           ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(_recipientName, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
-                            if (_recipientEmail.isNotEmpty)
-                              Text(_recipientEmail, style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                          ],
-                        ),
-                      ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
+                        );
+                      }),
+                      const SizedBox(height: 8),
+                      Text('• Proposal valid for 30 days', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                      Text('• Work begins upon signed acceptance', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // ============ WHAT'S NOT INCLUDED ============
+                _buildProposalSection(
+                  icon: Icons.info_outline,
+                  title: "What's Not Included",
+                  subtitle: 'Exclusions & Clarifications',
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildExclusionItem('Third-party software licenses or subscriptions'),
+                      _buildExclusionItem('Content creation (copywriting, photography)'),
+                      _buildExclusionItem('Hosting and domain registration fees'),
+                      _buildExclusionItem('Scope changes after project kickoff'),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // ============ ACCEPTANCE ============
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.success.withOpacity(0.05),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.success.withOpacity(0.2)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
                         children: [
-                          Text(DateFormat('M/d/yyyy').format(DateTime.now()), style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
-                          const Text('DRAFT', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.warning)),
+                          Icon(Icons.verified_outlined, color: AppColors.success, size: 20),
+                          const SizedBox(width: 8),
+                          const Text('Acceptance', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'By signing below, $_recipientName agrees to the scope of work, timeline, and payment terms outlined in this proposal.',
+                        style: TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.5),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    border: Border(bottom: BorderSide(color: AppColors.border)),
+                                  ),
+                                ),
+                                const Text('Signature', style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 24),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    border: Border(bottom: BorderSide(color: AppColors.border)),
+                                  ),
+                                ),
+                                const Text('Date', style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
+                              ],
+                            ),
+                          ),
                         ],
                       ),
                     ],
                   ),
                 ),
-
-                // Summary Stats
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: AppColors.neutral50,
-                    borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _buildStatItem('Items', '${_lineItems.length}'),
-                      _buildStatDivider(),
-                      _buildStatItem('Duration', '$_totalDuration days'),
-                      _buildStatDivider(),
-                      _buildStatItem('Tax', '${_taxRate.toStringAsFixed(2)}%'),
-                    ],
-                  ),
-                ),
+                const SizedBox(height: 32),
               ],
             ),
           ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildQuickAction(IconData icon, String label, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: AppColors.neutral50,
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: AppColors.textSecondary),
+            const SizedBox(width: 4),
+            Text(label, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProposalSection({
+    required IconData icon,
+    required String title,
+    String? subtitle,
+    required Widget child,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: AppShadows.card,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 18, color: AppColors.accent),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+                    if (subtitle != null)
+                      Text(subtitle, style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          child,
         ],
+      ),
+    );
+  }
+
+  Widget _buildSummaryRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: TextStyle(color: AppColors.textSecondary)),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.w500)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildExclusionItem(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.remove, size: 14, color: AppColors.textTertiary),
+          const SizedBox(width: 8),
+          Expanded(child: Text(text, style: TextStyle(fontSize: 13, color: AppColors.textSecondary))),
+        ],
+      ),
+    );
+  }
+
+  void _showEditEmailModal() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.cardBackground,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 20,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(2))),
+            ),
+            const SizedBox(height: 20),
+            const Text('Edit Email Message', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _emailMessageController,
+              maxLines: 6,
+              decoration: InputDecoration(
+                hintText: 'Enter your message...',
+                filled: true,
+                fillColor: AppColors.neutral50,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  setState(() {});
+                  Navigator.pop(context);
+                },
+                child: const Text('Save'),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
