@@ -77,10 +77,50 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
     },
   ];
 
+  // Terms & Conditions data
+  List<Map<String, dynamic>> _termsConditions = [
+    {
+      'id': '1',
+      'title': 'Payment Terms',
+      'content': 'Payment is due within 30 days of invoice date. A late fee of 1.5% per month will be applied to overdue balances.',
+      'isDefault': true,
+    },
+    {
+      'id': '2',
+      'title': 'Scope Changes',
+      'content': 'Any changes to the project scope after acceptance will require a written change order and may affect the timeline and cost.',
+      'isDefault': true,
+    },
+    {
+      'id': '3',
+      'title': 'Intellectual Property',
+      'content': 'Upon full payment, client receives full ownership of all deliverables. Provider retains the right to use work samples in portfolio.',
+      'isDefault': true,
+    },
+    {
+      'id': '4',
+      'title': 'Cancellation Policy',
+      'content': 'Either party may cancel with 14 days written notice. Client is responsible for payment of all work completed up to cancellation date.',
+      'isDefault': true,
+    },
+    {
+      'id': '5',
+      'title': 'Confidentiality',
+      'content': 'Both parties agree to keep confidential information private and not disclose to third parties without written consent.',
+      'isDefault': false,
+    },
+    {
+      'id': '6',
+      'title': 'Limitation of Liability',
+      'content': 'Provider liability is limited to the total amount paid under the agreement. Provider is not liable for indirect or consequential damages.',
+      'isDefault': false,
+    },
+  ];
+
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 10, vsync: this);
+    _tabController = TabController(length: 11, vsync: this);
   }
 
   @override
@@ -130,6 +170,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                   Tab(icon: Icon(Icons.people_outline, size: 20)),
                   Tab(icon: Icon(Icons.design_services_outlined, size: 20)),
                   Tab(icon: Icon(Icons.sell_outlined, size: 20)),
+                  Tab(icon: Icon(Icons.gavel_outlined, size: 20)), // Terms & Conditions
                   Tab(icon: Icon(Icons.group_outlined, size: 20)),
                   Tab(icon: Icon(Icons.description_outlined, size: 20)),
                   Tab(icon: Icon(Icons.notifications_outlined, size: 20)),
@@ -149,6 +190,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                   _buildPlaceholderTab('Team', 'Team member permissions'),
                   _buildServicesTab(),
                   _buildCategoriesTab(),
+                  _buildTermsTab(),
                   _buildPlaceholderTab('Clients', 'Client defaults and settings'),
                   _buildPlaceholderTab('Documents', 'Document templates'),
                   _buildPlaceholderTab('Notifications', 'Email and push notification settings'),
@@ -1566,6 +1608,405 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
               );
             },
             child: const Text('Delete', style: TextStyle(color: AppColors.error)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ============ TERMS & CONDITIONS TAB ============
+  Widget _buildTermsTab() {
+    return Column(
+      children: [
+        // Header
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Terms & Conditions', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 4),
+                    Text('Default terms for your proposals', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                  ],
+                ),
+              ),
+              ElevatedButton.icon(
+                onPressed: _showAddTermModal,
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text('Add Term'),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Info Card
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.info.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: AppColors.info.withOpacity(0.2)),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, size: 18, color: AppColors.info),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Terms marked as "Default" will be automatically included in new proposals.',
+                    style: TextStyle(fontSize: 12, color: AppColors.info),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        // Terms List
+        Expanded(
+          child: _termsConditions.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.gavel_outlined, size: 48, color: AppColors.textTertiary),
+                      const SizedBox(height: 12),
+                      const Text('No terms added yet', style: TextStyle(color: AppColors.textSecondary)),
+                    ],
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: _termsConditions.length,
+                  itemBuilder: (context, index) {
+                    final term = _termsConditions[index];
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      decoration: BoxDecoration(
+                        color: AppColors.cardBackground,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: term['isDefault'] ? AppColors.accent.withOpacity(0.3) : AppColors.border,
+                        ),
+                        boxShadow: AppShadows.sm,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Header
+                          Padding(
+                            padding: const EdgeInsets.all(14),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 36,
+                                  height: 36,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.accent.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Icon(Icons.article_outlined, size: 18, color: AppColors.accent),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(term['title'], style: const TextStyle(fontWeight: FontWeight.w600)),
+                                      if (term['isDefault'])
+                                        Row(
+                                          children: [
+                                            Icon(Icons.check_circle, size: 12, color: AppColors.success),
+                                            const SizedBox(width: 4),
+                                            Text('Default', style: TextStyle(fontSize: 11, color: AppColors.success)),
+                                          ],
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                                PopupMenuButton<String>(
+                                  icon: const Icon(Icons.more_vert, size: 20),
+                                  onSelected: (value) {
+                                    if (value == 'edit') {
+                                      _showEditTermModal(term);
+                                    } else if (value == 'toggle') {
+                                      setState(() {
+                                        term['isDefault'] = !term['isDefault'];
+                                      });
+                                    } else if (value == 'delete') {
+                                      _showDeleteTermDialog(term);
+                                    }
+                                  },
+                                  itemBuilder: (context) => [
+                                    const PopupMenuItem(value: 'edit', child: Text('Edit')),
+                                    PopupMenuItem(
+                                      value: 'toggle',
+                                      child: Text(term['isDefault'] ? 'Remove from defaults' : 'Add to defaults'),
+                                    ),
+                                    const PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: AppColors.error))),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                          // Content Preview
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+                            child: Text(
+                              term['content'],
+                              style: TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.5),
+                              maxLines: 3,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+        ),
+      ],
+    );
+  }
+
+  void _showAddTermModal() {
+    final titleController = TextEditingController();
+    final contentController = TextEditingController();
+    bool isDefault = true;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.cardBackground,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => Padding(
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 20,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(2)),
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text('Add Term & Condition', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 20),
+              TextField(
+                controller: titleController,
+                decoration: InputDecoration(
+                  labelText: 'Title',
+                  hintText: 'e.g., Payment Terms',
+                  filled: true,
+                  fillColor: AppColors.neutral50,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: contentController,
+                maxLines: 4,
+                decoration: InputDecoration(
+                  labelText: 'Content',
+                  hintText: 'Describe the term or condition...',
+                  filled: true,
+                  fillColor: AppColors.neutral50,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+              const SizedBox(height: 16),
+              GestureDetector(
+                onTap: () => setModalState(() => isDefault = !isDefault),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 22,
+                      height: 22,
+                      decoration: BoxDecoration(
+                        color: isDefault ? AppColors.accent : Colors.transparent,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: isDefault ? AppColors.accent : AppColors.border, width: 2),
+                      ),
+                      child: isDefault ? const Icon(Icons.check, color: Colors.white, size: 14) : null,
+                    ),
+                    const SizedBox(width: 10),
+                    const Text('Include in proposals by default'),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    if (titleController.text.isNotEmpty && contentController.text.isNotEmpty) {
+                      setState(() {
+                        _termsConditions.add({
+                          'id': DateTime.now().millisecondsSinceEpoch.toString(),
+                          'title': titleController.text,
+                          'content': contentController.text,
+                          'isDefault': isDefault,
+                        });
+                      });
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Term added successfully'), backgroundColor: AppColors.success),
+                      );
+                    }
+                  },
+                  child: const Text('Add Term'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showEditTermModal(Map<String, dynamic> term) {
+    final titleController = TextEditingController(text: term['title']);
+    final contentController = TextEditingController(text: term['content']);
+    bool isDefault = term['isDefault'];
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.cardBackground,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => Padding(
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 20,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(2)),
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text('Edit Term', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 20),
+              TextField(
+                controller: titleController,
+                decoration: InputDecoration(
+                  labelText: 'Title',
+                  filled: true,
+                  fillColor: AppColors.neutral50,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: contentController,
+                maxLines: 4,
+                decoration: InputDecoration(
+                  labelText: 'Content',
+                  filled: true,
+                  fillColor: AppColors.neutral50,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+              const SizedBox(height: 16),
+              GestureDetector(
+                onTap: () => setModalState(() => isDefault = !isDefault),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 22,
+                      height: 22,
+                      decoration: BoxDecoration(
+                        color: isDefault ? AppColors.accent : Colors.transparent,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: isDefault ? AppColors.accent : AppColors.border, width: 2),
+                      ),
+                      child: isDefault ? const Icon(Icons.check, color: Colors.white, size: 14) : null,
+                    ),
+                    const SizedBox(width: 10),
+                    const Text('Include in proposals by default'),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    setState(() {
+                      term['title'] = titleController.text;
+                      term['content'] = contentController.text;
+                      term['isDefault'] = isDefault;
+                    });
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Term updated'), backgroundColor: AppColors.success),
+                    );
+                  },
+                  child: const Text('Save Changes'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showDeleteTermDialog(Map<String, dynamic> term) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Term?'),
+        content: Text('Are you sure you want to delete "${term['title']}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              setState(() {
+                _termsConditions.removeWhere((t) => t['id'] == term['id']);
+              });
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Term deleted'), backgroundColor: AppColors.success),
+              );
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+            child: const Text('Delete'),
           ),
         ],
       ),

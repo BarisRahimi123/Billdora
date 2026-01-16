@@ -47,6 +47,54 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
 
   String get _selectedCoverUrl => _coverImages[_selectedCoverIndex]['url']!;
 
+  // Terms & Conditions - Default terms that can be toggled on/off
+  final List<Map<String, dynamic>> _availableTerms = [
+    {
+      'id': '1',
+      'title': 'Payment Terms',
+      'content': 'Payment is due within 30 days of invoice date. A late fee of 1.5% per month will be applied to overdue balances.',
+      'isSelected': true,
+    },
+    {
+      'id': '2',
+      'title': 'Scope Changes',
+      'content': 'Any changes to the project scope after acceptance will require a written change order and may affect the timeline and cost.',
+      'isSelected': true,
+    },
+    {
+      'id': '3',
+      'title': 'Intellectual Property',
+      'content': 'Upon full payment, client receives full ownership of all deliverables. Provider retains the right to use work samples in portfolio.',
+      'isSelected': true,
+    },
+    {
+      'id': '4',
+      'title': 'Cancellation Policy',
+      'content': 'Either party may cancel with 14 days written notice. Client is responsible for payment of all work completed up to cancellation date.',
+      'isSelected': true,
+    },
+    {
+      'id': '5',
+      'title': 'Confidentiality',
+      'content': 'Both parties agree to keep confidential information private and not disclose to third parties without written consent.',
+      'isSelected': false,
+    },
+    {
+      'id': '6',
+      'title': 'Limitation of Liability',
+      'content': 'Provider liability is limited to the total amount paid under the agreement. Provider is not liable for indirect or consequential damages.',
+      'isSelected': false,
+    },
+    {
+      'id': '7',
+      'title': 'Warranty',
+      'content': 'All work is warranted to be free from defects for 30 days after delivery. Issues reported within this period will be addressed at no additional cost.',
+      'isSelected': false,
+    },
+  ];
+
+  List<Map<String, dynamic>> get _selectedTerms => _availableTerms.where((t) => t['isSelected'] == true).toList();
+
   // Mock data - Clients with full info
   final List<Map<String, dynamic>> _clients = [
     {'id': '1', 'name': 'Barzan Shop', 'email': 'contact@barzanshop.com', 'phone': '555-0101', 'address': '123 Commerce St'},
@@ -1770,7 +1818,319 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
               ],
             ),
           ),
+          const SizedBox(height: 16),
+
+          // Terms & Conditions Card
+          Container(
+            decoration: BoxDecoration(
+              color: AppColors.cardBackground,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: AppShadows.sm,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header
+                Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: AppColors.purple.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(Icons.gavel_outlined, color: AppColors.purple, size: 18),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('Terms & Conditions', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                            Text('${_selectedTerms.length} terms included', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                          ],
+                        ),
+                      ),
+                      TextButton.icon(
+                        onPressed: _showTermsEditor,
+                        icon: const Icon(Icons.edit_outlined, size: 16),
+                        label: const Text('Edit'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppColors.accent,
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1),
+                // Selected Terms Preview
+                if (_selectedTerms.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.all(14),
+                    child: Row(
+                      children: [
+                        Icon(Icons.info_outline, size: 16, color: AppColors.warning),
+                        const SizedBox(width: 8),
+                        Text('No terms selected. Tap Edit to add terms.', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                      ],
+                    ),
+                  )
+                else
+                  ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    padding: const EdgeInsets.all(10),
+                    itemCount: _selectedTerms.length > 3 ? 3 : _selectedTerms.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 6),
+                    itemBuilder: (context, index) {
+                      final term = _selectedTerms[index];
+                      return Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: AppColors.neutral50,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.check_circle, size: 14, color: AppColors.success),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                term['title'],
+                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                if (_selectedTerms.length > 3)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+                    child: Text(
+                      '+${_selectedTerms.length - 3} more terms...',
+                      style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                    ),
+                  ),
+              ],
+            ),
+          ),
         ],
+      ),
+    );
+  }
+
+  // Show Terms Editor Modal
+  void _showTermsEditor() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.cardBackground,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => DraggableScrollableSheet(
+          initialChildSize: 0.8,
+          minChildSize: 0.5,
+          maxChildSize: 0.95,
+          expand: false,
+          builder: (context, scrollController) {
+            return Column(
+              children: [
+                // Header
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 40,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: AppColors.border,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: AppColors.purple.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.gavel_outlined, color: AppColors.purple),
+                          ),
+                          const SizedBox(width: 12),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Terms & Conditions', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                                Text('Select terms to include in proposal', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () => Navigator.pop(context),
+                            icon: const Icon(Icons.close),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1),
+                // Info Banner
+                Container(
+                  margin: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppColors.info.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppColors.info.withOpacity(0.2)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.info_outline, size: 16, color: AppColors.info),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Toggle terms on/off. You can manage default terms in Settings.',
+                          style: TextStyle(fontSize: 11, color: AppColors.info),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Terms List
+                Expanded(
+                  child: ListView.builder(
+                    controller: scrollController,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    itemCount: _availableTerms.length,
+                    itemBuilder: (context, index) {
+                      final term = _availableTerms[index];
+                      final isSelected = term['isSelected'] == true;
+                      
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 10),
+                        decoration: BoxDecoration(
+                          color: isSelected ? AppColors.accent.withOpacity(0.05) : AppColors.neutral50,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: isSelected ? AppColors.accent.withOpacity(0.3) : AppColors.border,
+                          ),
+                        ),
+                        child: InkWell(
+                          onTap: () {
+                            setModalState(() {
+                              term['isSelected'] = !isSelected;
+                            });
+                            setState(() {});
+                          },
+                          borderRadius: BorderRadius.circular(12),
+                          child: Padding(
+                            padding: const EdgeInsets.all(14),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  width: 24,
+                                  height: 24,
+                                  decoration: BoxDecoration(
+                                    color: isSelected ? AppColors.accent : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(
+                                      color: isSelected ? AppColors.accent : AppColors.border,
+                                      width: 2,
+                                    ),
+                                  ),
+                                  child: isSelected
+                                      ? const Icon(Icons.check, color: Colors.white, size: 16)
+                                      : null,
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        term['title'],
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                          color: isSelected ? AppColors.textPrimary : AppColors.textSecondary,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        term['content'],
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: AppColors.textSecondary,
+                                          height: 1.4,
+                                        ),
+                                        maxLines: 3,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                // Footer with Actions
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.cardBackground,
+                    border: Border(top: BorderSide(color: AppColors.border)),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () {
+                            setModalState(() {
+                              for (var term in _availableTerms) {
+                                term['isSelected'] = false;
+                              }
+                            });
+                            setState(() {});
+                          },
+                          child: const Text('Clear All'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        flex: 2,
+                        child: ElevatedButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: Text('Done (${_selectedTerms.length} selected)'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
