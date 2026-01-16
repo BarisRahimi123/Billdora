@@ -994,7 +994,6 @@ class _ClientsTab extends StatelessWidget {
       ),
     );
   }
-  }
 }
 
 // ============ QUOTES TAB ============
