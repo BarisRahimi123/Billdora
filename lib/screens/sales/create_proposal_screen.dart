@@ -895,6 +895,61 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
     );
   }
 
+  // Calculate total project duration based on scheduling
+  int get _totalDuration {
+    if (_lineItems.isEmpty) return 0;
+    
+    int maxEndDay = 0;
+    for (var item in _lineItems) {
+      int endDay = item.startDay + item.days;
+      if (endDay > maxEndDay) maxEndDay = endDay;
+    }
+    return maxEndDay;
+  }
+
+  // Get scheduling options for a task
+  List<String> _getSchedulingOptions(int currentIndex) {
+    List<String> options = ['Day 1'];
+    
+    for (int i = 0; i < currentIndex; i++) {
+      final prevItem = _lineItems[i];
+      options.add('After "${_truncateText(prevItem.description, 15)}"');
+      options.add('With "${_truncateText(prevItem.description, 15)}"');
+    }
+    
+    return options;
+  }
+
+  String _truncateText(String text, int maxLength) {
+    if (text.length <= maxLength) return text;
+    return '${text.substring(0, maxLength)}...';
+  }
+
+  // Update task scheduling based on selection
+  void _updateTaskScheduling(int index, String option) {
+    setState(() {
+      if (option == 'Day 1') {
+        _lineItems[index].startDay = 0;
+      } else if (option.startsWith('After')) {
+        // Find the task it's after
+        for (int i = 0; i < index; i++) {
+          if (option.contains(_truncateText(_lineItems[i].description, 15))) {
+            _lineItems[index].startDay = _lineItems[i].startDay + _lineItems[i].days;
+            break;
+          }
+        }
+      } else if (option.startsWith('With')) {
+        // Find the task it's parallel with
+        for (int i = 0; i < index; i++) {
+          if (option.contains(_truncateText(_lineItems[i].description, 15))) {
+            _lineItems[index].startDay = _lineItems[i].startDay;
+            break;
+          }
+        }
+      }
+    });
+  }
+
   // ============ STEP 2: TIMELINE ============
   Widget _buildStep2Timeline() {
     return SingleChildScrollView(
@@ -979,64 +1034,286 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
                         child: const Icon(Icons.calendar_today_outlined, color: AppColors.accent, size: 20),
                       ),
                       const SizedBox(width: 12),
-                      const Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Project Timeline', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                          Text('Visual schedule based on your line items', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                        ],
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('Project Timeline', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                            Text(
+                              _lineItems.isEmpty 
+                                  ? 'Add services in Step 1 first' 
+                                  : 'Set duration and scheduling for each task',
+                              style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: AppColors.neutral50,
-                      borderRadius: BorderRadius.circular(10),
+
+                // Empty State
+                if (_lineItems.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                    child: Container(
+                      padding: const EdgeInsets.all(32),
+                      decoration: BoxDecoration(
+                        color: AppColors.neutral50,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Column(
+                        children: [
+                          Icon(Icons.event_note_outlined, size: 48, color: AppColors.textTertiary),
+                          const SizedBox(height: 12),
+                          Text('No tasks to schedule', style: TextStyle(fontWeight: FontWeight.w500, color: AppColors.textSecondary)),
+                          const SizedBox(height: 4),
+                          Text('Go back to Step 1 and add services', style: TextStyle(fontSize: 12, color: AppColors.textTertiary)),
+                          const SizedBox(height: 16),
+                          OutlinedButton.icon(
+                            onPressed: () => _goToStep(0),
+                            icon: const Icon(Icons.arrow_back, size: 18),
+                            label: const Text('Add Services'),
+                          ),
+                        ],
+                      ),
                     ),
+                  )
+                else ...[
+                  // Task Configuration List
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Column(
-                      children: [
-                        // Timeline Header
-                        Row(
-                          children: [
-                            const Expanded(flex: 2, child: Text('Task', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600))),
-                            ...['Start', 'Day 3', 'Day 5', 'Day 7', 'Day 8'].map((day) =>
-                              Expanded(child: Text(day, textAlign: TextAlign.center, style: const TextStyle(fontSize: 10, color: AppColors.textSecondary)))
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-
-                        // Timeline Rows
-                        _buildTimelineRow('Civil Drafting - Civil En...', 0, 8, 8),
-                        const SizedBox(height: 8),
-                        _buildTimelineRow('Revisions - CD Plans re...', 0, 4, 8),
-                        const SizedBox(height: 8),
-                        _buildTimelineRow('TSM Map - TENTATIVE ...', 0, 4, 8),
-
-                        const SizedBox(height: 16),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text('Total Duration:', style: TextStyle(fontWeight: FontWeight.w500)),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: AppColors.cardBackground,
-                                borderRadius: BorderRadius.circular(6),
-                                border: Border.all(color: AppColors.border),
+                      children: List.generate(_lineItems.length, (index) {
+                        final item = _lineItems[index];
+                        final options = _getSchedulingOptions(index);
+                        
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: AppColors.neutral50,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: AppColors.border),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Task Name
+                              Row(
+                                children: [
+                                  Container(
+                                    width: 24,
+                                    height: 24,
+                                    decoration: BoxDecoration(
+                                      color: _getTaskColor(index),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        '${index + 1}',
+                                        style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      item.description,
+                                      style: const TextStyle(fontWeight: FontWeight.w600),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              child: const Text('8 days', style: TextStyle(fontWeight: FontWeight.w600)),
-                            ),
-                          ],
-                        ),
-                      ],
+                              const SizedBox(height: 12),
+
+                              // Days and Scheduling Row
+                              Row(
+                                children: [
+                                  // Days Input
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        const Text('DAYS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                                        const SizedBox(height: 4),
+                                        Container(
+                                          height: 40,
+                                          decoration: BoxDecoration(
+                                            color: AppColors.cardBackground,
+                                            borderRadius: BorderRadius.circular(8),
+                                            border: Border.all(color: AppColors.border),
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              InkWell(
+                                                onTap: () {
+                                                  if (item.days > 1) {
+                                                    setState(() => item.days--);
+                                                  }
+                                                },
+                                                child: Container(
+                                                  width: 32,
+                                                  height: 40,
+                                                  decoration: BoxDecoration(
+                                                    border: Border(right: BorderSide(color: AppColors.border)),
+                                                  ),
+                                                  child: const Icon(Icons.remove, size: 16, color: AppColors.textSecondary),
+                                                ),
+                                              ),
+                                              Expanded(
+                                                child: Center(
+                                                  child: Text(
+                                                    '${item.days}',
+                                                    style: const TextStyle(fontWeight: FontWeight.w600),
+                                                  ),
+                                                ),
+                                              ),
+                                              InkWell(
+                                                onTap: () => setState(() => item.days++),
+                                                child: Container(
+                                                  width: 32,
+                                                  height: 40,
+                                                  decoration: BoxDecoration(
+                                                    border: Border(left: BorderSide(color: AppColors.border)),
+                                                  ),
+                                                  child: const Icon(Icons.add, size: 16, color: AppColors.textSecondary),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+
+                                  // Scheduling Dropdown
+                                  Expanded(
+                                    flex: 2,
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        const Text('STARTS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                                        const SizedBox(height: 4),
+                                        Container(
+                                          height: 40,
+                                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.cardBackground,
+                                            borderRadius: BorderRadius.circular(8),
+                                            border: Border.all(color: AppColors.border),
+                                          ),
+                                          child: DropdownButtonHideUnderline(
+                                            child: DropdownButton<String>(
+                                              value: _getSchedulingValue(index),
+                                              isExpanded: true,
+                                              icon: const Icon(Icons.unfold_more, size: 18),
+                                              style: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
+                                              items: options.map((opt) => DropdownMenuItem(
+                                                value: opt,
+                                                child: Text(opt, overflow: TextOverflow.ellipsis),
+                                              )).toList(),
+                                              onChanged: (value) {
+                                                if (value != null) {
+                                                  _updateTaskScheduling(index, value);
+                                                }
+                                              },
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
                     ),
                   ),
-                ),
+                  const SizedBox(height: 8),
+
+                  // Visual Timeline (Gantt Chart)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppColors.neutral50,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Visual Timeline', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                          const SizedBox(height: 16),
+
+                          // Timeline Header
+                          Row(
+                            children: [
+                              const SizedBox(width: 100, child: Text('Task', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600))),
+                              Expanded(
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: _buildTimelineHeaders(),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+
+                          // Timeline Rows
+                          ...List.generate(_lineItems.length, (index) {
+                            final item = _lineItems[index];
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: _buildDynamicTimelineRow(
+                                item.description,
+                                item.startDay,
+                                item.days,
+                                _totalDuration > 0 ? _totalDuration : 1,
+                                _getTaskColor(index),
+                              ),
+                            );
+                          }),
+
+                          const SizedBox(height: 16),
+                          const Divider(),
+                          const SizedBox(height: 12),
+                          
+                          // Total Duration
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(Icons.schedule, size: 18, color: AppColors.textSecondary),
+                                  const SizedBox(width: 8),
+                                  const Text('Total Duration:', style: TextStyle(fontWeight: FontWeight.w500)),
+                                ],
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: AppColors.accent.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: AppColors.accent.withOpacity(0.3)),
+                                ),
+                                child: Text(
+                                  '$_totalDuration day${_totalDuration != 1 ? 's' : ''}',
+                                  style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.accent, fontSize: 15),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -1045,47 +1322,135 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
     );
   }
 
-  Widget _buildTimelineRow(String task, int start, int duration, int totalDays) {
+  // Get the current scheduling value for display
+  String _getSchedulingValue(int index) {
+    if (index == 0) return 'Day 1';
+    
+    final item = _lineItems[index];
+    
+    // Check if it starts at day 0
+    if (item.startDay == 0) return 'Day 1';
+    
+    // Find what task this is relative to
+    for (int i = 0; i < index; i++) {
+      final prevItem = _lineItems[i];
+      // Starts after previous task
+      if (item.startDay == prevItem.startDay + prevItem.days) {
+        return 'After "${_truncateText(prevItem.description, 15)}"';
+      }
+      // Starts with previous task (parallel)
+      if (item.startDay == prevItem.startDay) {
+        return 'With "${_truncateText(prevItem.description, 15)}"';
+      }
+    }
+    
+    return 'Day 1';
+  }
+
+  // Build timeline header labels
+  List<Widget> _buildTimelineHeaders() {
+    final total = _totalDuration > 0 ? _totalDuration : 1;
+    List<Widget> headers = [];
+    
+    // Show key day markers
+    List<int> markers = [1];
+    if (total > 2) markers.add((total / 2).round());
+    if (total > 1) markers.add(total);
+    
+    markers = markers.toSet().toList()..sort();
+    
+    for (var day in markers) {
+      headers.add(Text(
+        'Day $day',
+        style: const TextStyle(fontSize: 10, color: AppColors.textSecondary),
+      ));
+    }
+    
+    return headers;
+  }
+
+  // Get color for task based on index
+  Color _getTaskColor(int index) {
+    final colors = [
+      AppColors.accent,
+      AppColors.info,
+      AppColors.success,
+      AppColors.warning,
+      const Color(0xFF8B5CF6), // purple
+      const Color(0xFFEC4899), // pink
+    ];
+    return colors[index % colors.length];
+  }
+
+  Widget _buildDynamicTimelineRow(String task, int start, int duration, int totalDays, Color color) {
+    // Calculate positions as percentages
+    final startPercent = start / totalDays;
+    final widthPercent = duration / totalDays;
+
     return Row(
       children: [
-        Expanded(
-          flex: 2,
-          child: Text(task, style: const TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis),
+        SizedBox(
+          width: 100,
+          child: Text(
+            task,
+            style: const TextStyle(fontSize: 11),
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
         Expanded(
-          flex: 5,
-          child: Container(
-            height: 24,
-            child: Stack(
-              children: [
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  top: 10,
-                  child: Container(
-                    height: 4,
-                    color: AppColors.border,
-                  ),
-                ),
-                Positioned(
-                  left: (start / totalDays) * 100,
-                  width: (duration / totalDays) * 100,
-                  child: Container(
-                    height: 24,
-                    decoration: BoxDecoration(
-                      color: AppColors.accent,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Center(
-                      child: Text(
-                        '${duration}d',
-                        style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final totalWidth = constraints.maxWidth;
+              final barStart = startPercent * totalWidth;
+              final barWidth = (widthPercent * totalWidth).clamp(30.0, totalWidth - barStart);
+
+              return Container(
+                height: 28,
+                child: Stack(
+                  children: [
+                    // Background track
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      top: 12,
+                      child: Container(
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: AppColors.border,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
                       ),
                     ),
-                  ),
+                    // Task bar
+                    Positioned(
+                      left: barStart,
+                      width: barWidth,
+                      top: 0,
+                      bottom: 0,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: color,
+                          borderRadius: BorderRadius.circular(6),
+                          boxShadow: [
+                            BoxShadow(
+                              color: color.withOpacity(0.3),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Center(
+                          child: Text(
+                            '${duration}d',
+                            style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              );
+            },
           ),
         ),
       ],
@@ -1505,6 +1870,7 @@ class ProposalLineItem {
   int quantity;
   bool taxable;
   int days;
+  int startDay; // For timeline scheduling
 
   ProposalLineItem({
     required this.description,
@@ -1513,6 +1879,7 @@ class ProposalLineItem {
     required this.quantity,
     this.taxable = false,
     this.days = 1,
+    this.startDay = 0,
   });
 
   double get amount => unitPrice * quantity;
