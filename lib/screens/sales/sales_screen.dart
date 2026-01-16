@@ -18,7 +18,7 @@ class _SalesScreenState extends State<SalesScreen> with SingleTickerProviderStat
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 5, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     _tabController.addListener(() => setState(() {}));
   }
 
@@ -111,8 +111,6 @@ class _SalesScreenState extends State<SalesScreen> with SingleTickerProviderStat
                   _LeadsTab(),
                   _ClientsTab(),
                   _QuotesTab(),
-                  _ResponsesTab(),
-                  _TemplatesTab(),
                 ],
               ),
             ),
@@ -128,15 +126,11 @@ class _SalesScreenState extends State<SalesScreen> with SingleTickerProviderStat
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
         children: [
-          _buildTab(0, 'Leads', 3),
+          _buildTab(0, 'Leads', 4),
           const SizedBox(width: 8),
           _buildTab(1, 'Clients', 3),
           const SizedBox(width: 8),
           _buildTab(2, 'Quotes', 31),
-          const SizedBox(width: 8),
-          _buildTab(3, 'Responses', 24),
-          const SizedBox(width: 8),
-          _buildTab(4, 'Templates', 1),
         ],
       ),
     );
@@ -997,6 +991,7 @@ class _ClientsTab extends StatelessWidget {
 }
 
 // ============ QUOTES TAB ============
+// ============ QUOTES TAB (with sub-tabs: All Quotes, Responses, Templates) ============
 class _QuotesTab extends StatefulWidget {
   const _QuotesTab();
 
@@ -1004,8 +999,9 @@ class _QuotesTab extends StatefulWidget {
   State<_QuotesTab> createState() => _QuotesTabState();
 }
 
-class _QuotesTabState extends State<_QuotesTab> {
-  String _viewMode = 'clients'; // clients or leads
+class _QuotesTabState extends State<_QuotesTab> with SingleTickerProviderStateMixin {
+  late TabController _subTabController;
+  String _viewMode = 'clients';
   final Set<String> _expandedClients = {};
 
   final List<Map<String, dynamic>> _quotesByClient = [
@@ -1028,20 +1024,133 @@ class _QuotesTabState extends State<_QuotesTab> {
     },
   ];
 
+  final List<Map<String, dynamic>> _responses = [
+    {'quote': 'Proposal for Wall street global', 'number': '260114-717', 'response': 'Accepted', 'signer': 'Barzan Jan Rahimi', 'date': DateTime(2026, 1, 14)},
+    {'quote': 'Proposal for Wall street global', 'number': '260113-470', 'response': 'Accepted', 'signer': 'Barzan Jan Rahimi', 'date': DateTime(2026, 1, 13)},
+    {'quote': 'Proposal for Wall street global', 'number': '260113-524', 'response': 'Accepted', 'signer': 'Barzan Jan Rahimi', 'date': DateTime(2026, 1, 13)},
+    {'quote': 'Website Redesign', 'number': '260113-749', 'response': 'Declined', 'signer': 'John Smith', 'date': DateTime(2026, 1, 12)},
+    {'quote': 'Proposal for Tech Solutions', 'number': '260113-651', 'response': 'Pending', 'signer': 'Testing', 'date': DateTime(2026, 1, 11)},
+  ];
+
+  final List<Map<String, dynamic>> _templates = [
+    {'id': '1', 'name': 'Subdivisions', 'description': 'For lennar only', 'category': 'Subdivisions', 'clientType': 'Home Builders', 'usedCount': 48},
+    {'id': '2', 'name': 'Web Development', 'description': 'Standard web project proposal', 'category': 'Development', 'clientType': 'Small Business', 'usedCount': 32},
+    {'id': '3', 'name': 'Consulting Retainer', 'description': 'Monthly retainer agreement', 'category': 'Consulting', 'clientType': 'Enterprise', 'usedCount': 15},
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _subTabController = TabController(length: 3, vsync: this);
+    _subTabController.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _subTabController.dispose();
+    super.dispose();
+  }
+
+  int get _totalQuotes => _quotesByClient.fold(0, (sum, g) => sum + (g['quotes'] as List).length);
+
   @override
   Widget build(BuildContext context) {
+    return Column(
+      children: [
+        // Sub-tabs (All Quotes, Responses, Templates)
+        Container(
+          margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: AppColors.neutral100,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Row(
+            children: [
+              _buildSubTab(0, 'All Quotes', _totalQuotes),
+              _buildSubTab(1, 'Responses', _responses.length),
+              _buildSubTab(2, 'Templates', _templates.length),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        
+        // Sub-tab Content
+        Expanded(
+          child: IndexedStack(
+            index: _subTabController.index,
+            children: [
+              _buildAllQuotesContent(),
+              _buildResponsesContent(),
+              _buildTemplatesContent(),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSubTab(int index, String label, int count) {
+    final isSelected = _subTabController.index == index;
+    
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => _subTabController.animateTo(index),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: isSelected ? AppColors.cardBackground : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+            boxShadow: isSelected ? AppShadows.sm : null,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                  color: isSelected ? AppColors.textPrimary : AppColors.textSecondary,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: isSelected ? AppColors.accent.withOpacity(0.1) : AppColors.neutral200,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  '$count',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: isSelected ? AppColors.accent : AppColors.textTertiary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ============ ALL QUOTES CONTENT ============
+  Widget _buildAllQuotesContent() {
     final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 0);
     
     return Column(
       children: [
-        // Search & Filters
+        // Search & Filter
         Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(12),
           child: Row(
             children: [
               Expanded(
                 child: Container(
-                  height: 44,
+                  height: 42,
                   decoration: BoxDecoration(
                     color: AppColors.cardBackground,
                     borderRadius: BorderRadius.circular(10),
@@ -1050,18 +1159,31 @@ class _QuotesTabState extends State<_QuotesTab> {
                   child: TextField(
                     decoration: InputDecoration(
                       hintText: 'Search quotes...',
-                      hintStyle: TextStyle(fontSize: 14, color: AppColors.textSecondary),
-                      prefixIcon: Icon(Icons.search, size: 20, color: AppColors.textSecondary),
+                      hintStyle: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                      prefixIcon: Icon(Icons.search, size: 18, color: AppColors.textSecondary),
                       border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
                     ),
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
-              _buildToggleButton('Clients', _viewMode == 'clients', () {
-                setState(() => _viewMode = 'clients');
-              }),
+              const SizedBox(width: 10),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: AppColors.cardBackground,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.business_outlined, size: 16, color: AppColors.textSecondary),
+                    const SizedBox(width: 6),
+                    Text('Clients', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
@@ -1069,7 +1191,7 @@ class _QuotesTabState extends State<_QuotesTab> {
         // Quotes List
         Expanded(
           child: ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 12),
             itemCount: _quotesByClient.length,
             itemBuilder: (context, index) {
               final group = _quotesByClient[index];
@@ -1078,16 +1200,16 @@ class _QuotesTabState extends State<_QuotesTab> {
               final isExpanded = _expandedClients.contains(client);
               
               return Container(
-                margin: const EdgeInsets.only(bottom: 12),
+                margin: const EdgeInsets.only(bottom: 10),
                 decoration: BoxDecoration(
                   color: AppColors.cardBackground,
                   borderRadius: BorderRadius.circular(12),
-                  boxShadow: AppShadows.card,
+                  boxShadow: AppShadows.sm,
                 ),
                 child: Column(
                   children: [
                     // Client Header
-                    ListTile(
+                    InkWell(
                       onTap: () {
                         setState(() {
                           if (isExpanded) {
@@ -1097,30 +1219,38 @@ class _QuotesTabState extends State<_QuotesTab> {
                           }
                         });
                       },
-                      leading: Icon(
-                        isExpanded ? Icons.keyboard_arrow_down : Icons.chevron_right,
-                        color: AppColors.textSecondary,
-                      ),
-                      title: Text(
-                        client,
-                        style: const TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                      subtitle: Text(
-                        '(${quotes.length} quotes)',
-                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
-                      ),
-                      trailing: Text(
-                        currencyFormat.format(group['totalValue']),
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 16,
+                      borderRadius: BorderRadius.circular(12),
+                      child: Padding(
+                        padding: const EdgeInsets.all(14),
+                        child: Row(
+                          children: [
+                            Icon(
+                              isExpanded ? Icons.keyboard_arrow_down : Icons.chevron_right,
+                              color: AppColors.textSecondary,
+                              size: 22,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(client, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+                                  Text('(${quotes.length} quotes)', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                                ],
+                              ),
+                            ),
+                            Text(
+                              currencyFormat.format(group['totalValue']),
+                              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                            ),
+                          ],
                         ),
                       ),
                     ),
                     
                     // Expanded Quotes
                     if (isExpanded) ...[
-                      const Divider(height: 1, color: AppColors.border),
+                      const Divider(height: 1),
                       ...quotes.map((quote) => _buildQuoteItem(quote)),
                     ],
                   ],
@@ -1133,93 +1263,55 @@ class _QuotesTabState extends State<_QuotesTab> {
     );
   }
 
-  Widget _buildToggleButton(String label, bool isActive, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: isActive ? AppColors.cardBackground : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: isActive ? AppColors.border : Colors.transparent),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: isActive ? FontWeight.w500 : FontWeight.w400,
-            color: isActive ? AppColors.textPrimary : AppColors.textSecondary,
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildQuoteItem(Map<String, dynamic> quote) {
     final dateFormat = DateFormat('M/d/yyyy');
     
     return Container(
       color: AppColors.neutral50,
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        leading: Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            color: AppColors.neutral100,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: const Icon(Icons.description_outlined, size: 18, color: AppColors.textSecondary),
-        ),
-        title: Text(
-          quote['title'],
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Row(
           children: [
-            Text(
-              '${quote['number']} • ${dateFormat.format(quote['date'])}',
-              style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: AppColors.neutral100,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.description_outlined, size: 18, color: AppColors.textSecondary),
             ),
-            const SizedBox(height: 4),
-            Row(
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(quote['title'], style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${quote['number']} • ${dateFormat.format(quote['date'])}',
+                    style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 _buildStatusBadge(quote['status']),
                 if (quote['views'] > 0) ...[
-                  const SizedBox(width: 8),
-                  Icon(Icons.visibility_outlined, size: 12, color: AppColors.textTertiary),
-                  const SizedBox(width: 2),
-                  Text(
-                    '${quote['views']}',
-                    style: TextStyle(fontSize: 11, color: AppColors.textTertiary),
+                  const SizedBox(height: 4),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.visibility_outlined, size: 12, color: AppColors.textTertiary),
+                      const SizedBox(width: 2),
+                      Text('${quote['views']}', style: TextStyle(fontSize: 10, color: AppColors.textTertiary)),
+                    ],
                   ),
                 ],
               ],
-            ),
-            const SizedBox(height: 6),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: AppColors.success.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: AppColors.success.withOpacity(0.3)),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.arrow_forward, size: 12, color: AppColors.success),
-                  const SizedBox(width: 4),
-                  const Text(
-                    'Convert',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                      color: AppColors.success,
-                    ),
-                  ),
-                ],
-              ),
             ),
           ],
         ),
@@ -1237,44 +1329,29 @@ class _QuotesTabState extends State<_QuotesTab> {
     }
     
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
         status[0].toUpperCase() + status.substring(1),
-        style: TextStyle(
-          fontSize: 10,
-          fontWeight: FontWeight.w600,
-          color: color,
-        ),
+        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: color),
       ),
     );
   }
-}
 
-// ============ RESPONSES TAB ============
-class _ResponsesTab extends StatelessWidget {
-  const _ResponsesTab();
-
-  @override
-  Widget build(BuildContext context) {
-    final responses = [
-      {'quote': 'Proposal for Wall street global', 'number': '260114-717', 'response': 'Accepted', 'signer': 'Barzan Jan Rahimi', 'hasSignature': true},
-      {'quote': 'Proposal for Wall street global', 'number': '260113-470', 'response': 'Accepted', 'signer': 'Barzan Jan Rahimi', 'hasSignature': true},
-      {'quote': 'Proposal for Wall street global', 'number': '260113-524', 'response': 'Accepted', 'signer': 'Barzan Jan Rahimi', 'hasSignature': true},
-      {'quote': 'Proposal for Wall street global', 'number': '260113-749', 'response': 'Accepted', 'signer': 'Barzan Jan Rahimi\nFirst', 'hasSignature': true},
-      {'quote': 'Proposal for Wall street global', 'number': '260113-651', 'response': 'Accepted', 'signer': 'Testing', 'hasSignature': true},
-    ];
+  // ============ RESPONSES CONTENT ============
+  Widget _buildResponsesContent() {
+    final dateFormat = DateFormat('M/d');
     
     return Column(
       children: [
         // Search
         Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(12),
           child: Container(
-            height: 44,
+            height: 42,
             decoration: BoxDecoration(
               color: AppColors.cardBackground,
               borderRadius: BorderRadius.circular(10),
@@ -1283,203 +1360,262 @@ class _ResponsesTab extends StatelessWidget {
             child: TextField(
               decoration: InputDecoration(
                 hintText: 'Search responses...',
-                hintStyle: TextStyle(fontSize: 14, color: AppColors.textSecondary),
-                prefixIcon: Icon(Icons.search, size: 20, color: AppColors.textSecondary),
+                hintStyle: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                prefixIcon: Icon(Icons.search, size: 18, color: AppColors.textSecondary),
                 border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
               ),
-            ),
-          ),
-        ),
-
-        // Table Header
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: AppColors.neutral50,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-              border: Border.all(color: AppColors.border),
-            ),
-            child: Row(
-              children: [
-                const Expanded(flex: 2, child: Text('Quote', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary))),
-                const Expanded(child: Text('Response', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary))),
-                const Expanded(child: Text('Signer', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary))),
-                const SizedBox(width: 60, child: Text('Signature', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary))),
-              ],
             ),
           ),
         ),
 
         // Responses List
         Expanded(
-          child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 16),
-            decoration: BoxDecoration(
-              color: AppColors.cardBackground,
-              borderRadius: const BorderRadius.vertical(bottom: Radius.circular(12)),
-              border: Border.all(color: AppColors.border),
-            ),
-            child: ListView.separated(
-              itemCount: responses.length,
-              separatorBuilder: (_, __) => const Divider(height: 1, color: AppColors.border),
-              itemBuilder: (context, index) {
-                final response = responses[index];
-                
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        flex: 2,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              response['quote'] as String,
-                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
-                            ),
-                            Text(
-                              response['number'] as String,
-                              style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
-                            ),
-                          ],
-                        ),
+          child: ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            itemCount: _responses.length,
+            itemBuilder: (context, index) {
+              final response = _responses[index];
+              final responseType = response['response'] as String;
+              Color responseColor;
+              IconData responseIcon;
+              
+              switch (responseType) {
+                case 'Accepted':
+                  responseColor = AppColors.success;
+                  responseIcon = Icons.check_circle_outline;
+                  break;
+                case 'Declined':
+                  responseColor = AppColors.error;
+                  responseIcon = Icons.cancel_outlined;
+                  break;
+                default:
+                  responseColor = AppColors.warning;
+                  responseIcon = Icons.schedule;
+              }
+              
+              return Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: AppColors.cardBackground,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: AppShadows.sm,
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: responseColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                      Expanded(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      child: Icon(responseIcon, color: responseColor, size: 20),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(response['quote'] as String, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 2),
+                          Row(
+                            children: [
+                              Text(response['number'] as String, style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                              const SizedBox(width: 8),
+                              Text('•', style: TextStyle(color: AppColors.textTertiary)),
+                              const SizedBox(width: 8),
+                              Icon(Icons.person_outline, size: 12, color: AppColors.textTertiary),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  response['signer'] as String,
+                                  style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
-                            color: AppColors.success.withOpacity(0.1),
+                            color: responseColor.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
-                            response['response'] as String,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.success,
-                            ),
+                            responseType,
+                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: responseColor),
                           ),
                         ),
-                      ),
-                      Expanded(
-                        child: Text(
-                          response['signer'] as String,
-                          style: const TextStyle(fontSize: 12),
+                        const SizedBox(height: 4),
+                        Text(
+                          dateFormat.format(response['date'] as DateTime),
+                          style: TextStyle(fontSize: 10, color: AppColors.textTertiary),
                         ),
-                      ),
-                      SizedBox(
-                        width: 60,
-                        child: Row(
-                          children: [
-                            Icon(Icons.visibility_outlined, size: 14, color: AppColors.accent),
-                            const SizedBox(width: 4),
-                            Text(
-                              'View',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: AppColors.accent,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            },
           ),
         ),
-        const SizedBox(height: 16),
       ],
     );
   }
-}
 
-// ============ TEMPLATES TAB ============
-class _TemplatesTab extends StatelessWidget {
-  const _TemplatesTab();
-
-  @override
-  Widget build(BuildContext context) {
-    final templates = [
-      {
-        'id': '1',
-        'name': 'Subdivisions',
-        'description': 'For lennar only',
-        'category': 'Subdivisions',
-        'clientType': 'Home Builders',
-        'usedCount': 48,
-      },
-    ];
-    
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: templates.length,
-      itemBuilder: (context, index) {
-        final template = templates[index];
-        
-        return Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          decoration: BoxDecoration(
-            color: AppColors.cardBackground,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: AppShadows.card,
-          ),
-          child: ListTile(
-            contentPadding: const EdgeInsets.all(16),
-            leading: Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: AppColors.accent.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(10),
+  // ============ TEMPLATES CONTENT ============
+  Widget _buildTemplatesContent() {
+    return Column(
+      children: [
+        // Search & Add
+        Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              Expanded(
+                child: Container(
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: AppColors.cardBackground,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: TextField(
+                    decoration: InputDecoration(
+                      hintText: 'Search templates...',
+                      hintStyle: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                      prefixIcon: Icon(Icons.search, size: 18, color: AppColors.textSecondary),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+                    ),
+                  ),
+                ),
               ),
-              child: const Icon(Icons.description_outlined, color: AppColors.accent),
+              const SizedBox(width: 10),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppColors.accent,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.add, color: Colors.white, size: 20),
+              ),
+            ],
+          ),
+        ),
+
+        // Templates Grid
+        Expanded(
+          child: GridView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 10,
+              childAspectRatio: 0.85,
             ),
-            title: Text(
-              template['name'] as String,
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(template['description'] as String, style: const TextStyle(fontSize: 12)),
-                const SizedBox(height: 8),
-                Row(
+            itemCount: _templates.length,
+            itemBuilder: (context, index) {
+              final template = _templates[index];
+              
+              return Container(
+                decoration: BoxDecoration(
+                  color: AppColors.cardBackground,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: AppShadows.sm,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.label_outline, size: 12, color: AppColors.textTertiary),
-                    const SizedBox(width: 4),
-                    Text(template['category'] as String, style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
-                    const SizedBox(width: 12),
-                    Icon(Icons.people_outline, size: 12, color: AppColors.textTertiary),
-                    const SizedBox(width: 4),
-                    Text(template['clientType'] as String, style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
-                    const SizedBox(width: 12),
-                    Icon(Icons.access_time, size: 12, color: AppColors.textTertiary),
-                    const SizedBox(width: 4),
-                    Text('Used ${template['usedCount']}x', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                    // Template Preview
+                    Container(
+                      height: 80,
+                      decoration: BoxDecoration(
+                        color: AppColors.accent.withOpacity(0.1),
+                        borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                      ),
+                      child: Stack(
+                        children: [
+                          Center(
+                            child: Icon(Icons.description_outlined, size: 32, color: AppColors.accent.withOpacity(0.5)),
+                          ),
+                          Positioned(
+                            top: 8,
+                            right: 8,
+                            child: PopupMenuButton(
+                              icon: Icon(Icons.more_vert, size: 18, color: AppColors.textSecondary),
+                              padding: EdgeInsets.zero,
+                              itemBuilder: (context) => [
+                                const PopupMenuItem(value: 'use', child: Text('Use Template')),
+                                const PopupMenuItem(value: 'edit', child: Text('Edit')),
+                                const PopupMenuItem(value: 'duplicate', child: Text('Duplicate')),
+                                const PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: AppColors.error))),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Template Info
+                    Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            template['name'] as String,
+                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            template['description'] as String,
+                            style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: AppColors.neutral100,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  template['category'] as String,
+                                  style: TextStyle(fontSize: 9, color: AppColors.textSecondary),
+                                ),
+                              ),
+                              const Spacer(),
+                              Icon(Icons.copy_outlined, size: 10, color: AppColors.textTertiary),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${template['usedCount']}x',
+                                style: TextStyle(fontSize: 10, color: AppColors.textTertiary),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
-              ],
-            ),
-            trailing: PopupMenuButton(
-              icon: const Icon(Icons.more_vert),
-              itemBuilder: (context) => [
-                const PopupMenuItem(value: 'use', child: Text('Use Template')),
-                const PopupMenuItem(value: 'edit', child: Text('Edit')),
-                const PopupMenuItem(value: 'duplicate', child: Text('Duplicate')),
-                const PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: AppColors.error))),
-              ],
-            ),
+              );
+            },
           ),
-        );
-      },
+        ),
+      ],
     );
   }
 }
