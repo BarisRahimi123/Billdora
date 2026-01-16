@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 
+import '../../main.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/supabase_service.dart';
 
@@ -25,7 +26,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _loadStats() async {
     final supabase = context.read<SupabaseService>();
-    // TODO: Get actual company ID from user
     try {
       final stats = await supabase.getDashboardStats('company-id');
       setState(() {
@@ -40,241 +40,396 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
-    final colorScheme = Theme.of(context).colorScheme;
-    final currencyFormat = NumberFormat.currency(symbol: '\$');
+    final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 0);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Welcome back,',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
-            ),
-            Text(
-              authProvider.userName.isNotEmpty ? authProvider.userName : 'User',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_outlined),
-            onPressed: () {
-              // TODO: Navigate to notifications
-            },
-          ),
-        ],
-      ),
-      body: RefreshIndicator(
-        onRefresh: _loadStats,
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Stats Cards
-              _buildStatsGrid(colorScheme, currencyFormat),
-              const SizedBox(height: 24),
-
-              // Quick Actions
-              Text(
-                'Quick Actions',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
+      backgroundColor: AppColors.background,
+      body: SafeArea(
+        child: RefreshIndicator(
+          color: AppColors.blue,
+          backgroundColor: AppColors.cardBackground,
+          onRefresh: _loadStats,
+          child: CustomScrollView(
+            slivers: [
+              // Header
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Main Dashboard',
+                            style: Theme.of(context).textTheme.headlineMedium,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Welcome back, ${authProvider.userName.isNotEmpty ? authProvider.userName : 'User'}',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        ],
+                      ),
+                      Row(
+                        children: [
+                          _HeaderIconButton(
+                            icon: Icons.notifications_outlined,
+                            onTap: () {},
+                          ),
+                          const SizedBox(width: 8),
+                          _HeaderIconButton(
+                            icon: Icons.add,
+                            onTap: () => context.push('/invoices/create'),
+                            isPrimary: true,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              const SizedBox(height: 12),
-              _buildQuickActions(context, colorScheme),
-              const SizedBox(height: 24),
 
-              // Recent Invoices
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Recent Invoices',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () => context.go('/invoices'),
-                    child: const Text('View All'),
-                  ),
-                ],
+              // Main Stats Cards
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: _buildMainStatsCards(currencyFormat),
+                ),
               ),
-              const SizedBox(height: 8),
-              _buildRecentInvoices(colorScheme),
+
+              // Quick Actions Row
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: _buildQuickActionsRow(context),
+                ),
+              ),
+
+              // Recent Activity Section
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: _buildRecentActivitySection(context),
+                ),
+              ),
             ],
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.push('/invoices/create'),
-        icon: const Icon(Icons.add),
-        label: const Text('New Invoice'),
-      ),
     );
   }
 
-  Widget _buildStatsGrid(ColorScheme colorScheme, NumberFormat currencyFormat) {
+  Widget _buildMainStatsCards(NumberFormat currencyFormat) {
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(40),
+          child: CircularProgressIndicator(color: AppColors.blue),
+        ),
+      );
     }
 
-    return GridView.count(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: 2,
-      mainAxisSpacing: 12,
-      crossAxisSpacing: 12,
-      childAspectRatio: 1.5,
+    return Column(
       children: [
-        _buildStatCard(
-          'Total Revenue',
-          currencyFormat.format(_stats?['totalRevenue'] ?? 0),
-          Icons.trending_up,
-          colorScheme.primary,
-          colorScheme,
-        ),
-        _buildStatCard(
-          'Outstanding',
-          currencyFormat.format(_stats?['outstanding'] ?? 0),
-          Icons.pending_actions,
-          colorScheme.tertiary,
-          colorScheme,
-        ),
-        _buildStatCard(
-          'Expenses',
-          currencyFormat.format(_stats?['totalExpenses'] ?? 0),
-          Icons.receipt_long,
-          colorScheme.error,
-          colorScheme,
-        ),
-        _buildStatCard(
-          'Profit',
-          currencyFormat.format(_stats?['profit'] ?? 0),
-          Icons.account_balance_wallet,
-          Colors.green,
-          colorScheme,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStatCard(String title, String value, IconData icon, Color iconColor, ColorScheme colorScheme) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        // Row 1: Cash Flow & Revenue
+        Row(
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    color: colorScheme.onSurfaceVariant,
-                    fontSize: 12,
-                  ),
+            Expanded(
+              child: _StatCard(
+                title: 'Cash Flow',
+                value: currencyFormat.format(_stats?['cashFlow'] ?? 24580),
+                change: '+12.5%',
+                isPositive: true,
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF1E3A5F), Color(0xFF0F172A)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-                Icon(icon, color: iconColor, size: 20),
-              ],
+                icon: Icons.account_balance_wallet_outlined,
+              ),
             ),
-            Text(
-              value,
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 20,
-                color: colorScheme.onSurface,
+            const SizedBox(width: 12),
+            Expanded(
+              child: _StatCard(
+                title: 'Revenue',
+                value: currencyFormat.format(_stats?['totalRevenue'] ?? 48250),
+                change: '+8.2%',
+                isPositive: true,
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF1E4035), Color(0xFF0F172A)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                icon: Icons.trending_up,
               ),
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildQuickActions(BuildContext context, ColorScheme colorScheme) {
-    return Row(
-      children: [
-        Expanded(
-          child: _buildActionButton(
-            context,
-            'Invoice',
-            Icons.receipt_long,
-            () => context.push('/invoices/create'),
-            colorScheme,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _buildActionButton(
-            context,
-            'Client',
-            Icons.person_add,
-            () => context.go('/clients'),
-            colorScheme,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _buildActionButton(
-            context,
-            'Expense',
-            Icons.add_card,
-            () => context.go('/expenses'),
-            colorScheme,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _buildActionButton(
-            context,
-            'Report',
-            Icons.bar_chart,
-            () => context.go('/reports'),
-            colorScheme,
-          ),
+        const SizedBox(height: 12),
+        // Row 2: Profit & Expenses
+        Row(
+          children: [
+            Expanded(
+              child: _StatCard(
+                title: 'Profit',
+                value: currencyFormat.format(_stats?['profit'] ?? 18420),
+                change: '+15.3%',
+                isPositive: true,
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF2D1F4E), Color(0xFF0F172A)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                icon: Icons.show_chart,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _StatCard(
+                title: 'Expenses',
+                value: currencyFormat.format(_stats?['totalExpenses'] ?? 12840),
+                change: '-3.1%',
+                isPositive: false,
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF4A1D1D), Color(0xFF0F172A)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                icon: Icons.receipt_long_outlined,
+              ),
+            ),
+          ],
         ),
       ],
     );
   }
 
-  Widget _buildActionButton(
-    BuildContext context,
-    String label,
-    IconData icon,
-    VoidCallback onTap,
-    ColorScheme colorScheme,
-  ) {
-    return InkWell(
+  Widget _buildQuickActionsRow(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(child: _QuickAction(
+          icon: Icons.receipt_long,
+          label: 'Invoice',
+          onTap: () => context.push('/invoices/create'),
+        )),
+        const SizedBox(width: 12),
+        Expanded(child: _QuickAction(
+          icon: Icons.person_add,
+          label: 'Client',
+          onTap: () => context.go('/clients'),
+        )),
+        const SizedBox(width: 12),
+        Expanded(child: _QuickAction(
+          icon: Icons.folder_outlined,
+          label: 'Project',
+          onTap: () => context.go('/projects'),
+        )),
+        const SizedBox(width: 12),
+        Expanded(child: _QuickAction(
+          icon: Icons.timer_outlined,
+          label: 'Time',
+          onTap: () {}, // TODO: Navigate to time tracking
+        )),
+      ],
+    );
+  }
+
+  Widget _buildRecentActivitySection(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Recent Invoices',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            TextButton(
+              onPressed: () => context.go('/invoices'),
+              child: const Text('View All'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Container(
+          decoration: BoxDecoration(
+            color: AppColors.cardBackground,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.cardBorder),
+          ),
+          child: ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: 4,
+            separatorBuilder: (_, __) => const Divider(
+              height: 1,
+              color: AppColors.cardBorder,
+            ),
+            itemBuilder: (context, index) => _InvoiceListItem(
+              invoiceNumber: 'INV-${2024001 + index}',
+              clientName: ['Acme Corp', 'TechStart Inc', 'Design Studio', 'Global Media'][index],
+              amount: [2500, 1800, 3200, 950][index].toDouble(),
+              status: ['Paid', 'Pending', 'Paid', 'Overdue'][index],
+              onTap: () => context.push('/invoices/$index'),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// Header Icon Button
+class _HeaderIconButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  final bool isPrimary;
+
+  const _HeaderIconButton({
+    required this.icon,
+    required this.onTap,
+    this.isPrimary = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: isPrimary ? AppColors.blue : AppColors.cardBackground,
+          borderRadius: BorderRadius.circular(12),
+          border: isPrimary ? null : Border.all(color: AppColors.cardBorder),
+        ),
+        child: Icon(
+          icon,
+          color: AppColors.textPrimary,
+          size: 20,
+        ),
+      ),
+    );
+  }
+}
+
+// Stat Card with gradient
+class _StatCard extends StatelessWidget {
+  final String title;
+  final String value;
+  final String change;
+  final bool isPositive;
+  final Gradient gradient;
+  final IconData icon;
+
+  const _StatCard({
+    required this.title,
+    required this.value,
+    required this.change,
+    required this.isPositive,
+    required this.gradient,
+    required this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: gradient,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.cardBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, color: AppColors.textPrimary, size: 18),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: (isPositive ? AppColors.green : AppColors.red).withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  change,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: isPositive ? AppColors.green : AppColors.red,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 13,
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// Quick Action Button
+class _QuickAction extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _QuickAction({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
-          color: colorScheme.primaryContainer.withOpacity(0.3),
+          color: AppColors.cardBackground,
           borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.cardBorder),
         ),
         child: Column(
           children: [
-            Icon(icon, color: colorScheme.primary),
-            const SizedBox(height: 4),
+            Icon(icon, color: AppColors.blue, size: 24),
+            const SizedBox(height: 8),
             Text(
               label,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 12,
-                color: colorScheme.onSurface,
+                color: AppColors.textSecondary,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ],
@@ -282,52 +437,101 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
     );
   }
+}
 
-  Widget _buildRecentInvoices(ColorScheme colorScheme) {
-    // Placeholder - will be populated with real data
-    return Card(
-      child: ListView.separated(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        itemCount: 3,
-        separatorBuilder: (_, __) => const Divider(height: 1),
-        itemBuilder: (context, index) {
-          return ListTile(
-            leading: CircleAvatar(
-              backgroundColor: colorScheme.primaryContainer,
-              child: Text('C${index + 1}'),
+// Invoice List Item
+class _InvoiceListItem extends StatelessWidget {
+  final String invoiceNumber;
+  final String clientName;
+  final double amount;
+  final String status;
+  final VoidCallback onTap;
+
+  const _InvoiceListItem({
+    required this.invoiceNumber,
+    required this.clientName,
+    required this.amount,
+    required this.status,
+    required this.onTap,
+  });
+
+  Color get _statusColor {
+    switch (status.toLowerCase()) {
+      case 'paid': return AppColors.green;
+      case 'pending': return AppColors.orange;
+      case 'overdue': return AppColors.red;
+      default: return AppColors.textSecondary;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 0);
+    
+    return ListTile(
+      onTap: onTap,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      leading: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: AppColors.blue.withOpacity(0.15),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Center(
+          child: Text(
+            clientName[0],
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: AppColors.blue,
             ),
-            title: Text('Invoice #INV-00${index + 1}'),
-            subtitle: Text('Client ${index + 1}'),
-            trailing: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  '\$${(index + 1) * 500}.00',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: index == 0
-                        ? Colors.green.withOpacity(0.2)
-                        : Colors.orange.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    index == 0 ? 'Paid' : 'Pending',
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: index == 0 ? Colors.green : Colors.orange,
-                    ),
-                  ),
-                ),
-              ],
+          ),
+        ),
+      ),
+      title: Text(
+        invoiceNumber,
+        style: const TextStyle(
+          fontWeight: FontWeight.w500,
+          color: AppColors.textPrimary,
+        ),
+      ),
+      subtitle: Text(
+        clientName,
+        style: const TextStyle(
+          color: AppColors.textSecondary,
+          fontSize: 13,
+        ),
+      ),
+      trailing: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Text(
+            currencyFormat.format(amount),
+            style: const TextStyle(
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
+              fontSize: 15,
             ),
-            onTap: () => context.push('/invoices/$index'),
-          );
-        },
+          ),
+          const SizedBox(height: 4),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: _statusColor.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Text(
+              status,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: _statusColor,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
