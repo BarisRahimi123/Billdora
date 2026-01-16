@@ -6,8 +6,10 @@ import '../../main.dart';
 
 class CreateProposalScreen extends StatefulWidget {
   final String? templateId;
+  final String? leadId;
+  final String? clientId;
 
-  const CreateProposalScreen({super.key, this.templateId});
+  const CreateProposalScreen({super.key, this.templateId, this.leadId, this.clientId});
 
   @override
   State<CreateProposalScreen> createState() => _CreateProposalScreenState();
@@ -2304,6 +2306,20 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
     _emailMessageController = TextEditingController(
       text: 'Thank you for the opportunity to work together. I have attached the proposal for your consideration which includes a detailed Scope of Work, deliverable schedule, and investment summary.\n\nPlease review and let me know if you have any questions.',
     );
+    
+    // Pre-select lead if leadId was passed
+    if (widget.leadId != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _selectLead(widget.leadId);
+      });
+    }
+    
+    // Pre-select client if clientId was passed
+    if (widget.clientId != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _selectClient(widget.clientId);
+      });
+    }
   }
 
   @override

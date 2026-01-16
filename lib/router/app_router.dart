@@ -72,7 +72,13 @@ class AppRouter {
                 path: 'proposal/create',
                 builder: (context, state) {
                   final templateId = state.uri.queryParameters['template'];
-                  return CreateProposalScreen(templateId: templateId);
+                  final leadId = state.uri.queryParameters['leadId'];
+                  final clientId = state.uri.queryParameters['clientId'];
+                  return CreateProposalScreen(
+                    templateId: templateId,
+                    leadId: leadId,
+                    clientId: clientId,
+                  );
                 },
               ),
             ],
