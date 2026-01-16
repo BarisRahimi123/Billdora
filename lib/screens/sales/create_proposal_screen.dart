@@ -4329,7 +4329,6 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
 
                   // Option 1: Merged Proposal (only if all submitted)
                   _buildSendModeOption(
-                    setModalState,
                     sendMode,
                     'merged',
                     Icons.merge_type,
@@ -4338,13 +4337,12 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
                     AppColors.success,
                     enabled: allSubmitted,
                     disabledReason: !allSubmitted ? 'Wait for all submissions' : null,
-                    (val) => setModalState(() => sendMode = val),
+                    onSelect: (val) => setModalState(() => sendMode = val),
                   ),
                   const SizedBox(height: 10),
 
                   // Option 2: Send Without Collaborators
                   _buildSendModeOption(
-                    setModalState,
                     sendMode,
                     'without',
                     Icons.person,
@@ -4352,14 +4350,13 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
                     'Send only your services, exclude pending collaborators',
                     AppColors.info,
                     enabled: true,
-                    (val) => setModalState(() => sendMode = val),
+                    onSelect: (val) => setModalState(() => sendMode = val),
                   ),
                   const SizedBox(height: 10),
 
                   // Option 3: Wait for Submissions
                   if (pendingCollaborators.isNotEmpty)
                     _buildSendModeOption(
-                      setModalState,
                       sendMode,
                       'wait',
                       Icons.schedule,
@@ -4367,14 +4364,13 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
                       'Save as draft, send automatically when all submit',
                       AppColors.warning,
                       enabled: true,
-                      (val) => setModalState(() => sendMode = val),
+                      onSelect: (val) => setModalState(() => sendMode = val),
                     ),
                   if (pendingCollaborators.isNotEmpty)
                     const SizedBox(height: 10),
 
                   // Option 4: Independent Sending
                   _buildSendModeOption(
-                    setModalState,
                     sendMode,
                     'independent',
                     Icons.call_split,
@@ -4382,7 +4378,7 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
                     'You send yours, collaborators send theirs directly',
                     AppColors.purple,
                     enabled: true,
-                    (val) => setModalState(() => sendMode = val),
+                    onSelect: (val) => setModalState(() => sendMode = val),
                   ),
                   const SizedBox(height: 20),
 
@@ -4541,7 +4537,6 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
   }
 
   Widget _buildSendModeOption(
-    StateSetter setModalState,
     String currentMode,
     String mode,
     IconData icon,
