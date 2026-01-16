@@ -419,86 +419,152 @@ class _LeadsTabState extends State<_LeadsTab> {
                     final lead = _filteredLeads[index];
                     
                     return Container(
-                      margin: const EdgeInsets.only(bottom: 8),
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         color: AppColors.cardBackground,
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(16),
                         boxShadow: AppShadows.sm,
                       ),
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        leading: Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: _getLeadColor(lead['name']),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Center(
-                            child: Text(
-                              lead['name'][0].toUpperCase(),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 16,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Header Row
+                          Row(
+                            children: [
+                              // Avatar
+                              Container(
+                                width: 48,
+                                height: 48,
+                                decoration: BoxDecoration(
+                                  color: _getLeadColor(lead['name']),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    lead['name'][0].toUpperCase(),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 18,
+                                    ),
+                                  ),
+                                ),
                               ),
-                            ),
-                          ),
-                        ),
-                        title: Row(
-                          children: [
-                            Text(
-                              lead['name'],
-                              style: const TextStyle(fontWeight: FontWeight.w600),
-                            ),
-                            if (lead['company'].isNotEmpty) ...[
-                              const SizedBox(width: 8),
-                              Text(
-                                lead['company'],
-                                style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                              const SizedBox(width: 12),
+                              
+                              // Name and Company
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      lead['name'],
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    if (lead['company'].isNotEmpty)
+                                      Text(
+                                        lead['company'],
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          color: AppColors.textSecondary,
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                              
+                              // More Menu
+                              PopupMenuButton(
+                                icon: Icon(Icons.more_vert, color: AppColors.textSecondary, size: 20),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                itemBuilder: (context) => [
+                                  const PopupMenuItem(
+                                    value: 'edit',
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.edit_outlined, size: 18),
+                                        SizedBox(width: 12),
+                                        Text('Edit Lead'),
+                                      ],
+                                    ),
+                                  ),
+                                  const PopupMenuItem(
+                                    value: 'delete',
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.delete_outline, size: 18, color: AppColors.error),
+                                        SizedBox(width: 12),
+                                        Text('Delete', style: TextStyle(color: AppColors.error)),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                                onSelected: (value) {
+                                  // Handle menu actions
+                                },
                               ),
                             ],
-                          ],
-                        ),
-                        subtitle: Row(
-                          children: [
-                            Text(lead['source'], style: const TextStyle(fontSize: 12)),
-                            const SizedBox(width: 12),
-                            _buildStatusDropdown(lead),
-                            const SizedBox(width: 12),
-                            Text(
-                              currencyFormat.format(lead['value']),
-                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-                            ),
-                            const SizedBox(width: 12),
-                            Text(
-                              dateFormat.format(lead['created']),
-                              style: TextStyle(fontSize: 12, color: AppColors.textTertiary),
-                            ),
-                          ],
-                        ),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            _buildActionButton('Proposal', Icons.send_outlined, AppColors.accent),
-                            const SizedBox(width: 8),
-                            _buildActionButton('Convert', Icons.person_add_outlined, AppColors.success),
-                            const SizedBox(width: 8),
-                            IconButton(
-                              icon: const Icon(Icons.edit_outlined, size: 18),
-                              onPressed: () {},
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(),
-                            ),
-                            const SizedBox(width: 8),
-                            IconButton(
-                              icon: const Icon(Icons.delete_outline, size: 18, color: AppColors.error),
-                              onPressed: () {},
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(),
-                            ),
-                          ],
-                        ),
+                          ),
+                          
+                          const SizedBox(height: 16),
+                          
+                          // Details Row
+                          Wrap(
+                            spacing: 16,
+                            runSpacing: 8,
+                            children: [
+                              _buildInfoChip(Icons.source_outlined, lead['source']),
+                              _buildStatusDropdown(lead),
+                              _buildInfoChip(Icons.attach_money, currencyFormat.format(lead['value'])),
+                              _buildInfoChip(Icons.calendar_today_outlined, dateFormat.format(lead['created'])),
+                            ],
+                          ),
+                          
+                          const SizedBox(height: 16),
+                          
+                          // Action Buttons
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: () {},
+                                  icon: const Icon(Icons.send_outlined, size: 16),
+                                  label: const Text('Proposal'),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: AppColors.accent,
+                                    side: BorderSide(color: AppColors.accent.withOpacity(0.3)),
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  onPressed: () {},
+                                  icon: const Icon(Icons.person_add_outlined, size: 16),
+                                  label: const Text('Convert'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppColors.success,
+                                    foregroundColor: Colors.white,
+                                    elevation: 0,
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     );
                   },
@@ -557,25 +623,23 @@ class _LeadsTabState extends State<_LeadsTab> {
     }
   }
 
-  Widget _buildActionButton(String label, IconData icon, Color color) {
+  Widget _buildInfoChip(IconData icon, String label) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color.withOpacity(0.3)),
+        color: AppColors.neutral50,
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: color),
-          const SizedBox(width: 4),
+          Icon(icon, size: 14, color: AppColors.textSecondary),
+          const SizedBox(width: 6),
           Text(
             label,
             style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
-              color: color,
+              fontSize: 12,
+              color: AppColors.textPrimary,
             ),
           ),
         ],
