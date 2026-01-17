@@ -491,72 +491,70 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> with SingleTi
                 Row(
                   children: [
                     Expanded(child: _buildDropdownField('Status', _invoice['status'], ['Draft', 'Sent', 'Viewed', 'Paid', 'Overdue'])),
-                    const SizedBox(width: 16),
+                    const SizedBox(width: 12),
                     Expanded(child: _buildDateField('Sent Date', _invoice['sentDate'])),
                   ],
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'Due date calculated from sent date + terms',
-                  style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                  style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
 
-                // Timeline
+                // Timeline - Redesigned for compact display
                 Row(
                   children: [
-                    _buildTimelineItem('Drafted', shortDateFormat.format(_invoice['draftDate'])),
-                    const SizedBox(width: 16),
-                    _buildTimelineItem('Sent', shortDateFormat.format(_invoice['sentDate'])),
-                    const SizedBox(width: 16),
-                    _buildTimelineItem('Due', shortDateFormat.format(_invoice['dueDate'])),
+                    Expanded(child: _buildTimelineItem('Drafted', shortDateFormat.format(_invoice['draftDate']))),
+                    Container(width: 1, height: 24, color: AppColors.border),
+                    Expanded(child: _buildTimelineItem('Sent', shortDateFormat.format(_invoice['sentDate']))),
+                    Container(width: 1, height: 24, color: AppColors.border),
+                    Expanded(child: _buildTimelineItem('Due', shortDateFormat.format(_invoice['dueDate']))),
                   ],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
 
                 // Due Date
                 _buildDateField('Due Date', _invoice['dueDate']),
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
 
-          // Payment Reminder
+          // Payment Reminder - More Compact
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppColors.warningLight,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.warning),
+              color: AppColors.warning.withOpacity(0.05),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: AppColors.warning.withOpacity(0.3)),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
               children: [
-                Row(
-                  children: [
-                    Icon(Icons.notifications_outlined, color: AppColors.warning),
-                    const SizedBox(width: 8),
-                    const Text('Payment Reminder', style: TextStyle(fontWeight: FontWeight.w600)),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Set up automatic reminder if payment not received',
-                  style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: () {},
-                    icon: const Icon(Icons.notifications_outlined, size: 18),
-                    label: const Text('Set Reminder'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.warning,
-                      side: BorderSide(color: AppColors.warning),
-                      backgroundColor: AppColors.warningLight,
-                    ),
+                Icon(Icons.notifications_outlined, color: AppColors.warning, size: 20),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Payment Reminder', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Set automatic reminder',
+                        style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                      ),
+                    ],
                   ),
+                ),
+                OutlinedButton(
+                  onPressed: () {},
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    foregroundColor: AppColors.warning,
+                    side: BorderSide(color: AppColors.warning),
+                    minimumSize: Size.zero,
+                  ),
+                  child: const Text('Set', style: TextStyle(fontSize: 12)),
                 ),
               ],
             ),
@@ -573,13 +571,20 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> with SingleTi
         Text(label, style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
         const SizedBox(height: 6),
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           decoration: BoxDecoration(
             color: AppColors.neutral50,
             borderRadius: BorderRadius.circular(8),
             border: Border.all(color: AppColors.border),
           ),
-          child: Text(value.isEmpty ? (hint ?? '') : value, style: TextStyle(color: value.isEmpty ? AppColors.textSecondary : AppColors.textPrimary)),
+          child: Text(
+            value.isEmpty ? (hint ?? '') : value,
+            style: TextStyle(
+              fontSize: 13,
+              color: value.isEmpty ? AppColors.textSecondary : AppColors.textPrimary,
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
       ],
     );
@@ -601,7 +606,14 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> with SingleTi
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(value),
+              Expanded(
+                child: Text(
+                  value,
+                  style: const TextStyle(fontSize: 13),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 8),
               const Icon(Icons.unfold_more, size: 18, color: AppColors.textSecondary),
             ],
           ),
@@ -618,33 +630,51 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> with SingleTi
         Text(label, style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
         const SizedBox(height: 6),
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           decoration: BoxDecoration(
             color: AppColors.neutral100,
             borderRadius: BorderRadius.circular(8),
             border: Border.all(color: AppColors.border),
           ),
-          child: Center(child: Text(dateFormat.format(date))),
+          child: Center(
+            child: Text(
+              dateFormat.format(date),
+              style: const TextStyle(fontSize: 13),
+            ),
+          ),
         ),
       ],
     );
   }
 
   Widget _buildTimelineItem(String label, String date) {
-    return Row(
-      children: [
-        Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(
-            color: AppColors.textSecondary,
-            shape: BoxShape.circle,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(
+              color: AppColors.accent,
+              shape: BoxShape.circle,
+            ),
           ),
-        ),
-        const SizedBox(width: 6),
-        Text('$label  ', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-        Text(date, style: const TextStyle(fontSize: 12)),
-      ],
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(fontSize: 10, color: AppColors.textSecondary, fontWeight: FontWeight.w500),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 2),
+          Text(
+            date,
+            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
     );
   }
 
@@ -938,6 +968,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> with SingleTi
     // TODO: Implement PDF export
   }
 }
+
 
 
 
