@@ -2538,28 +2538,286 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
           else
             _buildCollaboratorsList(),
 
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
 
-          // Skip Info
+          // Status Summary (when collaborators exist)
+          if (_collaborators.isNotEmpty) ...[
+            _buildCollaboratorStatusSummary(),
+            const SizedBox(height: 16),
+          ],
+
+          // Action Buttons
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.cardBackground,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _collaborators.isEmpty ? 'Ready to continue?' : 'What would you like to do?',
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 12),
+                
+                if (_collaborators.isEmpty) ...[
+                  // No collaborators - simple continue
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () => _goToStep(4),
+                      icon: const Icon(Icons.arrow_forward, size: 18),
+                      label: const Text('Continue to Preview'),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Center(
+                    child: TextButton(
+                      onPressed: _saveDraft,
+                      child: Text('Save as Draft', style: TextStyle(color: AppColors.textSecondary)),
+                    ),
+                  ),
+                ] else ...[
+                  // Has collaborators - multiple options
+                  _buildCollaboratorActionOption(
+                    icon: Icons.save_outlined,
+                    title: 'Save & Wait for Responses',
+                    subtitle: 'Save draft and wait for collaborators to submit their pricing',
+                    color: AppColors.info,
+                    onTap: () {
+                      _saveDraft();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Proposal saved! You\'ll be notified when collaborators respond.'),
+                          backgroundColor: AppColors.info,
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                  _buildCollaboratorActionOption(
+                    icon: Icons.arrow_forward,
+                    title: 'Continue to Preview',
+                    subtitle: 'Review your proposal (collaborator prices pending)',
+                    color: AppColors.accent,
+                    onTap: () => _goToStep(4),
+                  ),
+                  const SizedBox(height: 10),
+                  _buildCollaboratorActionOption(
+                    icon: Icons.send_outlined,
+                    title: 'Send Without Collaborators',
+                    subtitle: 'Collaborators will send their proposals independently',
+                    color: AppColors.warning,
+                    onTap: () => _showIndependentSendConfirmation(),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Info Note
+          Container(
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
               color: AppColors.neutral50,
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(8),
             ),
             child: Row(
               children: [
-                Icon(Icons.info_outline, size: 18, color: AppColors.textSecondary),
-                const SizedBox(width: 10),
+                Icon(Icons.lightbulb_outline, size: 16, color: AppColors.textTertiary),
+                const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'This step is optional. You can skip it if you don\'t need collaborators.',
-                    style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                    _collaborators.isEmpty 
+                        ? 'This step is optional - skip if you don\'t need collaborators.'
+                        : 'Collaborators will receive email invitations to submit their pricing.',
+                    style: TextStyle(fontSize: 11, color: AppColors.textTertiary),
                   ),
                 ),
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCollaboratorStatusSummary() {
+    final pending = _collaborators.where((c) => !['submitted', 'accepted', 'locked'].contains(c['status'])).length;
+    final submitted = _collaborators.where((c) => ['submitted', 'accepted', 'locked'].contains(c['status'])).length;
+    
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: pending > 0 ? AppColors.warning.withOpacity(0.1) : AppColors.success.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: pending > 0 ? AppColors.warning.withOpacity(0.3) : AppColors.success.withOpacity(0.3)),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            pending > 0 ? Icons.hourglass_empty : Icons.check_circle_outline,
+            size: 20,
+            color: pending > 0 ? AppColors.warning : AppColors.success,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  pending > 0 
+                      ? '$pending collaborator${pending > 1 ? 's' : ''} pending'
+                      : 'All collaborators have responded!',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: pending > 0 ? AppColors.warning : AppColors.success,
+                  ),
+                ),
+                if (submitted > 0)
+                  Text(
+                    '$submitted submitted',
+                    style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                  ),
+              ],
+            ),
+          ),
+          if (pending > 0)
+            TextButton(
+              onPressed: () {
+                // Send reminder to pending collaborators
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Reminder sent to pending collaborators'), backgroundColor: AppColors.info),
+                );
+              },
+              child: const Text('Send Reminder', style: TextStyle(fontSize: 12)),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCollaboratorActionOption({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: color.withOpacity(0.2)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, size: 18, color: color),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: color)),
+                  Text(subtitle, style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right, size: 20, color: color.withOpacity(0.5)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _saveDraft() {
+    // Save proposal as draft
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Proposal saved as draft'),
+        backgroundColor: AppColors.success,
+      ),
+    );
+  }
+
+  void _showIndependentSendConfirmation() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        title: const Text('Send Independently?'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Your collaborators will send their proposals separately to the client.'),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.warning.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('What happens:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 8),
+                  _buildBulletPoint('You send your proposal with your services only'),
+                  _buildBulletPoint('Collaborators are notified to send their proposals'),
+                  _buildBulletPoint('Client receives separate proposals from each'),
+                  _buildBulletPoint('You can forward collaborator proposals to client'),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _goToStep(4); // Go to preview
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.warning),
+            child: const Text('Continue'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBulletPoint(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('• ', style: TextStyle(color: AppColors.textSecondary)),
+          Expanded(child: Text(text, style: TextStyle(fontSize: 12, color: AppColors.textSecondary))),
         ],
       ),
     );
