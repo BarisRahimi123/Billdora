@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../main.dart';
 import '../shell/app_header.dart';
+import '../projects/projects_screen.dart';
 
 // Global consultants list - accessible from Sales page and Proposal creation
 final List<Map<String, dynamic>> consultantsList = [
@@ -867,6 +868,20 @@ class _LeadsTabState extends State<_LeadsTab> {
       builder: (context) => _ConversionModal(
         lead: lead,
         onConvert: (convertedClient, projectName) {
+          // Generate unique project ID
+          final projectId = 'p${DateTime.now().millisecondsSinceEpoch}';
+          final clientId = convertedClient['id'];
+          
+          // Create new project
+          final newProject = {
+            'id': projectId,
+            'name': projectName,
+            'description': 'Converted from lead: ${lead['name']}',
+            'status': 'active',
+            'budget': lead['value'] ?? 0.0,
+            'clientId': clientId,
+          };
+          
           // Add to clients list
           setState(() {
             clientsList.add(convertedClient);
@@ -877,17 +892,32 @@ class _LeadsTabState extends State<_LeadsTab> {
             }
           });
           
-          // Show success message
+          // Add project to global projects list
+          final clientGroupIndex = projectGroups.indexWhere((group) => group['clientId'] == clientId);
+          if (clientGroupIndex != -1) {
+            // Client group exists, add project to it
+            (projectGroups[clientGroupIndex]['projects'] as List<Map<String, dynamic>>).add(newProject);
+          } else {
+            // Create new client group
+            projectGroups.add({
+              'client': convertedClient['company'],
+              'clientId': clientId,
+              'projects': [newProject],
+            });
+          }
+          
+          // Show success message with auto-dismiss
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Successfully converted to project: $projectName'),
               backgroundColor: AppColors.success,
+              duration: const Duration(seconds: 5),
               action: SnackBarAction(
                 label: 'View Project',
                 textColor: Colors.white,
                 onPressed: () {
-                  // Navigate to project
-                  context.push('/projects');
+                  // Navigate to specific project
+                  context.push('/projects/$projectId');
                 },
               ),
             ),

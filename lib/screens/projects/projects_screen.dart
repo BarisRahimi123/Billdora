@@ -5,6 +5,39 @@ import 'package:intl/intl.dart';
 import '../../main.dart';
 import '../shell/app_header.dart';
 
+// Global projects list - accessible from Sales page for lead-to-project conversion
+final List<Map<String, dynamic>> projectGroups = [
+  {
+    'client': 'Barzan Shop',
+    'clientId': 'c1',
+    'projects': [
+      {'id': 'p1', 'name': 'Website Redesign', 'description': 'Complete website overhaul', 'status': 'active', 'budget': 5000.0},
+      {'id': 'p2', 'name': 'Mobile App', 'description': 'iOS and Android app development', 'status': 'active', 'budget': 8000.0},
+      {'id': 'p3', 'name': 'SEO Optimization', 'description': 'Search engine optimization', 'status': 'completed', 'budget': 2000.0},
+      {'id': 'p4', 'name': 'Logo Design', 'description': 'Brand identity refresh', 'status': 'active', 'budget': 1500.0},
+      {'id': 'p5', 'name': 'Social Media Setup', 'description': 'Social media presence', 'status': 'completed', 'budget': 800.0},
+      {'id': 'p6', 'name': 'Email Marketing', 'description': 'Email campaign setup', 'status': 'on-hold', 'budget': 1200.0},
+      {'id': 'p7', 'name': 'Analytics Dashboard', 'description': 'Custom analytics solution', 'status': 'active', 'budget': 3500.0},
+    ],
+  },
+  {
+    'client': 'Sequoia Consulting',
+    'clientId': 'c2',
+    'projects': [
+      {'id': 'p8', 'name': 'SAGECREST', 'description': 'TSM Map - TENTATIVE SUBDIVISION MAP', 'status': 'active', 'budget': 2000.0},
+    ],
+  },
+  {
+    'client': 'Unassigned',
+    'clientId': null,
+    'projects': [
+      {'id': 'p9', 'name': 'Internal Tool', 'description': 'Internal productivity tool', 'status': 'active', 'budget': 0.0},
+      {'id': 'p10', 'name': 'Template Library', 'description': 'Reusable design templates', 'status': 'active', 'budget': 0.0},
+      {'id': 'p11', 'name': 'Training Materials', 'description': 'Team training resources', 'status': 'completed', 'budget': 0.0},
+    ],
+  },
+];
+
 class ProjectsScreen extends StatefulWidget {
   const ProjectsScreen({super.key});
 
@@ -17,43 +50,10 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
   String _viewMode = 'list'; // list or grid
   final Set<String> _expandedGroups = {};
 
-  // Mock data - projects grouped by client
-  final List<Map<String, dynamic>> _projectGroups = [
-    {
-      'client': 'Barzan Shop',
-      'clientId': 'c1',
-      'projects': [
-        {'id': 'p1', 'name': 'Website Redesign', 'description': 'Complete website overhaul', 'status': 'active', 'budget': 5000.0},
-        {'id': 'p2', 'name': 'Mobile App', 'description': 'iOS and Android app development', 'status': 'active', 'budget': 8000.0},
-        {'id': 'p3', 'name': 'SEO Optimization', 'description': 'Search engine optimization', 'status': 'completed', 'budget': 2000.0},
-        {'id': 'p4', 'name': 'Logo Design', 'description': 'Brand identity refresh', 'status': 'active', 'budget': 1500.0},
-        {'id': 'p5', 'name': 'Social Media Setup', 'description': 'Social media presence', 'status': 'completed', 'budget': 800.0},
-        {'id': 'p6', 'name': 'Email Marketing', 'description': 'Email campaign setup', 'status': 'on-hold', 'budget': 1200.0},
-        {'id': 'p7', 'name': 'Analytics Dashboard', 'description': 'Custom analytics solution', 'status': 'active', 'budget': 3500.0},
-      ],
-    },
-    {
-      'client': 'Sequoia Consulting',
-      'clientId': 'c2',
-      'projects': [
-        {'id': 'p8', 'name': 'SAGECREST', 'description': 'TSM Map - TENTATIVE SUBDIVISION MAP', 'status': 'active', 'budget': 2000.0},
-      ],
-    },
-    {
-      'client': 'Unassigned',
-      'clientId': null,
-      'projects': [
-        {'id': 'p9', 'name': 'Internal Tool', 'description': 'Internal productivity tool', 'status': 'active', 'budget': 0.0},
-        {'id': 'p10', 'name': 'Template Library', 'description': 'Reusable design templates', 'status': 'active', 'budget': 0.0},
-        {'id': 'p11', 'name': 'Training Materials', 'description': 'Team training resources', 'status': 'completed', 'budget': 0.0},
-      ],
-    },
-  ];
-
   List<Map<String, dynamic>> get _filteredGroups {
-    if (_searchQuery.isEmpty) return _projectGroups;
+    if (_searchQuery.isEmpty) return projectGroups;
     
-    return _projectGroups.map((group) {
+    return projectGroups.map((group) {
       final filteredProjects = (group['projects'] as List<Map<String, dynamic>>)
           .where((p) =>
               p['name'].toLowerCase().contains(_searchQuery.toLowerCase()) ||
@@ -69,7 +69,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
   // Get all projects as a flat list (not grouped)
   List<Map<String, dynamic>> get _allProjects {
     final allProjects = <Map<String, dynamic>>[];
-    for (final group in _projectGroups) {
+    for (final group in projectGroups) {
       final projects = group['projects'] as List<Map<String, dynamic>>;
       for (final project in projects) {
         allProjects.add({
