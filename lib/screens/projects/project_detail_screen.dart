@@ -2458,7 +2458,9 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> with SingleTi
               children: [
                 const Text('Billing History', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                 ElevatedButton.icon(
-                  onPressed: () => _showCreateInvoiceModal(),
+                  onPressed: () {
+                    context.push('/projects/${widget.projectId}/create-invoice', extra: _project);
+                  },
                   icon: const Icon(Icons.add, size: 18),
                   label: const Text('New'),
                   style: ElevatedButton.styleFrom(
@@ -2468,379 +2470,94 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> with SingleTi
               ],
             ),
             const SizedBox(height: 16),
-            ...invoices.map((invoice) => Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              child: ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 0),
-                title: Text(invoice['number'], style: const TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: Text(dateFormat.format(invoice['date']), style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(currencyFormat.format(invoice['amount']), style: const TextStyle(fontWeight: FontWeight.w600)),
-                        const SizedBox(height: 2),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: AppColors.neutral100,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            invoice['status'],
-                            style: TextStyle(fontSize: 10, color: AppColors.textSecondary),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(width: 8),
-                    const Icon(Icons.chevron_right, color: AppColors.textSecondary),
-                  ],
-                ),
-              ),
-            )),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showCreateInvoiceModal() {
-    showDialog(
-      context: context,
-      builder: (context) => CreateInvoiceModal(project: _project),
-    );
-  }
-}
-
-// ============ CREATE INVOICE MODAL ============
-class CreateInvoiceModal extends StatefulWidget {
-  final Map<String, dynamic> project;
-
-  const CreateInvoiceModal({super.key, required this.project});
-
-  @override
-  State<CreateInvoiceModal> createState() => _CreateInvoiceModalState();
-}
-
-class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
-  String _billingMethod = 'items'; // items, milestone, percentage
-  final Set<String> _selectedItems = {};
-  double _additionalAmount = 0.0;
-  DateTime _dueDate = DateTime.now().add(const Duration(days: 30));
-
-  double get _selectedTotal {
-    final tasks = widget.project['tasks'] as List<Map<String, dynamic>>;
-    double total = 0;
-    for (var task in tasks) {
-      if (_selectedItems.contains(task['id'])) {
-        if (_billingMethod == 'percentage') {
-          total += (task['amount'] as double) * (1 - task['percentBilled'] / 100);
-        } else {
-          total += task['amount'] as double;
-        }
-      }
-    }
-    return total + _additionalAmount;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 2);
-    final tasks = widget.project['tasks'] as List<Map<String, dynamic>>;
-    
-    return Dialog(
-      backgroundColor: AppColors.cardBackground,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Container(
-        width: double.infinity,
-        constraints: const BoxConstraints(maxHeight: 600),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Header
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+            if (invoices.isEmpty)
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Column(
                     children: [
-                      const Text('Create Invoice', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-                      Text(widget.project['name'], style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-                    ],
-                  ),
-                  GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: const Icon(Icons.close),
-                  ),
-                ],
-              ),
-            ),
-            const Divider(height: 1),
-
-            // Content
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Billing Method
-                    const Text('BILLING METHOD', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.textSecondary, letterSpacing: 0.5)),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        _buildMethodButton('By Items', 'Select specific items', 'items'),
-                        const SizedBox(width: 8),
-                        _buildMethodButton('By Milestone', 'Bill full remaining', 'milestone'),
-                        const SizedBox(width: 8),
-                        _buildMethodButton('By Percentage', 'Bill % of budget', 'percentage'),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Items
-                    if (_billingMethod == 'items') ...[
-                      _buildCheckboxItem(
-                        'Project Budget (Fixed Fee)',
-                        'Allocated project budget',
-                        currencyFormat.format(widget.project['budget']),
-                        'budget',
+                      Icon(Icons.receipt_long_outlined, size: 48, color: AppColors.textTertiary),
+                      const SizedBox(height: 12),
+                      Text('No invoices yet', style: TextStyle(color: AppColors.textSecondary)),
+                      const SizedBox(height: 8),
+                      OutlinedButton.icon(
+                        onPressed: () {
+                          context.push('/projects/${widget.projectId}/create-invoice', extra: _project);
+                        },
+                        icon: const Icon(Icons.add, size: 16),
+                        label: const Text('Create Invoice'),
                       ),
-                      const Divider(),
                     ],
-
-                    // Tasks
-                    _buildCheckboxItem(
-                      'Tasks (${tasks.length})',
-                      null,
-                      currencyFormat.format(_selectedTotal - _additionalAmount) + ' selected',
-                      null,
-                      isHeader: true,
-                    ),
-                    ...tasks.map((task) => _buildTaskCheckboxItem(task, currencyFormat)),
-
-                    const SizedBox(height: 16),
-                    
-                    // Additional Amount & Due Date
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text('ADDITIONAL AMOUNT', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                              const SizedBox(height: 8),
-                              TextField(
-                                decoration: InputDecoration(
-                                  prefixText: '\$ ',
-                                  hintText: '0.00',
-                                ),
-                                keyboardType: TextInputType.number,
-                                onChanged: (value) {
-                                  setState(() {
-                                    _additionalAmount = double.tryParse(value) ?? 0;
-                                  });
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text('DUE DATE', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                              const SizedBox(height: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-                                decoration: BoxDecoration(
-                                  color: AppColors.neutral50,
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(color: AppColors.border),
-                                ),
-                                child: Text(DateFormat('MMM d, yyyy').format(_dueDate)),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+                  ),
                 ),
-              ),
-            ),
-
-            // Footer
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.accent,
-                borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              )
+            else
+              ...invoices.map((invoice) => InkWell(
+                onTap: () => context.push('/invoices/${invoice['id']}'),
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: AppColors.border.withOpacity(0.5)),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
                     children: [
-                      const Text('Subtotal', style: TextStyle(color: Colors.white70)),
-                      Text(currencyFormat.format(_selectedTotal), style: const TextStyle(color: Colors.white70)),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(invoice['number'], style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                            const SizedBox(height: 4),
+                            Text(dateFormat.format(invoice['date']), style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                          ],
+                        ),
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(currencyFormat.format(invoice['amount']), style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                          const SizedBox(height: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: _getInvoiceStatusColor(invoice['status']).withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              invoice['status'].toUpperCase(),
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                color: _getInvoiceStatusColor(invoice['status']),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(width: 8),
+                      Icon(Icons.chevron_right, size: 20, color: AppColors.textSecondary),
                     ],
                   ),
-                  const SizedBox(height: 4),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('Total', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
-                      Text(currencyFormat.format(_selectedTotal), style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('Cancel'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('Create Invoice'),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+                ),
+              )),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildMethodButton(String title, String subtitle, String method) {
-    final isSelected = _billingMethod == method;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => setState(() => _billingMethod = method),
-        child: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: isSelected ? AppColors.neutral50 : Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: isSelected ? AppColors.accent : AppColors.border),
-          ),
-          child: Column(
-            children: [
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: isSelected ? AppColors.accent : AppColors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                subtitle,
-                style: TextStyle(fontSize: 10, color: AppColors.textSecondary),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCheckboxItem(String title, String? subtitle, String value, String? id, {bool isHeader = false}) {
-    final isSelected = id != null && _selectedItems.contains(id);
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: id != null
-          ? Checkbox(
-              value: isSelected,
-              onChanged: (val) {
-                setState(() {
-                  if (val == true) {
-                    _selectedItems.add(id);
-                  } else {
-                    _selectedItems.remove(id);
-                  }
-                });
-              },
-              activeColor: AppColors.accent,
-            )
-          : const SizedBox(width: 24),
-      title: Text(title, style: TextStyle(fontWeight: isHeader ? FontWeight.w600 : FontWeight.w400)),
-      subtitle: subtitle != null ? Text(subtitle, style: TextStyle(fontSize: 12, color: AppColors.textSecondary)) : null,
-      trailing: Text(value, style: const TextStyle(fontWeight: FontWeight.w500)),
-    );
-  }
-
-  Widget _buildTaskCheckboxItem(Map<String, dynamic> task, NumberFormat currencyFormat) {
-    final isSelected = _selectedItems.contains(task['id']);
-    final percentBilled = task['percentBilled'] as int;
-    final remaining = (task['amount'] as double) * (1 - percentBilled / 100);
-
-    return Padding(
-      padding: const EdgeInsets.only(left: 24),
-      child: ListTile(
-        contentPadding: EdgeInsets.zero,
-        leading: Checkbox(
-          value: isSelected,
-          onChanged: remaining > 0 ? (val) {
-            setState(() {
-              if (val == true) {
-                _selectedItems.add(task['id']);
-              } else {
-                _selectedItems.remove(task['id']);
-              }
-            });
-          } : null,
-          activeColor: AppColors.accent,
-        ),
-        title: Text(
-          task['name'],
-          style: TextStyle(
-            fontSize: 13,
-            color: remaining > 0 ? AppColors.textPrimary : AppColors.textSecondary,
-          ),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        subtitle: Text(
-          '${task['estimatedHours']}h estimated${percentBilled > 0 ? ' • ${percentBilled}% billed' : ''}',
-          style: TextStyle(fontSize: 11, color: AppColors.textTertiary),
-        ),
-        trailing: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            if (_billingMethod == 'percentage') ...[
-              Text('Prior', style: TextStyle(fontSize: 9, color: AppColors.textTertiary)),
-              Text(currencyFormat.format(task['amount'] * percentBilled / 100), style: const TextStyle(fontSize: 12)),
-              Text('${percentBilled}%', style: TextStyle(fontSize: 10, color: AppColors.textTertiary)),
-            ] else ...[
-              Text(currencyFormat.format(remaining), style: const TextStyle(fontWeight: FontWeight.w500)),
-              if (remaining == 0)
-                Text('0% left', style: TextStyle(fontSize: 10, color: AppColors.textTertiary)),
-            ],
-          ],
-        ),
-      ),
-    );
+  Color _getInvoiceStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'paid':
+        return AppColors.success;
+      case 'sent':
+        return AppColors.info;
+      case 'overdue':
+        return AppColors.error;
+      default:
+        return AppColors.warning;
+    }
   }
 }

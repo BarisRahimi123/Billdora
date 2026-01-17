@@ -13,6 +13,7 @@ import '../screens/invoices/create_invoice_screen.dart';
 import '../screens/clients/clients_screen.dart';
 import '../screens/projects/projects_screen.dart';
 import '../screens/projects/project_detail_screen.dart';
+import '../screens/projects/create_invoice_screen.dart' as project_invoice;
 import '../screens/expenses/expenses_screen.dart';
 import '../screens/time_expense/time_expense_screen.dart';
 import '../screens/sales/sales_screen.dart';
@@ -118,6 +119,15 @@ class AppRouter {
                 builder: (context, state) => ProjectDetailScreen(
                   projectId: state.pathParameters['id']!,
                 ),
+                routes: [
+                  GoRoute(
+                    path: 'create-invoice',
+                    builder: (context, state) {
+                      final project = state.extra as Map<String, dynamic>;
+                      return project_invoice.CreateInvoiceScreen(project: project);
+                    },
+                  ),
+                ],
               ),
             ],
           ),
