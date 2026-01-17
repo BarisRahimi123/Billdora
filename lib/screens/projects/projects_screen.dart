@@ -66,6 +66,33 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
     }).whereType<Map<String, dynamic>>().toList();
   }
 
+  // Get all projects as a flat list (not grouped)
+  List<Map<String, dynamic>> get _allProjects {
+    final allProjects = <Map<String, dynamic>>[];
+    for (final group in _projectGroups) {
+      final projects = group['projects'] as List<Map<String, dynamic>>;
+      for (final project in projects) {
+        allProjects.add({
+          ...project,
+          'client': group['client'],
+          'clientId': group['clientId'],
+        });
+      }
+    }
+    
+    // Apply search filter
+    if (_searchQuery.isNotEmpty) {
+      return allProjects
+          .where((p) =>
+              p['name'].toLowerCase().contains(_searchQuery.toLowerCase()) ||
+              p['description'].toLowerCase().contains(_searchQuery.toLowerCase()) ||
+              p['client'].toLowerCase().contains(_searchQuery.toLowerCase()))
+          .toList();
+    }
+    
+    return allProjects;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -151,16 +178,11 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
               ),
             ),
 
-            // Project Groups
+            // Project Display
             Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                itemCount: _filteredGroups.length,
-                itemBuilder: (context, index) {
-                  final group = _filteredGroups[index];
-                  return _buildProjectGroup(group);
-                },
-              ),
+              child: _viewMode == 'list' 
+                  ? _buildGroupedView() 
+                  : _buildGridView(),
             ),
           ],
         ),
@@ -208,6 +230,154 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
         border: Border.all(color: AppColors.border),
       ),
       child: const Icon(Icons.more_vert, size: 18, color: AppColors.textSecondary),
+    );
+  }
+
+  // Grouped view (by client)
+  Widget _buildGroupedView() {
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      itemCount: _filteredGroups.length,
+      itemBuilder: (context, index) {
+        final group = _filteredGroups[index];
+        return _buildProjectGroup(group);
+      },
+    );
+  }
+
+  // Grid view (all projects)
+  Widget _buildGridView() {
+    final projects = _allProjects;
+    
+    if (projects.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.folder_outlined, size: 64, color: AppColors.textTertiary),
+            const SizedBox(height: 16),
+            Text(
+              'No projects found',
+              style: TextStyle(fontSize: 16, color: AppColors.textSecondary),
+            ),
+          ],
+        ),
+      );
+    }
+    
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: projects.length,
+      itemBuilder: (context, index) {
+        final project = projects[index];
+        return _buildFlatProjectCard(project);
+      },
+    );
+  }
+
+  Widget _buildFlatProjectCard(Map<String, dynamic> project) {
+    final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 0);
+    
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: AppShadows.card,
+      ),
+      child: ListTile(
+        onTap: () => context.push('/projects/${project['id']}'),
+        contentPadding: const EdgeInsets.all(16),
+        leading: Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: _getStatusColor(project['status']).withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(
+            Icons.folder_outlined,
+            color: _getStatusColor(project['status']),
+            size: 24,
+          ),
+        ),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              project['name'],
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Icon(Icons.business_outlined, size: 12, color: AppColors.textTertiary),
+                const SizedBox(width: 4),
+                Text(
+                  project['client'] ?? 'Unassigned',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Row(
+            children: [
+              _buildStatusChip(project['status']),
+              const SizedBox(width: 8),
+              if (project['budget'] > 0)
+                Text(
+                  currencyFormat.format(project['budget']),
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+            ],
+          ),
+        ),
+        trailing: const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+      ),
+    );
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'active':
+        return AppColors.success;
+      case 'completed':
+        return AppColors.info;
+      case 'on-hold':
+        return AppColors.warning;
+      default:
+        return AppColors.textSecondary;
+    }
+  }
+
+  Widget _buildStatusChip(String status) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: _getStatusColor(status).withOpacity(0.1),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        status.toUpperCase(),
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+          color: _getStatusColor(status),
+        ),
+      ),
     );
   }
 
