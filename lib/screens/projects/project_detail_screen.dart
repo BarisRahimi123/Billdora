@@ -171,14 +171,61 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> with SingleTi
               ],
             ),
           ),
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: AppColors.cardBackground,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppColors.border),
+          PopupMenuButton<String>(
+            onSelected: (value) {
+              if (value == 'edit') {
+                // Navigate to edit project
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Edit project')),
+                );
+              } else if (value == 'archive') {
+                _showArchiveDialog();
+              } else if (value == 'delete') {
+                _showDeleteDialog();
+              }
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'edit',
+                child: Row(
+                  children: [
+                    Icon(Icons.edit_outlined, size: 18, color: AppColors.textPrimary),
+                    SizedBox(width: 12),
+                    Text('Edit Project', style: TextStyle(fontSize: 14)),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'archive',
+                child: Row(
+                  children: [
+                    Icon(Icons.archive_outlined, size: 18, color: AppColors.textPrimary),
+                    SizedBox(width: 12),
+                    Text('Archive', style: TextStyle(fontSize: 14)),
+                  ],
+                ),
+              ),
+              const PopupMenuDivider(),
+              const PopupMenuItem(
+                value: 'delete',
+                child: Row(
+                  children: [
+                    Icon(Icons.delete_outlined, size: 18, color: AppColors.error),
+                    SizedBox(width: 12),
+                    Text('Delete Project', style: TextStyle(fontSize: 14, color: AppColors.error)),
+                  ],
+                ),
+              ),
+            ],
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.cardBackground,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: const Icon(Icons.more_vert, size: 18),
             ),
-            child: const Icon(Icons.more_vert, size: 18),
           ),
           const SizedBox(width: 8),
           Container(
@@ -458,9 +505,9 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> with SingleTi
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
-          // Client Information Card
+          // Company Information
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               color: AppColors.cardBackground,
               borderRadius: BorderRadius.circular(16),
@@ -470,41 +517,49 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> with SingleTi
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Client Information', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                    const Icon(Icons.more_vert, color: AppColors.textSecondary),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppColors.accent.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(Icons.business, color: AppColors.accent, size: 24),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            client['name'],
+                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                          ),
+                          Text(
+                            'Company Information',
+                            style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
+                const SizedBox(height: 24),
+                _buildModernInfoRow(Icons.language_outlined, 'Website', client['website'], isLink: true),
                 const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: AppColors.neutral50,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border(left: BorderSide(color: AppColors.accent, width: 3)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Company Information', style: TextStyle(fontWeight: FontWeight.w600)),
-                      const SizedBox(height: 16),
-                      _buildClientInfoRow('Company Name', client['name']),
-                      _buildClientInfoRow('Website', client['website'], isLink: true),
-                      _buildClientInfoRow('Email', client['email']),
-                      _buildClientInfoRow('Phone', client['phone']),
-                      _buildClientInfoRow('Address', client['address']),
-                    ],
-                  ),
-                ),
+                _buildModernInfoRow(Icons.email_outlined, 'Email', client['email']),
+                const SizedBox(height: 16),
+                _buildModernInfoRow(Icons.phone_outlined, 'Phone', client['phone']),
+                const SizedBox(height: 16),
+                _buildModernInfoRow(Icons.location_on_outlined, 'Address', client['address']),
               ],
             ),
           ),
           const SizedBox(height: 16),
 
-          // Contacts Card
+          // Contacts
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               color: AppColors.cardBackground,
               borderRadius: BorderRadius.circular(16),
@@ -513,9 +568,20 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> with SingleTi
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Contacts', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                const SizedBox(height: 16),
-                ...((client['contacts'] as List).map((contact) => _buildContactItem(contact))),
+                const Text(
+                  'Contacts',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 20),
+                ...((client['contacts'] as List).asMap().entries.map((entry) {
+                  final isLast = entry.key == (client['contacts'] as List).length - 1;
+                  return Column(
+                    children: [
+                      _buildModernContactCard(entry.value),
+                      if (!isLast) const SizedBox(height: 12),
+                    ],
+                  );
+                })),
               ],
             ),
           ),
@@ -524,45 +590,107 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> with SingleTi
     );
   }
 
-  Widget _buildClientInfoRow(String label, String value, {bool isLink = false}) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-          const SizedBox(height: 2),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: isLink ? AppColors.accent : AppColors.textPrimary,
-            ),
+  Widget _buildModernInfoRow(IconData icon, String label, String value, {bool isLink = false}) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 20, color: AppColors.textSecondary),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textTertiary, letterSpacing: 0.5),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: isLink ? AppColors.accent : AppColors.textPrimary,
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
-  Widget _buildContactItem(Map<String, dynamic> contact) {
+  Widget _buildModernContactCard(Map<String, dynamic> contact) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.neutral50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border),
+      ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.person_outline, size: 20, color: AppColors.textSecondary),
-          const SizedBox(width: 12),
+          CircleAvatar(
+            radius: 24,
+            backgroundColor: AppColors.accent.withOpacity(0.1),
+            child: Text(
+              contact['name'].toString().substring(0, 1),
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: AppColors.accent,
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(contact['type'], style: const TextStyle(fontWeight: FontWeight.w600)),
+                Row(
+                  children: [
+                    Text(
+                      contact['type'],
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.accent,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 4),
-                Text(contact['name'], style: const TextStyle(fontSize: 14)),
-                Text(contact['role'], style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                Text(contact['email'], style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                Text(contact['phone'], style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                Text(
+                  contact['name'],
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                ),
+                Text(
+                  contact['role'],
+                  style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(Icons.email_outlined, size: 14, color: AppColors.textTertiary),
+                    const SizedBox(width: 6),
+                    Text(
+                      contact['email'],
+                      style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(Icons.phone_outlined, size: 14, color: AppColors.textTertiary),
+                    const SizedBox(width: 6),
+                    Text(
+                      contact['phone'],
+                      style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
@@ -576,7 +704,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> with SingleTi
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           color: AppColors.cardBackground,
           borderRadius: BorderRadius.circular(16),
@@ -585,31 +713,49 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> with SingleTi
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('Project Details', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                ElevatedButton(
-                  onPressed: () {},
-                  child: const Text('Save Changes'),
-                ),
-              ],
-            ),
+            const Text('Project Details', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
             const SizedBox(height: 24),
+            
             _buildFormField('Status', DropdownButtonFormField<String>(
               value: 'Active',
-              decoration: const InputDecoration(),
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: AppColors.neutral50,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(color: AppColors.border),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(color: AppColors.border),
+                ),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              ),
               items: ['Active', 'On Hold', 'Completed', 'Cancelled'].map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
               onChanged: (_) {},
             )),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
+            
             _buildFormField('Category', DropdownButtonFormField<String>(
               value: 'Other',
-              decoration: const InputDecoration(),
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: AppColors.neutral50,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(color: AppColors.border),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(color: AppColors.border),
+                ),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              ),
               items: ['Other', 'Development', 'Design', 'Consulting'].map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
               onChanged: (_) {},
             )),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
+            
             Row(
               children: [
                 Expanded(child: _buildDateField('Start Date', DateTime(2026, 1, 1))),
@@ -617,13 +763,52 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> with SingleTi
                 Expanded(child: _buildDateField('Due Date', DateTime(2026, 1, 15))),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
+            
             _buildFormField('Notes', TextField(
               maxLines: 4,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 hintText: 'Add any notes about this project...',
+                hintStyle: TextStyle(fontSize: 14, color: AppColors.textTertiary),
+                filled: true,
+                fillColor: AppColors.neutral50,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(color: AppColors.border),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(color: AppColors.border),
+                ),
+                contentPadding: const EdgeInsets.all(16),
               ),
             )),
+            const SizedBox(height: 32),
+            
+            // Save button - subtle and at the bottom
+            Center(
+              child: TextButton.icon(
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Changes saved successfully'),
+                      backgroundColor: AppColors.success,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.check_circle_outline, size: 18),
+                label: const Text('Save Changes'),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.accent,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    side: BorderSide(color: AppColors.accent.withOpacity(0.2)),
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -2559,5 +2744,58 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> with SingleTi
       default:
         return AppColors.warning;
     }
+  }
+
+  void _showArchiveDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Archive Project'),
+        content: Text('Are you sure you want to archive "${_project['name']}"? You can restore it later.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Project archived'), backgroundColor: AppColors.info),
+              );
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.warning),
+            child: const Text('Archive'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeleteDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Project'),
+        content: Text('Are you sure you want to delete "${_project['name']}"? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              context.pop(); // Go back to projects list
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Project deleted'), backgroundColor: AppColors.error),
+              );
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
   }
 }
