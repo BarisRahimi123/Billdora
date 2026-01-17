@@ -101,7 +101,47 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> with SingleTi
                           ],
                         ),
                       ),
-                      const SizedBox(width: 60),
+                      PopupMenuButton<String>(
+                        icon: Icon(Icons.more_vert, size: 24, color: AppColors.textPrimary),
+                        onSelected: (value) {
+                          if (value == 'delete') _showDeleteConfirmation();
+                          else if (value == 'duplicate') _duplicateInvoice();
+                          else if (value == 'export') _exportInvoice();
+                        },
+                        itemBuilder: (context) => [
+                          const PopupMenuItem(
+                            value: 'duplicate',
+                            child: Row(
+                              children: [
+                                Icon(Icons.content_copy, size: 18),
+                                SizedBox(width: 12),
+                                Text('Duplicate'),
+                              ],
+                            ),
+                          ),
+                          const PopupMenuItem(
+                            value: 'export',
+                            child: Row(
+                              children: [
+                                Icon(Icons.download, size: 18),
+                                SizedBox(width: 12),
+                                Text('Export PDF'),
+                              ],
+                            ),
+                          ),
+                          const PopupMenuItem(value: 'delete', child: SizedBox(height: 1)),
+                          const PopupMenuItem(
+                            value: 'delete',
+                            child: Row(
+                              children: [
+                                Icon(Icons.delete_outline, size: 18, color: AppColors.error),
+                                SizedBox(width: 12),
+                                Text('Delete Invoice', style: TextStyle(color: AppColors.error)),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ],
@@ -146,10 +186,17 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> with SingleTi
 
             // Footer
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               decoration: BoxDecoration(
-                color: AppColors.neutral100,
+                color: AppColors.cardBackground,
                 border: Border(top: BorderSide(color: AppColors.border)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, -2),
+                  ),
+                ],
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -157,34 +204,13 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> with SingleTi
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(_invoice['client'], style: const TextStyle(fontWeight: FontWeight.w600)),
-                      Text('Client', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                      Text(_invoice['client'], style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                      Text('Client', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
                     ],
                   ),
                   Text(
                     '\$${_invoice['amount'].toStringAsFixed(0)}',
                     style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
-                  ),
-                ],
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-              color: AppColors.cardBackground,
-              child: Row(
-                children: [
-                  OutlinedButton.icon(
-                    onPressed: () {},
-                    icon: const Icon(Icons.delete_outline, size: 18),
-                    label: const Text('Delete'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  OutlinedButton(
-                    onPressed: () => context.pop(),
-                    child: const Text('Cancel'),
                   ),
                 ],
               ),
@@ -415,15 +441,15 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> with SingleTi
     final shortDateFormat = DateFormat('M/d/yyyy');
     
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       child: Column(
         children: [
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               color: AppColors.cardBackground,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: AppShadows.card,
+              borderRadius: BorderRadius.circular(10),
+              boxShadow: AppShadows.sm,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -432,32 +458,32 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> with SingleTi
                 Row(
                   children: [
                     Expanded(child: _buildFormField('Invoice #', _invoice['number'])),
-                    const SizedBox(width: 16),
+                    const SizedBox(width: 12),
                     Expanded(child: _buildDropdownField('Period', _invoice['period'], ['Current Invoice', 'Previous Invoice'])),
                   ],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
 
                 // PO Number and Terms
                 Row(
                   children: [
                     Expanded(child: _buildFormField('PO Number', _invoice['poNumber'], hint: 'Enter PO #')),
-                    const SizedBox(width: 16),
+                    const SizedBox(width: 12),
                     Expanded(child: _buildDropdownField('Terms', _invoice['terms'], ['Net 15', 'Net 30', 'Net 45', 'Net 60', 'Due on Receipt'])),
                   ],
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
 
           // Status Section
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               color: AppColors.cardBackground,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: AppShadows.card,
+              borderRadius: BorderRadius.circular(10),
+              boxShadow: AppShadows.sm,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -625,51 +651,92 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> with SingleTi
   // ============ TIME TAB ============
   Widget _buildTimeTab() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: AppColors.cardBackground,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: AppShadows.card,
+          borderRadius: BorderRadius.circular(10),
+          boxShadow: AppShadows.sm,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Buttons
+            // Buttons - More Compact
             Row(
               children: [
-                OutlinedButton(onPressed: () {}, child: const Text('Add\nTime')),
-                const SizedBox(width: 12),
-                OutlinedButton(onPressed: () {}, child: const Text('Update\nRates')),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () {},
+                    icon: const Icon(Icons.add, size: 16),
+                    label: const Text('Add Time', style: TextStyle(fontSize: 13)),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () {},
+                    icon: const Icon(Icons.attach_money, size: 16),
+                    label: const Text('Update Rates', style: TextStyle(fontSize: 13)),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
+                  ),
+                ),
               ],
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
 
-            // Table Header
-            Row(
-              children: [
-                Expanded(flex: 2, child: Text('STAFF\nMEMBER', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.textSecondary))),
-                Expanded(child: Text('DATE', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.textSecondary))),
-                Expanded(child: Text('CATEGORY', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.textSecondary))),
-                Expanded(child: Text('NOTES', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.textSecondary))),
-                Expanded(child: Text('RATE', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.textSecondary))),
-              ],
-            ),
-            const Divider(),
-            const SizedBox(height: 40),
-
-            // Empty State
-            Center(
-              child: Text(
-                'No time entries found for this invoice',
-                style: TextStyle(color: AppColors.textSecondary),
+            // Table Header - More Compact
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+              decoration: BoxDecoration(
+                color: AppColors.neutral50,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Row(
+                children: [
+                  Expanded(flex: 2, child: Text('STAFF MEMBER', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: AppColors.textSecondary))),
+                  Expanded(child: Text('DATE', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: AppColors.textSecondary))),
+                  Expanded(child: Text('CATEGORY', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: AppColors.textSecondary))),
+                  Expanded(child: Text('NOTES', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: AppColors.textSecondary))),
+                  Expanded(child: Text('RATE', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: AppColors.textSecondary), textAlign: TextAlign.right)),
+                ],
               ),
             ),
-            const SizedBox(height: 40),
+            const SizedBox(height: 20),
 
-            // Overall Totals
-            const Text('OVERALL TOTALS', style: TextStyle(fontWeight: FontWeight.w700)),
+            // Empty State - Modern Design
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 32),
+                child: Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppColors.neutral50,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(Icons.access_time, size: 40, color: AppColors.textTertiary),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'No time entries yet',
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textSecondary),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Add time entries to track billable hours',
+                      style: TextStyle(fontSize: 12, color: AppColors.textTertiary),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -679,36 +746,73 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> with SingleTi
   // ============ EXPENSES TAB ============
   Widget _buildExpensesTab() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: AppColors.cardBackground,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: AppShadows.card,
+          borderRadius: BorderRadius.circular(10),
+          boxShadow: AppShadows.sm,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            OutlinedButton(onPressed: () {}, child: const Text('Add Expense')),
-            const SizedBox(height: 24),
-
-            // Table Header
-            Row(
-              children: [
-                Expanded(flex: 2, child: Text('DESCRIPTION', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.textSecondary))),
-                Expanded(child: Text('DATE', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.textSecondary))),
-                Expanded(child: Text('AMOUNT', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.textSecondary))),
-              ],
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () {},
+                icon: const Icon(Icons.add, size: 16),
+                label: const Text('Add Expense', style: TextStyle(fontSize: 13)),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                ),
+              ),
             ),
-            const Divider(),
-            const SizedBox(height: 40),
+            const SizedBox(height: 16),
 
-            // Empty State
+            // Table Header - More Compact
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+              decoration: BoxDecoration(
+                color: AppColors.neutral50,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Row(
+                children: [
+                  Expanded(flex: 2, child: Text('DESCRIPTION', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: AppColors.textSecondary))),
+                  Expanded(child: Text('DATE', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: AppColors.textSecondary))),
+                  Expanded(child: Text('AMOUNT', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: AppColors.textSecondary), textAlign: TextAlign.right)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Empty State - Modern Design
             Center(
-              child: Text(
-                'No expenses found for this invoice',
-                style: TextStyle(color: AppColors.textSecondary),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 32),
+                child: Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppColors.neutral50,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(Icons.receipt_long_outlined, size: 40, color: AppColors.textTertiary),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'No expenses yet',
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textSecondary),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Add reimbursable expenses for this invoice',
+                      style: TextStyle(fontSize: 12, color: AppColors.textTertiary),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
@@ -720,29 +824,44 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> with SingleTi
   // ============ HISTORY TAB ============
   Widget _buildHistoryTab() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: AppColors.cardBackground,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: AppShadows.card,
+          borderRadius: BorderRadius.circular(10),
+          boxShadow: AppShadows.sm,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Invoice History', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-            const SizedBox(height: 16),
+            const Text('Invoice History', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 20),
             Center(
-              child: Column(
-                children: [
-                  Icon(Icons.history, size: 48, color: AppColors.textTertiary),
-                  const SizedBox(height: 12),
-                  Text(
-                    'No history events yet',
-                    style: TextStyle(color: AppColors.textSecondary),
-                  ),
-                ],
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 32),
+                child: Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppColors.neutral50,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(Icons.history, size: 40, color: AppColors.textTertiary),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'No activity yet',
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textSecondary),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Invoice actions and updates will appear here',
+                      style: TextStyle(fontSize: 12, color: AppColors.textTertiary),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
@@ -750,4 +869,76 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> with SingleTi
       ),
     );
   }
+
+  // ============ HELPER METHODS ============
+  void _showDeleteConfirmation() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        title: Row(
+          children: [
+            Icon(Icons.warning_amber, color: AppColors.error, size: 24),
+            const SizedBox(width: 12),
+            const Text('Delete Invoice?'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Are you sure you want to delete invoice ${_invoice['number']}?'),
+            const SizedBox(height: 12),
+            Text(
+              'This action cannot be undone.',
+              style: TextStyle(fontSize: 13, color: AppColors.error, fontWeight: FontWeight.w500),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context); // Close dialog
+              context.pop(); // Go back to invoices list
+              // TODO: Actually delete the invoice from the database
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _duplicateInvoice() {
+    // Show a snackbar for now
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Duplicating invoice ${_invoice['number']}...'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+    // TODO: Implement invoice duplication
+  }
+
+  void _exportInvoice() {
+    // Show a snackbar for now
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Exporting invoice ${_invoice['number']} as PDF...'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+    // TODO: Implement PDF export
+  }
 }
+
+
+
+
