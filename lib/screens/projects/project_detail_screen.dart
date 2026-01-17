@@ -239,9 +239,34 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> with SingleTi
           // Stats Grid
           Row(
             children: [
-              Expanded(child: _buildStatCard(Icons.schedule, 'Total Hours', '${_project['totalHours'].toInt()}h')),
+              Expanded(
+                child: _buildStatCard(
+                  Icons.schedule,
+                  'Total Hours',
+                  '${_project['totalHours'].toStringAsFixed(1)}h',
+                  onTap: () {
+                    // Navigate to Financials tab and expand Labor Cost
+                    _tabController.animateTo(4); // Financials is index 4
+                    Future.delayed(const Duration(milliseconds: 300), () {
+                      setState(() {
+                        _expandedFinancialSection = 'labor';
+                      });
+                    });
+                  },
+                ),
+              ),
               const SizedBox(width: 12),
-              Expanded(child: _buildStatCard(Icons.attach_money, 'Project Budget', currencyFormat.format(_project['budget']))),
+              Expanded(
+                child: _buildStatCard(
+                  Icons.attach_money,
+                  'Project Budget',
+                  currencyFormat.format(_project['budget']),
+                  onTap: () {
+                    // Navigate to Tasks tab
+                    _tabController.animateTo(3);
+                  },
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -253,10 +278,24 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> with SingleTi
                   'Tasks Completed',
                   '${_project['tasksCompleted']}/${_project['tasksTotal']}',
                   _project['tasksCompleted'] / _project['tasksTotal'],
+                  onTap: () {
+                    // Navigate to Tasks tab
+                    _tabController.animateTo(3);
+                  },
                 ),
               ),
               const SizedBox(width: 12),
-              Expanded(child: _buildStatCard(Icons.description_outlined, 'Amount Invoiced', currencyFormat.format(_project['amountInvoiced']))),
+              Expanded(
+                child: _buildStatCard(
+                  Icons.description_outlined,
+                  'Amount Invoiced',
+                  currencyFormat.format(_project['amountInvoiced']),
+                  onTap: () {
+                    // Navigate to Billing tab
+                    _tabController.animateTo(5);
+                  },
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 24),
@@ -311,67 +350,91 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> with SingleTi
     );
   }
 
-  Widget _buildStatCard(IconData icon, String label, String value) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.cardBackground,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: AppShadows.sm,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: AppColors.accent.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
+  Widget _buildStatCard(IconData icon, String label, String value, {VoidCallback? onTap}) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.cardBackground,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: AppShadows.sm,
+          border: onTap != null ? Border.all(color: AppColors.border.withOpacity(0.5)) : null,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: AppColors.accent.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(icon, color: AppColors.accent, size: 18),
+                ),
+                if (onTap != null)
+                  Icon(Icons.arrow_forward_ios, size: 14, color: AppColors.textTertiary),
+              ],
             ),
-            child: Icon(icon, color: AppColors.accent, size: 18),
-          ),
-          const SizedBox(height: 12),
-          Text(label, style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-          const SizedBox(height: 4),
-          Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
-        ],
+            const SizedBox(height: 12),
+            Text(label, style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+            const SizedBox(height: 4),
+            Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildStatCardWithProgress(IconData icon, String label, String value, double progress) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.cardBackground,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: AppShadows.sm,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: AppColors.accent.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
+  Widget _buildStatCardWithProgress(IconData icon, String label, String value, double progress, {VoidCallback? onTap}) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.cardBackground,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: AppShadows.sm,
+          border: onTap != null ? Border.all(color: AppColors.border.withOpacity(0.5)) : null,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: AppColors.accent.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(icon, color: AppColors.accent, size: 18),
+                ),
+                if (onTap != null)
+                  Icon(Icons.arrow_forward_ios, size: 14, color: AppColors.textTertiary),
+              ],
             ),
-            child: Icon(icon, color: AppColors.accent, size: 18),
-          ),
-          const SizedBox(height: 12),
-          Text(label, style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-          const SizedBox(height: 4),
-          Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
-          const SizedBox(height: 8),
-          LinearProgressIndicator(
-            value: progress,
-            backgroundColor: AppColors.neutral200,
-            valueColor: AlwaysStoppedAnimation(AppColors.accent),
-            borderRadius: BorderRadius.circular(2),
-          ),
-        ],
+            const SizedBox(height: 12),
+            Text(label, style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+            const SizedBox(height: 4),
+            Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 8),
+            LinearProgressIndicator(
+              value: progress,
+              backgroundColor: AppColors.neutral200,
+              valueColor: AlwaysStoppedAnimation(AppColors.accent),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ],
+        ),
       ),
     );
   }
