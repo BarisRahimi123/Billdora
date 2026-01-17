@@ -13,19 +13,20 @@ class InvoicesScreen extends StatefulWidget {
 }
 
 class _InvoicesScreenState extends State<InvoicesScreen> {
-  int _activeTab = 0; // 0 = All, 1 = Sent, 2 = Aging
+  int _activeTab = 0; // 0 = All, 1 = Draft, 2 = Sent, 3 = Aging
   String _statusFilter = 'all';
   String _searchQuery = '';
   String _viewMode = 'list'; // list or client
   
   // Mock data
   final List<Map<String, dynamic>> _invoices = [
-    {'id': '1', 'number': 'INV-001', 'client': 'Acme Corp', 'amount': 2500.0, 'status': 'paid', 'dueDate': DateTime.now().subtract(const Duration(days: 5))},
-    {'id': '2', 'number': 'INV-002', 'client': 'TechStart Inc', 'amount': 1800.0, 'status': 'sent', 'dueDate': DateTime.now().add(const Duration(days: 15))},
-    {'id': '3', 'number': 'INV-003', 'client': 'Design Studio', 'amount': 4200.0, 'status': 'draft', 'dueDate': null},
-    {'id': '4', 'number': 'INV-004', 'client': 'Global Media', 'amount': 950.0, 'status': 'overdue', 'dueDate': DateTime.now().subtract(const Duration(days: 10))},
-    {'id': '5', 'number': 'INV-005', 'client': 'Acme Corp', 'amount': 3200.0, 'status': 'sent', 'dueDate': DateTime.now().add(const Duration(days: 7))},
-    {'id': '6', 'number': 'INV-006', 'client': 'Startup Labs', 'amount': 1500.0, 'status': 'paid', 'dueDate': DateTime.now().subtract(const Duration(days: 20))},
+    {'id': '1', 'number': 'INV-001', 'client': 'Acme Corp', 'amount': 2500.0, 'status': 'paid', 'dueDate': DateTime.now().subtract(const Duration(days: 5)), 'viewCount': 3, 'lastViewedAt': DateTime.now().subtract(const Duration(days: 2))},
+    {'id': '2', 'number': 'INV-002', 'client': 'TechStart Inc', 'amount': 1800.0, 'status': 'sent', 'dueDate': DateTime.now().add(const Duration(days: 15)), 'viewCount': 5, 'lastViewedAt': DateTime.now().subtract(const Duration(hours: 6))},
+    {'id': '3', 'number': 'INV-003', 'client': 'Design Studio', 'amount': 4200.0, 'status': 'draft', 'dueDate': null, 'viewCount': 0, 'lastViewedAt': null},
+    {'id': '4', 'number': 'INV-004', 'client': 'Global Media', 'amount': 950.0, 'status': 'overdue', 'dueDate': DateTime.now().subtract(const Duration(days: 10)), 'viewCount': 2, 'lastViewedAt': DateTime.now().subtract(const Duration(days: 5))},
+    {'id': '5', 'number': 'INV-005', 'client': 'Acme Corp', 'amount': 3200.0, 'status': 'sent', 'dueDate': DateTime.now().add(const Duration(days: 7)), 'viewCount': 1, 'lastViewedAt': DateTime.now().subtract(const Duration(hours: 12))},
+    {'id': '6', 'number': 'INV-006', 'client': 'Startup Labs', 'amount': 1500.0, 'status': 'paid', 'dueDate': DateTime.now().subtract(const Duration(days: 20)), 'viewCount': 0, 'lastViewedAt': null},
+    {'id': '7', 'number': 'INV-007', 'client': 'Tech Innovations', 'amount': 2100.0, 'status': 'draft', 'dueDate': null, 'viewCount': 0, 'lastViewedAt': null},
   ];
 
   List<Map<String, dynamic>> get _filteredInvoices {
@@ -33,8 +34,13 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
     
     // Filter by tab
     if (_activeTab == 1) {
-      filtered = filtered.where((i) => i['status'] == 'sent').toList();
+      // Draft tab
+      filtered = filtered.where((i) => i['status'] == 'draft').toList();
     } else if (_activeTab == 2) {
+      // Sent tab
+      filtered = filtered.where((i) => i['status'] == 'sent').toList();
+    } else if (_activeTab == 3) {
+      // Aging tab (overdue + sent)
       filtered = filtered.where((i) => i['status'] == 'overdue' || i['status'] == 'sent').toList();
     }
     
@@ -195,8 +201,9 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                   child: Row(
                     children: [
                       _TabButton(label: 'All', isActive: _activeTab == 0, onTap: () => setState(() => _activeTab = 0)),
-                      _TabButton(label: 'Sent', isActive: _activeTab == 1, onTap: () => setState(() => _activeTab = 1)),
-                      _TabButton(label: 'Aging', isActive: _activeTab == 2, onTap: () => setState(() => _activeTab = 2)),
+                      _TabButton(label: 'Draft', isActive: _activeTab == 1, onTap: () => setState(() => _activeTab = 1)),
+                      _TabButton(label: 'Sent', isActive: _activeTab == 2, onTap: () => setState(() => _activeTab = 2)),
+                      _TabButton(label: 'Aging', isActive: _activeTab == 3, onTap: () => setState(() => _activeTab = 3)),
                     ],
                   ),
                 ),
@@ -670,10 +677,27 @@ class _InvoiceListTile extends StatelessWidget {
     }
   }
 
+  String _formatViewTime(DateTime timestamp) {
+    final now = DateTime.now();
+    final difference = now.difference(timestamp);
+    
+    if (difference.inMinutes < 60) {
+      return '${difference.inMinutes}m ago';
+    } else if (difference.inHours < 24) {
+      return '${difference.inHours}h ago';
+    } else if (difference.inDays < 7) {
+      return '${difference.inDays}d ago';
+    } else {
+      return DateFormat('MMM d').format(timestamp);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 0);
     final dateFormat = DateFormat('MMM d');
+    final viewCount = invoice['viewCount'] as int? ?? 0;
+    final lastViewedAt = invoice['lastViewedAt'] as DateTime?;
     
     return ListTile(
       onTap: onTap,
@@ -718,12 +742,51 @@ class _InvoiceListTile extends StatelessWidget {
           ],
         ],
       ),
-      subtitle: Text(
-        invoice['client'],
-        style: TextStyle(
-          fontSize: 13,
-          color: AppColors.textSecondary,
-        ),
+      subtitle: Row(
+        children: [
+          Expanded(
+            child: Text(
+              invoice['client'],
+              style: TextStyle(
+                fontSize: 13,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+          // View count indicator (only for sent/paid invoices)
+          if (viewCount > 0 && lastViewedAt != null) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: AppColors.info.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.visibility_outlined, size: 12, color: AppColors.info),
+                  const SizedBox(width: 4),
+                  Text(
+                    '$viewCount',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.info,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    '• ${_formatViewTime(lastViewedAt)}',
+                    style: TextStyle(
+                      fontSize: 9,
+                      color: AppColors.textTertiary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
       ),
       trailing: Column(
         mainAxisAlignment: MainAxisAlignment.center,
