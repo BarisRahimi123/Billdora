@@ -6189,6 +6189,22 @@ class _ConsultantsTabState extends State<_ConsultantsTab> {
     return filtered;
   }
 
+  Map<String, List<Map<String, dynamic>>> get _consultantsBySpecialty {
+    final groups = <String, List<Map<String, dynamic>>>{};
+    for (final consultant in _filteredConsultants) {
+      final specialty = consultant['specialty'] as String;
+      if (!groups.containsKey(specialty)) {
+        groups[specialty] = [];
+      }
+      groups[specialty]!.add(consultant);
+    }
+    // Sort groups by specialty name
+    final sortedKeys = groups.keys.toList()..sort();
+    return Map.fromEntries(
+      sortedKeys.map((key) => MapEntry(key, groups[key]!))
+    );
+  }
+
   void showAddConsultantModal() {
     showModalBottomSheet(
       context: context,
@@ -6372,7 +6388,7 @@ class _ConsultantsTabState extends State<_ConsultantsTab> {
         ),
         const SizedBox(height: 12),
         
-        // Consultants List
+        // Consultants List (Grouped by Specialty)
         Expanded(
           child: _filteredConsultants.isEmpty
               ? Center(
@@ -6393,10 +6409,12 @@ class _ConsultantsTabState extends State<_ConsultantsTab> {
                 )
               : ListView.builder(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
-                  itemCount: _filteredConsultants.length,
-                  itemBuilder: (context, index) {
-                    final consultant = _filteredConsultants[index];
-                    return _buildConsultantCard(consultant);
+                  itemCount: _consultantsBySpecialty.length,
+                  itemBuilder: (context, groupIndex) {
+                    final specialty = _consultantsBySpecialty.keys.elementAt(groupIndex);
+                    final consultants = _consultantsBySpecialty[specialty]!;
+                    
+                    return _buildSpecialtyGroup(specialty, consultants);
                   },
                 ),
         ),
@@ -6428,6 +6446,74 @@ class _ConsultantsTabState extends State<_ConsultantsTab> {
             overflow: TextOverflow.ellipsis,
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSpecialtyGroup(String specialty, List<Map<String, dynamic>> consultants) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          initiallyExpanded: true,
+          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          childrenPadding: const EdgeInsets.only(bottom: 8),
+          leading: Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: AppColors.accent.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: Icon(
+                Icons.engineering_outlined,
+                size: 18,
+                color: AppColors.accent,
+              ),
+            ),
+          ),
+          title: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  specialty,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.neutral50,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '${consultants.length}',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          children: consultants.map((consultant) {
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: _buildConsultantCard(consultant),
+            );
+          }).toList(),
+        ),
       ),
     );
   }

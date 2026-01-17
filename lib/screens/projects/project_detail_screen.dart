@@ -1884,7 +1884,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> with SingleTi
             child: LinearProgressIndicator(
               value: percentUsed.clamp(0.0, 1.0),
               backgroundColor: AppColors.neutral200,
-              valueColor: AlwaysStoppedAnimation(percentUsed > 0.9 ? AppColors.error : AppColors.accent),
+              valueColor: const AlwaysStoppedAnimation(AppColors.accent),
               minHeight: 8,
             ),
           ),

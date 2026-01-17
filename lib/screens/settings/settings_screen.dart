@@ -32,13 +32,25 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
     'emergencyRelationship': '',
   };
 
-  // Categories data
+  // Categories data (for Services)
   List<Map<String, dynamic>> _categories = [
     {'id': '1', 'name': 'Development', 'color': 0xFF3B82F6, 'icon': 'code'},
     {'id': '2', 'name': 'Design', 'color': 0xFF8B5CF6, 'icon': 'palette'},
     {'id': '3', 'name': 'Consulting', 'color': 0xFF10B981, 'icon': 'lightbulb'},
     {'id': '4', 'name': 'Management', 'color': 0xFFF59E0B, 'icon': 'work'},
     {'id': '5', 'name': 'Other', 'color': 0xFF6B7280, 'icon': 'category'},
+  ];
+
+  // Consultant Specialties/Traits
+  List<Map<String, dynamic>> _consultantSpecialties = [
+    {'id': '1', 'name': 'Architect', 'color': 0xFF3B82F6, 'icon': 'architecture'},
+    {'id': '2', 'name': 'Structural Engineer', 'color': 0xFF10B981, 'icon': 'engineering'},
+    {'id': '3', 'name': 'Interior Designer', 'color': 0xFF8B5CF6, 'icon': 'design_services'},
+    {'id': '4', 'name': 'Landscape Architect', 'color': 0xFF10B981, 'icon': 'park'},
+    {'id': '5', 'name': 'Civil Engineer', 'color': 0xFF3B82F6, 'icon': 'construction'},
+    {'id': '6', 'name': 'Electrical Engineer', 'color': 0xFFF59E0B, 'icon': 'electrical_services'},
+    {'id': '7', 'name': 'Mechanical Engineer', 'color': 0xFFEF4444, 'icon': 'precision_manufacturing'},
+    {'id': '8', 'name': 'Other', 'color': 0xFF6B7280, 'icon': 'person'},
   ];
 
   // Services data
@@ -120,7 +132,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 11, vsync: this);
+    _tabController = TabController(length: 12, vsync: this);
   }
 
   @override
@@ -170,6 +182,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                   Tab(icon: Icon(Icons.people_outline, size: 20)),
                   Tab(icon: Icon(Icons.design_services_outlined, size: 20)),
                   Tab(icon: Icon(Icons.sell_outlined, size: 20)),
+                  Tab(icon: Icon(Icons.engineering_outlined, size: 20)), // Consultant Specialties
                   Tab(icon: Icon(Icons.gavel_outlined, size: 20)), // Terms & Conditions
                   Tab(icon: Icon(Icons.group_outlined, size: 20)),
                   Tab(icon: Icon(Icons.description_outlined, size: 20)),
@@ -190,6 +203,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                   _buildPlaceholderTab('Team', 'Team member permissions'),
                   _buildServicesTab(),
                   _buildCategoriesTab(),
+                  _buildConsultantSpecialtiesTab(),
                   _buildTermsTab(),
                   _buildPlaceholderTab('Clients', 'Client defaults and settings'),
                   _buildPlaceholderTab('Documents', 'Document templates'),
@@ -1603,6 +1617,448 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text('Category deleted successfully'),
+                  backgroundColor: AppColors.success,
+                ),
+              );
+            },
+            child: const Text('Delete', style: TextStyle(color: AppColors.error)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ============ CONSULTANT SPECIALTIES TAB ============
+  Widget _buildConsultantSpecialtiesTab() {
+    return Column(
+      children: [
+        // Header with Add Button
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Consultant Specialties',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${_consultantSpecialties.length} specialties configured',
+                    style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                  ),
+                ],
+              ),
+              ElevatedButton.icon(
+                onPressed: () => _showAddConsultantSpecialtyModal(),
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text('Add Specialty'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.accent,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        
+        // Specialties List
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: _consultantSpecialties.length,
+            itemBuilder: (context, index) {
+              final specialty = _consultantSpecialties[index];
+              
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.cardBackground,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: AppShadows.sm,
+                ),
+                child: Row(
+                  children: [
+                    // Color Circle
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: Color(specialty['color'] as int).withOpacity(0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Center(
+                        child: Container(
+                          width: 16,
+                          height: 16,
+                          decoration: BoxDecoration(
+                            color: Color(specialty['color'] as int),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    
+                    // Specialty Name
+                    Expanded(
+                      child: Text(
+                        specialty['name'],
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ),
+                    
+                    // More Menu
+                    PopupMenuButton(
+                      icon: Icon(Icons.more_vert, size: 18, color: AppColors.textSecondary),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      itemBuilder: (context) => [
+                        const PopupMenuItem(
+                          value: 'edit',
+                          child: Row(
+                            children: [
+                              Icon(Icons.edit_outlined, size: 18),
+                              SizedBox(width: 12),
+                              Text('Edit'),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuItem(
+                          value: 'delete',
+                          child: Row(
+                            children: [
+                              Icon(Icons.delete_outline, size: 18, color: AppColors.error),
+                              SizedBox(width: 12),
+                              Text('Delete', style: TextStyle(color: AppColors.error)),
+                            ],
+                          ),
+                        ),
+                      ],
+                      onSelected: (value) {
+                        if (value == 'edit') {
+                          _showEditConsultantSpecialtyModal(specialty);
+                        } else if (value == 'delete') {
+                          _deleteConsultantSpecialty(specialty['id']);
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showAddConsultantSpecialtyModal() {
+    final nameController = TextEditingController();
+    int selectedColor = 0xFF3B82F6; // Default blue
+    
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.cardBackground,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Add Specialty',
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.pop(context),
+                          icon: const Icon(Icons.close),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    
+                    // Name Field
+                    TextField(
+                      controller: nameController,
+                      decoration: InputDecoration(
+                        labelText: 'Specialty Name',
+                        hintText: 'e.g., Architect, Civil Engineer',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    // Color Picker
+                    const Text('Color', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: [
+                        0xFF3B82F6, // Blue
+                        0xFF10B981, // Green
+                        0xFF8B5CF6, // Purple
+                        0xFFF59E0B, // Amber
+                        0xFFEF4444, // Red
+                        0xFF06B6D4, // Cyan
+                        0xFFEC4899, // Pink
+                        0xFF6B7280, // Gray
+                      ].map((color) {
+                        return GestureDetector(
+                          onTap: () => setModalState(() => selectedColor = color),
+                          child: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: Color(color),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: selectedColor == color ? Colors.black : Colors.transparent,
+                                width: 2,
+                              ),
+                            ),
+                            child: selectedColor == color
+                                ? const Icon(Icons.check, color: Colors.white, size: 20)
+                                : null,
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 24),
+                    
+                    // Save Button
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          if (nameController.text.isNotEmpty) {
+                            setState(() {
+                              _consultantSpecialties.add({
+                                'id': DateTime.now().millisecondsSinceEpoch.toString(),
+                                'name': nameController.text,
+                                'color': selectedColor,
+                                'icon': 'person',
+                              });
+                            });
+                            Navigator.pop(context);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Specialty added successfully'),
+                                backgroundColor: AppColors.success,
+                              ),
+                            );
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.accent,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        child: const Text('Add Specialty', style: TextStyle(fontWeight: FontWeight.w600)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showEditConsultantSpecialtyModal(Map<String, dynamic> specialty) {
+    final nameController = TextEditingController(text: specialty['name'] as String);
+    int selectedColor = specialty['color'] as int;
+    
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.cardBackground,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Edit Specialty',
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.pop(context),
+                          icon: const Icon(Icons.close),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    
+                    // Name Field
+                    TextField(
+                      controller: nameController,
+                      decoration: InputDecoration(
+                        labelText: 'Specialty Name',
+                        hintText: 'e.g., Architect, Civil Engineer',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    // Color Picker
+                    const Text('Color', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: [
+                        0xFF3B82F6, // Blue
+                        0xFF10B981, // Green
+                        0xFF8B5CF6, // Purple
+                        0xFFF59E0B, // Amber
+                        0xFFEF4444, // Red
+                        0xFF06B6D4, // Cyan
+                        0xFFEC4899, // Pink
+                        0xFF6B7280, // Gray
+                      ].map((color) {
+                        return GestureDetector(
+                          onTap: () => setModalState(() => selectedColor = color),
+                          child: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: Color(color),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: selectedColor == color ? Colors.black : Colors.transparent,
+                                width: 2,
+                              ),
+                            ),
+                            child: selectedColor == color
+                                ? const Icon(Icons.check, color: Colors.white, size: 20)
+                                : null,
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 24),
+                    
+                    // Update Button
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          if (nameController.text.isNotEmpty) {
+                            setState(() {
+                              final index = _consultantSpecialties.indexWhere((s) => s['id'] == specialty['id']);
+                              if (index != -1) {
+                                _consultantSpecialties[index] = {
+                                  'id': specialty['id'],
+                                  'name': nameController.text,
+                                  'color': selectedColor,
+                                  'icon': specialty['icon'],
+                                };
+                              }
+                            });
+                            Navigator.pop(context);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Specialty updated successfully'),
+                                backgroundColor: AppColors.success,
+                              ),
+                            );
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.accent,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        child: const Text('Update Specialty', style: TextStyle(fontWeight: FontWeight.w600)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _deleteConsultantSpecialty(String id) {
+    final specialty = _consultantSpecialties.firstWhere((s) => s['id'] == id);
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Specialty'),
+        content: Text('Are you sure you want to delete "${specialty['name']}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              setState(() {
+                _consultantSpecialties.removeWhere((s) => s['id'] == id);
+              });
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Specialty deleted successfully'),
                   backgroundColor: AppColors.success,
                 ),
               );
