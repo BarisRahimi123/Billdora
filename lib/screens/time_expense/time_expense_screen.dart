@@ -261,8 +261,8 @@ class _TimeTabState extends State<_TimeTab> {
   int _elapsedSeconds = 0;
   Timer? _timer;
   
-  String _selectedProject = 'Mobile App UI Design';
-  String _selectedTask = 'Wireframes - iOS';
+  String? _selectedProject;
+  String? _selectedTask;
   final TextEditingController _descriptionController = TextEditingController();
   
   // Day selection
@@ -292,20 +292,29 @@ class _TimeTabState extends State<_TimeTab> {
   }
 
   void _stopTimer() {
+    if (_selectedProject == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a project'), behavior: SnackBarBehavior.floating),
+      );
+      return;
+    }
+    
     setState(() {
       _isTimerRunning = false;
       _timer?.cancel();
       if (_elapsedSeconds > 0) {
         // Save entry
         _timeEntries.add({
-          'project': _selectedProject,
-          'task': _selectedTask,
+          'project': _selectedProject!,
+          'task': _selectedTask, // Can be null
           'description': _descriptionController.text,
           'hours': _elapsedSeconds / 3600,
           'date': _selectedDate,
           'status': 'draft',
         });
         _elapsedSeconds = 0;
+        _selectedProject = null;
+        _selectedTask = null;
         _descriptionController.clear();
       }
     });
@@ -328,13 +337,13 @@ class _TimeTabState extends State<_TimeTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Timer Card
+          // Timer Card - Optimized
           Container(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: AppColors.cardBackground,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: AppShadows.card,
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: AppShadows.sm,
             ),
             child: Column(
               children: [
@@ -342,83 +351,127 @@ class _TimeTabState extends State<_TimeTab> {
                 Text(
                   _formatDuration(_elapsedSeconds),
                   style: const TextStyle(
-                    fontSize: 48,
+                    fontSize: 42,
                     fontWeight: FontWeight.w700,
                     color: AppColors.textPrimary,
                     fontFeatures: [FontFeature.tabularFigures()],
+                    letterSpacing: 2,
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
                 
-                // Project Dropdown
-                _buildDropdown(
-                  value: _selectedProject,
-                  items: ['Mobile App UI Design', 'E-commerce Website', 'Virtual Tour Production'],
-                  onChanged: (value) => setState(() => _selectedProject = value!),
+                // Project Dropdown (Required)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.neutral50,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: _selectedProject,
+                      hint: Text('Select Project *', style: TextStyle(color: AppColors.textSecondary)),
+                      isExpanded: true,
+                      icon: Icon(Icons.unfold_more, size: 20, color: AppColors.textSecondary),
+                      items: [
+                        'Mobile App UI Design',
+                        'E-commerce Website',
+                        'Virtual Tour Production',
+                        'Brand Identity Design',
+                      ].map((project) {
+                        return DropdownMenuItem(
+                          value: project,
+                          child: Text(project, style: const TextStyle(fontSize: 13)),
+                        );
+                      }).toList(),
+                      onChanged: (value) => setState(() => _selectedProject = value),
+                    ),
+                  ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
                 
-                // Task Dropdown
-                _buildDropdown(
-                  value: _selectedTask,
-                  items: ['Wireframes - iOS', 'Visual Design System', 'Prototyping'],
-                  onChanged: (value) => setState(() => _selectedTask = value!),
+                // Task/Subtask Dropdown (Optional)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.neutral50,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: _selectedTask,
+                      hint: Text('Task/Subtask (Optional)', style: TextStyle(color: AppColors.textTertiary)),
+                      isExpanded: true,
+                      icon: Icon(Icons.unfold_more, size: 20, color: AppColors.textSecondary),
+                      items: [
+                        DropdownMenuItem(value: null, child: Text('None', style: TextStyle(color: AppColors.textTertiary, fontSize: 13))),
+                        ...['Wireframes - iOS', 'Visual Design System', 'Prototyping', 'User Research', 'Testing'].map((task) {
+                          return DropdownMenuItem(
+                            value: task,
+                            child: Text(task, style: const TextStyle(fontSize: 13)),
+                          );
+                        }),
+                      ],
+                      onChanged: (value) => setState(() => _selectedTask = value),
+                    ),
+                  ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
                 
-                // Description Field
+                // Description Field - Compact
                 TextField(
                   controller: _descriptionController,
                   decoration: InputDecoration(
                     hintText: 'What are you working on?',
+                    hintStyle: TextStyle(color: AppColors.textTertiary),
                     filled: true,
-                    fillColor: AppColors.neutral100,
+                    fillColor: AppColors.neutral50,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide.none,
+                      borderSide: BorderSide(color: AppColors.border),
                     ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: AppColors.border),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   ),
+                  style: const TextStyle(fontSize: 13),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
                 
-                // Timer Controls
+                // Timer Controls - Improved
                 Row(
                   children: [
                     Expanded(
-                      child: GestureDetector(
-                        onTap: _toggleTimer,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          decoration: BoxDecoration(
-                            color: _isTimerRunning ? AppColors.success : AppColors.accent,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                _isTimerRunning ? Icons.pause : Icons.play_arrow,
-                                color: Colors.white,
-                              ),
-                            ],
-                          ),
+                      child: ElevatedButton.icon(
+                        onPressed: _selectedProject != null ? _toggleTimer : null,
+                        icon: Icon(_isTimerRunning ? Icons.pause : Icons.play_arrow, size: 20),
+                        label: Text(_isTimerRunning ? 'Pause' : 'Start'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _isTimerRunning ? AppColors.success : AppColors.accent,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          disabledBackgroundColor: AppColors.neutral200,
+                          disabledForegroundColor: AppColors.textTertiary,
                         ),
                       ),
                     ),
-                    const SizedBox(width: 10),
-                    GestureDetector(
-                      onTap: _stopTimer,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
-                        decoration: BoxDecoration(
-                          color: AppColors.error.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(
-                          Icons.stop,
-                          color: AppColors.error,
-                        ),
+                    const SizedBox(width: 8),
+                    ElevatedButton.icon(
+                      onPressed: _elapsedSeconds > 0 ? _stopTimer : null,
+                      icon: const Icon(Icons.stop, size: 20),
+                      label: const Text('Stop'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.error.withOpacity(0.1),
+                        foregroundColor: AppColors.error,
+                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        disabledBackgroundColor: AppColors.neutral100,
+                        disabledForegroundColor: AppColors.textTertiary,
                       ),
                     ),
                   ],
@@ -571,12 +624,21 @@ class _TimeTabState extends State<_TimeTab> {
                     itemBuilder: (context, index) {
                       final entry = _timeEntries[index];
                       return ListTile(
-                        title: Text(entry['project']),
-                        subtitle: Text(entry['task']),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        title: Text(
+                          entry['project'],
+                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                        ),
+                        subtitle: entry['task'] != null
+                            ? Text(entry['task'], style: TextStyle(fontSize: 12, color: AppColors.textSecondary))
+                            : entry['description'].isNotEmpty
+                                ? Text(entry['description'], style: TextStyle(fontSize: 12, color: AppColors.textTertiary))
+                                : null,
                         trailing: Text(
                           '${entry['hours'].toStringAsFixed(1)}h',
                           style: const TextStyle(
-                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
                             color: AppColors.accent,
                           ),
                         ),
@@ -618,31 +680,6 @@ class _TimeTabState extends State<_TimeTab> {
     );
   }
 
-  Widget _buildDropdown({
-    required String value,
-    required List<String> items,
-    required ValueChanged<String?> onChanged,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14),
-      decoration: BoxDecoration(
-        color: AppColors.neutral100,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: value,
-          isExpanded: true,
-          icon: const Icon(Icons.unfold_more, size: 20),
-          items: items.map((item) => DropdownMenuItem(
-            value: item,
-            child: Text(item, style: const TextStyle(fontSize: 14)),
-          )).toList(),
-          onChanged: onChanged,
-        ),
-      ),
-    );
-  }
 }
 
 // ============ EXPENSES TAB ============
