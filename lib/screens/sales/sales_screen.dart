@@ -325,12 +325,113 @@ class _LeadsTabState extends State<_LeadsTab> {
 
   // Leads with proposal tracking
   // proposalStatus: 'none' | 'draft' | 'sent' | 'approved' | 'declined'
+  // Full lead structure for proper conversion to client
   final List<Map<String, dynamic>> _leads = [
-    {'id': '1', 'name': 'Testing', 'company': 'Wgcc', 'source': 'Other', 'status': 'new', 'value': 5009.0, 'created': DateTime(2026, 1, 13), 'proposalStatus': 'none'},
-    {'id': '2', 'name': 'John', 'company': '', 'source': 'Other', 'status': 'new', 'value': 4000.0, 'created': DateTime(2026, 1, 13), 'proposalStatus': 'none'},
-    {'id': '3', 'name': 'Sarah Miller', 'company': 'Tech Solutions', 'source': 'Referral', 'status': 'proposal', 'value': 8500.0, 'created': DateTime(2026, 1, 10), 'proposalStatus': 'sent'},
-    {'id': '4', 'name': 'Mike Johnson', 'company': 'StartupXYZ', 'source': 'Website', 'status': 'proposal', 'value': 12000.0, 'created': DateTime(2026, 1, 5), 'proposalStatus': 'approved'},
-    {'id': '5', 'name': 'Emily Chen', 'company': 'Design Co', 'source': 'Website', 'status': 'contacted', 'value': 6500.0, 'created': DateTime(2026, 1, 8), 'proposalStatus': 'none'},
+    {
+      'id': '1', 
+      'name': 'Testing', 
+      'email': 'test@wgcc.com',
+      'phone': '+1 (555) 100-0001',
+      'title': 'Manager',
+      'company': 'Wgcc', 
+      'address': '',
+      'city': '',
+      'state': '',
+      'zip': '',
+      'website': '',
+      'type': 'Other',
+      'source': 'Other', 
+      'status': 'new', 
+      'value': 5009.0, 
+      'created': DateTime(2026, 1, 13), 
+      'proposalStatus': 'none',
+      'proposalId': null, // Links to the sent proposal
+      'notes': '',
+    },
+    {
+      'id': '2', 
+      'name': 'John Doe', 
+      'email': 'john@email.com',
+      'phone': '+1 (555) 200-0002',
+      'title': 'Owner',
+      'company': 'John\'s LLC', 
+      'address': '',
+      'city': '',
+      'state': '',
+      'zip': '',
+      'website': '',
+      'type': 'Other',
+      'source': 'Other', 
+      'status': 'new', 
+      'value': 4000.0, 
+      'created': DateTime(2026, 1, 13), 
+      'proposalStatus': 'none',
+      'proposalId': null,
+      'notes': '',
+    },
+    {
+      'id': '3', 
+      'name': 'Sarah Miller', 
+      'email': 'sarah@techsolutions.com',
+      'phone': '+1 (555) 300-0003',
+      'title': 'CEO',
+      'company': 'Tech Solutions', 
+      'address': '100 Tech Park',
+      'city': 'San Jose',
+      'state': 'CA',
+      'zip': '95101',
+      'website': 'www.techsolutions.com',
+      'type': 'Technology',
+      'source': 'Referral', 
+      'status': 'proposal', 
+      'value': 8500.0, 
+      'created': DateTime(2026, 1, 10), 
+      'proposalStatus': 'sent',
+      'proposalId': 'prop_001',
+      'notes': 'Very interested in web development services',
+    },
+    {
+      'id': '4', 
+      'name': 'Mike Johnson', 
+      'email': 'mike@startupxyz.io',
+      'phone': '+1 (555) 400-0004',
+      'title': 'Founder',
+      'company': 'StartupXYZ', 
+      'address': '500 Innovation Blvd',
+      'city': 'Austin',
+      'state': 'TX',
+      'zip': '73301',
+      'website': 'www.startupxyz.io',
+      'type': 'Technology',
+      'source': 'Website', 
+      'status': 'proposal', 
+      'value': 12000.0, 
+      'created': DateTime(2026, 1, 5), 
+      'proposalStatus': 'approved',
+      'proposalId': 'prop_002',
+      'notes': 'Ready to convert - approved mobile app proposal',
+    },
+    {
+      'id': '5', 
+      'name': 'Emily Chen', 
+      'email': 'emily@designco.com',
+      'phone': '+1 (555) 500-0005',
+      'title': 'Creative Director',
+      'company': 'Design Co', 
+      'address': '',
+      'city': 'Los Angeles',
+      'state': 'CA',
+      'zip': '',
+      'website': 'www.designco.com',
+      'type': 'Consulting',
+      'source': 'Website', 
+      'status': 'contacted', 
+      'value': 6500.0, 
+      'created': DateTime(2026, 1, 8), 
+      'proposalStatus': 'none',
+      'proposalId': null,
+      'notes': 'Follow up scheduled for next week',
+    },
   ];
 
   final List<String> _statuses = ['all', 'new', 'contacted', 'qualified', 'proposal', 'won', 'lost'];
@@ -802,7 +903,49 @@ class _LeadsTabState extends State<_LeadsTab> {
   }
 
   void _convertToProject(Map<String, dynamic> lead) {
-    // Show conversion dialog
+    // Show conversion dialog with options
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.cardBackground,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => _ConversionModal(
+        lead: lead,
+        onConvert: (convertedClient, projectName) {
+          // Add to clients list
+          setState(() {
+            clientsList.add(convertedClient);
+            // Update lead status to 'won' and remove from active leads
+            final index = _leads.indexWhere((l) => l['id'] == lead['id']);
+            if (index != -1) {
+              _leads[index]['status'] = 'won';
+            }
+          });
+          
+          // Show success message
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Successfully converted to project: $projectName'),
+              backgroundColor: AppColors.success,
+              action: SnackBarAction(
+                label: 'View Project',
+                textColor: Colors.white,
+                onPressed: () {
+                  // Navigate to project
+                  context.push('/projects');
+                },
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+  
+  void _convertToProjectLegacy(Map<String, dynamic> lead) {
+    // Legacy dialog - keeping for reference
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -2761,21 +2904,38 @@ class _AddLeadModal extends StatefulWidget {
 
 class _AddLeadModalState extends State<_AddLeadModal> {
   final _nameController = TextEditingController();
+  final _titleController = TextEditingController();
   final _companyController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
   final _valueController = TextEditingController();
+  final _addressController = TextEditingController();
+  final _cityController = TextEditingController();
+  final _stateController = TextEditingController();
+  final _zipController = TextEditingController();
+  final _websiteController = TextEditingController();
+  final _notesController = TextEditingController();
   String _selectedSource = 'Website';
+  String _selectedType = 'Other';
+  bool _showMoreFields = false;
   
   final List<String> _sources = ['Website', 'Referral', 'Cold Call', 'Social Media', 'Other'];
+  final List<String> _types = ['Retail', 'Consulting', 'Finance', 'Technology', 'Healthcare', 'Construction', 'Real Estate', 'Other'];
 
   @override
   void dispose() {
     _nameController.dispose();
+    _titleController.dispose();
     _companyController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
     _valueController.dispose();
+    _addressController.dispose();
+    _cityController.dispose();
+    _stateController.dispose();
+    _zipController.dispose();
+    _websiteController.dispose();
+    _notesController.dispose();
     super.dispose();
   }
 
@@ -2793,14 +2953,23 @@ class _AddLeadModalState extends State<_AddLeadModal> {
     final newLead = {
       'id': DateTime.now().millisecondsSinceEpoch.toString(),
       'name': _nameController.text.trim(),
+      'title': _titleController.text.trim(),
       'company': _companyController.text.trim(),
       'email': _emailController.text.trim(),
       'phone': _phoneController.text.trim(),
+      'address': _addressController.text.trim(),
+      'city': _cityController.text.trim(),
+      'state': _stateController.text.trim(),
+      'zip': _zipController.text.trim(),
+      'website': _websiteController.text.trim(),
+      'type': _selectedType,
       'source': _selectedSource,
       'status': 'new',
       'value': value,
+      'notes': _notesController.text.trim(),
       'created': DateTime.now(),
       'proposalStatus': 'none',
+      'proposalId': null,
     };
 
     widget.onLeadAdded(newLead);
@@ -2813,7 +2982,7 @@ class _AddLeadModalState extends State<_AddLeadModal> {
   @override
   Widget build(BuildContext context) {
     return DraggableScrollableSheet(
-      initialChildSize: 0.75,
+      initialChildSize: _showMoreFields ? 0.92 : 0.75,
       minChildSize: 0.5,
       maxChildSize: 0.95,
       expand: false,
@@ -2821,9 +2990,7 @@ class _AddLeadModalState extends State<_AddLeadModal> {
         return SingleChildScrollView(
           controller: scrollController,
           padding: EdgeInsets.only(
-            left: 20,
-            right: 20,
-            top: 20,
+            left: 20, right: 20, top: 20,
             bottom: MediaQuery.of(context).viewInsets.bottom + 20,
           ),
           child: Column(
@@ -2831,25 +2998,78 @@ class _AddLeadModalState extends State<_AddLeadModal> {
             children: [
               Center(
                 child: Container(
-                  width: 40,
-                  height: 4,
+                  width: 40, height: 4,
                   decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(2)),
                 ),
               ),
               const SizedBox(height: 20),
               const Text('Add Lead', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+              Text('Enter lead details for future conversion to client', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
               const SizedBox(height: 20),
-              _buildTextField('Lead Name *', 'Enter lead name', _nameController),
-              const SizedBox(height: 14),
-              _buildTextField('Company', 'Company name', _companyController),
-              const SizedBox(height: 14),
+              
+              // Basic Info
+              _buildTextField('Contact Name *', 'Full name', _nameController),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(child: _buildTextField('Company', 'Company name', _companyController)),
+                  const SizedBox(width: 10),
+                  Expanded(child: _buildTextField('Title', 'Job title', _titleController)),
+                ],
+              ),
+              const SizedBox(height: 12),
               _buildTextField('Email', 'email@example.com', _emailController, TextInputType.emailAddress),
-              const SizedBox(height: 14),
-              _buildTextField('Phone', '+1 (555) 000-0000', _phoneController, TextInputType.phone),
-              const SizedBox(height: 14),
-              _buildTextField('Estimated Value', '\$0.00', _valueController, TextInputType.number),
-              const SizedBox(height: 14),
-              _buildDropdown(),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(child: _buildTextField('Phone', '+1 (555) 000-0000', _phoneController, TextInputType.phone)),
+                  const SizedBox(width: 10),
+                  Expanded(child: _buildTextField('Est. Value', '\$0.00', _valueController, TextInputType.number)),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(child: _buildSourceDropdown()),
+                  const SizedBox(width: 10),
+                  Expanded(child: _buildTypeDropdown()),
+                ],
+              ),
+              
+              // Show more fields toggle
+              const SizedBox(height: 16),
+              GestureDetector(
+                onTap: () => setState(() => _showMoreFields = !_showMoreFields),
+                child: Row(
+                  children: [
+                    Icon(_showMoreFields ? Icons.expand_less : Icons.expand_more, 
+                      size: 18, color: AppColors.accent),
+                    const SizedBox(width: 6),
+                    Text(_showMoreFields ? 'Show less' : 'Add more details (address, website, notes)',
+                      style: TextStyle(fontSize: 12, color: AppColors.accent, fontWeight: FontWeight.w500)),
+                  ],
+                ),
+              ),
+              
+              if (_showMoreFields) ...[
+                const SizedBox(height: 16),
+                _buildTextField('Address', 'Street address', _addressController),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(flex: 2, child: _buildTextField('City', 'City', _cityController)),
+                    const SizedBox(width: 10),
+                    Expanded(child: _buildTextField('State', 'CA', _stateController)),
+                    const SizedBox(width: 10),
+                    Expanded(child: _buildTextField('ZIP', '90001', _zipController, TextInputType.number)),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                _buildTextField('Website', 'www.company.com', _websiteController, TextInputType.url),
+                const SizedBox(height: 12),
+                _buildTextArea('Notes', 'Additional notes about this lead...', _notesController),
+              ],
+              
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
@@ -2870,44 +3090,98 @@ class _AddLeadModalState extends State<_AddLeadModal> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
-        const SizedBox(height: 6),
+        Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500)),
+        const SizedBox(height: 5),
         TextField(
           controller: controller,
           keyboardType: keyboardType,
+          style: const TextStyle(fontSize: 14),
           decoration: InputDecoration(
             hintText: hint,
+            hintStyle: TextStyle(fontSize: 13, color: AppColors.textTertiary),
             filled: true,
             fillColor: AppColors.neutral50,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
-            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AppColors.border)),
-            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AppColors.accent)),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.border)),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.accent)),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildDropdown() {
+  Widget _buildTextArea(String label, String hint, TextEditingController controller) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Source', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
-        const SizedBox(height: 6),
+        Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500)),
+        const SizedBox(height: 5),
+        TextField(
+          controller: controller,
+          maxLines: 3,
+          style: const TextStyle(fontSize: 14),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: TextStyle(fontSize: 13, color: AppColors.textTertiary),
+            filled: true,
+            fillColor: AppColors.neutral50,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.border)),
+            contentPadding: const EdgeInsets.all(12),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSourceDropdown() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Source', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500)),
+        const SizedBox(height: 5),
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
             color: AppColors.neutral50,
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(8),
             border: Border.all(color: AppColors.border),
           ),
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
               value: _selectedSource,
               isExpanded: true,
+              style: const TextStyle(fontSize: 14, color: AppColors.textPrimary),
               items: _sources.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
               onChanged: (val) => setState(() => _selectedSource = val ?? 'Website'),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTypeDropdown() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Type', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500)),
+        const SizedBox(height: 5),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            color: AppColors.neutral50,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: _selectedType,
+              isExpanded: true,
+              style: const TextStyle(fontSize: 14, color: AppColors.textPrimary),
+              items: _types.map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
+              onChanged: (val) => setState(() => _selectedType = val ?? 'Other'),
             ),
           ),
         ),
@@ -3554,6 +3828,395 @@ class _AddClientModalFullState extends State<_AddClientModalFull> {
               items: _clientTypes.map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
               onChanged: (val) => setState(() => _selectedType = val ?? 'Retail'),
             ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ============ CONVERSION MODAL ============
+// Handles Lead → Client and Proposal → Project conversion
+class _ConversionModal extends StatefulWidget {
+  final Map<String, dynamic> lead;
+  final Function(Map<String, dynamic> client, String projectName) onConvert;
+  
+  const _ConversionModal({required this.lead, required this.onConvert});
+
+  @override
+  State<_ConversionModal> createState() => _ConversionModalState();
+}
+
+class _ConversionModalState extends State<_ConversionModal> {
+  late TextEditingController _projectNameController;
+  late TextEditingController _companyController;
+  late TextEditingController _primaryNameController;
+  late TextEditingController _primaryEmailController;
+  late TextEditingController _primaryPhoneController;
+  late TextEditingController _primaryTitleController;
+  late TextEditingController _addressController;
+  late TextEditingController _cityController;
+  late TextEditingController _stateController;
+  late TextEditingController _zipController;
+  late TextEditingController _websiteController;
+  late String _selectedType;
+  bool _addBillingContact = false;
+  late TextEditingController _billingNameController;
+  late TextEditingController _billingEmailController;
+  late TextEditingController _billingPhoneController;
+  late TextEditingController _billingTitleController;
+  
+  // Mock proposal line items (in real app, fetch from proposal)
+  final List<Map<String, dynamic>> _proposalLineItems = [
+    {'name': 'Web Development', 'hours': 40, 'rate': 150.0, 'amount': 6000.0},
+    {'name': 'UI/UX Design', 'hours': 20, 'rate': 125.0, 'amount': 2500.0},
+    {'name': 'Project Management', 'hours': 10, 'rate': 100.0, 'amount': 1000.0},
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    final lead = widget.lead;
+    
+    // Pre-fill from lead data
+    _projectNameController = TextEditingController(
+      text: '${lead['company']?.isNotEmpty == true ? lead['company'] : lead['name']} Project'
+    );
+    _companyController = TextEditingController(text: lead['company'] ?? '');
+    _primaryNameController = TextEditingController(text: lead['name'] ?? '');
+    _primaryEmailController = TextEditingController(text: lead['email'] ?? '');
+    _primaryPhoneController = TextEditingController(text: lead['phone'] ?? '');
+    _primaryTitleController = TextEditingController(text: lead['title'] ?? '');
+    _addressController = TextEditingController(text: lead['address'] ?? '');
+    _cityController = TextEditingController(text: lead['city'] ?? '');
+    _stateController = TextEditingController(text: lead['state'] ?? '');
+    _zipController = TextEditingController(text: lead['zip'] ?? '');
+    _websiteController = TextEditingController(text: lead['website'] ?? '');
+    _selectedType = lead['type'] ?? 'Other';
+    
+    // Billing (empty by default - uses primary)
+    _billingNameController = TextEditingController();
+    _billingEmailController = TextEditingController();
+    _billingPhoneController = TextEditingController();
+    _billingTitleController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _projectNameController.dispose();
+    _companyController.dispose();
+    _primaryNameController.dispose();
+    _primaryEmailController.dispose();
+    _primaryPhoneController.dispose();
+    _primaryTitleController.dispose();
+    _addressController.dispose();
+    _cityController.dispose();
+    _stateController.dispose();
+    _zipController.dispose();
+    _websiteController.dispose();
+    _billingNameController.dispose();
+    _billingEmailController.dispose();
+    _billingPhoneController.dispose();
+    _billingTitleController.dispose();
+    super.dispose();
+  }
+
+  void _convert() {
+    if (_companyController.text.isEmpty || _primaryNameController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Company name and primary contact are required'), backgroundColor: AppColors.error),
+      );
+      return;
+    }
+
+    // Create client from lead data
+    final newClient = {
+      'id': DateTime.now().millisecondsSinceEpoch.toString(),
+      'company': _companyController.text.trim(),
+      'primaryName': _primaryNameController.text.trim(),
+      'primaryEmail': _primaryEmailController.text.trim(),
+      'primaryPhone': _primaryPhoneController.text.trim(),
+      'primaryTitle': _primaryTitleController.text.trim(),
+      'billingName': _addBillingContact ? _billingNameController.text.trim() : '',
+      'billingEmail': _addBillingContact ? _billingEmailController.text.trim() : '',
+      'billingPhone': _addBillingContact ? _billingPhoneController.text.trim() : '',
+      'billingTitle': _addBillingContact ? _billingTitleController.text.trim() : '',
+      'address': _addressController.text.trim(),
+      'city': _cityController.text.trim(),
+      'state': _stateController.text.trim(),
+      'zip': _zipController.text.trim(),
+      'website': _websiteController.text.trim(),
+      'type': _selectedType,
+      'notes': 'Converted from lead: ${widget.lead['name']}\nOriginal proposal value: \$${widget.lead['value']}',
+      'quotes': 1,
+      'projects': 1,
+      'value': widget.lead['value'] ?? 0.0,
+      'created': DateTime.now(),
+      'lastActivity': DateTime.now(),
+      // Reference to original lead
+      'convertedFromLeadId': widget.lead['id'],
+    };
+
+    Navigator.pop(context);
+    widget.onConvert(newClient, _projectNameController.text.trim());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 0);
+    
+    return DraggableScrollableSheet(
+      initialChildSize: 0.92,
+      minChildSize: 0.5,
+      maxChildSize: 0.95,
+      expand: false,
+      builder: (context, scrollController) {
+        return SingleChildScrollView(
+          controller: scrollController,
+          padding: EdgeInsets.only(
+            left: 20, right: 20, top: 20,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Handle
+              Center(
+                child: Container(
+                  width: 40, height: 4,
+                  decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(2)),
+                ),
+              ),
+              const SizedBox(height: 20),
+              
+              // Header
+              Row(
+                children: [
+                  Container(
+                    width: 48, height: 48,
+                    decoration: BoxDecoration(
+                      color: AppColors.success.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.rocket_launch, color: AppColors.success, size: 24),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Convert to Project', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+                        Text('Lead: ${widget.lead['name']}', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                      ],
+                    ),
+                  ),
+                  IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close)),
+                ],
+              ),
+              const SizedBox(height: 20),
+
+              // Summary Card
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: AppColors.success.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.success.withOpacity(0.2)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Conversion Summary', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.success)),
+                    const SizedBox(height: 12),
+                    _buildSummaryRow(Icons.check_circle_outline, 'Create new client from lead info'),
+                    _buildSummaryRow(Icons.check_circle_outline, 'Create project: "${_projectNameController.text}"'),
+                    _buildSummaryRow(Icons.check_circle_outline, 'Convert ${_proposalLineItems.length} line items to tasks'),
+                    _buildSummaryRow(Icons.check_circle_outline, 'Project value: ${currencyFormat.format(widget.lead['value'])}'),
+                    _buildSummaryRow(Icons.check_circle_outline, 'Mark lead as "Won"'),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Project Name
+              _buildSectionHeader('Project Details', Icons.folder_outlined, AppColors.accent),
+              const SizedBox(height: 10),
+              _buildTextField('Project Name *', _projectNameController),
+              const SizedBox(height: 20),
+
+              // Tasks from Line Items
+              _buildSectionHeader('Tasks (from proposal)', Icons.checklist, AppColors.info),
+              const SizedBox(height: 10),
+              Container(
+                decoration: BoxDecoration(
+                  color: AppColors.neutral50,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Column(
+                  children: _proposalLineItems.asMap().entries.map((entry) {
+                    final item = entry.value;
+                    final isLast = entry.key == _proposalLineItems.length - 1;
+                    return Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        border: isLast ? null : Border(bottom: BorderSide(color: AppColors.border)),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 32, height: 32,
+                            decoration: BoxDecoration(
+                              color: AppColors.info.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Icon(Icons.task_alt, size: 16, color: AppColors.info),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(item['name'], style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+                                Text('${item['hours']}h @ ${currencyFormat.format(item['rate'])}/hr', 
+                                  style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                              ],
+                            ),
+                          ),
+                          Text(currencyFormat.format(item['amount']), 
+                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Client Info (editable)
+              _buildSectionHeader('Client Information', Icons.business, AppColors.accent),
+              const SizedBox(height: 10),
+              _buildTextField('Company Name *', _companyController),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(child: _buildTextField('City', _cityController)),
+                  const SizedBox(width: 10),
+                  SizedBox(width: 70, child: _buildTextField('State', _stateController)),
+                  const SizedBox(width: 10),
+                  SizedBox(width: 80, child: _buildTextField('ZIP', _zipController)),
+                ],
+              ),
+              const SizedBox(height: 20),
+
+              // Primary Contact
+              _buildSectionHeader('Primary Contact', Icons.person, AppColors.accent),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(child: _buildTextField('Name *', _primaryNameController)),
+                  const SizedBox(width: 10),
+                  Expanded(child: _buildTextField('Title', _primaryTitleController)),
+                ],
+              ),
+              const SizedBox(height: 10),
+              _buildTextField('Email', _primaryEmailController),
+              const SizedBox(height: 10),
+              _buildTextField('Phone', _primaryPhoneController),
+              const SizedBox(height: 20),
+
+              // Billing Contact (optional)
+              Row(
+                children: [
+                  Expanded(child: _buildSectionHeader('Billing Contact', Icons.receipt_long, AppColors.info)),
+                  Switch(
+                    value: _addBillingContact,
+                    onChanged: (val) => setState(() => _addBillingContact = val),
+                    activeColor: AppColors.info,
+                  ),
+                ],
+              ),
+              if (_addBillingContact) ...[
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(child: _buildTextField('Name', _billingNameController)),
+                    const SizedBox(width: 10),
+                    Expanded(child: _buildTextField('Title', _billingTitleController)),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                _buildTextField('Email', _billingEmailController),
+                const SizedBox(height: 10),
+                _buildTextField('Phone', _billingPhoneController),
+              ] else
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text('Invoices will be sent to primary contact', 
+                    style: TextStyle(fontSize: 12, color: AppColors.textTertiary, fontStyle: FontStyle.italic)),
+                ),
+              const SizedBox(height: 28),
+
+              // Convert Button
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton.icon(
+                  onPressed: _convert,
+                  icon: const Icon(Icons.rocket_launch),
+                  label: const Text('Convert to Project'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.success,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSummaryRow(IconData icon, String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: AppColors.success),
+          const SizedBox(width: 8),
+          Expanded(child: Text(text, style: TextStyle(fontSize: 12, color: AppColors.textSecondary))),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title, IconData icon, Color color) {
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: color),
+        const SizedBox(width: 8),
+        Text(title, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: color)),
+      ],
+    );
+  }
+
+  Widget _buildTextField(String label, TextEditingController controller) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500)),
+        const SizedBox(height: 4),
+        TextField(
+          controller: controller,
+          style: const TextStyle(fontSize: 14),
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: AppColors.neutral50,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.border)),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.accent)),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           ),
         ),
       ],
