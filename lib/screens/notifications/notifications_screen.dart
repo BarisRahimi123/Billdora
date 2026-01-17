@@ -62,7 +62,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       case 'new_client': return AppColors.blue;
       case 'project_update': return AppColors.purple;
       case 'payment_reminder': return AppColors.orange;
-      case 'invoice_sent': return AppColors.cyan;
+      case 'invoice_sent': return AppColors.info;
       default: return AppColors.blue;
     }
   }
