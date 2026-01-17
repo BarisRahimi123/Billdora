@@ -2440,19 +2440,35 @@ class _QuotesTabState extends State<_QuotesTab> with SingleTickerProviderStateMi
   final List<Map<String, dynamic>> _quotesByClient = [
     {
       'client': 'Barzan Shop',
+      'clientEmail': 'billing@barzanshop.com',
       'totalValue': 12150.0,
       'quotes': [
-        {'id': 'q1', 'title': 'Proposal for Wall street global', 'number': '260114-538', 'date': DateTime(2026, 1, 14), 'status': 'sent', 'views': 0},
-        {'id': 'q2', 'title': 'Proposal for Wall street global', 'number': '260114-280', 'date': DateTime(2026, 1, 14), 'status': 'sent', 'views': 1},
-        {'id': 'q3', 'title': 'Proposal for Wall street global', 'number': '260114-049', 'date': DateTime(2026, 1, 14), 'status': 'sent', 'views': 0},
-        {'id': 'q4', 'title': 'Proposal for Wall street global', 'number': '260114-717', 'date': DateTime(2026, 1, 14), 'status': 'approved', 'views': 5},
+        {'id': 'q1', 'title': 'Proposal for Wall street global', 'number': '260114-538', 'date': DateTime(2026, 1, 14), 'status': 'sent', 'views': 0, 'amount': 3500.0, 'lineItems': [
+          {'name': 'Website Design', 'amount': 2000.0},
+          {'name': 'SEO Setup', 'amount': 1500.0},
+        ]},
+        {'id': 'q2', 'title': 'Proposal for Wall street global', 'number': '260114-280', 'date': DateTime(2026, 1, 14), 'status': 'sent', 'views': 1, 'amount': 2800.0, 'lineItems': [
+          {'name': 'Logo Design', 'amount': 1800.0},
+          {'name': 'Brand Guidelines', 'amount': 1000.0},
+        ]},
+        {'id': 'q3', 'title': 'Proposal for Wall street global', 'number': '260114-049', 'date': DateTime(2026, 1, 14), 'status': 'sent', 'views': 0, 'amount': 1850.0, 'lineItems': [
+          {'name': 'Social Media Setup', 'amount': 850.0},
+          {'name': 'Marketing Strategy', 'amount': 1000.0},
+        ]},
+        {'id': 'q4', 'title': 'Proposal for Wall street global', 'number': '260114-717', 'date': DateTime(2026, 1, 14), 'status': 'approved', 'views': 5, 'amount': 4000.0, 'signedAt': DateTime(2026, 1, 15), 'signedBy': 'Barzan Jan Rahimi', 'lineItems': [
+          {'name': 'Mobile App UI Design', 'amount': 2500.0},
+          {'name': 'Prototyping', 'amount': 1500.0},
+        ]},
       ],
     },
     {
       'client': 'Sequoia Consulting',
+      'clientEmail': 'stevenm@seqhq.com',
       'totalValue': 2000.0,
       'quotes': [
-        {'id': 'q5', 'title': 'Website Redesign Proposal', 'number': '260112-001', 'date': DateTime(2026, 1, 12), 'status': 'draft', 'views': 0},
+        {'id': 'q5', 'title': 'Website Redesign Proposal', 'number': '260112-001', 'date': DateTime(2026, 1, 12), 'status': 'draft', 'views': 0, 'amount': 2000.0, 'lineItems': [
+          {'name': 'TSM Map Design', 'amount': 2000.0},
+        ]},
       ],
     },
   ];
@@ -2684,7 +2700,11 @@ class _QuotesTabState extends State<_QuotesTab> with SingleTickerProviderStateMi
                     // Expanded Quotes
                     if (isExpanded) ...[
                       const Divider(height: 1),
-                      ...quotes.map((quote) => _buildQuoteItem(quote)),
+                      ...quotes.map((quote) => _buildQuoteItem(
+                        quote, 
+                        clientName: client, 
+                        clientEmail: group['clientEmail'] as String?,
+                      )),
                     ],
                   ],
                 ),
@@ -2696,55 +2716,384 @@ class _QuotesTabState extends State<_QuotesTab> with SingleTickerProviderStateMi
     );
   }
 
-  Widget _buildQuoteItem(Map<String, dynamic> quote) {
+  Widget _buildQuoteItem(Map<String, dynamic> quote, {String? clientName, String? clientEmail}) {
     final dateFormat = DateFormat('M/d/yyyy');
+    final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 0);
+    final amount = quote['amount'] as double? ?? 0.0;
     
-    return Container(
-      color: AppColors.neutral50,
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Row(
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: AppColors.neutral100,
-                borderRadius: BorderRadius.circular(8),
+    return InkWell(
+      onTap: () => _showQuotePreview(quote, clientName: clientName, clientEmail: clientEmail),
+      child: Container(
+        color: AppColors.neutral50,
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: AppColors.neutral100,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.description_outlined, size: 18, color: AppColors.textSecondary),
               ),
-              child: const Icon(Icons.description_outlined, size: 18, color: AppColors.textSecondary),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(quote['title'], style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${quote['number']} • ${dateFormat.format(quote['date'])}',
+                      style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Amount
+              Text(
+                currencyFormat.format(amount),
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text(quote['title'], style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
-                  const SizedBox(height: 2),
-                  Text(
-                    '${quote['number']} • ${dateFormat.format(quote['date'])}',
-                    style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                  _buildStatusBadge(quote['status']),
+                  if (quote['views'] > 0) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.visibility_outlined, size: 12, color: AppColors.textTertiary),
+                        const SizedBox(width: 2),
+                        Text('${quote['views']}', style: TextStyle(fontSize: 10, color: AppColors.textTertiary)),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+              const SizedBox(width: 8),
+              Icon(Icons.chevron_right, size: 20, color: AppColors.textTertiary),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showQuotePreview(Map<String, dynamic> quote, {String? clientName, String? clientEmail}) {
+    final dateFormat = DateFormat('MMM d, yyyy');
+    final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 2);
+    final lineItems = quote['lineItems'] as List<Map<String, dynamic>>? ?? [];
+    final amount = quote['amount'] as double? ?? 0.0;
+    final status = quote['status'] as String;
+    
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.85,
+        decoration: const BoxDecoration(
+          color: AppColors.cardBackground,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          children: [
+            // Handle
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            
+            // Header
+            Container(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            _buildStatusBadge(status),
+                            const SizedBox(width: 8),
+                            Text('# ${quote['number']}', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(quote['title'], style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                        const SizedBox(height: 4),
+                        Text('Created ${dateFormat.format(quote['date'])}', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
                   ),
                 ],
               ),
             ),
-            const SizedBox(width: 8),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                _buildStatusBadge(quote['status']),
-                if (quote['views'] > 0) ...[
-                  const SizedBox(height: 4),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.visibility_outlined, size: 12, color: AppColors.textTertiary),
-                      const SizedBox(width: 2),
-                      Text('${quote['views']}', style: TextStyle(fontSize: 10, color: AppColors.textTertiary)),
+            
+            const Divider(height: 1),
+            
+            // Content
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Client Info
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppColors.neutral50,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: AppColors.accent.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Center(
+                              child: Text(
+                                clientName?.isNotEmpty == true ? clientName![0] : 'C',
+                                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.accent),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(clientName ?? 'Client', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                                if (clientEmail != null)
+                                  Text(clientEmail, style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    
+                    // Line Items
+                    const Text('Services & Items', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 12),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: AppColors.cardBackground,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: Column(
+                        children: [
+                          // Header
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: AppColors.neutral50,
+                              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                            ),
+                            child: Row(
+                              children: [
+                                const Expanded(flex: 3, child: Text('Item', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600))),
+                                const SizedBox(width: 60, child: Text('Amount', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600), textAlign: TextAlign.right)),
+                              ],
+                            ),
+                          ),
+                          const Divider(height: 1),
+                          // Items
+                          ...lineItems.map((item) => Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            decoration: BoxDecoration(
+                              border: Border(bottom: BorderSide(color: AppColors.border.withOpacity(0.5))),
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(flex: 3, child: Text(item['name'] as String, style: const TextStyle(fontSize: 13))),
+                                SizedBox(width: 80, child: Text(currencyFormat.format(item['amount']), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500), textAlign: TextAlign.right)),
+                              ],
+                            ),
+                          )),
+                          // Total
+                          Container(
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: AppColors.accent.withOpacity(0.05),
+                              borderRadius: const BorderRadius.vertical(bottom: Radius.circular(12)),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text('Total', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                                Text(currencyFormat.format(amount), style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.accent)),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    
+                    // Signature Info (if approved)
+                    if (status == 'approved' && quote['signedBy'] != null) ...[
+                      const SizedBox(height: 20),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppColors.success.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.success.withOpacity(0.3)),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.verified, color: AppColors.success, size: 24),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text('Approved & Signed', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.success)),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'By ${quote['signedBy']} on ${dateFormat.format(quote['signedAt'])}',
+                                    style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ],
-                  ),
+                    
+                    // Views Info
+                    if ((quote['views'] as int?) != null && quote['views'] > 0) ...[
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Icon(Icons.visibility_outlined, size: 16, color: AppColors.textTertiary),
+                          const SizedBox(width: 6),
+                          Text('Viewed ${quote['views']} time${quote['views'] > 1 ? 's' : ''}', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+            
+            // Footer Actions
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.cardBackground,
+                border: Border(top: BorderSide(color: AppColors.border)),
+              ),
+              child: Row(
+                children: [
+                  if (status == 'draft') ...[
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          // Edit proposal
+                        },
+                        icon: const Icon(Icons.edit_outlined, size: 18),
+                        label: const Text('Edit'),
+                        style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 12)),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Proposal sent!'), behavior: SnackBarBehavior.floating),
+                          );
+                        },
+                        icon: const Icon(Icons.send, size: 18),
+                        label: const Text('Send'),
+                        style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 12)),
+                      ),
+                    ),
+                  ] else if (status == 'sent') ...[
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          // Resend
+                        },
+                        icon: const Icon(Icons.refresh, size: 18),
+                        label: const Text('Resend'),
+                        style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 12)),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          // Download PDF
+                        },
+                        icon: const Icon(Icons.download, size: 18),
+                        label: const Text('Download'),
+                        style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 12)),
+                      ),
+                    ),
+                  ] else if (status == 'approved') ...[
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          // Download PDF
+                        },
+                        icon: const Icon(Icons.download, size: 18),
+                        label: const Text('Download'),
+                        style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 12)),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          // Convert to project
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Converting to project...'), behavior: SnackBarBehavior.floating),
+                          );
+                        },
+                        icon: const Icon(Icons.rocket_launch, size: 18),
+                        label: const Text('Convert'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.success,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ],
         ),
