@@ -5,6 +5,118 @@ import 'dart:async';
 import '../../main.dart';
 import '../shell/app_header.dart';
 
+// Mock Projects Data (would come from a service/provider in production)
+final List<Map<String, dynamic>> mockProjects = [
+  {
+    'id': 'p1',
+    'name': 'Mobile App UI Design',
+    'client': 'Tech Startup Inc.',
+    'tasks': [
+      {
+        'id': 't1',
+        'name': 'User Research & Analysis',
+        'subtasks': [
+          {'id': 'st1', 'name': 'Conduct user interviews'},
+          {'id': 'st2', 'name': 'Analyze competitors'},
+          {'id': 'st3', 'name': 'Create user personas'},
+        ],
+      },
+      {
+        'id': 't2',
+        'name': 'Wireframing',
+        'subtasks': [
+          {'id': 'st4', 'name': 'Sketch initial layouts'},
+          {'id': 'st5', 'name': 'Create low-fi wireframes'},
+          {'id': 'st6', 'name': 'Client review session'},
+        ],
+      },
+      {
+        'id': 't3',
+        'name': 'Visual Design',
+        'subtasks': [
+          {'id': 'st7', 'name': 'Design system creation'},
+          {'id': 'st8', 'name': 'Hi-fi mockups'},
+          {'id': 'st9', 'name': 'Asset preparation'},
+        ],
+      },
+    ],
+  },
+  {
+    'id': 'p2',
+    'name': 'E-commerce Website',
+    'client': 'Retail Corp',
+    'tasks': [
+      {
+        'id': 't4',
+        'name': 'Homepage Design',
+        'subtasks': [
+          {'id': 'st10', 'name': 'Hero section'},
+          {'id': 'st11', 'name': 'Product showcase'},
+          {'id': 'st12', 'name': 'Footer design'},
+        ],
+      },
+      {
+        'id': 't5',
+        'name': 'Product Pages',
+        'subtasks': [
+          {'id': 'st13', 'name': 'Product detail template'},
+          {'id': 'st14', 'name': 'Shopping cart UI'},
+          {'id': 'st15', 'name': 'Checkout flow'},
+        ],
+      },
+    ],
+  },
+  {
+    'id': 'p3',
+    'name': 'Virtual Tour Production',
+    'client': 'Real Estate Agency',
+    'tasks': [
+      {
+        'id': 't6',
+        'name': '360° Photography',
+        'subtasks': [
+          {'id': 'st16', 'name': 'Property walkthrough'},
+          {'id': 'st17', 'name': 'Photo editing'},
+        ],
+      },
+      {
+        'id': 't7',
+        'name': 'Tour Assembly',
+        'subtasks': [
+          {'id': 'st18', 'name': 'Stitch panoramas'},
+          {'id': 'st19', 'name': 'Add hotspots'},
+          {'id': 'st20', 'name': 'Final testing'},
+        ],
+      },
+    ],
+  },
+  {
+    'id': 'p4',
+    'name': 'Brand Identity Design',
+    'client': 'Fashion Boutique',
+    'tasks': [
+      {
+        'id': 't8',
+        'name': 'Logo Design',
+        'subtasks': [
+          {'id': 'st21', 'name': 'Concept sketches'},
+          {'id': 'st22', 'name': 'Digital refinement'},
+          {'id': 'st23', 'name': 'Color variations'},
+        ],
+      },
+      {
+        'id': 't9',
+        'name': 'Brand Guidelines',
+        'subtasks': [
+          {'id': 'st24', 'name': 'Typography system'},
+          {'id': 'st25', 'name': 'Color palette'},
+          {'id': 'st26', 'name': 'Usage examples'},
+        ],
+      },
+    ],
+  },
+];
+
 class TimeExpenseScreen extends StatefulWidget {
   const TimeExpenseScreen({super.key});
 
@@ -261,8 +373,9 @@ class _TimeTabState extends State<_TimeTab> {
   int _elapsedSeconds = 0;
   Timer? _timer;
   
-  String? _selectedProject;
-  String? _selectedTask;
+  String? _selectedProjectId;
+  String? _selectedTaskId;
+  String? _selectedSubtaskId;
   final TextEditingController _descriptionController = TextEditingController();
   
   // Day selection
@@ -270,6 +383,22 @@ class _TimeTabState extends State<_TimeTab> {
   
   // Mock time entries
   final List<Map<String, dynamic>> _timeEntries = [];
+  
+  // Helper getters to access data
+  Map<String, dynamic>? get selectedProject => 
+      mockProjects.firstWhere((p) => p['id'] == _selectedProjectId, orElse: () => <String, dynamic>{});
+  
+  List<Map<String, dynamic>> get availableTasks {
+    if (_selectedProjectId == null) return [];
+    final project = mockProjects.firstWhere((p) => p['id'] == _selectedProjectId, orElse: () => <String, dynamic>{});
+    return (project['tasks'] as List<Map<String, dynamic>>?) ?? [];
+  }
+  
+  List<Map<String, dynamic>> get availableSubtasks {
+    if (_selectedTaskId == null) return [];
+    final task = availableTasks.firstWhere((t) => t['id'] == _selectedTaskId, orElse: () => <String, dynamic>{});
+    return (task['subtasks'] as List<Map<String, dynamic>>?) ?? [];
+  }
 
   @override
   void dispose() {
@@ -292,7 +421,7 @@ class _TimeTabState extends State<_TimeTab> {
   }
 
   void _stopTimer() {
-    if (_selectedProject == null) {
+    if (_selectedProjectId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please select a project'), behavior: SnackBarBehavior.floating),
       );
@@ -303,18 +432,38 @@ class _TimeTabState extends State<_TimeTab> {
       _isTimerRunning = false;
       _timer?.cancel();
       if (_elapsedSeconds > 0) {
+        // Get project, task, and subtask names
+        final project = mockProjects.firstWhere((p) => p['id'] == _selectedProjectId);
+        String? taskName;
+        String? subtaskName;
+        
+        if (_selectedTaskId != null) {
+          final task = (project['tasks'] as List).firstWhere((t) => t['id'] == _selectedTaskId, orElse: () => <String, dynamic>{});
+          taskName = task['name'];
+          
+          if (_selectedSubtaskId != null) {
+            final subtask = (task['subtasks'] as List?)?.firstWhere((st) => st['id'] == _selectedSubtaskId, orElse: () => <String, dynamic>{});
+            subtaskName = subtask?['name'];
+          }
+        }
+        
         // Save entry
         _timeEntries.add({
-          'project': _selectedProject!,
-          'task': _selectedTask, // Can be null
+          'projectId': _selectedProjectId!,
+          'projectName': project['name'],
+          'taskId': _selectedTaskId,
+          'taskName': taskName,
+          'subtaskId': _selectedSubtaskId,
+          'subtaskName': subtaskName,
           'description': _descriptionController.text,
           'hours': _elapsedSeconds / 3600,
           'date': _selectedDate,
           'status': 'draft',
         });
         _elapsedSeconds = 0;
-        _selectedProject = null;
-        _selectedTask = null;
+        _selectedProjectId = null;
+        _selectedTaskId = null;
+        _selectedSubtaskId = null;
         _descriptionController.clear();
       }
     });
@@ -370,54 +519,113 @@ class _TimeTabState extends State<_TimeTab> {
                   ),
                   child: DropdownButtonHideUnderline(
                     child: DropdownButton<String>(
-                      value: _selectedProject,
-                      hint: Text('Select Project *', style: TextStyle(color: AppColors.textSecondary)),
+                      value: _selectedProjectId,
+                      hint: Text('Select Project *', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
                       isExpanded: true,
                       icon: Icon(Icons.unfold_more, size: 20, color: AppColors.textSecondary),
-                      items: [
-                        'Mobile App UI Design',
-                        'E-commerce Website',
-                        'Virtual Tour Production',
-                        'Brand Identity Design',
-                      ].map((project) {
+                      items: mockProjects.map((project) {
                         return DropdownMenuItem(
-                          value: project,
-                          child: Text(project, style: const TextStyle(fontSize: 13)),
+                          value: project['id'] as String,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(project['name'] as String, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+                              Text(project['client'] as String, style: TextStyle(fontSize: 11, color: AppColors.textTertiary)),
+                            ],
+                          ),
                         );
                       }).toList(),
-                      onChanged: (value) => setState(() => _selectedProject = value),
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedProjectId = value;
+                          // Reset task and subtask when project changes
+                          _selectedTaskId = null;
+                          _selectedSubtaskId = null;
+                        });
+                      },
                     ),
                   ),
                 ),
                 const SizedBox(height: 8),
                 
-                // Task/Subtask Dropdown (Optional)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppColors.neutral50,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      value: _selectedTask,
-                      hint: Text('Task/Subtask (Optional)', style: TextStyle(color: AppColors.textTertiary)),
-                      isExpanded: true,
-                      icon: Icon(Icons.unfold_more, size: 20, color: AppColors.textSecondary),
-                      items: [
-                        DropdownMenuItem(value: null, child: Text('None', style: TextStyle(color: AppColors.textTertiary, fontSize: 13))),
-                        ...['Wireframes - iOS', 'Visual Design System', 'Prototyping', 'User Research', 'Testing'].map((task) {
-                          return DropdownMenuItem(
-                            value: task,
-                            child: Text(task, style: const TextStyle(fontSize: 13)),
-                          );
-                        }),
-                      ],
-                      onChanged: (value) => setState(() => _selectedTask = value),
+                // Task Dropdown (Optional - only shown if project is selected)
+                if (_selectedProjectId != null && availableTasks.isNotEmpty) ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.neutral50,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String?>(
+                        value: _selectedTaskId,
+                        hint: Text('Select Task (Optional)', style: TextStyle(color: AppColors.textTertiary, fontSize: 13)),
+                        isExpanded: true,
+                        icon: Icon(Icons.unfold_more, size: 20, color: AppColors.textSecondary),
+                        items: [
+                          DropdownMenuItem(
+                            value: null, 
+                            child: Text('None', style: TextStyle(color: AppColors.textTertiary, fontSize: 13, fontStyle: FontStyle.italic)),
+                          ),
+                          ...availableTasks.map((task) {
+                            return DropdownMenuItem(
+                              value: task['id'] as String,
+                              child: Text(task['name'] as String, style: const TextStyle(fontSize: 13)),
+                            );
+                          }),
+                        ],
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedTaskId = value;
+                            // Reset subtask when task changes
+                            _selectedSubtaskId = null;
+                          });
+                        },
+                      ),
                     ),
                   ),
-                ),
+                  const SizedBox(height: 8),
+                ],
+                
+                // Subtask Dropdown (Optional - only shown if task is selected)
+                if (_selectedTaskId != null && availableSubtasks.isNotEmpty) ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.neutral50,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String?>(
+                        value: _selectedSubtaskId,
+                        hint: Text('Select Subtask (Optional)', style: TextStyle(color: AppColors.textTertiary, fontSize: 13)),
+                        isExpanded: true,
+                        icon: Icon(Icons.unfold_more, size: 20, color: AppColors.textSecondary),
+                        items: [
+                          DropdownMenuItem(
+                            value: null, 
+                            child: Text('None', style: TextStyle(color: AppColors.textTertiary, fontSize: 13, fontStyle: FontStyle.italic)),
+                          ),
+                          ...availableSubtasks.map((subtask) {
+                            return DropdownMenuItem(
+                              value: subtask['id'] as String,
+                              child: Text(subtask['name'] as String, style: const TextStyle(fontSize: 13)),
+                            );
+                          }),
+                        ],
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedSubtaskId = value;
+                          });
+                        },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                ],
                 const SizedBox(height: 8),
                 
                 // Description Field - Compact
@@ -447,7 +655,7 @@ class _TimeTabState extends State<_TimeTab> {
                   children: [
                     Expanded(
                       child: ElevatedButton.icon(
-                        onPressed: _selectedProject != null ? _toggleTimer : null,
+                        onPressed: _selectedProjectId != null ? _toggleTimer : null,
                         icon: Icon(_isTimerRunning ? Icons.pause : Icons.play_arrow, size: 20),
                         label: Text(_isTimerRunning ? 'Pause' : 'Start'),
                         style: ElevatedButton.styleFrom(
@@ -623,17 +831,25 @@ class _TimeTabState extends State<_TimeTab> {
                     separatorBuilder: (_, __) => const Divider(height: 1, color: AppColors.border),
                     itemBuilder: (context, index) {
                       final entry = _timeEntries[index];
+                      // Build subtitle based on what's available
+                      String? subtitle;
+                      if (entry['subtaskName'] != null) {
+                        subtitle = '${entry['taskName']} › ${entry['subtaskName']}';
+                      } else if (entry['taskName'] != null) {
+                        subtitle = entry['taskName'];
+                      } else if (entry['description'].toString().isNotEmpty) {
+                        subtitle = entry['description'];
+                      }
+                      
                       return ListTile(
                         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                         title: Text(
-                          entry['project'],
+                          entry['projectName'],
                           style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
                         ),
-                        subtitle: entry['task'] != null
-                            ? Text(entry['task'], style: TextStyle(fontSize: 12, color: AppColors.textSecondary))
-                            : entry['description'].isNotEmpty
-                                ? Text(entry['description'], style: TextStyle(fontSize: 12, color: AppColors.textTertiary))
-                                : null,
+                        subtitle: subtitle != null
+                            ? Text(subtitle, style: TextStyle(fontSize: 12, color: AppColors.textSecondary))
+                            : null,
                         trailing: Text(
                           '${entry['hours'].toStringAsFixed(1)}h',
                           style: const TextStyle(
