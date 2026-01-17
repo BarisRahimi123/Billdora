@@ -26,11 +26,11 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> with SingleTi
     'budget': 2000.0,
     'startDate': DateTime(2025, 12, 31),
     'endDate': null,
-    'totalHours': 0.0,
+    'totalHours': 30.5,
     'tasksCompleted': 1,
     'tasksTotal': 2,
     'amountInvoiced': 1500.0,
-    'laborCost': 0.0,
+    'laborCost': 4275.0, // 28.5h * $150
     'laborRate': 150.0,
     'expenses': 0.0,
     'collected': 0.0,
@@ -80,7 +80,21 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> with SingleTi
       },
     ],
     'invoices': [
-      {'id': 'inv1', 'number': 'INV-542754', 'date': DateTime(2026, 1, 10), 'amount': 1500.0, 'status': 'draft'},
+      {'id': 'inv1', 'number': 'INV-542754', 'date': DateTime(2026, 1, 10), 'amount': 1500.0, 'status': 'draft', 'dueDate': DateTime(2026, 2, 10)},
+    ],
+    'timeEntries': [
+      {'id': 'te1', 'date': DateTime(2026, 1, 5), 'task': 'TSM Map - TENTATIVE SUBDIVISION MAP', 'subtask': 'Site analysis', 'user': 'Baris Rahimi', 'hours': 8.0, 'rate': 150.0, 'billable': true},
+      {'id': 'te2', 'date': DateTime(2026, 1, 6), 'task': 'TSM Map - TENTATIVE SUBDIVISION MAP', 'subtask': 'Initial draft', 'user': 'Baris Rahimi', 'hours': 6.0, 'rate': 150.0, 'billable': true},
+      {'id': 'te3', 'date': DateTime(2026, 1, 7), 'task': 'TSM Map - TENTATIVE SUBDIVISION MAP', 'subtask': 'Initial draft', 'user': 'Baris Rahimi', 'hours': 6.0, 'rate': 150.0, 'billable': true},
+      {'id': 'te4', 'date': DateTime(2026, 1, 8), 'task': 'TSM Map - TENTATIVE SUBDIVISION MAP', 'subtask': 'Client review', 'user': 'Baris Rahimi', 'hours': 4.0, 'rate': 150.0, 'billable': true},
+      {'id': 'te5', 'date': DateTime(2026, 1, 9), 'task': 'TSM Map - TENTATIVE SUBDIVISION MAP', 'subtask': 'Final submission', 'user': 'Baris Rahimi', 'hours': 4.5, 'rate': 150.0, 'billable': true},
+      {'id': 'te6', 'date': DateTime(2026, 1, 15), 'task': 'Revisions - CD Plans revesions', 'subtask': 'Review existing plans', 'user': 'Baris Rahimi', 'hours': 2.0, 'rate': 150.0, 'billable': true},
+    ],
+    'expenseEntries': <Map<String, dynamic>>[
+      // Empty for now
+    ],
+    'payments': <Map<String, dynamic>>[
+      // Empty for now
     ],
   };
 
@@ -1425,90 +1439,620 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> with SingleTi
   // ============ FINANCIALS TAB ============
   Widget _buildFinancialsTab() {
     final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 0);
+    final timeEntries = _project['timeEntries'] as List<Map<String, dynamic>>;
+    final expenses = _project['expenseEntries'] as List<Map<String, dynamic>>;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          // Financial Stats Grid
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.cardBackground,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: AppShadows.card,
+            ),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(child: _buildFinancialCard('Budget', currencyFormat.format(_project['budget']), null, onTap: () => _showBudgetDetail())),
+                    const SizedBox(width: 12),
+                    Expanded(child: _buildFinancialCard('Labor Cost', currencyFormat.format(_project['laborCost']), '${_project['totalHours'].toStringAsFixed(1)}h @ \$${_project['laborRate'].toInt()}/hr', onTap: () => _showLaborCostDetail())),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(child: _buildFinancialCard('Expenses', currencyFormat.format(_project['expenses']), '${expenses.length} expenses', onTap: () => _showExpensesDetail())),
+                    const SizedBox(width: 12),
+                    Expanded(child: _buildFinancialCard('Invoiced', currencyFormat.format(_project['amountInvoiced']), null, valueColor: AppColors.success, onTap: () => _showInvoicesDetail())),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                _buildFinancialCard('Collected', currencyFormat.format(_project['collected']), null, onTap: () => _showCollectedDetail()),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Time Entries Section
+          Container(
+            decoration: BoxDecoration(
+              color: AppColors.cardBackground,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: AppShadows.sm,
+            ),
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 12, 8, 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Time Entries', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                      if (timeEntries.isNotEmpty)
+                        TextButton(
+                          onPressed: () => _showLaborCostDetail(),
+                          child: Text('View All', style: TextStyle(fontSize: 12, color: AppColors.accent)),
+                        ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1),
+                if (timeEntries.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.all(32),
+                    child: Text('No time entries for this project', style: TextStyle(color: AppColors.textSecondary)),
+                  )
+                else
+                  ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: timeEntries.length > 3 ? 3 : timeEntries.length,
+                    separatorBuilder: (_, __) => const Divider(height: 1),
+                    itemBuilder: (context, index) => _buildTimeEntryRow(timeEntries[index]),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Expenses Section
+          Container(
+            decoration: BoxDecoration(
+              color: AppColors.cardBackground,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: AppShadows.sm,
+            ),
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 12, 8, 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Expenses', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                      if (expenses.isNotEmpty)
+                        TextButton(
+                          onPressed: () => _showExpensesDetail(),
+                          child: Text('View All', style: TextStyle(fontSize: 12, color: AppColors.accent)),
+                        ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1),
+                Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Text('No expenses for this project', style: TextStyle(color: AppColors.textSecondary)),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFinancialCard(String label, String value, String? subtitle, {Color? valueColor, VoidCallback? onTap}) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: AppColors.cardBackground,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: AppShadows.card,
+          color: AppColors.neutral50,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: AppColors.border.withOpacity(0.5)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Financial Stats Grid
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Expanded(child: _buildFinancialCard('Budget', currencyFormat.format(_project['budget']), null)),
-                const SizedBox(width: 12),
-                Expanded(child: _buildFinancialCard('Labor Cost', currencyFormat.format(_project['laborCost']), '${_project['totalHours'].toInt()}h @ \$${_project['laborRate'].toInt()}/hr')),
+                Text(label, style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                if (onTap != null)
+                  Icon(Icons.arrow_forward_ios, size: 12, color: AppColors.textTertiary),
               ],
             ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(child: _buildFinancialCard('Expenses', currencyFormat.format(_project['expenses']), '0 expenses')),
-                const SizedBox(width: 12),
-                Expanded(child: _buildFinancialCard('Invoiced', currencyFormat.format(_project['amountInvoiced']), null, valueColor: AppColors.success)),
-              ],
-            ),
-            const SizedBox(height: 12),
-            _buildFinancialCard('Collected', currencyFormat.format(_project['collected']), null),
-            const SizedBox(height: 24),
-
-            // Time Entries
-            const Text('Time Entries', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-            const SizedBox(height: 12),
-            Center(
-              child: Text(
-                'No time entries for this project',
-                style: TextStyle(color: AppColors.textSecondary),
+            const SizedBox(height: 4),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: valueColor ?? AppColors.textPrimary,
               ),
             ),
-            const SizedBox(height: 24),
-
-            // Expenses
-            const Text('Expenses', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-            const SizedBox(height: 12),
-            Center(
-              child: Text(
-                'No expenses for this project',
-                style: TextStyle(color: AppColors.textSecondary),
-              ),
-            ),
+            if (subtitle != null) ...[
+              const SizedBox(height: 2),
+              Text(subtitle, style: TextStyle(fontSize: 11, color: AppColors.textTertiary)),
+            ],
           ],
         ),
       ),
     );
   }
 
-  Widget _buildFinancialCard(String label, String value, String? subtitle, {Color? valueColor}) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.neutral50,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildTimeEntryRow(Map<String, dynamic> entry) {
+    final dateFormat = DateFormat('M/d/yyyy');
+    final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 0);
+    final total = (entry['hours'] as double) * (entry['rate'] as double);
+    
+    return Padding(
+      padding: const EdgeInsets.all(12),
+      child: Row(
         children: [
-          Text(label, style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: valueColor ?? AppColors.textPrimary,
+          Expanded(
+            flex: 2,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(entry['task'], style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500), maxLines: 1, overflow: TextOverflow.ellipsis),
+                Text(entry['subtask'], style: TextStyle(fontSize: 11, color: AppColors.textSecondary), maxLines: 1, overflow: TextOverflow.ellipsis),
+              ],
             ),
           ),
-          if (subtitle != null) ...[
-            const SizedBox(height: 2),
-            Text(subtitle, style: TextStyle(fontSize: 11, color: AppColors.textTertiary)),
-          ],
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text('${entry['hours']}h', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+              Text(dateFormat.format(entry['date']), style: TextStyle(fontSize: 10, color: AppColors.textTertiary)),
+            ],
+          ),
         ],
+      ),
+    );
+  }
+
+  // Detail Modal: Budget
+  void _showBudgetDetail() {
+    final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 0);
+    final budget = _project['budget'] as double;
+    final laborCost = _project['laborCost'] as double;
+    final expenses = _project['expenses'] as double;
+    final totalCost = laborCost + expenses;
+    final remaining = budget - totalCost;
+    final percentUsed = budget > 0 ? (totalCost / budget) : 0.0;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.cardBackground,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        minChildSize: 0.4,
+        maxChildSize: 0.9,
+        expand: false,
+        builder: (context, scrollController) => Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(2)))),
+              const SizedBox(height: 20),
+              const Text('Budget Details', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 20),
+              
+              // Budget Overview Card
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.neutral50,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Total Budget', style: TextStyle(color: AppColors.textSecondary)),
+                        Text(currencyFormat.format(budget), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: percentUsed.clamp(0.0, 1.0),
+                        backgroundColor: AppColors.neutral200,
+                        valueColor: AlwaysStoppedAnimation(percentUsed > 0.9 ? AppColors.error : AppColors.accent),
+                        minHeight: 8,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text('${(percentUsed * 100).toStringAsFixed(0)}% used', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              
+              // Breakdown
+              const Text('Breakdown', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 12),
+              _buildBudgetRow('Labor Cost', laborCost, AppColors.info),
+              _buildBudgetRow('Expenses', expenses, AppColors.warning),
+              const Divider(height: 24),
+              _buildBudgetRow('Total Cost', totalCost, AppColors.textPrimary, bold: true),
+              _buildBudgetRow('Remaining', remaining, remaining >= 0 ? AppColors.success : AppColors.error, bold: true),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBudgetRow(String label, double amount, Color color, {bool bold = false}) {
+    final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 0);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: TextStyle(fontSize: 13, fontWeight: bold ? FontWeight.w600 : FontWeight.w400)),
+          Text(currencyFormat.format(amount), style: TextStyle(fontSize: 14, fontWeight: bold ? FontWeight.w700 : FontWeight.w500, color: color)),
+        ],
+      ),
+    );
+  }
+
+  // Detail Modal: Labor Cost
+  void _showLaborCostDetail() {
+    final timeEntries = _project['timeEntries'] as List<Map<String, dynamic>>;
+    final dateFormat = DateFormat('M/d/yyyy');
+    final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 2);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.cardBackground,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.7,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        expand: false,
+        builder: (context, scrollController) => Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(2)))),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Time Entries', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.info.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text('${_project['totalHours']}h total', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.info)),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              
+              if (timeEntries.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Center(child: Text('No time entries yet', style: TextStyle(color: AppColors.textSecondary))),
+                )
+              else
+                Expanded(
+                  child: ListView.separated(
+                    controller: scrollController,
+                    itemCount: timeEntries.length,
+                    separatorBuilder: (_, __) => const Divider(height: 1),
+                    itemBuilder: (context, index) {
+                      final entry = timeEntries[index];
+                      final total = (entry['hours'] as double) * (entry['rate'] as double);
+                      
+                      return Container(
+                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(dateFormat.format(entry['date']), style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                                Text(entry['user'], style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Text(entry['task'], style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+                            Text(entry['subtask'], style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                            const SizedBox(height: 6),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text('${entry['hours']}h @ ${currencyFormat.format(entry['rate'])}/hr', style: TextStyle(fontSize: 11, color: AppColors.textTertiary)),
+                                Text(currencyFormat.format(total), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.info)),
+                              ],
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Detail Modal: Expenses
+  void _showExpensesDetail() {
+    final expenses = _project['expenseEntries'] as List<Map<String, dynamic>>;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.cardBackground,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        minChildSize: 0.4,
+        maxChildSize: 0.9,
+        expand: false,
+        builder: (context, scrollController) => Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(2)))),
+              const SizedBox(height: 20),
+              const Text('Expenses', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 20),
+              
+              if (expenses.isEmpty)
+                Expanded(
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.receipt_long, size: 48, color: AppColors.textTertiary),
+                        const SizedBox(height: 12),
+                        Text('No expenses for this project', style: TextStyle(color: AppColors.textSecondary)),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Detail Modal: Invoices
+  void _showInvoicesDetail() {
+    final invoices = _project['invoices'] as List<Map<String, dynamic>>;
+    final dateFormat = DateFormat('M/d/yyyy');
+    final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 0);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.cardBackground,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        minChildSize: 0.4,
+        maxChildSize: 0.9,
+        expand: false,
+        builder: (context, scrollController) => Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(2)))),
+              const SizedBox(height: 20),
+              const Text('Invoices', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 20),
+              
+              if (invoices.isEmpty)
+                Expanded(
+                  child: Center(
+                    child: Text('No invoices created', style: TextStyle(color: AppColors.textSecondary)),
+                  ),
+                )
+              else
+                Expanded(
+                  child: ListView.separated(
+                    controller: scrollController,
+                    itemCount: invoices.length,
+                    separatorBuilder: (_, __) => const Divider(height: 20),
+                    itemBuilder: (context, index) {
+                      final invoice = invoices[index];
+                      final status = invoice['status'] as String;
+                      final statusColor = status == 'paid' ? AppColors.success : status == 'sent' ? AppColors.info : AppColors.warning;
+                      
+                      return InkWell(
+                        onTap: () {
+                          Navigator.pop(context);
+                          context.push('/invoices/${invoice['id']}');
+                        },
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: AppColors.neutral50,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppColors.border),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(invoice['number'], style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: statusColor.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      status.toUpperCase(),
+                                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: statusColor),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text('Date', style: TextStyle(fontSize: 10, color: AppColors.textTertiary)),
+                                      Text(dateFormat.format(invoice['date']), style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                                    ],
+                                  ),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text('Due', style: TextStyle(fontSize: 10, color: AppColors.textTertiary)),
+                                      Text(dateFormat.format(invoice['dueDate']), style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                                    ],
+                                  ),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      Text('Amount', style: TextStyle(fontSize: 10, color: AppColors.textTertiary)),
+                                      Text(currencyFormat.format(invoice['amount']), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Detail Modal: Collected
+  void _showCollectedDetail() {
+    final payments = _project['payments'] as List<Map<String, dynamic>>;
+    final collected = _project['collected'] as double;
+    final invoiced = _project['amountInvoiced'] as double;
+    final outstanding = invoiced - collected;
+    final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 0);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.cardBackground,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        minChildSize: 0.4,
+        maxChildSize: 0.9,
+        expand: false,
+        builder: (context, scrollController) => Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(2)))),
+              const SizedBox(height: 20),
+              const Text('Collected Payments', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 20),
+              
+              // Summary
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.neutral50,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Invoiced', style: TextStyle(color: AppColors.textSecondary)),
+                        Text(currencyFormat.format(invoiced), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Collected', style: TextStyle(color: AppColors.textSecondary)),
+                        Text(currencyFormat.format(collected), style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.success)),
+                      ],
+                    ),
+                    const Divider(height: 20),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Outstanding', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                        Text(currencyFormat.format(outstanding), style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: outstanding > 0 ? AppColors.error : AppColors.success)),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              
+              if (payments.isEmpty)
+                Expanded(
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.payments_outlined, size: 48, color: AppColors.textTertiary),
+                        const SizedBox(height: 12),
+                        Text('No payments received yet', style: TextStyle(color: AppColors.textSecondary)),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }
