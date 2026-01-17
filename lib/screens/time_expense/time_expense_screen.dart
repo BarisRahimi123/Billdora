@@ -385,19 +385,32 @@ class _TimeTabState extends State<_TimeTab> {
   final List<Map<String, dynamic>> _timeEntries = [];
   
   // Helper getters to access data
-  Map<String, dynamic>? get selectedProject => 
-      mockProjects.firstWhere((p) => p['id'] == _selectedProjectId, orElse: () => <String, dynamic>{});
+  Map<String, dynamic>? get selectedProject {
+    try {
+      return mockProjects.firstWhere((p) => p['id'] == _selectedProjectId);
+    } catch (e) {
+      return null;
+    }
+  }
   
   List<Map<String, dynamic>> get availableTasks {
     if (_selectedProjectId == null) return [];
-    final project = mockProjects.firstWhere((p) => p['id'] == _selectedProjectId, orElse: () => <String, dynamic>{});
-    return (project['tasks'] as List<Map<String, dynamic>>?) ?? [];
+    try {
+      final project = mockProjects.firstWhere((p) => p['id'] == _selectedProjectId);
+      return (project['tasks'] as List<dynamic>?)?.cast<Map<String, dynamic>>() ?? [];
+    } catch (e) {
+      return [];
+    }
   }
   
   List<Map<String, dynamic>> get availableSubtasks {
     if (_selectedTaskId == null) return [];
-    final task = availableTasks.firstWhere((t) => t['id'] == _selectedTaskId, orElse: () => <String, dynamic>{});
-    return (task['subtasks'] as List<Map<String, dynamic>>?) ?? [];
+    try {
+      final task = availableTasks.firstWhere((t) => t['id'] == _selectedTaskId);
+      return (task['subtasks'] as List<dynamic>?)?.cast<Map<String, dynamic>>() ?? [];
+    } catch (e) {
+      return [];
+    }
   }
 
   @override
@@ -438,12 +451,20 @@ class _TimeTabState extends State<_TimeTab> {
         String? subtaskName;
         
         if (_selectedTaskId != null) {
-          final task = (project['tasks'] as List).firstWhere((t) => t['id'] == _selectedTaskId, orElse: () => <String, dynamic>{});
-          taskName = task['name'];
-          
-          if (_selectedSubtaskId != null) {
-            final subtask = (task['subtasks'] as List?)?.firstWhere((st) => st['id'] == _selectedSubtaskId, orElse: () => <String, dynamic>{});
-            subtaskName = subtask?['name'];
+          try {
+            final task = (project['tasks'] as List).firstWhere((t) => t['id'] == _selectedTaskId);
+            taskName = task['name'];
+            
+            if (_selectedSubtaskId != null) {
+              try {
+                final subtask = (task['subtasks'] as List?)?.firstWhere((st) => st['id'] == _selectedSubtaskId);
+                subtaskName = subtask?['name'];
+              } catch (e) {
+                // Subtask not found
+              }
+            }
+          } catch (e) {
+            // Task not found
           }
         }
         
