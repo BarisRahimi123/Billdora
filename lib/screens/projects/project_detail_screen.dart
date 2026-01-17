@@ -15,6 +15,9 @@ class ProjectDetailScreen extends StatefulWidget {
 
 class _ProjectDetailScreenState extends State<ProjectDetailScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  
+  // Track expanded financial sections
+  String? _expandedFinancialSection;
 
   // Mock project data
   final Map<String, dynamic> _project = {
@@ -1441,6 +1444,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> with SingleTi
     final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 0);
     final timeEntries = _project['timeEntries'] as List<Map<String, dynamic>>;
     final expenses = _project['expenseEntries'] as List<Map<String, dynamic>>;
+    final invoices = _project['invoices'] as List<Map<String, dynamic>>;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -1458,114 +1462,78 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> with SingleTi
               children: [
                 Row(
                   children: [
-                    Expanded(child: _buildFinancialCard('Budget', currencyFormat.format(_project['budget']), null, onTap: () => _showBudgetDetail())),
+                    Expanded(child: _buildFinancialCard('Budget', currencyFormat.format(_project['budget']), null, sectionKey: 'budget')),
                     const SizedBox(width: 12),
-                    Expanded(child: _buildFinancialCard('Labor Cost', currencyFormat.format(_project['laborCost']), '${_project['totalHours'].toStringAsFixed(1)}h @ \$${_project['laborRate'].toInt()}/hr', onTap: () => _showLaborCostDetail())),
+                    Expanded(child: _buildFinancialCard('Labor Cost', currencyFormat.format(_project['laborCost']), '${_project['totalHours'].toStringAsFixed(1)}h @ \$${_project['laborRate'].toInt()}/hr', sectionKey: 'labor')),
                   ],
                 ),
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    Expanded(child: _buildFinancialCard('Expenses', currencyFormat.format(_project['expenses']), '${expenses.length} expenses', onTap: () => _showExpensesDetail())),
+                    Expanded(child: _buildFinancialCard('Expenses', currencyFormat.format(_project['expenses']), '${expenses.length} expenses', sectionKey: 'expenses')),
                     const SizedBox(width: 12),
-                    Expanded(child: _buildFinancialCard('Invoiced', currencyFormat.format(_project['amountInvoiced']), null, valueColor: AppColors.success, onTap: () => _showInvoicesDetail())),
+                    Expanded(child: _buildFinancialCard('Invoiced', currencyFormat.format(_project['amountInvoiced']), null, valueColor: AppColors.success, sectionKey: 'invoiced')),
                   ],
                 ),
                 const SizedBox(height: 12),
-                _buildFinancialCard('Collected', currencyFormat.format(_project['collected']), null, onTap: () => _showCollectedDetail()),
+                _buildFinancialCard('Collected', currencyFormat.format(_project['collected']), null, sectionKey: 'collected'),
               ],
             ),
           ),
-          const SizedBox(height: 16),
-
-          // Time Entries Section
-          Container(
-            decoration: BoxDecoration(
-              color: AppColors.cardBackground,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: AppShadows.sm,
-            ),
-            child: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 12, 8, 8),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('Time Entries', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
-                      if (timeEntries.isNotEmpty)
-                        TextButton(
-                          onPressed: () => _showLaborCostDetail(),
-                          child: Text('View All', style: TextStyle(fontSize: 12, color: AppColors.accent)),
-                        ),
-                    ],
-                  ),
-                ),
-                const Divider(height: 1),
-                if (timeEntries.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.all(32),
-                    child: Text('No time entries for this project', style: TextStyle(color: AppColors.textSecondary)),
-                  )
-                else
-                  ListView.separated(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: timeEntries.length > 3 ? 3 : timeEntries.length,
-                    separatorBuilder: (_, __) => const Divider(height: 1),
-                    itemBuilder: (context, index) => _buildTimeEntryRow(timeEntries[index]),
-                  ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // Expenses Section
-          Container(
-            decoration: BoxDecoration(
-              color: AppColors.cardBackground,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: AppShadows.sm,
-            ),
-            child: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 12, 8, 8),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('Expenses', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
-                      if (expenses.isNotEmpty)
-                        TextButton(
-                          onPressed: () => _showExpensesDetail(),
-                          child: Text('View All', style: TextStyle(fontSize: 12, color: AppColors.accent)),
-                        ),
-                    ],
-                  ),
-                ),
-                const Divider(height: 1),
-                Padding(
-                  padding: const EdgeInsets.all(32),
-                  child: Text('No expenses for this project', style: TextStyle(color: AppColors.textSecondary)),
-                ),
-              ],
-            ),
-          ),
+          
+          // Expanded Budget Detail
+          if (_expandedFinancialSection == 'budget') ...[
+            const SizedBox(height: 16),
+            _buildBudgetDetailInline(),
+          ],
+          
+          // Expanded Labor Cost Detail
+          if (_expandedFinancialSection == 'labor') ...[
+            const SizedBox(height: 16),
+            _buildLaborCostDetailInline(timeEntries),
+          ],
+          
+          // Expanded Expenses Detail
+          if (_expandedFinancialSection == 'expenses') ...[
+            const SizedBox(height: 16),
+            _buildExpensesDetailInline(expenses),
+          ],
+          
+          // Expanded Invoiced Detail
+          if (_expandedFinancialSection == 'invoiced') ...[
+            const SizedBox(height: 16),
+            _buildInvoicesDetailInline(invoices),
+          ],
+          
+          // Expanded Collected Detail
+          if (_expandedFinancialSection == 'collected') ...[
+            const SizedBox(height: 16),
+            _buildCollectedDetailInline(),
+          ],
         ],
       ),
     );
   }
 
-  Widget _buildFinancialCard(String label, String value, String? subtitle, {Color? valueColor, VoidCallback? onTap}) {
+  Widget _buildFinancialCard(String label, String value, String? subtitle, {Color? valueColor, String? sectionKey}) {
+    final isExpanded = _expandedFinancialSection == sectionKey;
+    
     return InkWell(
-      onTap: onTap,
+      onTap: sectionKey != null ? () {
+        setState(() {
+          _expandedFinancialSection = isExpanded ? null : sectionKey;
+        });
+      } : null,
       borderRadius: BorderRadius.circular(10),
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: AppColors.neutral50,
+          color: isExpanded ? AppColors.accent.withOpacity(0.05) : AppColors.neutral50,
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: AppColors.border.withOpacity(0.5)),
+          border: Border.all(
+            color: isExpanded ? AppColors.accent : AppColors.border.withOpacity(0.5),
+            width: isExpanded ? 2 : 1,
+          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1573,9 +1541,13 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> with SingleTi
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(label, style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                if (onTap != null)
-                  Icon(Icons.arrow_forward_ios, size: 12, color: AppColors.textTertiary),
+                Text(label, style: TextStyle(fontSize: 12, color: isExpanded ? AppColors.accent : AppColors.textSecondary, fontWeight: isExpanded ? FontWeight.w600 : FontWeight.w400)),
+                if (sectionKey != null)
+                  Icon(
+                    isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                    size: 18,
+                    color: isExpanded ? AppColors.accent : AppColors.textTertiary,
+                  ),
               ],
             ),
             const SizedBox(height: 4),
@@ -1624,6 +1596,349 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> with SingleTi
               Text(dateFormat.format(entry['date']), style: TextStyle(fontSize: 10, color: AppColors.textTertiary)),
             ],
           ),
+        ],
+      ),
+    );
+  }
+
+  // ============ INLINE FINANCIAL DETAILS ============
+  
+  Widget _buildBudgetDetailInline() {
+    final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 0);
+    final budget = _project['budget'] as double;
+    final laborCost = _project['laborCost'] as double;
+    final expenses = _project['expenses'] as double;
+    final totalCost = laborCost + expenses;
+    final remaining = budget - totalCost;
+    final percentUsed = budget > 0 ? (totalCost / budget) : 0.0;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: AppShadows.sm,
+        border: Border.all(color: AppColors.accent.withOpacity(0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Budget Breakdown', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+              Text('${(percentUsed * 100).toStringAsFixed(0)}% used', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: percentUsed.clamp(0.0, 1.0),
+              backgroundColor: AppColors.neutral200,
+              valueColor: AlwaysStoppedAnimation(percentUsed > 0.9 ? AppColors.error : AppColors.accent),
+              minHeight: 8,
+            ),
+          ),
+          const SizedBox(height: 16),
+          _buildBudgetRow('Labor Cost', laborCost, AppColors.info),
+          _buildBudgetRow('Expenses', expenses, AppColors.warning),
+          const Divider(height: 24),
+          _buildBudgetRow('Total Cost', totalCost, AppColors.textPrimary, bold: true),
+          _buildBudgetRow('Remaining', remaining, remaining >= 0 ? AppColors.success : AppColors.error, bold: true),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLaborCostDetailInline(List<Map<String, dynamic>> timeEntries) {
+    final dateFormat = DateFormat('M/d/yyyy');
+    final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 2);
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: AppShadows.sm,
+        border: Border.all(color: AppColors.accent.withOpacity(0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Time Entries', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.info.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text('${_project['totalHours']}h total', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.info)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          
+          if (timeEntries.isEmpty)
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text('No time entries yet', style: TextStyle(color: AppColors.textSecondary)),
+              ),
+            )
+          else
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: timeEntries.length,
+              separatorBuilder: (_, __) => const Divider(height: 16),
+              itemBuilder: (context, index) {
+                final entry = timeEntries[index];
+                final total = (entry['hours'] as double) * (entry['rate'] as double);
+                
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(dateFormat.format(entry['date']), style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                        Text(entry['user'], style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(entry['task'], style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+                    Text(entry['subtask'], style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                    const SizedBox(height: 6),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('${entry['hours']}h @ ${currencyFormat.format(entry['rate'])}/hr', style: TextStyle(fontSize: 11, color: AppColors.textTertiary)),
+                        Text(currencyFormat.format(total), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.info)),
+                      ],
+                    ),
+                  ],
+                );
+              },
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildExpensesDetailInline(List<Map<String, dynamic>> expenses) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: AppShadows.sm,
+        border: Border.all(color: AppColors.accent.withOpacity(0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Expenses', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 16),
+          
+          if (expenses.isEmpty)
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  children: [
+                    Icon(Icons.receipt_long, size: 40, color: AppColors.textTertiary),
+                    const SizedBox(height: 12),
+                    Text('No expenses for this project', style: TextStyle(color: AppColors.textSecondary)),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInvoicesDetailInline(List<Map<String, dynamic>> invoices) {
+    final dateFormat = DateFormat('M/d/yyyy');
+    final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 0);
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: AppShadows.sm,
+        border: Border.all(color: AppColors.accent.withOpacity(0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Invoices', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 16),
+          
+          if (invoices.isEmpty)
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text('No invoices created', style: TextStyle(color: AppColors.textSecondary)),
+              ),
+            )
+          else
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: invoices.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              itemBuilder: (context, index) {
+                final invoice = invoices[index];
+                final status = invoice['status'] as String;
+                final statusColor = status == 'paid' ? AppColors.success : status == 'sent' ? AppColors.info : AppColors.warning;
+                
+                return InkWell(
+                  onTap: () {
+                    context.push('/invoices/${invoice['id']}');
+                  },
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.neutral50,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(invoice['number'], style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: statusColor.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                status.toUpperCase(),
+                                style: TextStyle(fontSize: 9, fontWeight: FontWeight.w600, color: statusColor),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Date', style: TextStyle(fontSize: 9, color: AppColors.textTertiary)),
+                                Text(dateFormat.format(invoice['date']), style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                              ],
+                            ),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Due', style: TextStyle(fontSize: 9, color: AppColors.textTertiary)),
+                                Text(dateFormat.format(invoice['dueDate']), style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                              ],
+                            ),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text('Amount', style: TextStyle(fontSize: 9, color: AppColors.textTertiary)),
+                                Text(currencyFormat.format(invoice['amount']), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCollectedDetailInline() {
+    final payments = _project['payments'] as List<Map<String, dynamic>>;
+    final collected = _project['collected'] as double;
+    final invoiced = _project['amountInvoiced'] as double;
+    final outstanding = invoiced - collected;
+    final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 0);
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: AppShadows.sm,
+        border: Border.all(color: AppColors.accent.withOpacity(0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Payment Summary', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 16),
+          
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppColors.neutral50,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Invoiced', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                    Text(currencyFormat.format(invoiced), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Collected', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                    Text(currencyFormat.format(collected), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.success)),
+                  ],
+                ),
+                const Divider(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Outstanding', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+                    Text(currencyFormat.format(outstanding), style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: outstanding > 0 ? AppColors.error : AppColors.success)),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          
+          if (payments.isEmpty) ...[
+            const SizedBox(height: 16),
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    Icon(Icons.payments_outlined, size: 40, color: AppColors.textTertiary),
+                    const SizedBox(height: 12),
+                    Text('No payments received yet', style: TextStyle(color: AppColors.textSecondary)),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
