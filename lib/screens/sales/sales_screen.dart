@@ -1999,18 +1999,32 @@ class _ClientsTabState extends State<_ClientsTab> {
                       Expanded(
                         child: _buildActionButton(Icons.send_outlined, 'Proposal', AppColors.accent, () {
                           Navigator.pop(context);
+                          // Navigate to create proposal with client pre-selected
+                          final clientData = {
+                            'id': client['id'],
+                            'name': client['primaryContact']['name'],
+                            'email': client['primaryContact']['email'],
+                            'company': client['company'],
+                          };
+                          context.push(
+                            '/sales/proposal/create?clientId=${client['id']}&clientName=${Uri.encodeComponent(client['company'])}&clientEmail=${Uri.encodeComponent(client['primaryContact']['email'])}',
+                          );
                         }),
                       ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: _buildActionButton(Icons.receipt_outlined, 'Invoice', AppColors.success, () {
                           Navigator.pop(context);
+                          // Show invoice creation modal or navigate to invoices
+                          _showClientInvoiceOptions(context, client);
                         }),
                       ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: _buildActionButton(Icons.email_outlined, 'Email', AppColors.info, () {
                           Navigator.pop(context);
+                          // Show email composer
+                          _showEmailComposer(context, client);
                         }),
                       ),
                       const SizedBox(width: 8),
@@ -4523,6 +4537,157 @@ class _TemplateSelector extends StatelessWidget {
           Text(label, style: const TextStyle(fontSize: 13)),
           const SizedBox(width: 4),
           const Icon(Icons.keyboard_arrow_down, size: 18),
+        ],
+      ),
+    );
+  }
+
+  // Helper method to show invoice options
+  void _showClientInvoiceOptions(BuildContext context, Map<String, dynamic> client) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Invoice Options for ${client['company']}'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: AppColors.success.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(Icons.add, color: AppColors.success),
+              ),
+              title: const Text('Create New Invoice'),
+              subtitle: const Text('Create a new invoice for this client'),
+              onTap: () {
+                Navigator.pop(context);
+                // Navigate to invoice creation with client pre-selected
+                context.push('/invoicing/create?clientId=${client['id']}&clientName=${Uri.encodeComponent(client['company'])}');
+              },
+            ),
+            const Divider(),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: AppColors.info.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(Icons.list_alt, color: AppColors.info),
+              ),
+              title: const Text('View All Invoices'),
+              subtitle: Text('See invoice history (${client['invoices'] ?? 0})'),
+              onTap: () {
+                Navigator.pop(context);
+                // Navigate to invoices page filtered by this client
+                context.push('/invoicing?clientId=${client['id']}');
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Helper method to show email composer
+  void _showEmailComposer(BuildContext context, Map<String, dynamic> client) {
+    final primaryContact = client['primaryContact'] as Map<String, dynamic>;
+    final emailController = TextEditingController();
+    final subjectController = TextEditingController();
+    final bodyController = TextEditingController();
+
+    // Pre-fill with client info
+    emailController.text = primaryContact['email'] as String? ?? '';
+    subjectController.text = 'Following up on ${client['company']}';
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Email ${client['company']}'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Recipient
+              Text('To:', style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 6),
+              TextFormField(
+                controller: emailController,
+                decoration: InputDecoration(
+                  hintText: 'Email address',
+                  prefixIcon: const Icon(Icons.email_outlined, size: 20),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                ),
+                keyboardType: TextInputType.emailAddress,
+              ),
+              const SizedBox(height: 16),
+
+              // Subject
+              Text('Subject:', style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 6),
+              TextFormField(
+                controller: subjectController,
+                decoration: InputDecoration(
+                  hintText: 'Email subject',
+                  prefixIcon: const Icon(Icons.subject, size: 20),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Body
+              Text('Message:', style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 6),
+              TextFormField(
+                controller: bodyController,
+                decoration: InputDecoration(
+                  hintText: 'Type your message here...',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  contentPadding: const EdgeInsets.all(14),
+                ),
+                maxLines: 8,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton.icon(
+            onPressed: () {
+              // TODO: Integrate with email service (e.g., url_launcher or API)
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Email functionality will be integrated soon!')),
+              );
+              Navigator.pop(context);
+            },
+            icon: const Icon(Icons.send, size: 18),
+            label: const Text('Send Email'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.accent,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+          ),
         ],
       ),
     );
