@@ -530,53 +530,6 @@ class _LeadsTabState extends State<_LeadsTab> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // Compact Search & Filter Row
-        Padding(
-          padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-          child: Row(
-            children: [
-              Expanded(
-                child: Container(
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: AppColors.cardBackground,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: TextField(
-                    onChanged: (value) => setState(() => _searchQuery = value),
-                    style: const TextStyle(fontSize: 13),
-                    decoration: InputDecoration(
-                      hintText: 'Search leads...',
-                      hintStyle: TextStyle(fontSize: 13, color: AppColors.textSecondary),
-                      prefixIcon: Icon(Icons.search, size: 18, color: AppColors.textSecondary),
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Container(
-                height: 40,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  color: AppColors.cardBackground,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppColors.border),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.filter_list, size: 16, color: AppColors.textSecondary),
-                    const SizedBox(width: 4),
-                    Text('Filters', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-
         // Status Filter Pills (minimal, secondary)
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
@@ -1357,33 +1310,12 @@ class _ClientsTabState extends State<_ClientsTab> {
     
     return Column(
       children: [
-        // Search Row
+        // Filter Row
         Padding(
           padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
           child: Row(
             children: [
-              Expanded(
-                child: Container(
-                  height: 38,
-                  decoration: BoxDecoration(
-                    color: AppColors.cardBackground,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: TextField(
-                    onChanged: (value) => setState(() => _searchQuery = value),
-                    style: const TextStyle(fontSize: 13),
-                    decoration: InputDecoration(
-                      hintText: 'Search clients...',
-                      hintStyle: TextStyle(fontSize: 13, color: AppColors.textSecondary),
-                      prefixIcon: Icon(Icons.search, size: 16, color: AppColors.textSecondary),
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
+              const Spacer(),
               // Sort Button
               _buildFilterButton(
                 icon: Icons.sort,
@@ -2691,31 +2623,12 @@ class _QuotesTabState extends State<_QuotesTab> with SingleTickerProviderStateMi
     
     return Column(
       children: [
-        // Search & Filter
+        // Filter
         Padding(
           padding: const EdgeInsets.all(12),
           child: Row(
             children: [
-              Expanded(
-                child: Container(
-                  height: 42,
-                  decoration: BoxDecoration(
-                    color: AppColors.cardBackground,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: TextField(
-                    decoration: InputDecoration(
-                      hintText: 'Search quotes...',
-                      hintStyle: TextStyle(fontSize: 13, color: AppColors.textSecondary),
-                      prefixIcon: Icon(Icons.search, size: 18, color: AppColors.textSecondary),
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
+              const Spacer(),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 decoration: BoxDecoration(
@@ -3651,28 +3564,6 @@ class _QuotesTabState extends State<_QuotesTab> with SingleTickerProviderStateMi
     
     return Column(
       children: [
-        // Search
-        Padding(
-          padding: const EdgeInsets.all(12),
-          child: Container(
-            height: 42,
-            decoration: BoxDecoration(
-              color: AppColors.cardBackground,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: AppColors.border),
-            ),
-            child: TextField(
-              decoration: InputDecoration(
-                hintText: 'Search responses...',
-                hintStyle: TextStyle(fontSize: 13, color: AppColors.textSecondary),
-                prefixIcon: Icon(Icons.search, size: 18, color: AppColors.textSecondary),
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
-              ),
-            ),
-          ),
-        ),
-
         // Responses List
         Expanded(
           child: ListView.builder(
@@ -3779,31 +3670,12 @@ class _QuotesTabState extends State<_QuotesTab> with SingleTickerProviderStateMi
   Widget _buildTemplatesContent() {
     return Column(
       children: [
-        // Search & Add
+        // Add Button
         Padding(
           padding: const EdgeInsets.all(12),
           child: Row(
             children: [
-              Expanded(
-                child: Container(
-                  height: 42,
-                  decoration: BoxDecoration(
-                    color: AppColors.cardBackground,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: TextField(
-                    decoration: InputDecoration(
-                      hintText: 'Search templates...',
-                      hintStyle: TextStyle(fontSize: 13, color: AppColors.textSecondary),
-                      prefixIcon: Icon(Icons.search, size: 18, color: AppColors.textSecondary),
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
+              const Spacer(),
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
@@ -6296,33 +6168,12 @@ class _ConsultantsTabState extends State<_ConsultantsTab> {
     
     return Column(
       children: [
-        // Search & Filter
+        // Filter
         Padding(
           padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
           child: Row(
             children: [
-              Expanded(
-                child: Container(
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: AppColors.cardBackground,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: TextField(
-                    onChanged: (value) => setState(() => _searchQuery = value),
-                    style: const TextStyle(fontSize: 13),
-                    decoration: InputDecoration(
-                      hintText: 'Search consultants...',
-                      hintStyle: TextStyle(fontSize: 13, color: AppColors.textSecondary),
-                      prefixIcon: Icon(Icons.search, size: 18, color: AppColors.textSecondary),
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
+              const Spacer(),
               PopupMenuButton<String>(
                 onSelected: (value) => setState(() => _statusFilter = value),
                 child: Container(
@@ -6602,11 +6453,15 @@ class _ConsultantsTabState extends State<_ConsultantsTab> {
                       const SizedBox(height: 6),
                       Row(
                         children: [
-                          _buildMiniInfo(Icons.build_outlined, consultant['specialty']),
+                          Flexible(
+                            child: _buildMiniInfo(Icons.build_outlined, consultant['specialty']),
+                          ),
                           const SizedBox(width: 12),
-                          _buildMiniInfo(
-                            Icons.attach_money,
-                            '${currencyFormat.format(consultant['rate'])}/${consultant['rateType'] == 'hourly' ? 'hr' : 'project'}',
+                          Flexible(
+                            child: _buildMiniInfo(
+                              Icons.attach_money,
+                              '${currencyFormat.format(consultant['rate'])}/${consultant['rateType'] == 'hourly' ? 'hr' : 'project'}',
+                            ),
                           ),
                         ],
                       ),
@@ -6650,7 +6505,13 @@ class _ConsultantsTabState extends State<_ConsultantsTab> {
       children: [
         Icon(icon, size: 12, color: AppColors.textTertiary),
         const SizedBox(width: 4),
-        Text(text, style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+        Flexible(
+          child: Text(
+            text,
+            style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
       ],
     );
   }
