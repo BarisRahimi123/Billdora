@@ -4194,48 +4194,45 @@ class _MergedProposalPreviewState extends State<_MergedProposalPreview> {
                   ],
                   
                   // Pending Collaborators Notice
-                  if (widget.isPartial) ...[
-                    final pending = collaborators.where((c) => c['status'] != 'submitted').toList();
-                    if (pending.isNotEmpty) ...[
-                      Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: AppColors.warning.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: AppColors.warning.withOpacity(0.3)),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
+                  if (widget.isPartial && collaborators.where((c) => c['status'] != 'submitted').isNotEmpty) ...[
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: AppColors.warning.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: AppColors.warning.withOpacity(0.3)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.hourglass_empty, size: 18, color: AppColors.warning),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Awaiting Submissions',
+                                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.warning),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          ...collaborators.where((c) => c['status'] != 'submitted').map((p) => Padding(
+                            padding: const EdgeInsets.only(bottom: 6),
+                            child: Row(
                               children: [
-                                Icon(Icons.hourglass_empty, size: 18, color: AppColors.warning),
+                                Icon(Icons.person_outline, size: 14, color: AppColors.textSecondary),
                                 const SizedBox(width: 8),
                                 Text(
-                                  'Awaiting Submissions',
-                                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.warning),
+                                  '${p['name']} - ${p['role']}',
+                                  style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 10),
-                            ...pending.map((p) => Padding(
-                              padding: const EdgeInsets.only(bottom: 6),
-                              child: Row(
-                                children: [
-                                  Icon(Icons.person_outline, size: 14, color: AppColors.textSecondary),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    '${p['name']} - ${p['role']}',
-                                    style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
-                                  ),
-                                ],
-                              ),
-                            )),
-                          ],
-                        ),
+                          )),
+                        ],
                       ),
-                      const SizedBox(height: 24),
-                    ],
+                    ),
+                    const SizedBox(height: 24),
                   ],
                   
                   // GRAND TOTAL
