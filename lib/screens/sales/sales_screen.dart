@@ -900,10 +900,18 @@ class _LeadsTabState extends State<_LeadsTab> {
 final List<Map<String, dynamic>> clientsList = [
   {
     'id': '1',
-    'name': 'Barzan Shop',
     'company': 'Barzan Retail LLC',
-    'email': 'contact@barzanshop.com',
-    'phone': '+1 (555) 123-4567',
+    // Primary Contact (main point of contact)
+    'primaryName': 'Barzan Ahmed',
+    'primaryEmail': 'barzan@barzanshop.com',
+    'primaryPhone': '+1 (555) 123-4567',
+    'primaryTitle': 'Owner',
+    // Billing Contact (for invoices - if empty, uses primary)
+    'billingName': 'Sarah Johnson',
+    'billingEmail': 'billing@barzanshop.com',
+    'billingPhone': '+1 (555) 123-4568',
+    'billingTitle': 'Accounts Payable',
+    // Address
     'address': '123 Main Street',
     'city': 'Los Angeles',
     'state': 'CA',
@@ -919,10 +927,15 @@ final List<Map<String, dynamic>> clientsList = [
   },
   {
     'id': '2',
-    'name': 'Sequoia Consulting',
     'company': 'Sequoia Consulting Group',
-    'email': 'hello@sequoia.com',
-    'phone': '+1 (555) 234-5678',
+    'primaryName': 'Michael Chen',
+    'primaryEmail': 'michael@sequoia.com',
+    'primaryPhone': '+1 (555) 234-5678',
+    'primaryTitle': 'Managing Partner',
+    'billingName': '',
+    'billingEmail': '',
+    'billingPhone': '',
+    'billingTitle': '',
     'address': '456 Business Ave',
     'city': 'San Francisco',
     'state': 'CA',
@@ -934,14 +947,19 @@ final List<Map<String, dynamic>> clientsList = [
     'projects': 0,
     'value': 2000.0,
     'created': DateTime(2025, 8, 20),
-    'lastActivity': DateTime.now().subtract(const Duration(days: 120)), // Inactive
+    'lastActivity': DateTime.now().subtract(const Duration(days: 120)),
   },
   {
     'id': '3',
-    'name': 'Wall Street Global',
     'company': 'Wall Street Global Inc',
-    'email': 'info@wallstreet.com',
-    'phone': '+1 (555) 345-6789',
+    'primaryName': 'James Morrison',
+    'primaryEmail': 'jmorrison@wallstreet.com',
+    'primaryPhone': '+1 (555) 345-6789',
+    'primaryTitle': 'VP of Operations',
+    'billingName': 'Linda Park',
+    'billingEmail': 'ap@wallstreet.com',
+    'billingPhone': '+1 (555) 345-6700',
+    'billingTitle': 'Finance Manager',
     'address': '789 Finance Blvd',
     'city': 'New York',
     'state': 'NY',
@@ -957,10 +975,15 @@ final List<Map<String, dynamic>> clientsList = [
   },
   {
     'id': '4',
-    'name': 'TechStart Inc',
     'company': 'TechStart Innovation Labs',
-    'email': 'team@techstart.io',
-    'phone': '+1 (555) 456-7890',
+    'primaryName': 'Alex Rivera',
+    'primaryEmail': 'alex@techstart.io',
+    'primaryPhone': '+1 (555) 456-7890',
+    'primaryTitle': 'CEO',
+    'billingName': '',
+    'billingEmail': '',
+    'billingPhone': '',
+    'billingTitle': '',
     'address': '100 Innovation Way',
     'city': 'Austin',
     'state': 'TX',
@@ -976,10 +999,15 @@ final List<Map<String, dynamic>> clientsList = [
   },
   {
     'id': '5',
-    'name': 'MedCare Solutions',
     'company': 'MedCare Health Systems',
-    'email': 'admin@medcare.health',
-    'phone': '+1 (555) 567-8901',
+    'primaryName': 'Dr. Emily Watson',
+    'primaryEmail': 'ewatson@medcare.health',
+    'primaryPhone': '+1 (555) 567-8901',
+    'primaryTitle': 'Director of IT',
+    'billingName': 'Robert Kim',
+    'billingEmail': 'rkim@medcare.health',
+    'billingPhone': '+1 (555) 567-8902',
+    'billingTitle': 'Billing Department',
     'address': '500 Health Plaza',
     'city': 'Boston',
     'state': 'MA',
@@ -995,10 +1023,15 @@ final List<Map<String, dynamic>> clientsList = [
   },
   {
     'id': '6',
-    'name': 'Green Build Co',
     'company': 'Green Build Construction',
-    'email': 'projects@greenbuild.co',
-    'phone': '+1 (555) 678-9012',
+    'primaryName': 'Tom Martinez',
+    'primaryEmail': 'tom@greenbuild.co',
+    'primaryPhone': '+1 (555) 678-9012',
+    'primaryTitle': 'Project Manager',
+    'billingName': '',
+    'billingEmail': '',
+    'billingPhone': '',
+    'billingTitle': '',
     'address': '250 Builder Lane',
     'city': 'Denver',
     'state': 'CO',
@@ -1010,9 +1043,38 @@ final List<Map<String, dynamic>> clientsList = [
     'projects': 1,
     'value': 8900.0,
     'created': DateTime(2025, 5, 22),
-    'lastActivity': DateTime.now().subtract(const Duration(days: 180)), // Inactive
+    'lastActivity': DateTime.now().subtract(const Duration(days: 180)),
   },
 ];
+
+// Helper to get billing contact (falls back to primary if no billing contact)
+Map<String, String> getBillingContact(Map<String, dynamic> client) {
+  final hasBilling = (client['billingEmail'] as String?)?.isNotEmpty ?? false;
+  if (hasBilling) {
+    return {
+      'name': client['billingName'] as String? ?? '',
+      'email': client['billingEmail'] as String? ?? '',
+      'phone': client['billingPhone'] as String? ?? '',
+      'title': client['billingTitle'] as String? ?? '',
+    };
+  }
+  return {
+    'name': client['primaryName'] as String? ?? '',
+    'email': client['primaryEmail'] as String? ?? '',
+    'phone': client['primaryPhone'] as String? ?? '',
+    'title': client['primaryTitle'] as String? ?? '',
+  };
+}
+
+// Helper to get primary contact
+Map<String, String> getPrimaryContact(Map<String, dynamic> client) {
+  return {
+    'name': client['primaryName'] as String? ?? '',
+    'email': client['primaryEmail'] as String? ?? '',
+    'phone': client['primaryPhone'] as String? ?? '',
+    'title': client['primaryTitle'] as String? ?? '',
+  };
+}
 
 class _ClientsTab extends StatefulWidget {
   const _ClientsTab({super.key});
@@ -1059,9 +1121,9 @@ class _ClientsTabState extends State<_ClientsTab> {
     // Search filter
     if (_searchQuery.isNotEmpty) {
       filtered = filtered.where((c) =>
-        c['name'].toLowerCase().contains(_searchQuery.toLowerCase()) ||
-        c['company'].toLowerCase().contains(_searchQuery.toLowerCase()) ||
-        c['email'].toLowerCase().contains(_searchQuery.toLowerCase())
+        (c['primaryName'] as String? ?? '').toLowerCase().contains(_searchQuery.toLowerCase()) ||
+        (c['company'] as String? ?? '').toLowerCase().contains(_searchQuery.toLowerCase()) ||
+        (c['primaryEmail'] as String? ?? '').toLowerCase().contains(_searchQuery.toLowerCase())
       ).toList();
     }
     
@@ -1438,8 +1500,11 @@ class _ClientsTabState extends State<_ClientsTab> {
   Widget _buildClientCard(Map<String, dynamic> client, NumberFormat currencyFormat) {
     final isTopClient = _topClientIds.contains(client['id']);
     final isActive = _isClientActive(client);
-    final activityCount = _getActivityCount(client);
     final revenue = (client['value'] as double?) ?? 0;
+    final company = client['company'] as String? ?? '';
+    final primaryName = client['primaryName'] as String? ?? '';
+    final primaryEmail = client['primaryEmail'] as String? ?? '';
+    final hasBillingContact = (client['billingEmail'] as String?)?.isNotEmpty ?? false;
     
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -1472,7 +1537,7 @@ class _ClientsTabState extends State<_ClientsTab> {
                       ),
                       child: Center(
                         child: Text(
-                          client['name'].toString()[0],
+                          company.isNotEmpty ? company[0] : 'C',
                           style: TextStyle(
                             fontSize: 20, 
                             fontWeight: FontWeight.w700, 
@@ -1507,7 +1572,7 @@ class _ClientsTabState extends State<_ClientsTab> {
                       Row(
                         children: [
                           Flexible(
-                            child: Text(client['name'] as String, 
+                            child: Text(company, 
                               style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -1522,11 +1587,11 @@ class _ClientsTabState extends State<_ClientsTab> {
                                 ),
                                 borderRadius: BorderRadius.circular(4),
                               ),
-                              child: Row(
+                              child: const Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Icon(Icons.star, size: 10, color: Colors.white),
-                                  const SizedBox(width: 2),
+                                  SizedBox(width: 2),
                                   Text('TOP', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: Colors.white)),
                                 ],
                               ),
@@ -1535,9 +1600,35 @@ class _ClientsTabState extends State<_ClientsTab> {
                         ],
                       ),
                       const SizedBox(height: 2),
-                      Text(client['company'] as String,
-                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
-                        overflow: TextOverflow.ellipsis,
+                      // Primary Contact
+                      Row(
+                        children: [
+                          Icon(Icons.person_outline, size: 12, color: AppColors.textTertiary),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(primaryName,
+                              style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (hasBillingContact) ...[
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                              decoration: BoxDecoration(
+                                color: AppColors.info.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.receipt_outlined, size: 10, color: AppColors.info),
+                                  const SizedBox(width: 2),
+                                  Text('Billing', style: TextStyle(fontSize: 9, color: AppColors.info)),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                       const SizedBox(height: 6),
                       // Stats Row
@@ -1608,6 +1699,10 @@ class _ClientsTabState extends State<_ClientsTab> {
   void _showClientDetail(BuildContext context, Map<String, dynamic> client) {
     final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 0);
     final dateFormat = DateFormat('MMM d, yyyy');
+    final company = client['company'] as String? ?? '';
+    final primaryContact = getPrimaryContact(client);
+    final billingContact = getBillingContact(client);
+    final hasSeparateBilling = (client['billingEmail'] as String?)?.isNotEmpty ?? false;
     
     showModalBottomSheet(
       context: context,
@@ -1648,7 +1743,7 @@ class _ClientsTabState extends State<_ClientsTab> {
                     ),
                     child: Center(
                       child: Text(
-                        client['name'].toString()[0],
+                        company.isNotEmpty ? company[0] : 'C',
                         style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: AppColors.accent),
                       ),
                     ),
@@ -1658,9 +1753,7 @@ class _ClientsTabState extends State<_ClientsTab> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(client['name'] as String, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
-                        const SizedBox(height: 2),
-                        Text(client['company'] as String, style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
+                        Text(company, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
                         const SizedBox(height: 4),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -1668,7 +1761,7 @@ class _ClientsTabState extends State<_ClientsTab> {
                             color: AppColors.accent.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(4),
                           ),
-                          child: Text(client['type'] as String, style: TextStyle(fontSize: 10, color: AppColors.accent, fontWeight: FontWeight.w500)),
+                          child: Text(client['type'] as String? ?? '', style: TextStyle(fontSize: 10, color: AppColors.accent, fontWeight: FontWeight.w500)),
                         ),
                       ],
                     ),
@@ -1695,19 +1788,40 @@ class _ClientsTabState extends State<_ClientsTab> {
                   ),
                   const SizedBox(height: 20),
                   
-                  // Contact Information
-                  _buildDetailSection('Contact Information', [
-                    _buildDetailRow(Icons.email_outlined, 'Email', client['email'] as String),
-                    _buildDetailRow(Icons.phone_outlined, 'Phone', client['phone'] as String),
-                    if ((client['website'] as String?)?.isNotEmpty ?? false)
-                      _buildDetailRow(Icons.language, 'Website', client['website'] as String),
-                  ]),
+                  // Primary Contact
+                  _buildContactCard(
+                    'Primary Contact',
+                    primaryContact['name'] ?? '',
+                    primaryContact['title'] ?? '',
+                    primaryContact['email'] ?? '',
+                    primaryContact['phone'] ?? '',
+                    Icons.person,
+                    AppColors.accent,
+                    isPrimary: true,
+                  ),
+                  const SizedBox(height: 12),
+                  
+                  // Billing Contact
+                  _buildContactCard(
+                    'Billing Contact',
+                    billingContact['name'] ?? '',
+                    billingContact['title'] ?? '',
+                    billingContact['email'] ?? '',
+                    billingContact['phone'] ?? '',
+                    Icons.receipt_long,
+                    AppColors.info,
+                    isPrimary: false,
+                    showSameAsPrimary: !hasSeparateBilling,
+                  ),
                   const SizedBox(height: 16),
                   
                   // Address
-                  _buildDetailSection('Address', [
-                    _buildDetailRow(Icons.location_on_outlined, 'Street', client['address'] as String),
-                    _buildDetailRow(Icons.location_city_outlined, 'City/State', '${client['city']}, ${client['state']} ${client['zip']}'),
+                  _buildDetailSection('Company Address', [
+                    if ((client['address'] as String?)?.isNotEmpty ?? false)
+                      _buildDetailRow(Icons.location_on_outlined, 'Street', client['address'] as String),
+                    _buildDetailRow(Icons.location_city_outlined, 'City/State', '${client['city'] ?? ''}, ${client['state'] ?? ''} ${client['zip'] ?? ''}'),
+                    if ((client['website'] as String?)?.isNotEmpty ?? false)
+                      _buildDetailRow(Icons.language, 'Website', client['website'] as String),
                   ]),
                   const SizedBox(height: 16),
                   
@@ -1740,17 +1854,23 @@ class _ClientsTabState extends State<_ClientsTab> {
                   Row(
                     children: [
                       Expanded(
-                        child: _buildActionButton(Icons.send_outlined, 'New Quote', AppColors.accent, () {
+                        child: _buildActionButton(Icons.send_outlined, 'Proposal', AppColors.accent, () {
                           Navigator.pop(context);
                         }),
                       ),
-                      const SizedBox(width: 10),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildActionButton(Icons.receipt_outlined, 'Invoice', AppColors.success, () {
+                          Navigator.pop(context);
+                        }),
+                      ),
+                      const SizedBox(width: 8),
                       Expanded(
                         child: _buildActionButton(Icons.email_outlined, 'Email', AppColors.info, () {
                           Navigator.pop(context);
                         }),
                       ),
-                      const SizedBox(width: 10),
+                      const SizedBox(width: 8),
                       Expanded(
                         child: _buildActionButton(Icons.edit_outlined, 'Edit', AppColors.textSecondary, () {
                           Navigator.pop(context);
@@ -1764,6 +1884,89 @@ class _ClientsTabState extends State<_ClientsTab> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildContactCard(String title, String name, String jobTitle, String email, String phone, IconData icon, Color color, {bool isPrimary = false, bool showSameAsPrimary = false}) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, size: 16, color: color),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: TextStyle(fontSize: 11, color: AppColors.textTertiary, fontWeight: FontWeight.w500)),
+                    const SizedBox(height: 2),
+                    if (showSameAsPrimary)
+                      Text('Same as Primary Contact', style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontStyle: FontStyle.italic))
+                    else
+                      Text(name, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                  ],
+                ),
+              ),
+              if (isPrimary)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text('PRIMARY', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: color)),
+                ),
+            ],
+          ),
+          if (!showSameAsPrimary) ...[
+            const SizedBox(height: 12),
+            if (jobTitle.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  children: [
+                    Icon(Icons.work_outline, size: 14, color: AppColors.textTertiary),
+                    const SizedBox(width: 8),
+                    Text(jobTitle, style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                  ],
+                ),
+              ),
+            Row(
+              children: [
+                Icon(Icons.email_outlined, size: 14, color: AppColors.textTertiary),
+                const SizedBox(width: 8),
+                Expanded(child: Text(email, style: const TextStyle(fontSize: 13))),
+              ],
+            ),
+            if (phone.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  Icon(Icons.phone_outlined, size: 14, color: AppColors.textTertiary),
+                  const SizedBox(width: 8),
+                  Text(phone, style: const TextStyle(fontSize: 13)),
+                ],
+              ),
+            ],
+          ],
+        ],
       ),
     );
   }
@@ -2950,10 +3153,8 @@ class _AddClientModalFull extends StatefulWidget {
 }
 
 class _AddClientModalFullState extends State<_AddClientModalFull> {
-  late TextEditingController _nameController;
+  // Company Info
   late TextEditingController _companyController;
-  late TextEditingController _emailController;
-  late TextEditingController _phoneController;
   late TextEditingController _addressController;
   late TextEditingController _cityController;
   late TextEditingController _stateController;
@@ -2962,6 +3163,19 @@ class _AddClientModalFullState extends State<_AddClientModalFull> {
   late TextEditingController _notesController;
   String _selectedType = 'Retail';
   
+  // Primary Contact
+  late TextEditingController _primaryNameController;
+  late TextEditingController _primaryEmailController;
+  late TextEditingController _primaryPhoneController;
+  late TextEditingController _primaryTitleController;
+  
+  // Billing Contact
+  late TextEditingController _billingNameController;
+  late TextEditingController _billingEmailController;
+  late TextEditingController _billingPhoneController;
+  late TextEditingController _billingTitleController;
+  bool _hasSeparateBilling = false;
+  
   final List<String> _clientTypes = ['Retail', 'Consulting', 'Finance', 'Technology', 'Healthcare', 'Construction', 'Real Estate', 'Other'];
 
   bool get _isEditing => widget.client != null;
@@ -2969,10 +3183,8 @@ class _AddClientModalFullState extends State<_AddClientModalFull> {
   @override
   void initState() {
     super.initState();
-    _nameController = TextEditingController(text: widget.client?['name'] ?? '');
+    // Company
     _companyController = TextEditingController(text: widget.client?['company'] ?? '');
-    _emailController = TextEditingController(text: widget.client?['email'] ?? '');
-    _phoneController = TextEditingController(text: widget.client?['phone'] ?? '');
     _addressController = TextEditingController(text: widget.client?['address'] ?? '');
     _cityController = TextEditingController(text: widget.client?['city'] ?? '');
     _stateController = TextEditingController(text: widget.client?['state'] ?? '');
@@ -2980,43 +3192,75 @@ class _AddClientModalFullState extends State<_AddClientModalFull> {
     _websiteController = TextEditingController(text: widget.client?['website'] ?? '');
     _notesController = TextEditingController(text: widget.client?['notes'] ?? '');
     _selectedType = widget.client?['type'] ?? 'Retail';
+    
+    // Primary Contact
+    _primaryNameController = TextEditingController(text: widget.client?['primaryName'] ?? '');
+    _primaryEmailController = TextEditingController(text: widget.client?['primaryEmail'] ?? '');
+    _primaryPhoneController = TextEditingController(text: widget.client?['primaryPhone'] ?? '');
+    _primaryTitleController = TextEditingController(text: widget.client?['primaryTitle'] ?? '');
+    
+    // Billing Contact
+    _billingNameController = TextEditingController(text: widget.client?['billingName'] ?? '');
+    _billingEmailController = TextEditingController(text: widget.client?['billingEmail'] ?? '');
+    _billingPhoneController = TextEditingController(text: widget.client?['billingPhone'] ?? '');
+    _billingTitleController = TextEditingController(text: widget.client?['billingTitle'] ?? '');
+    _hasSeparateBilling = (widget.client?['billingEmail'] as String?)?.isNotEmpty ?? false;
   }
 
   @override
   void dispose() {
-    _nameController.dispose();
     _companyController.dispose();
-    _emailController.dispose();
-    _phoneController.dispose();
     _addressController.dispose();
     _cityController.dispose();
     _stateController.dispose();
     _zipController.dispose();
     _websiteController.dispose();
     _notesController.dispose();
+    _primaryNameController.dispose();
+    _primaryEmailController.dispose();
+    _primaryPhoneController.dispose();
+    _primaryTitleController.dispose();
+    _billingNameController.dispose();
+    _billingEmailController.dispose();
+    _billingPhoneController.dispose();
+    _billingTitleController.dispose();
     super.dispose();
   }
 
   void _submit() {
-    if (_nameController.text.trim().isEmpty) {
+    if (_companyController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter client name'), backgroundColor: AppColors.error),
+        const SnackBar(content: Text('Please enter company name'), backgroundColor: AppColors.error),
       );
       return;
     }
-    if (_emailController.text.trim().isEmpty) {
+    if (_primaryNameController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter email address'), backgroundColor: AppColors.error),
+        const SnackBar(content: Text('Please enter primary contact name'), backgroundColor: AppColors.error),
+      );
+      return;
+    }
+    if (_primaryEmailController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter primary contact email'), backgroundColor: AppColors.error),
       );
       return;
     }
 
     final clientData = {
       'id': widget.client?['id'] ?? DateTime.now().millisecondsSinceEpoch.toString(),
-      'name': _nameController.text.trim(),
-      'company': _companyController.text.trim().isNotEmpty ? _companyController.text.trim() : _nameController.text.trim(),
-      'email': _emailController.text.trim(),
-      'phone': _phoneController.text.trim(),
+      'company': _companyController.text.trim(),
+      // Primary Contact
+      'primaryName': _primaryNameController.text.trim(),
+      'primaryEmail': _primaryEmailController.text.trim(),
+      'primaryPhone': _primaryPhoneController.text.trim(),
+      'primaryTitle': _primaryTitleController.text.trim(),
+      // Billing Contact (empty if same as primary)
+      'billingName': _hasSeparateBilling ? _billingNameController.text.trim() : '',
+      'billingEmail': _hasSeparateBilling ? _billingEmailController.text.trim() : '',
+      'billingPhone': _hasSeparateBilling ? _billingPhoneController.text.trim() : '',
+      'billingTitle': _hasSeparateBilling ? _billingTitleController.text.trim() : '',
+      // Address
       'address': _addressController.text.trim(),
       'city': _cityController.text.trim(),
       'state': _stateController.text.trim(),
@@ -3024,9 +3268,12 @@ class _AddClientModalFullState extends State<_AddClientModalFull> {
       'website': _websiteController.text.trim(),
       'notes': _notesController.text.trim(),
       'type': _selectedType,
+      // Preserve existing data
       'quotes': widget.client?['quotes'] ?? 0,
+      'projects': widget.client?['projects'] ?? 0,
       'value': widget.client?['value'] ?? 0.0,
       'created': widget.client?['created'] ?? DateTime.now(),
+      'lastActivity': widget.client?['lastActivity'] ?? DateTime.now(),
     };
 
     widget.onClientSaved(clientData);
@@ -3042,7 +3289,7 @@ class _AddClientModalFullState extends State<_AddClientModalFull> {
   @override
   Widget build(BuildContext context) {
     return DraggableScrollableSheet(
-      initialChildSize: 0.9,
+      initialChildSize: 0.92,
       minChildSize: 0.5,
       maxChildSize: 0.95,
       expand: false,
@@ -3076,64 +3323,136 @@ class _AddClientModalFullState extends State<_AddClientModalFull> {
                   IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close)),
                 ],
               ),
-              const SizedBox(height: 8),
-              Text(
-                _isEditing ? 'Update client information' : 'Enter client details to add them to your list',
-                style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
-              ),
-              const SizedBox(height: 24),
-
-              // Basic Info Section
-              _buildSectionHeader('Basic Information'),
-              const SizedBox(height: 12),
-              _buildTextField('Contact Name *', 'Full name', _nameController),
-              const SizedBox(height: 12),
-              _buildTextField('Company Name', 'Company or business name', _companyController),
-              const SizedBox(height: 12),
-              _buildTypeDropdown(),
               const SizedBox(height: 20),
 
-              // Contact Info Section
-              _buildSectionHeader('Contact Information'),
-              const SizedBox(height: 12),
-              _buildTextField('Email *', 'email@company.com', _emailController, TextInputType.emailAddress),
-              const SizedBox(height: 12),
-              _buildTextField('Phone', '+1 (555) 000-0000', _phoneController, TextInputType.phone),
-              const SizedBox(height: 12),
-              _buildTextField('Website', 'www.company.com', _websiteController, TextInputType.url),
-              const SizedBox(height: 20),
-
-              // Address Section
-              _buildSectionHeader('Address'),
-              const SizedBox(height: 12),
-              _buildTextField('Street Address', '123 Main Street', _addressController),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(flex: 2, child: _buildTextField('City', 'City', _cityController)),
-                  const SizedBox(width: 12),
-                  Expanded(child: _buildTextField('State', 'CA', _stateController)),
-                  const SizedBox(width: 12),
-                  Expanded(child: _buildTextField('ZIP', '90001', _zipController, TextInputType.number)),
+              // Company Info Section
+              _buildSectionCard(
+                'Company Information',
+                Icons.business,
+                AppColors.accent,
+                [
+                  _buildTextField('Company Name *', 'Enter company name', _companyController),
+                  const SizedBox(height: 12),
+                  _buildTypeDropdown(),
+                  const SizedBox(height: 12),
+                  _buildTextField('Website', 'www.company.com', _websiteController, TextInputType.url),
                 ],
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
+
+              // Primary Contact Section
+              _buildSectionCard(
+                'Primary Contact',
+                Icons.person,
+                AppColors.accent,
+                [
+                  Row(
+                    children: [
+                      Expanded(child: _buildTextField('Name *', 'Full name', _primaryNameController)),
+                      const SizedBox(width: 12),
+                      Expanded(child: _buildTextField('Title', 'Job title', _primaryTitleController)),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  _buildTextField('Email *', 'email@company.com', _primaryEmailController, TextInputType.emailAddress),
+                  const SizedBox(height: 12),
+                  _buildTextField('Phone', '+1 (555) 000-0000', _primaryPhoneController, TextInputType.phone),
+                ],
+                badge: 'Main point of contact',
+              ),
+              const SizedBox(height: 16),
+
+              // Billing Contact Section
+              _buildSectionCard(
+                'Billing Contact',
+                Icons.receipt_long,
+                AppColors.info,
+                [
+                  // Toggle for separate billing
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Different from primary contact?',
+                          style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                        ),
+                      ),
+                      Switch(
+                        value: _hasSeparateBilling,
+                        onChanged: (val) => setState(() => _hasSeparateBilling = val),
+                        activeColor: AppColors.info,
+                      ),
+                    ],
+                  ),
+                  if (_hasSeparateBilling) ...[
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(child: _buildTextField('Name', 'Full name', _billingNameController)),
+                        const SizedBox(width: 12),
+                        Expanded(child: _buildTextField('Title', 'Accounts Payable', _billingTitleController)),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    _buildTextField('Email', 'billing@company.com', _billingEmailController, TextInputType.emailAddress),
+                    const SizedBox(height: 12),
+                    _buildTextField('Phone', '+1 (555) 000-0000', _billingPhoneController, TextInputType.phone),
+                  ] else
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        'Invoices will be sent to the primary contact',
+                        style: TextStyle(fontSize: 12, color: AppColors.textTertiary, fontStyle: FontStyle.italic),
+                      ),
+                    ),
+                ],
+                badge: 'For sending invoices',
+              ),
+              const SizedBox(height: 16),
+
+              // Address Section
+              _buildSectionCard(
+                'Company Address',
+                Icons.location_on,
+                AppColors.textSecondary,
+                [
+                  _buildTextField('Street Address', '123 Main Street', _addressController),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(flex: 2, child: _buildTextField('City', 'City', _cityController)),
+                      const SizedBox(width: 10),
+                      Expanded(child: _buildTextField('State', 'CA', _stateController)),
+                      const SizedBox(width: 10),
+                      Expanded(child: _buildTextField('ZIP', '90001', _zipController, TextInputType.number)),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
 
               // Notes Section
-              _buildSectionHeader('Notes'),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _notesController,
-                maxLines: 3,
-                decoration: InputDecoration(
-                  hintText: 'Additional notes about this client...',
-                  filled: true,
-                  fillColor: AppColors.neutral50,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
-                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AppColors.border)),
-                ),
+              _buildSectionCard(
+                'Notes',
+                Icons.notes,
+                AppColors.textSecondary,
+                [
+                  TextField(
+                    controller: _notesController,
+                    maxLines: 3,
+                    style: const TextStyle(fontSize: 14),
+                    decoration: InputDecoration(
+                      hintText: 'Additional notes about this client...',
+                      filled: true,
+                      fillColor: AppColors.neutral50,
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AppColors.border)),
+                      contentPadding: const EdgeInsets.all(14),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 28),
 
               // Submit Button
               SizedBox(
@@ -3144,6 +3463,7 @@ class _AddClientModalFullState extends State<_AddClientModalFull> {
                   child: Text(_isEditing ? 'Save Changes' : 'Add Client'),
                 ),
               ),
+              const SizedBox(height: 12),
             ],
           ),
         );
@@ -3151,27 +3471,62 @@ class _AddClientModalFullState extends State<_AddClientModalFull> {
     );
   }
 
-  Widget _buildSectionHeader(String title) {
-    return Text(title, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary));
+  Widget _buildSectionCard(String title, IconData icon, Color color, List<Widget> children, {String? badge}) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Icon(icon, size: 14, color: color),
+              ),
+              const SizedBox(width: 10),
+              Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+              if (badge != null) ...[
+                const Spacer(),
+                Text(badge, style: TextStyle(fontSize: 10, color: AppColors.textTertiary)),
+              ],
+            ],
+          ),
+          const SizedBox(height: 14),
+          ...children,
+        ],
+      ),
+    );
   }
 
   Widget _buildTextField(String label, String hint, TextEditingController controller, [TextInputType? keyboardType]) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
-        const SizedBox(height: 6),
+        Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500)),
+        const SizedBox(height: 5),
         TextField(
           controller: controller,
           keyboardType: keyboardType,
+          style: const TextStyle(fontSize: 14),
           decoration: InputDecoration(
             hintText: hint,
+            hintStyle: TextStyle(fontSize: 13, color: AppColors.textTertiary),
             filled: true,
             fillColor: AppColors.neutral50,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
-            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AppColors.border)),
-            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AppColors.accent)),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.border)),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.accent)),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           ),
         ),
       ],
@@ -3182,19 +3537,20 @@ class _AddClientModalFullState extends State<_AddClientModalFull> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Client Type', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
-        const SizedBox(height: 6),
+        const Text('Client Type', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500)),
+        const SizedBox(height: 5),
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
             color: AppColors.neutral50,
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(8),
             border: Border.all(color: AppColors.border),
           ),
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
               value: _selectedType,
               isExpanded: true,
+              style: const TextStyle(fontSize: 14, color: AppColors.textPrimary),
               items: _clientTypes.map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
               onChanged: (val) => setState(() => _selectedType = val ?? 'Retail'),
             ),
