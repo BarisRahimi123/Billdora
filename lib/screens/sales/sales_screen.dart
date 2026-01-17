@@ -2473,6 +2473,98 @@ class _QuotesTabState extends State<_QuotesTab> with SingleTickerProviderStateMi
     },
   ];
 
+  // Proposals awaiting collaborator submissions
+  final List<Map<String, dynamic>> _pendingProposals = [
+    {
+      'id': 'p1',
+      'title': 'Enterprise Software Development',
+      'number': '260116-001',
+      'date': DateTime(2026, 1, 16),
+      'client': 'Tech Innovations Inc',
+      'clientEmail': 'contact@techinnovations.com',
+      'amount': 45000.0,
+      'lineItems': [
+        {'name': 'Backend API Development', 'amount': 20000.0, 'days': 30},
+        {'name': 'Database Architecture', 'amount': 15000.0, 'days': 15},
+        {'name': 'Cloud Infrastructure Setup', 'amount': 10000.0, 'days': 10},
+      ],
+      'collaborators': [
+        {
+          'id': 'c1',
+          'name': 'Sarah Chen',
+          'company': 'Chen UX Design',
+          'email': 'sarah@chenux.com',
+          'role': 'UI/UX Designer',
+          'status': 'submitted',
+          'showInfo': true, // Client will see collaborator info
+          'submittedAt': DateTime(2026, 1, 15),
+          'lineItems': [
+            {'name': 'User Research & Personas', 'amount': 3500.0, 'days': 5},
+            {'name': 'Wireframing & Prototyping', 'amount': 5000.0, 'days': 7},
+            {'name': 'UI Design System', 'amount': 8500.0, 'days': 10},
+          ],
+          'totalAmount': 17000.0,
+        },
+        {
+          'id': 'c2',
+          'name': 'Marcus Rodriguez',
+          'company': 'MR Security Solutions',
+          'email': 'marcus@mrsecurity.io',
+          'role': 'Security Consultant',
+          'status': 'pending',
+          'showInfo': false, // Anonymous - client won't see info
+          'deadline': DateTime(2026, 1, 18),
+        },
+      ],
+    },
+    {
+      'id': 'p2',
+      'title': 'E-commerce Platform Redesign',
+      'number': '260115-042',
+      'date': DateTime(2026, 1, 15),
+      'client': 'Fashion Forward LLC',
+      'clientEmail': 'projects@fashionforward.com',
+      'amount': 28000.0,
+      'lineItems': [
+        {'name': 'Platform Migration', 'amount': 15000.0, 'days': 20},
+        {'name': 'Payment Integration', 'amount': 8000.0, 'days': 10},
+        {'name': 'Analytics Setup', 'amount': 5000.0, 'days': 5},
+      ],
+      'collaborators': [
+        {
+          'id': 'c3',
+          'name': 'Alex Kim',
+          'company': 'Kim Digital Marketing',
+          'email': 'alex@kimdigital.com',
+          'role': 'Marketing Strategist',
+          'status': 'submitted',
+          'showInfo': true,
+          'submittedAt': DateTime(2026, 1, 14),
+          'lineItems': [
+            {'name': 'SEO Strategy', 'amount': 4000.0, 'days': 8},
+            {'name': 'Social Media Campaign', 'amount': 6000.0, 'days': 12},
+          ],
+          'totalAmount': 10000.0,
+        },
+        {
+          'id': 'c4',
+          'name': 'Emma Wilson',
+          'company': 'Wilson Content Co',
+          'email': 'emma@wilsoncontent.com',
+          'role': 'Content Writer',
+          'status': 'submitted',
+          'showInfo': false, // Anonymous
+          'submittedAt': DateTime(2026, 1, 15),
+          'lineItems': [
+            {'name': 'Product Descriptions', 'amount': 2500.0, 'days': 5},
+            {'name': 'Blog Content', 'amount': 3500.0, 'days': 7},
+          ],
+          'totalAmount': 6000.0,
+        },
+      ],
+    },
+  ];
+
   final List<Map<String, dynamic>> _responses = [
     {'quote': 'Proposal for Wall street global', 'number': '260114-717', 'response': 'Accepted', 'signer': 'Barzan Jan Rahimi', 'date': DateTime(2026, 1, 14)},
     {'quote': 'Proposal for Wall street global', 'number': '260113-470', 'response': 'Accepted', 'signer': 'Barzan Jan Rahimi', 'date': DateTime(2026, 1, 13)},
@@ -2490,7 +2582,7 @@ class _QuotesTabState extends State<_QuotesTab> with SingleTickerProviderStateMi
   @override
   void initState() {
     super.initState();
-    _subTabController = TabController(length: 3, vsync: this);
+    _subTabController = TabController(length: 4, vsync: this);
     _subTabController.addListener(() => setState(() {}));
   }
 
@@ -2501,12 +2593,13 @@ class _QuotesTabState extends State<_QuotesTab> with SingleTickerProviderStateMi
   }
 
   int get _totalQuotes => _quotesByClient.fold(0, (sum, g) => sum + (g['quotes'] as List).length);
+  int get _pendingCount => _pendingProposals.length;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // Sub-tabs (All Quotes, Responses, Templates)
+        // Sub-tabs (All Quotes, Pending, Responses, Templates)
         Container(
           margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
           padding: const EdgeInsets.all(4),
@@ -2516,9 +2609,10 @@ class _QuotesTabState extends State<_QuotesTab> with SingleTickerProviderStateMi
           ),
           child: Row(
             children: [
-              _buildSubTab(0, 'All Quotes', _totalQuotes),
-              _buildSubTab(1, 'Responses', _responses.length),
-              _buildSubTab(2, 'Templates', _templates.length),
+              _buildSubTab(0, 'All', _totalQuotes),
+              _buildSubTab(1, 'Pending', _pendingCount, highlight: _pendingCount > 0),
+              _buildSubTab(2, 'Responses', _responses.length),
+              _buildSubTab(3, 'Templates', _templates.length),
             ],
           ),
         ),
@@ -2530,6 +2624,7 @@ class _QuotesTabState extends State<_QuotesTab> with SingleTickerProviderStateMi
             index: _subTabController.index,
             children: [
               _buildAllQuotesContent(),
+              _buildPendingContent(),
               _buildResponsesContent(),
               _buildTemplatesContent(),
             ],
@@ -2539,7 +2634,7 @@ class _QuotesTabState extends State<_QuotesTab> with SingleTickerProviderStateMi
     );
   }
 
-  Widget _buildSubTab(int index, String label, int count) {
+  Widget _buildSubTab(int index, String label, int count, {bool highlight = false}) {
     final isSelected = _subTabController.index == index;
     
     return Expanded(
@@ -2558,16 +2653,18 @@ class _QuotesTabState extends State<_QuotesTab> with SingleTickerProviderStateMi
               Text(
                 label,
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: 11,
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
                   color: isSelected ? AppColors.textPrimary : AppColors.textSecondary,
                 ),
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: 4),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
                 decoration: BoxDecoration(
-                  color: isSelected ? AppColors.accent.withOpacity(0.1) : AppColors.neutral200,
+                  color: highlight 
+                      ? AppColors.warning.withOpacity(isSelected ? 0.2 : 0.1)
+                      : (isSelected ? AppColors.accent.withOpacity(0.1) : AppColors.neutral200),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
@@ -2575,7 +2672,9 @@ class _QuotesTabState extends State<_QuotesTab> with SingleTickerProviderStateMi
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w600,
-                    color: isSelected ? AppColors.accent : AppColors.textTertiary,
+                    color: highlight 
+                        ? AppColors.warning 
+                        : (isSelected ? AppColors.accent : AppColors.textTertiary),
                   ),
                 ),
               ),
@@ -3123,6 +3222,429 @@ class _QuotesTabState extends State<_QuotesTab> with SingleTickerProviderStateMi
     );
   }
 
+  // ============ PENDING CONTENT ============
+  Widget _buildPendingContent() {
+    final dateFormat = DateFormat('MMM d');
+    final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 0);
+    
+    if (_pendingProposals.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.hourglass_empty, size: 48, color: AppColors.textTertiary),
+            const SizedBox(height: 16),
+            Text(
+              'No Pending Proposals',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Proposals waiting for collaborator\nsubmissions will appear here',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+            ),
+          ],
+        ),
+      );
+    }
+    
+    return Column(
+      children: [
+        // Info Banner
+        Container(
+          margin: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: AppColors.warning.withOpacity(0.08),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: AppColors.warning.withOpacity(0.2)),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.info_outline, size: 18, color: AppColors.warning),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'These proposals are waiting for collaborator submissions before sending to clients.',
+                  style: TextStyle(fontSize: 11, color: AppColors.warning.withOpacity(0.9)),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Pending Proposals List
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            itemCount: _pendingProposals.length,
+            itemBuilder: (context, index) {
+              final proposal = _pendingProposals[index];
+              final collaborators = proposal['collaborators'] as List<Map<String, dynamic>>;
+              final submitted = collaborators.where((c) => c['status'] == 'submitted').length;
+              final total = collaborators.length;
+              final allSubmitted = submitted == total;
+              
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: AppColors.cardBackground,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: AppShadows.sm,
+                  border: allSubmitted ? Border.all(color: AppColors.success.withOpacity(0.3), width: 1.5) : null,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header
+                    Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 42,
+                            height: 42,
+                            decoration: BoxDecoration(
+                              color: allSubmitted ? AppColors.success.withOpacity(0.1) : AppColors.warning.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Icon(
+                              allSubmitted ? Icons.check_circle_outline : Icons.hourglass_top,
+                              color: allSubmitted ? AppColors.success : AppColors.warning,
+                              size: 22,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  proposal['title'] as String,
+                                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 3),
+                                Row(
+                                  children: [
+                                    Text(
+                                      proposal['client'] as String,
+                                      style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text('•', style: TextStyle(color: AppColors.textTertiary)),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      '#${proposal['number']}',
+                                      style: TextStyle(fontSize: 11, color: AppColors.textTertiary),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(
+                                currencyFormat.format(proposal['amount']),
+                                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                dateFormat.format(proposal['date'] as DateTime),
+                                style: TextStyle(fontSize: 10, color: AppColors.textTertiary),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    
+                    const Divider(height: 1),
+                    
+                    // Collaborators Status
+                    Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                'Collaborators',
+                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+                              ),
+                              const Spacer(),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: allSubmitted ? AppColors.success.withOpacity(0.1) : AppColors.warning.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  '$submitted / $total submitted',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                    color: allSubmitted ? AppColors.success : AppColors.warning,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          ...collaborators.map((collab) => _buildCollaboratorRow(collab)),
+                        ],
+                      ),
+                    ),
+                    
+                    const Divider(height: 1),
+                    
+                    // Actions
+                    Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Row(
+                        children: [
+                          if (allSubmitted) ...[
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: () => _showMergePreview(proposal),
+                                icon: const Icon(Icons.merge, size: 18),
+                                label: const Text('Merge & Review'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.success,
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                ),
+                              ),
+                            ),
+                          ] else ...[
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: () {
+                                  // Send reminder
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Reminder sent to pending collaborators'), backgroundColor: AppColors.info),
+                                  );
+                                },
+                                icon: const Icon(Icons.notifications_active_outlined, size: 18),
+                                label: const Text('Send Reminder'),
+                                style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 12)),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: () => _showPartialPreview(proposal),
+                                icon: const Icon(Icons.visibility_outlined, size: 18),
+                                label: const Text('Preview'),
+                                style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 12)),
+                              ),
+                            ),
+                          ],
+                          const SizedBox(width: 10),
+                          PopupMenuButton(
+                            icon: Icon(Icons.more_vert, color: AppColors.textSecondary),
+                            itemBuilder: (context) => [
+                              const PopupMenuItem(value: 'edit', child: Text('Edit Proposal')),
+                              const PopupMenuItem(value: 'send_solo', child: Text('Send Without Collaborators')),
+                              const PopupMenuItem(value: 'cancel', child: Text('Cancel', style: TextStyle(color: AppColors.error))),
+                            ],
+                            onSelected: (value) {
+                              if (value == 'send_solo') {
+                                _showSendSoloConfirmation(proposal);
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCollaboratorRow(Map<String, dynamic> collab) {
+    final isSubmitted = collab['status'] == 'submitted';
+    final showInfo = collab['showInfo'] as bool? ?? true;
+    final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 0);
+    
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: isSubmitted ? AppColors.success.withOpacity(0.05) : AppColors.neutral50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: isSubmitted ? AppColors.success.withOpacity(0.2) : AppColors.border,
+        ),
+      ),
+      child: Row(
+        children: [
+          // Avatar with status
+          Stack(
+            children: [
+              CircleAvatar(
+                radius: 16,
+                backgroundColor: AppColors.neutral200,
+                child: Text(
+                  (collab['name'] as String).substring(0, 1),
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                ),
+              ),
+              Positioned(
+                right: 0,
+                bottom: 0,
+                child: Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    color: isSubmitted ? AppColors.success : AppColors.warning,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 1.5),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      collab['name'] as String,
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(width: 6),
+                    if (!showInfo)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: AppColors.purple.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          'Anonymous',
+                          style: TextStyle(fontSize: 8, fontWeight: FontWeight.w600, color: AppColors.purple),
+                        ),
+                      ),
+                  ],
+                ),
+                Text(
+                  collab['role'] as String,
+                  style: TextStyle(fontSize: 10, color: AppColors.textSecondary),
+                ),
+              ],
+            ),
+          ),
+          if (isSubmitted) ...[
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  currencyFormat.format(collab['totalAmount'] ?? 0),
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.success),
+                ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.check, size: 10, color: AppColors.success),
+                    const SizedBox(width: 2),
+                    Text('Submitted', style: TextStyle(fontSize: 9, color: AppColors.success)),
+                  ],
+                ),
+              ],
+            ),
+          ] else ...[
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Icon(Icons.hourglass_empty, size: 14, color: AppColors.warning),
+                Text('Pending', style: TextStyle(fontSize: 9, color: AppColors.warning)),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  void _showMergePreview(Map<String, dynamic> proposal) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _MergedProposalPreview(
+        proposal: proposal,
+        showCollaboratorInfo: true, // Show with collaborator info first
+        onSend: () {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Proposal sent to client!'), backgroundColor: AppColors.success),
+          );
+          // Remove from pending
+          setState(() {
+            _pendingProposals.removeWhere((p) => p['id'] == proposal['id']);
+          });
+        },
+      ),
+    );
+  }
+
+  void _showPartialPreview(Map<String, dynamic> proposal) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _MergedProposalPreview(
+        proposal: proposal,
+        showCollaboratorInfo: true,
+        isPartial: true,
+      ),
+    );
+  }
+
+  void _showSendSoloConfirmation(Map<String, dynamic> proposal) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Send Without Collaborators?'),
+        content: Text(
+          'This will send only your services to ${proposal['client']}. '
+          'Collaborators can still send their proposals independently.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Proposal sent without collaborators'), backgroundColor: AppColors.info),
+              );
+              setState(() {
+                _pendingProposals.removeWhere((p) => p['id'] == proposal['id']);
+              });
+            },
+            child: const Text('Send'),
+          ),
+        ],
+      ),
+    );
+  }
+
   // ============ RESPONSES CONTENT ============
   Widget _buildResponsesContent() {
     final dateFormat = DateFormat('M/d');
@@ -3401,6 +3923,606 @@ class _QuotesTabState extends State<_QuotesTab> with SingleTickerProviderStateMi
             },
           ),
         ),
+      ],
+    );
+  }
+}
+
+// ============ MERGED PROPOSAL PREVIEW ============
+class _MergedProposalPreview extends StatefulWidget {
+  final Map<String, dynamic> proposal;
+  final bool showCollaboratorInfo;
+  final bool isPartial;
+  final VoidCallback? onSend;
+
+  const _MergedProposalPreview({
+    required this.proposal,
+    this.showCollaboratorInfo = true,
+    this.isPartial = false,
+    this.onSend,
+  });
+
+  @override
+  State<_MergedProposalPreview> createState() => _MergedProposalPreviewState();
+}
+
+class _MergedProposalPreviewState extends State<_MergedProposalPreview> {
+  late bool _showCollaboratorInfo;
+  
+  @override
+  void initState() {
+    super.initState();
+    _showCollaboratorInfo = widget.showCollaboratorInfo;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 2);
+    final dateFormat = DateFormat('MMMM d, yyyy');
+    final proposal = widget.proposal;
+    final lineItems = proposal['lineItems'] as List<Map<String, dynamic>>;
+    final collaborators = proposal['collaborators'] as List<Map<String, dynamic>>;
+    final submittedCollaborators = collaborators.where((c) => c['status'] == 'submitted').toList();
+    
+    // Calculate totals
+    double ownerTotal = (proposal['amount'] as num).toDouble();
+    double collaboratorTotal = 0;
+    for (final collab in submittedCollaborators) {
+      collaboratorTotal += (collab['totalAmount'] as num? ?? 0).toDouble();
+    }
+    double grandTotal = ownerTotal + collaboratorTotal;
+    
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.92,
+      decoration: const BoxDecoration(
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        children: [
+          // Handle
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.border,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          
+          // Header
+          Container(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: AppColors.accent.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(Icons.description_outlined, color: AppColors.accent, size: 22),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.isPartial ? 'Preview (Partial)' : 'Merged Proposal Preview',
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                          ),
+                          Text(
+                            '#${proposal['number']}',
+                            style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+                
+                // Toggle View Mode
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: AppColors.neutral100,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => setState(() => _showCollaboratorInfo = true),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            decoration: BoxDecoration(
+                              color: _showCollaboratorInfo ? AppColors.cardBackground : Colors.transparent,
+                              borderRadius: BorderRadius.circular(8),
+                              boxShadow: _showCollaboratorInfo ? AppShadows.sm : null,
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.visibility,
+                                  size: 16,
+                                  color: _showCollaboratorInfo ? AppColors.accent : AppColors.textSecondary,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'With Info',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: _showCollaboratorInfo ? FontWeight.w600 : FontWeight.w400,
+                                    color: _showCollaboratorInfo ? AppColors.accent : AppColors.textSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => setState(() => _showCollaboratorInfo = false),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            decoration: BoxDecoration(
+                              color: !_showCollaboratorInfo ? AppColors.cardBackground : Colors.transparent,
+                              borderRadius: BorderRadius.circular(8),
+                              boxShadow: !_showCollaboratorInfo ? AppShadows.sm : null,
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.visibility_off,
+                                  size: 16,
+                                  color: !_showCollaboratorInfo ? AppColors.purple : AppColors.textSecondary,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Anonymous',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: !_showCollaboratorInfo ? FontWeight.w600 : FontWeight.w400,
+                                    color: !_showCollaboratorInfo ? AppColors.purple : AppColors.textSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          
+          const Divider(height: 1),
+          
+          // Proposal Content
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Client Info
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppColors.neutral50,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 22,
+                          backgroundColor: AppColors.accent.withOpacity(0.1),
+                          child: Text(
+                            (proposal['client'] as String).substring(0, 1),
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.accent),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                proposal['client'] as String,
+                                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                              ),
+                              Text(
+                                proposal['clientEmail'] as String,
+                                style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text('Proposal Date', style: TextStyle(fontSize: 10, color: AppColors.textTertiary)),
+                            Text(
+                              dateFormat.format(proposal['date'] as DateTime),
+                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 24),
+                  
+                  // Proposal Title
+                  Text(
+                    proposal['title'] as String,
+                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+                  ),
+                  
+                  const SizedBox(height: 24),
+                  
+                  // YOUR SERVICES SECTION
+                  _buildSectionHeader('Your Services', ownerTotal, currencyFormat, isOwner: true),
+                  const SizedBox(height: 12),
+                  _buildLineItemsTable(lineItems, currencyFormat),
+                  
+                  const SizedBox(height: 24),
+                  
+                  // COLLABORATOR SERVICES
+                  if (submittedCollaborators.isNotEmpty) ...[
+                    for (final collab in submittedCollaborators) ...[
+                      _buildCollaboratorSection(collab, currencyFormat),
+                      const SizedBox(height: 20),
+                    ],
+                  ],
+                  
+                  // Pending Collaborators Notice
+                  if (widget.isPartial) ...[
+                    final pending = collaborators.where((c) => c['status'] != 'submitted').toList();
+                    if (pending.isNotEmpty) ...[
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: AppColors.warning.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: AppColors.warning.withOpacity(0.3)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(Icons.hourglass_empty, size: 18, color: AppColors.warning),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Awaiting Submissions',
+                                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.warning),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            ...pending.map((p) => Padding(
+                              padding: const EdgeInsets.only(bottom: 6),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.person_outline, size: 14, color: AppColors.textSecondary),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    '${p['name']} - ${p['role']}',
+                                    style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                                  ),
+                                ],
+                              ),
+                            )),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                    ],
+                  ],
+                  
+                  // GRAND TOTAL
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppColors.accent.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.accent.withOpacity(0.2)),
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('Your Services', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                            Text(currencyFormat.format(ownerTotal), style: const TextStyle(fontSize: 13)),
+                          ],
+                        ),
+                        if (collaboratorTotal > 0) ...[
+                          const SizedBox(height: 8),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text('Collaborator Services', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                              Text(currencyFormat.format(collaboratorTotal), style: const TextStyle(fontSize: 13)),
+                            ],
+                          ),
+                        ],
+                        const Divider(height: 20),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Grand Total', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                            Text(
+                              currencyFormat.format(grandTotal),
+                              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: AppColors.accent),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 20),
+                  
+                  // View Mode Description
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: _showCollaboratorInfo ? AppColors.info.withOpacity(0.08) : AppColors.purple.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          _showCollaboratorInfo ? Icons.visibility : Icons.visibility_off,
+                          size: 18,
+                          color: _showCollaboratorInfo ? AppColors.info : AppColors.purple,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            _showCollaboratorInfo
+                                ? 'Client will see collaborator names and company details alongside their services.'
+                                : 'Client will only see "Additional Services" without collaborator identities.',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: _showCollaboratorInfo ? AppColors.info : AppColors.purple,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          
+          // Footer Actions
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.cardBackground,
+              border: Border(top: BorderSide(color: AppColors.border)),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.edit_outlined, size: 18),
+                    label: const Text('Edit'),
+                    style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 12)),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                if (!widget.isPartial && widget.onSend != null)
+                  Expanded(
+                    flex: 2,
+                    child: ElevatedButton.icon(
+                      onPressed: widget.onSend,
+                      icon: const Icon(Icons.send, size: 18),
+                      label: const Text('Send to Client'),
+                      style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 12)),
+                    ),
+                  ),
+                if (widget.isPartial)
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.download_outlined, size: 18),
+                      label: const Text('Download'),
+                      style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 12)),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title, double total, NumberFormat currencyFormat, {bool isOwner = false}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: isOwner ? AppColors.accent.withOpacity(0.1) : AppColors.neutral100,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
+      ),
+      child: Row(
+        children: [
+          if (isOwner)
+            Icon(Icons.person, size: 16, color: AppColors.accent)
+          else
+            Icon(Icons.group, size: 16, color: AppColors.textSecondary),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              title,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: isOwner ? AppColors.accent : AppColors.textPrimary,
+              ),
+            ),
+          ),
+          Text(
+            currencyFormat.format(total),
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: isOwner ? AppColors.accent : AppColors.textPrimary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLineItemsTable(List<Map<String, dynamic>> items, NumberFormat currencyFormat) {
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: AppColors.border),
+        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(10)),
+      ),
+      child: Column(
+        children: items.asMap().entries.map((entry) {
+          final item = entry.value;
+          final isLast = entry.key == items.length - 1;
+          
+          return Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              border: isLast ? null : Border(bottom: BorderSide(color: AppColors.border.withOpacity(0.5))),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  flex: 3,
+                  child: Text(item['name'] as String, style: const TextStyle(fontSize: 13)),
+                ),
+                if (item['days'] != null)
+                  SizedBox(
+                    width: 60,
+                    child: Text(
+                      '${item['days']} days',
+                      style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                    ),
+                  ),
+                SizedBox(
+                  width: 80,
+                  child: Text(
+                    currencyFormat.format(item['amount']),
+                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                    textAlign: TextAlign.right,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildCollaboratorSection(Map<String, dynamic> collab, NumberFormat currencyFormat) {
+    final showInfo = collab['showInfo'] as bool? ?? true;
+    final items = collab['lineItems'] as List<Map<String, dynamic>>? ?? [];
+    final total = (collab['totalAmount'] as num? ?? 0).toDouble();
+    
+    // Determine what to show based on _showCollaboratorInfo toggle
+    String sectionTitle;
+    if (_showCollaboratorInfo && showInfo) {
+      sectionTitle = '${collab['name']} - ${collab['company']}';
+    } else {
+      sectionTitle = 'Additional Services ${collab['role'] != null ? '(${collab['role']})' : ''}';
+    }
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: _showCollaboratorInfo && showInfo 
+                ? AppColors.info.withOpacity(0.1) 
+                : AppColors.purple.withOpacity(0.1),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
+          ),
+          child: Row(
+            children: [
+              if (_showCollaboratorInfo && showInfo) ...[
+                CircleAvatar(
+                  radius: 12,
+                  backgroundColor: AppColors.info.withOpacity(0.2),
+                  child: Text(
+                    (collab['name'] as String).substring(0, 1),
+                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.info),
+                  ),
+                ),
+              ] else ...[
+                Container(
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    color: AppColors.purple.withOpacity(0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.person_outline, size: 14, color: AppColors.purple),
+                ),
+              ],
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      sectionTitle,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: _showCollaboratorInfo && showInfo ? AppColors.info : AppColors.purple,
+                      ),
+                    ),
+                    if (_showCollaboratorInfo && showInfo)
+                      Text(
+                        collab['email'] as String,
+                        style: TextStyle(fontSize: 10, color: AppColors.textSecondary),
+                      ),
+                  ],
+                ),
+              ),
+              Text(
+                currencyFormat.format(total),
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: _showCollaboratorInfo && showInfo ? AppColors.info : AppColors.purple,
+                ),
+              ),
+            ],
+          ),
+        ),
+        _buildLineItemsTable(items, currencyFormat),
       ],
     );
   }
