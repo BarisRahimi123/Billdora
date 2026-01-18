@@ -79,7 +79,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
           slivers: [
             // App Header with Hamburger Menu
             const SliverToBoxAdapter(
-              child: AppHeader(showSearch: true),
+              child: AppHeader(showSearch: false),
             ),
 
             // Title and Actions

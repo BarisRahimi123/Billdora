@@ -6111,6 +6111,8 @@ class _ConsultantsTabState extends State<_ConsultantsTab> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      enableDrag: true,
+      isDismissible: true,
       backgroundColor: AppColors.cardBackground,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -6628,43 +6630,46 @@ class _AddConsultantModalState extends State<_AddConsultantModal> {
 
   @override
   Widget build(BuildContext context) {
-    return DraggableScrollableSheet(
-      initialChildSize: 0.85,
-      minChildSize: 0.5,
-      maxChildSize: 0.95,
-      expand: false,
-      builder: (context, scrollController) {
-        return SingleChildScrollView(
-          controller: scrollController,
-          padding: EdgeInsets.only(
-            left: 20,
-            right: 20,
-            top: 20,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(2)),
-                ),
-              ),
-              const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('Add Consultant', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close),
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: DraggableScrollableSheet(
+        initialChildSize: 0.85,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        expand: false,
+        builder: (context, scrollController) {
+          return SingleChildScrollView(
+            controller: scrollController,
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            padding: EdgeInsets.only(
+              left: 20,
+              right: 20,
+              top: 20,
+              bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(2)),
                   ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text('Add a sub-consultant to collaborate on projects', style: TextStyle(color: AppColors.textSecondary)),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Add Consultant', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text('Add a sub-consultant to collaborate on projects', style: TextStyle(color: AppColors.textSecondary)),
               const SizedBox(height: 24),
               
               // Contact Information Section
@@ -6707,9 +6712,10 @@ class _AddConsultantModalState extends State<_AddConsultantModal> {
                 ),
               ),
             ],
-          ),
-        );
-      },
+            ),
+          );
+        },
+      ),
     );
   }
 
@@ -6729,13 +6735,16 @@ class _AddConsultantModalState extends State<_AddConsultantModal> {
         TextField(
           controller: controller,
           keyboardType: keyboardType,
+          enabled: true,
+          enableInteractiveSelection: true,
+          style: const TextStyle(fontSize: 14),
           decoration: InputDecoration(
             hintText: hint,
             filled: true,
             fillColor: AppColors.neutral50,
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
             enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AppColors.border)),
-            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AppColors.accent)),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AppColors.accent, width: 2)),
             contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
           ),
         ),
@@ -6759,19 +6768,34 @@ class _AddConsultantModalState extends State<_AddConsultantModal> {
             );
           },
           onSelected: (String selection) {
-            _specialtyController.text = selection;
+            setState(() {
+              _specialtyController.text = selection;
+            });
           },
-          fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+          fieldViewBuilder: (context, textEditingController, focusNode, onFieldSubmitted) {
+            // Sync the autocomplete controller with our specialty controller
+            if (_specialtyController.text.isNotEmpty && textEditingController.text.isEmpty) {
+              textEditingController.text = _specialtyController.text;
+            }
+            textEditingController.addListener(() {
+              if (textEditingController.text != _specialtyController.text) {
+                setState(() {
+                  _specialtyController.text = textEditingController.text;
+                });
+              }
+            });
             return TextField(
-              controller: controller,
+              controller: textEditingController,
               focusNode: focusNode,
+              enabled: true,
+              style: const TextStyle(fontSize: 14),
               decoration: InputDecoration(
                 hintText: 'Select or type specialty',
                 filled: true,
                 fillColor: AppColors.neutral50,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
                 enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AppColors.border)),
-                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AppColors.accent)),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AppColors.accent, width: 2)),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                 suffixIcon: const Icon(Icons.arrow_drop_down),
               ),

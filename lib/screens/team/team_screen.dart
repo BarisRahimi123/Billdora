@@ -35,7 +35,7 @@ class _TeamScreenState extends State<TeamScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // App Header with Hamburger Menu
-            const AppHeader(showSearch: true),
+            const AppHeader(showSearch: false),
 
             // Title
             Padding(
