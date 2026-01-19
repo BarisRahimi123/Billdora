@@ -1,10 +1,12 @@
-// Edge function for client portal access
-// Allows clients to view their invoices via token-based authentication
+// Client Portal Edge Function
+// Allows clients to view their invoices via direct token link (no access code required)
+// Sends "Invoice Viewed" notification on first access
 
 Deno.serve(async (req) => {
   const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'GET, OPTIONS',
   };
 
   if (req.method === 'OPTIONS') {
@@ -55,6 +57,9 @@ Deno.serve(async (req) => {
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    // Track if this is first access
+    const isFirstAccess = !portalToken.last_accessed_at;
 
     // Update last accessed
     await fetch(
@@ -145,6 +150,88 @@ Deno.serve(async (req) => {
       }
 
       const invoice = invoices[0];
+
+      // Track first view of this specific invoice
+      const isFirstInvoiceView = !invoice.viewed_at;
+      
+      // Update invoice viewed_at if first view
+      if (isFirstInvoiceView) {
+        await fetch(
+          `${supabaseUrl}/rest/v1/invoices?id=eq.${invoiceId}`,
+          {
+            method: 'PATCH',
+            headers: {
+              'apikey': supabaseKey,
+              'Authorization': `Bearer ${supabaseKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ viewed_at: new Date().toISOString() }),
+          }
+        );
+
+        const clientName = client?.primary_contact_name || client?.name || 'Client';
+
+        // Create in-app notification
+        await fetch(`${supabaseUrl}/rest/v1/notifications`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': supabaseKey,
+            'Authorization': `Bearer ${supabaseKey}`,
+          },
+          body: JSON.stringify({
+            company_id: portalToken.company_id,
+            type: 'invoice_viewed',
+            title: '👀 Invoice Viewed',
+            message: `${clientName} opened invoice #${invoice.invoice_number} ($${invoice.total?.toFixed(2) || '0.00'})`,
+            reference_id: invoiceId,
+            reference_type: 'invoice',
+            is_read: false
+          })
+        });
+
+        // Send email notification to invoice owner
+        try {
+          const ownerRes = await fetch(
+            `${supabaseUrl}/rest/v1/profiles?user_id=eq.${invoice.created_by}&select=email,full_name`,
+            {
+              headers: {
+                'apikey': supabaseKey,
+                'Authorization': `Bearer ${supabaseKey}`,
+              },
+            }
+          );
+          const owners = await ownerRes.json();
+          const owner = owners[0];
+
+          if (owner?.email) {
+            await fetch(`${supabaseUrl}/functions/v1/send-email`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${supabaseKey}`
+              },
+              body: JSON.stringify({
+                to: owner.email,
+                subject: `Invoice #${invoice.invoice_number} Viewed by ${clientName}`,
+                type: 'invoice_viewed',
+                data: {
+                  invoiceNumber: invoice.invoice_number,
+                  invoiceTotal: invoice.total?.toFixed(2) || '0.00',
+                  clientName: clientName,
+                  viewedAt: new Date().toLocaleString('en-US', { 
+                    year: 'numeric', month: 'long', day: 'numeric',
+                    hour: 'numeric', minute: '2-digit', hour12: true 
+                  }),
+                  ownerName: owner.full_name || 'there'
+                }
+              })
+            });
+          }
+        } catch (emailErr) {
+          console.error('Failed to send invoice view notification email:', emailErr);
+        }
+      }
 
       // Get line items
       const lineItemsResponse = await fetch(

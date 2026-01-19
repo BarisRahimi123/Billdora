@@ -1,3 +1,6 @@
+// Proposal Response Edge Function
+// Allows clients to view and respond to proposals via direct token link (no access code required)
+
 Deno.serve(async (req) => {
   const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
@@ -15,10 +18,9 @@ Deno.serve(async (req) => {
   try {
     const url = new URL(req.url);
     
-    // GET: Verify token and get proposal data
+    // GET: Verify token and get proposal data (NO ACCESS CODE REQUIRED)
     if (req.method === 'GET') {
       const token = url.searchParams.get('token');
-      const accessCode = url.searchParams.get('code');
 
       if (!token) {
         return new Response(JSON.stringify({ error: 'Token required' }), {
@@ -56,66 +58,158 @@ Deno.serve(async (req) => {
         });
       }
 
-      // If code provided, verify it
-      if (accessCode) {
-        if (accessCode !== tokenRecord.access_code) {
-          return new Response(JSON.stringify({ error: 'Invalid access code' }), {
-            status: 401,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          });
-        }
+      // Track first view - send notification if not viewed before
+      const isFirstView = !tokenRecord.viewed_at;
+      
+      // Update viewed_at on token
+      await fetch(`${SUPABASE_URL}/rest/v1/proposal_tokens?id=eq.${tokenRecord.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_SERVICE_ROLE_KEY!,
+          'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
+        },
+        body: JSON.stringify({ viewed_at: new Date().toISOString() })
+      });
 
-        // Update viewed_at on token
-        await fetch(`${SUPABASE_URL}/rest/v1/proposal_tokens?id=eq.${tokenRecord.id}`, {
-          method: 'PATCH',
+      // Increment view_count and update last_viewed_at on quote
+      await fetch(`${SUPABASE_URL}/rest/v1/rpc/increment_quote_view_count`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_SERVICE_ROLE_KEY!,
+          'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
+        },
+        body: JSON.stringify({ quote_id_param: tokenRecord.quote_id })
+      });
+
+      // Get quote data
+      const quoteRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/quotes?id=eq.${tokenRecord.quote_id}&select=*`,
+        {
           headers: {
-            'Content-Type': 'application/json',
             'apikey': SUPABASE_SERVICE_ROLE_KEY!,
             'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
-          },
-          body: JSON.stringify({ viewed_at: new Date().toISOString() })
-        });
+          }
+        }
+      );
+      const quotes = await quoteRes.json();
+      const quote = quotes[0];
 
-        // Increment view_count and update last_viewed_at on quote
-        await fetch(`${SUPABASE_URL}/rest/v1/rpc/increment_quote_view_count`, {
+      // Get line items
+      const itemsRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/quote_line_items?quote_id=eq.${tokenRecord.quote_id}&select=*`,
+        {
+          headers: {
+            'apikey': SUPABASE_SERVICE_ROLE_KEY!,
+            'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
+          }
+        }
+      );
+      const lineItems = await itemsRes.json();
+
+      // Get client or lead
+      let client = null;
+      if (quote?.client_id) {
+        const clientRes = await fetch(
+          `${SUPABASE_URL}/rest/v1/clients?id=eq.${quote.client_id}&select=*`,
+          {
+            headers: {
+              'apikey': SUPABASE_SERVICE_ROLE_KEY!,
+              'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
+            }
+          }
+        );
+        const clients = await clientRes.json();
+        client = clients[0];
+      } else if (quote?.lead_id) {
+        const leadRes = await fetch(
+          `${SUPABASE_URL}/rest/v1/leads?id=eq.${quote.lead_id}&select=*`,
+          {
+            headers: {
+              'apikey': SUPABASE_SERVICE_ROLE_KEY!,
+              'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
+            }
+          }
+        );
+        const leads = await leadRes.json();
+        const lead = leads[0];
+        if (lead) {
+          client = {
+            id: lead.id,
+            name: lead.company_name || lead.name,
+            primary_contact_name: lead.name,
+            primary_contact_email: lead.email,
+            email: lead.email,
+            phone: lead.phone,
+            address: lead.address,
+            city: lead.city,
+            state: lead.state,
+            zip: lead.zip
+          };
+        }
+      } else if (tokenRecord.client_email) {
+        client = {
+          id: null,
+          name: tokenRecord.client_email.split('@')[0],
+          primary_contact_name: null,
+          primary_contact_email: tokenRecord.client_email,
+          email: tokenRecord.client_email
+        };
+      }
+
+      // Get company settings
+      const companyRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/company_settings?company_id=eq.${tokenRecord.company_id}&select=*`,
+        {
+          headers: {
+            'apikey': SUPABASE_SERVICE_ROLE_KEY!,
+            'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
+          }
+        }
+      );
+      const company = await companyRes.json();
+
+      // Check existing response
+      const responseRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/proposal_responses?token_id=eq.${tokenRecord.id}&select=*&order=responded_at.desc&limit=1`,
+        {
+          headers: {
+            'apikey': SUPABASE_SERVICE_ROLE_KEY!,
+            'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
+          }
+        }
+      );
+      const existingResponse = await responseRes.json();
+
+      // Send "Proposal Viewed" notification on first view
+      if (isFirstView) {
+        const clientName = client?.primary_contact_name || client?.name || 'Client';
+        
+        // Create in-app notification
+        await fetch(`${SUPABASE_URL}/rest/v1/notifications`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'apikey': SUPABASE_SERVICE_ROLE_KEY!,
             'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
           },
-          body: JSON.stringify({ quote_id_param: tokenRecord.quote_id })
+          body: JSON.stringify({
+            company_id: tokenRecord.company_id,
+            type: 'proposal_viewed',
+            title: '👀 Proposal Viewed',
+            message: `${clientName} opened proposal #${quote?.quote_number || ''} - ${quote?.title || 'Untitled'}`,
+            reference_id: tokenRecord.quote_id,
+            reference_type: 'quote',
+            is_read: false
+          })
         });
 
-        // Get quote data
-        const quoteRes = await fetch(
-          `${SUPABASE_URL}/rest/v1/quotes?id=eq.${tokenRecord.quote_id}&select=*`,
-          {
-            headers: {
-              'apikey': SUPABASE_SERVICE_ROLE_KEY!,
-              'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
-            }
-          }
-        );
-        const quotes = await quoteRes.json();
-
-        // Get line items
-        const itemsRes = await fetch(
-          `${SUPABASE_URL}/rest/v1/quote_line_items?quote_id=eq.${tokenRecord.quote_id}&select=*`,
-          {
-            headers: {
-              'apikey': SUPABASE_SERVICE_ROLE_KEY!,
-              'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
-            }
-          }
-        );
-        const lineItems = await itemsRes.json();
-
-        // Get client or lead
-        let client = null;
-        if (quotes[0]?.client_id) {
-          const clientRes = await fetch(
-            `${SUPABASE_URL}/rest/v1/clients?id=eq.${quotes[0].client_id}&select=*`,
+        // Send email notification to proposal owner
+        try {
+          // Get quote owner's email
+          const ownerRes = await fetch(
+            `${SUPABASE_URL}/rest/v1/profiles?user_id=eq.${quote?.created_by}&select=email,full_name`,
             {
               headers: {
                 'apikey': SUPABASE_SERVICE_ROLE_KEY!,
@@ -123,93 +217,52 @@ Deno.serve(async (req) => {
               }
             }
           );
-          const clients = await clientRes.json();
-          client = clients[0];
-        } else if (quotes[0]?.lead_id) {
-          // Fetch lead data and map to client-like structure
-          const leadRes = await fetch(
-            `${SUPABASE_URL}/rest/v1/leads?id=eq.${quotes[0].lead_id}&select=*`,
-            {
+          const owners = await ownerRes.json();
+          const owner = owners[0];
+
+          if (owner?.email) {
+            await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
+              method: 'POST',
               headers: {
-                'apikey': SUPABASE_SERVICE_ROLE_KEY!,
+                'Content-Type': 'application/json',
                 'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
-              }
-            }
-          );
-          const leads = await leadRes.json();
-          const lead = leads[0];
-          if (lead) {
-            client = {
-              id: lead.id,
-              name: lead.company_name || lead.name,
-              primary_contact_name: lead.name,
-              primary_contact_email: lead.email,
-              email: lead.email,
-              phone: lead.phone,
-              address: lead.address,
-              city: lead.city,
-              state: lead.state,
-              zip: lead.zip
-            };
+              },
+              body: JSON.stringify({
+                to: owner.email,
+                subject: `Proposal #${quote?.quote_number} Viewed by ${clientName}`,
+                type: 'proposal_viewed',
+                data: {
+                  proposalNumber: quote?.quote_number,
+                  proposalTitle: quote?.title,
+                  clientName: clientName,
+                  viewedAt: new Date().toLocaleString('en-US', { 
+                    year: 'numeric', month: 'long', day: 'numeric',
+                    hour: 'numeric', minute: '2-digit', hour12: true 
+                  }),
+                  ownerName: owner.full_name || 'there'
+                }
+              })
+            });
           }
-        } else if (tokenRecord.client_email) {
-          // Fallback: use email from token if no client/lead linked
-          client = {
-            id: null,
-            name: tokenRecord.client_email.split('@')[0],
-            primary_contact_name: null,
-            primary_contact_email: tokenRecord.client_email,
-            email: tokenRecord.client_email
-          };
+        } catch (emailErr) {
+          console.error('Failed to send view notification email:', emailErr);
         }
-
-        // Get company settings
-        const companyRes = await fetch(
-          `${SUPABASE_URL}/rest/v1/company_settings?company_id=eq.${tokenRecord.company_id}&select=*`,
-          {
-            headers: {
-              'apikey': SUPABASE_SERVICE_ROLE_KEY!,
-              'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
-            }
-          }
-        );
-        const company = await companyRes.json();
-
-        // Check existing response
-        const responseRes = await fetch(
-          `${SUPABASE_URL}/rest/v1/proposal_responses?token_id=eq.${tokenRecord.id}&select=*&order=responded_at.desc&limit=1`,
-          {
-            headers: {
-              'apikey': SUPABASE_SERVICE_ROLE_KEY!,
-              'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
-            }
-          }
-        );
-        const existingResponse = await responseRes.json();
-
-        return new Response(JSON.stringify({
-          verified: true,
-          quote: quotes[0],
-          lineItems,
-          client: client,
-          company: company[0],
-          tokenId: tokenRecord.id,
-          existingResponse: existingResponse[0] || null
-        }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
       }
 
-      // No code - just verify token exists
-      return new Response(JSON.stringify({ 
-        valid: true,
-        requiresCode: true 
+      return new Response(JSON.stringify({
+        verified: true,
+        quote: quote,
+        lineItems,
+        client: client,
+        company: company[0],
+        tokenId: tokenRecord.id,
+        existingResponse: existingResponse[0] || null
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
-    // POST: Submit response
+    // POST: Submit response (accept/decline)
     if (req.method === 'POST') {
       const { tokenId, quoteId, companyId, status, responseType, signatureData, signerName, signerTitle, comments } = await req.json();
 
@@ -316,13 +369,12 @@ Deno.serve(async (req) => {
         const companies = await companyRes.json();
         const company = companies[0];
 
-        // Get the proposal token and access code for view URL
-        const tokenRes = await fetch(`${SUPABASE_URL}/rest/v1/proposal_tokens?id=eq.${tokenId}&select=token,access_code`, {
+        // Get the proposal token for view URL (no access code needed anymore)
+        const tokenRes = await fetch(`${SUPABASE_URL}/rest/v1/proposal_tokens?id=eq.${tokenId}&select=token`, {
           headers: { 'apikey': SUPABASE_SERVICE_ROLE_KEY!, 'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` }
         });
         const tokens = await tokenRes.json();
         const proposalToken = tokens[0]?.token;
-        const accessCode = tokens[0]?.access_code;
 
         // Send confirmation email to client
         if (client?.email) {
@@ -344,8 +396,7 @@ Deno.serve(async (req) => {
                   companyName: company?.company_name,
                   signerName: signerName,
                   signedDate: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
-                  viewUrl: proposalToken ? `https://billdora.com/proposal/${proposalToken}` : null,
-                  accessCode: accessCode
+                  viewUrl: proposalToken ? `https://billdora.com/proposal/${proposalToken}` : null
                 }
               })
             });
