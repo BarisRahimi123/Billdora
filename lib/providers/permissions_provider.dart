@@ -139,15 +139,18 @@ class PermissionsProvider extends ChangeNotifier {
   bool get isSalesRep => _roleName == 'sales_rep';
   bool get isConsultant => _roleName == 'consultant';
 
+  // Shortcut permission getters
+  bool get canViewClientValues => _permissions.canViewClientValues;
+
   /// Load user profile and permissions for a company
-  Future<void> loadPermissions(String clerkUserId, String companyId) async {
+  Future<void> loadPermissions(String supabaseUserId, String companyId) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      // Fetch user profile with role
-      final profileData = await _supabaseService.getProfileByClerkId(clerkUserId);
+      // Fetch user profile with role (uses Supabase Auth user ID)
+      final profileData = await _supabaseService.getProfileBySupabaseUserId(supabaseUserId);
       
       if (profileData == null) {
         _errorMessage = 'Profile not found';

@@ -14,6 +14,8 @@ class AuthProvider extends ChangeNotifier {
   Map<String, dynamic>? _profile;
 
   String? get companyId => _companyId;
+  String? get currentCompanyId => _companyId;  // Alias for compatibility
+  String? get currentCompanyName => _profile?['company_name'] ?? _profile?['company']?['name'];  // Company name from profile
   Map<String, dynamic>? get profile => _profile;
   bool _isAuthenticated = false;
   Map<String, dynamic>? _user;
@@ -22,6 +24,7 @@ class AuthProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   bool get isAuthenticated => _isAuthenticated;
   Map<String, dynamic>? get user => _user;
+  Map<String, dynamic>? get currentUser => _user;  // Alias for compatibility
   String? get errorMessage => _errorMessage;
   
   String get userId => _user?['id'] ?? '';
@@ -47,20 +50,26 @@ class AuthProvider extends ChangeNotifier {
       final event = authState.event;
       final session = authState.session;
 
+      debugPrint('AuthProvider: Auth state changed - event=$event');
+
       switch (event) {
         case AuthChangeEvent.signedIn:
         case AuthChangeEvent.tokenRefreshed:
           if (session?.user != null) {
+            debugPrint('AuthProvider: User signed in - id=${session!.user.id}, email=${session.user.email}');
             _isAuthenticated = true;
             _user = _authService.getCurrentUserMap();
             // Load profile on auth state change
-            _loadUserProfile(session!.user.id);
+            _loadUserProfile(session.user.id);
             notifyListeners();
           }
           break;
         case AuthChangeEvent.signedOut:
+          debugPrint('AuthProvider: User signed out');
           _isAuthenticated = false;
           _user = null;
+          _profile = null;
+          _companyId = null;
           notifyListeners();
           break;
         case AuthChangeEvent.userUpdated:
@@ -74,12 +83,22 @@ class AuthProvider extends ChangeNotifier {
   }
 
   void _checkAuthStatus() {
+    debugPrint('AuthProvider._checkAuthStatus: Starting...');
     _isLoading = true;
     notifyListeners();
 
     _isAuthenticated = _authService.isAuthenticated();
+    debugPrint('AuthProvider._checkAuthStatus: isAuthenticated=$_isAuthenticated');
+    
     if (_isAuthenticated) {
       _user = _authService.getCurrentUserMap();
+      debugPrint('AuthProvider._checkAuthStatus: user=$_user');
+      // Also load profile on initial check
+      final userId = _user?['id'];
+      if (userId != null) {
+        debugPrint('AuthProvider._checkAuthStatus: Loading profile for userId=$userId');
+        _loadUserProfile(userId);
+      }
     }
 
     _isLoading = false;
@@ -166,15 +185,34 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  /// Load existing profile after sign in
+  /// Load existing profile after sign in (Supabase Auth)
   Future<void> _loadUserProfile(String authUserId) async {
+    debugPrint('AuthProvider._loadUserProfile: Looking for profile with authUserId=$authUserId');
     try {
-      _profile = await _supabaseService.getProfileByAuthId(authUserId);
+      // For Supabase Auth, the user ID is stored in clerk_id column (legacy naming)
+      // Try by clerk_id first (most common case)
+      _profile = await _supabaseService.getProfileBySupabaseUserId(authUserId);
+      
+      // If not found, try by profile id
+      if (_profile == null) {
+        debugPrint('AuthProvider._loadUserProfile: Not found by clerk_id, trying profile id');
+        _profile = await _supabaseService.getProfileByAuthId(authUserId);
+      }
+      
+      // If still not found, try by email
+      if (_profile == null && _user?['email'] != null) {
+        debugPrint('AuthProvider._loadUserProfile: Not found by id, trying email');
+        _profile = await _supabaseService.getProfileByEmail(_user!['email']);
+      }
+      
       if (_profile != null) {
         _companyId = _profile!['company_id'];
+        debugPrint('AuthProvider._loadUserProfile: Found profile! company_id=$_companyId');
+      } else {
+        debugPrint('AuthProvider._loadUserProfile: No profile found - will need to create one');
       }
     } catch (e) {
-      debugPrint('Error loading user profile: $e');
+      debugPrint('AuthProvider._loadUserProfile: Error - $e');
     }
   }
 

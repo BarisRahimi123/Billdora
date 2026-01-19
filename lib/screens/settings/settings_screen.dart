@@ -20,6 +20,35 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
 
   // Consultant Specialties - fetched from provider
 
+  // Get profile from AuthProvider - using a method instead of getter to avoid context issues
+  Map<String, dynamic> _getProfile() {
+    try {
+      final authProvider = context.read<AuthProvider>();
+      return authProvider.profile ?? _defaultProfile(authProvider);
+    } catch (e) {
+      return _defaultProfile(null);
+    }
+  }
+
+  Map<String, dynamic> _defaultProfile(AuthProvider? authProvider) {
+    return {
+      'fullName': '',
+      'phone': '',
+      'email': authProvider?.currentUser?['email'] ?? '',
+      'dateOfBirth': null,
+      'streetAddress': '',
+      'city': '',
+      'state': '',
+      'zipCode': '',
+      'emergencyContactName': '',
+      'emergencyPhone': '',
+      'emergencyRelationship': '',
+    };
+  }
+
+  // Alias for compatibility with existing code
+  Map<String, dynamic> get _profile => _getProfile();
+
   @override
   void initState() {
     super.initState();
@@ -30,10 +59,16 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
   }
 
   Future<void> _loadSettings() async {
-    final authProvider = context.read<AuthProvider>();
-    final companyId = authProvider.currentCompanyId;
-    if (companyId != null) {
-      await context.read<SettingsProvider>().loadAll(companyId);
+    try {
+      final authProvider = context.read<AuthProvider>();
+      final companyId = authProvider.currentCompanyId;
+      if (companyId != null) {
+        await context.read<SettingsProvider>().loadAll(companyId);
+      } else {
+        debugPrint('Settings: No company ID available');
+      }
+    } catch (e) {
+      debugPrint('Settings: Error loading settings - $e');
     }
   }
 

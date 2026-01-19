@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 
 import '../../main.dart';
+import '../../providers/auth_provider.dart';
+import '../../services/supabase_service.dart';
 import 'sales_screen.dart' show consultantsList;
 
 class CreateProposalScreen extends StatefulWidget {
@@ -197,6 +200,9 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
 
   // Show services selection modal
   void _showServicesModal() {
+    // Get list of already added service names to prevent duplicates
+    final alreadyAddedServices = _lineItems.map((item) => item.description).toSet();
+    
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -206,16 +212,22 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
       ),
       builder: (context) => _ServicesSelectionModal(
         services: _services,
+        alreadyAddedServices: alreadyAddedServices,
         onServicesSelected: (selectedServices) {
           setState(() {
             for (var service in selectedServices) {
-              _lineItems.add(ProposalLineItem(
-                description: service['name'],
-                unitPrice: service['rate'],
-                unit: service['unit'] == 'hour' ? 'h' : service['unit'],
-                quantity: 1,
-                days: 1,
-              ));
+              // Double-check to prevent duplicates
+              final serviceName = service['name'] as String;
+              if (!alreadyAddedServices.contains(serviceName)) {
+                _lineItems.add(ProposalLineItem(
+                  description: serviceName,
+                  unitPrice: (service['rate'] as num).toDouble(),
+                  unit: service['unit'] == 'hour' ? 'h' : service['unit'] as String,
+                  quantity: 1,
+                  taxable: true,
+                  days: 1,
+                ));
+              }
             }
           });
         },
@@ -229,6 +241,7 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
     final rateController = TextEditingController();
     final qtyController = TextEditingController(text: '1');
     String selectedUnit = 'h';
+    bool isTaxable = true;
 
     showModalBottomSheet(
       context: context,
@@ -320,23 +333,59 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                 ),
               ),
+              const SizedBox(height: 16),
+              // Taxable Checkbox
+              Container(
+                decoration: BoxDecoration(
+                  color: AppColors.neutral50,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: CheckboxListTile(
+                  title: const Text('Taxable', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                  subtitle: Text('Include in tax calculation', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                  value: isTaxable,
+                  onChanged: (value) => setModalState(() => isTaxable = value ?? true),
+                  controlAffinity: ListTileControlAffinity.leading,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                ),
+              ),
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () {
-                    if (nameController.text.isNotEmpty && rateController.text.isNotEmpty) {
-                      setState(() {
-                        _lineItems.add(ProposalLineItem(
-                          description: nameController.text,
-                          unitPrice: double.tryParse(rateController.text) ?? 0,
-                          unit: selectedUnit,
-                          quantity: int.tryParse(qtyController.text) ?? 1,
-                          days: 1,
-                        ));
-                      });
-                      Navigator.pop(context);
+                    if (nameController.text.isEmpty || rateController.text.isEmpty) {
+                      return;
                     }
+                    
+                    // Check for duplicate items
+                    final itemName = nameController.text.trim();
+                    final isDuplicate = _lineItems.any(
+                      (item) => item.description.toLowerCase() == itemName.toLowerCase()
+                    );
+                    
+                    if (isDuplicate) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('"$itemName" is already in your proposal'),
+                          backgroundColor: AppColors.warning,
+                        ),
+                      );
+                      return;
+                    }
+                    
+                    setState(() {
+                      _lineItems.add(ProposalLineItem(
+                        description: itemName,
+                        unitPrice: double.tryParse(rateController.text) ?? 0,
+                        unit: selectedUnit,
+                        quantity: int.tryParse(qtyController.text) ?? 1,
+                        taxable: isTaxable,
+                        days: 1,
+                      ));
+                    });
+                    Navigator.pop(context);
                   },
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
@@ -351,8 +400,53 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
     );
   }
 
+  // Show unit picker modal
+  void _showUnitPicker(int itemIndex) {
+    final units = [
+      {'value': 'h', 'label': 'Hour'},
+      {'value': 'ea', 'label': 'Each'},
+      {'value': 'day', 'label': 'Day'},
+      {'value': 'flat', 'label': 'Flat'},
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.cardBackground,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Select Unit',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 16),
+            ...units.map((unit) => ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(unit['label'] as String),
+              trailing: _lineItems[itemIndex].unit == unit['value']
+                  ? const Icon(Icons.check_circle, color: AppColors.accent)
+                  : null,
+              onTap: () {
+                setState(() {
+                  _lineItems[itemIndex].unit = unit['value'] as String;
+                });
+                Navigator.pop(context);
+              },
+            )),
+          ],
+        ),
+      ),
+    );
+  }
+
   double get _subtotal => _lineItems.fold(0.0, (sum, item) => sum + item.amount);
-  double get _taxableAmount => _subtotal;
+  double get _taxableAmount => _lineItems.where((item) => item.taxable).fold(0.0, (sum, item) => sum + item.amount);
   double get _taxAmount => _taxableAmount * (_taxRate / 100);
   double get _total => _subtotal + _taxAmount;
 
@@ -906,38 +1000,74 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
                               child: const Icon(Icons.delete_outline, color: AppColors.error),
                             ),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              padding: const EdgeInsets.symmetric(vertical: 10),
                               decoration: BoxDecoration(
                                 border: Border(bottom: BorderSide(color: AppColors.border)),
                               ),
                               child: Row(
                                 children: [
-                                  Expanded(flex: 2, child: Text(item.description)),
-                                  SizedBox(width: 50, child: Text('\$${item.unitPrice.toInt()}', textAlign: TextAlign.center)),
-                                  SizedBox(
-                                    width: 40,
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
+                                  // Description
+                                  Expanded(
+                                    flex: 3,
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        Text(item.unit),
-                                        const Icon(Icons.unfold_more, size: 14),
+                                        Text(item.description, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                                        if (item.taxable)
+                                          Text('Taxable', style: TextStyle(fontSize: 10, color: AppColors.success)),
                                       ],
                                     ),
                                   ),
-                                  SizedBox(
-                                    width: 50,
+                                  const SizedBox(width: 6),
+                                  // Unit Price - Inline editable
+                                  _InlineNumberField(
+                                    value: item.unitPrice.toInt(),
+                                    prefix: '\$',
+                                    width: 65,
+                                    onChanged: (val) {
+                                      setState(() => item.unitPrice = val.toDouble());
+                                    },
+                                  ),
+                                  const SizedBox(width: 6),
+                                  // Unit - Tap to change
+                                  GestureDetector(
+                                    onTap: () => _showUnitPicker(index),
                                     child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                      width: 40,
+                                      height: 40,
                                       decoration: BoxDecoration(
                                         color: AppColors.neutral50,
-                                        borderRadius: BorderRadius.circular(6),
+                                        borderRadius: BorderRadius.circular(8),
                                         border: Border.all(color: AppColors.border),
                                       ),
-                                      child: Text(
-                                        '${item.quantity}',
-                                        textAlign: TextAlign.center,
-                                        style: const TextStyle(fontSize: 13),
+                                      child: Center(
+                                        child: Text(item.unit, style: const TextStyle(fontSize: 13)),
                                       ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  // Quantity - Inline editable
+                                  _InlineNumberField(
+                                    value: item.quantity,
+                                    width: 55,
+                                    onChanged: (val) {
+                                      setState(() => item.quantity = val);
+                                    },
+                                  ),
+                                  const SizedBox(width: 6),
+                                  // Remove Button
+                                  GestureDetector(
+                                    onTap: () {
+                                      setState(() => _lineItems.removeAt(index));
+                                    },
+                                    child: Container(
+                                      width: 36,
+                                      height: 36,
+                                      decoration: BoxDecoration(
+                                        color: AppColors.error.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: const Icon(Icons.close, size: 18, color: AppColors.error),
                                     ),
                                   ),
                                 ],
@@ -2746,8 +2876,8 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
     );
   }
 
-  void _saveAndWaitForCollaborators() {
-    // Save proposal to Pending tab and send invitations to collaborators
+  Future<void> _saveAndWaitForCollaborators() async {
+    // Actually save proposal to database with pending status
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -2820,44 +2950,113 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
             child: const Text('Cancel'),
           ),
           ElevatedButton.icon(
-            onPressed: () {
-              Navigator.pop(context); // Close dialog
+            onPressed: () async {
+              Navigator.pop(context); // Close confirmation dialog
               
-              // Show success and navigate back
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Row(
-                    children: [
-                      Icon(Icons.check_circle, color: Colors.white, size: 18),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text('Saved to Pending!', style: TextStyle(fontWeight: FontWeight.w600)),
-                            Text('Invitations sent to ${_collaborators.length} collaborator${_collaborators.length > 1 ? 's' : ''}', style: const TextStyle(fontSize: 12)),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  backgroundColor: AppColors.success,
-                  duration: const Duration(seconds: 3),
-                  behavior: SnackBarBehavior.floating,
-                  action: SnackBarAction(
-                    label: 'View',
-                    textColor: Colors.white,
-                    onPressed: () {
-                      // Navigate to Quotes > Pending tab
-                      context.go('/sales');
-                    },
-                  ),
-                ),
+              // Show loading
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (ctx) => const Center(child: CircularProgressIndicator()),
               );
               
-              // Navigate back to sales
-              context.go('/sales');
+              try {
+                final authProvider = context.read<AuthProvider>();
+                final supabaseService = SupabaseService();
+                
+                // Prepare line items for saving
+                final lineItemsData = _lineItems.map((item) => {
+                  'description': item.description,
+                  'unit_price': item.unitPrice,
+                  'unit': item.unit,
+                  'quantity': item.quantity,
+                  'taxable': item.taxable,
+                  'amount': item.amount,
+                }).toList();
+                
+                // Prepare collaborator data
+                final collaboratorsData = _collaborators.map((c) => {
+                  'name': c['name'],
+                  'email': c['email'],
+                  'company': c['company'],
+                  'role': c['role'],
+                  'status': 'invited',
+                  'deadline': c['deadline']?.toIso8601String(),
+                  'payment_mode': c['paymentMode'],
+                  'display_mode': c['displayMode'],
+                }).toList();
+                
+                // Save the quote/proposal to database with PENDING status
+                final quoteData = {
+                  'company_id': authProvider.companyId,
+                  'client_id': _selectedClientId,
+                  'lead_id': _selectedLeadId,
+                  'title': _projectNameController.text.isNotEmpty ? _projectNameController.text : 'Proposal for $_recipientName',
+                  'subtotal': _subtotal,
+                  'tax_rate': _taxRate,
+                  'tax_amount': _taxAmount,
+                  'total': _total,
+                  'status': 'pending_collaborators', // Special status for pending collaborator submissions
+                  'recipient_name': _recipientName,
+                  'recipient_email': _recipientEmail,
+                  'scope': _scopeController.text,
+                  'line_items': lineItemsData,
+                  'collaborators': collaboratorsData,
+                };
+                
+                await supabaseService.createQuote(quoteData);
+                
+                Navigator.pop(context); // Close loading
+                
+                // Show success and navigate back
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Row(
+                        children: [
+                          const Icon(Icons.check_circle, color: Colors.white, size: 18),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('Saved to Pending!', style: TextStyle(fontWeight: FontWeight.w600)),
+                                Text('Invitations sent to ${_collaborators.length} collaborator${_collaborators.length > 1 ? 's' : ''}', style: const TextStyle(fontSize: 12)),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      backgroundColor: AppColors.success,
+                      duration: const Duration(seconds: 3),
+                      behavior: SnackBarBehavior.floating,
+                      action: SnackBarAction(
+                        label: 'View',
+                        textColor: Colors.white,
+                        onPressed: () {
+                          // Navigate to Quotes tab (3) > Pending subtab (1)
+                          context.go('/sales?tab=3&subTab=1');
+                        },
+                      ),
+                    ),
+                  );
+                  
+                  // Navigate back to sales - Quotes tab (3) > Pending subtab (1)
+                  context.go('/sales?tab=3&subTab=1');
+                }
+              } catch (e) {
+                Navigator.pop(context); // Close loading
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Failed to save: ${e.toString()}'),
+                      backgroundColor: AppColors.error,
+                    ),
+                  );
+                }
+                debugPrint('Error saving proposal: $e');
+              }
             },
             icon: const Icon(Icons.send, size: 18),
             label: const Text('Save & Send Invites'),
@@ -3434,6 +3633,8 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
     String displayMode = 'transparent'; // 'transparent' or 'anonymous'
     DateTime deadline = DateTime.now().add(const Duration(days: 7));
     String? selectedConsultantId;
+    String? selectedSpecialty;
+    bool showCustomSpecialtyField = false;
     List<Map<String, String>> projectLinks = [];
 
     showModalBottomSheet(
@@ -3549,11 +3750,23 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
                               emailController.text = consultant['email'] ?? '';
                               companyController.text = consultant['company'] ?? '';
                               roleController.text = consultant['specialty'] ?? '';
+                              // Try to match existing specialty or show as custom
+                              final specialty = consultant['specialty'] ?? '';
+                              final predefinedSpecialties = ['Architect', 'Civil Engineer', 'Structural Engineer', 'MEP Engineer', 'Interior Designer', 'Landscape Architect', 'Project Manager'];
+                              if (predefinedSpecialties.contains(specialty)) {
+                                selectedSpecialty = specialty;
+                                showCustomSpecialtyField = false;
+                              } else if (specialty.isNotEmpty) {
+                                selectedSpecialty = null;
+                                showCustomSpecialtyField = true;
+                              }
                             } else {
                               nameController.clear();
                               emailController.clear();
                               companyController.clear();
                               roleController.clear();
+                              selectedSpecialty = null;
+                              showCustomSpecialtyField = false;
                             }
                           });
                         },
@@ -3587,7 +3800,75 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
                   children: [
                     Expanded(child: _buildModalTextField('Company', 'Company name', companyController)),
                     const SizedBox(width: 12),
-                    Expanded(child: _buildModalTextField('Role / Specialty', 'e.g., Engineer', roleController)),
+                    // Specialty Dropdown
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Role / Specialty', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            decoration: BoxDecoration(
+                              color: AppColors.neutral50,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: AppColors.border),
+                            ),
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<String>(
+                                value: selectedSpecialty,
+                                hint: const Text('Select specialty'),
+                                isExpanded: true,
+                                items: [
+                                  // Add default specialties if SettingsProvider is empty
+                                  const DropdownMenuItem(value: 'Architect', child: Text('Architect')),
+                                  const DropdownMenuItem(value: 'Civil Engineer', child: Text('Civil Engineer')),
+                                  const DropdownMenuItem(value: 'Structural Engineer', child: Text('Structural Engineer')),
+                                  const DropdownMenuItem(value: 'MEP Engineer', child: Text('MEP Engineer')),
+                                  const DropdownMenuItem(value: 'Interior Designer', child: Text('Interior Designer')),
+                                  const DropdownMenuItem(value: 'Landscape Architect', child: Text('Landscape Architect')),
+                                  const DropdownMenuItem(value: 'Project Manager', child: Text('Project Manager')),
+                                  const DropdownMenuItem(value: '__custom__', child: Text('+ Add Custom Specialty', style: TextStyle(color: AppColors.accent, fontWeight: FontWeight.w600))),
+                                ],
+                                onChanged: (value) {
+                                  setModalState(() {
+                                    if (value == '__custom__') {
+                                      showCustomSpecialtyField = true;
+                                      selectedSpecialty = null;
+                                    } else {
+                                      selectedSpecialty = value;
+                                      roleController.text = value ?? '';
+                                      showCustomSpecialtyField = false;
+                                    }
+                                  });
+                                },
+                              ),
+                            ),
+                          ),
+                          if (showCustomSpecialtyField) ...[
+                            const SizedBox(height: 8),
+                            TextField(
+                              controller: roleController,
+                              decoration: InputDecoration(
+                                hintText: 'Enter custom specialty',
+                                filled: true,
+                                fillColor: AppColors.neutral50,
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                                suffixIcon: IconButton(
+                                  icon: const Icon(Icons.close, size: 18),
+                                  onPressed: () {
+                                    setModalState(() {
+                                      showCustomSpecialtyField = false;
+                                      roleController.clear();
+                                    });
+                                  },
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 20),
@@ -3842,39 +4123,103 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
                   width: double.infinity,
                   height: 50,
                   child: ElevatedButton.icon(
-                    onPressed: () {
+                    onPressed: () async {
                       if (nameController.text.isEmpty || emailController.text.isEmpty) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('Please enter name and email'), backgroundColor: AppColors.error),
                         );
                         return;
                       }
-
-                      setState(() {
-                        _collaborators.add({
-                          'id': DateTime.now().millisecondsSinceEpoch.toString(),
-                          'name': nameController.text,
-                          'email': emailController.text,
-                          'company': companyController.text.isNotEmpty ? companyController.text : 'Independent',
-                          'role': roleController.text,
-                          'notes': notesController.text,
-                          'deadline': deadline,
-                          'showPricing': showPricing,
-                          'paymentMode': paymentMode,
-                          'displayMode': displayMode,
-                          'status': 'invited',
-                          'lineItems': null,
-                          'projectLinks': List<Map<String, String>>.from(projectLinks),
-                        });
-                      });
-
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Invitation sent to ${emailController.text}'),
-                          backgroundColor: AppColors.success,
-                        ),
+                      
+                      // Get final role value (from dropdown or custom field)
+                      final finalRole = selectedSpecialty ?? roleController.text;
+                      
+                      // Save references before async operations
+                      final navigator = Navigator.of(context);
+                      final scaffoldMessenger = ScaffoldMessenger.of(context);
+                      final emailText = emailController.text;
+                      final nameText = nameController.text;
+                      final companyText = companyController.text;
+                      final notesText = notesController.text;
+                      
+                      // Close the modal first
+                      navigator.pop();
+                      
+                      // Show loading on the main screen
+                      showDialog(
+                        context: this.context,
+                        barrierDismissible: false,
+                        builder: (ctx) => const Center(child: CircularProgressIndicator()),
                       );
+                      
+                      try {
+                        // Send the actual invitation email
+                        final authProvider = this.context.read<AuthProvider>();
+                        final supabaseService = SupabaseService();
+                        
+                        await supabaseService.sendCollaboratorInvitation(
+                          collaboratorEmail: emailText,
+                          collaboratorName: nameText,
+                          ownerName: authProvider.userName,
+                          companyName: authProvider.currentCompanyName ?? 'Company',
+                          projectName: _projectNameController.text.isNotEmpty 
+                              ? _projectNameController.text 
+                              : 'Project for $_recipientName',
+                          companyId: authProvider.companyId,
+                          deadline: deadline.toIso8601String(),
+                          notes: notesText,
+                          showPricing: showPricing,
+                        );
+                        
+                        // Also save the consultant to the database so it appears in the consultants list
+                        final consultantData = await supabaseService.createConsultant({
+                          'company_id': authProvider.companyId,
+                          'name': nameText,
+                          'company_name': companyText.isNotEmpty ? companyText : 'Independent',
+                          'email': emailText,
+                          'specialty': finalRole,
+                          'status': 'active',
+                        });
+                        debugPrint('Created consultant in database: ${consultantData['id']}');
+                        
+                        // Close loading dialog
+                        if (mounted) Navigator.of(this.context).pop();
+                        
+                        setState(() {
+                          _collaborators.add({
+                            'id': consultantData['id'] ?? DateTime.now().millisecondsSinceEpoch.toString(),
+                            'name': nameText,
+                            'email': emailText,
+                            'company': companyText.isNotEmpty ? companyText : 'Independent',
+                            'role': finalRole,
+                            'notes': notesText,
+                            'deadline': deadline,
+                            'showPricing': showPricing,
+                            'paymentMode': paymentMode,
+                            'displayMode': displayMode,
+                            'status': 'invited',
+                            'lineItems': null,
+                            'projectLinks': List<Map<String, String>>.from(projectLinks),
+                          });
+                        });
+
+                        scaffoldMessenger.showSnackBar(
+                          SnackBar(
+                            content: Text('Invitation sent to $emailText'),
+                            backgroundColor: AppColors.success,
+                          ),
+                        );
+                      } catch (e) {
+                        // Close loading dialog
+                        if (mounted) Navigator.of(this.context).pop();
+                        scaffoldMessenger.showSnackBar(
+                          SnackBar(
+                            content: Text('Failed to send invitation: ${e.toString()}'),
+                            backgroundColor: AppColors.error,
+                          ),
+                        );
+                        debugPrint('Error sending collaborator invitation: $e');
+                      }
                     },
                     icon: const Icon(Icons.send_outlined, size: 18),
                     label: const Text('Send Invitation'),
@@ -5316,38 +5661,113 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
     }
   }
 
-  void _executeSendMode(String mode, String email, bool sendCopy) {
-    String message;
-    
-    switch (mode) {
-      case 'merged':
-        message = 'Merged proposal sent to $email';
-        // Logic: Include all collaborator line items
-        break;
-      case 'without':
-        message = 'Proposal sent to $email (without pending collaborators)';
-        // Logic: Exclude pending collaborators
-        break;
-      case 'wait':
-        message = 'Proposal saved as draft. You\'ll be notified when all collaborators submit.';
-        // Logic: Save as draft, set up auto-send trigger
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message), backgroundColor: AppColors.warning, duration: const Duration(seconds: 4)),
-        );
-        // Don't navigate away - stay on proposal
-        return;
-      case 'independent':
-        message = 'Your proposal sent to $email. Collaborators have been notified to send their proposals.';
-        // Logic: Send your part, notify collaborators to send directly
-        break;
-      default:
-        message = 'Proposal sent to $email';
-    }
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: AppColors.success, duration: const Duration(seconds: 3)),
+  Future<void> _executeSendMode(String mode, String email, bool sendCopy) async {
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => const Center(child: CircularProgressIndicator()),
     );
-    context.go('/sales');
+    
+    try {
+      final authProvider = context.read<AuthProvider>();
+      final supabaseService = SupabaseService();
+      
+      // Handle wait mode separately - save as draft
+      if (mode == 'wait') {
+        Navigator.pop(context); // Close loading
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Proposal saved as draft. You\'ll be notified when all collaborators submit.'),
+            backgroundColor: AppColors.warning,
+            duration: Duration(seconds: 4),
+          ),
+        );
+        return;
+      }
+      
+      // Prepare line items for saving
+      final lineItemsData = _lineItems.map((item) => {
+        'description': item.description,
+        'unit_price': item.unitPrice,
+        'unit': item.unit,
+        'quantity': item.quantity,
+        'taxable': item.taxable,
+        'amount': item.amount,
+      }).toList();
+      
+      // Save the quote/proposal to database first
+      final quoteData = {
+        'company_id': authProvider.companyId,
+        'client_id': _selectedClientId,
+        'lead_id': _selectedLeadId,
+        'title': _projectNameController.text.isNotEmpty ? _projectNameController.text : 'Proposal for $_recipientName',
+        'subtotal': _subtotal,
+        'tax_rate': _taxRate,
+        'tax_amount': _taxAmount,
+        'total': _total,
+        'status': 'sent',
+        'recipient_name': _recipientName,
+        'recipient_email': email,
+        'scope': _scopeController.text,
+        'line_items': lineItemsData,
+        'sent_at': DateTime.now().toIso8601String(),
+      };
+      
+      final savedQuote = await supabaseService.createQuote(quoteData);
+      final quoteId = savedQuote['id'] as String;
+      
+      // Now send the email
+      await supabaseService.sendProposal(
+        quoteId: quoteId,
+        companyId: authProvider.companyId ?? '',
+        clientEmail: email,
+        clientName: _recipientName,
+        projectName: _projectNameController.text.isNotEmpty ? _projectNameController.text : 'Project',
+        companyName: authProvider.currentCompanyName ?? 'Company',
+        senderName: authProvider.userName,
+        portalUrl: 'https://billdora.com', // TODO: Use actual portal URL
+        letterContent: _emailBodyController.text.isNotEmpty 
+            ? _emailBodyController.text 
+            : 'Please review the attached proposal for your project. We\'re excited about the opportunity to work with you.',
+      );
+      
+      Navigator.pop(context); // Close loading
+      
+      String message;
+      switch (mode) {
+        case 'merged':
+          message = 'Merged proposal sent to $email';
+          break;
+        case 'without':
+          message = 'Proposal sent to $email (without pending collaborators)';
+          break;
+        case 'independent':
+          message = 'Your proposal sent to $email. Collaborators have been notified.';
+          break;
+        default:
+          message = 'Proposal sent to $email';
+      }
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message), backgroundColor: AppColors.success, duration: const Duration(seconds: 3)),
+        );
+        context.go('/sales');
+      }
+    } catch (e) {
+      Navigator.pop(context); // Close loading
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to send proposal: ${e.toString()}'),
+            backgroundColor: AppColors.error,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+      debugPrint('Error sending proposal: $e');
+    }
   }
 
   // Show Save as Template Modal
@@ -5609,6 +6029,113 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
   }
 }
 
+// Inline Number Field Widget - Easy tap and edit
+class _InlineNumberField extends StatefulWidget {
+  final int value;
+  final String? prefix;
+  final double width;
+  final Function(int) onChanged;
+
+  const _InlineNumberField({
+    required this.value,
+    required this.onChanged,
+    this.prefix,
+    this.width = 55,
+  });
+
+  @override
+  State<_InlineNumberField> createState() => _InlineNumberFieldState();
+}
+
+class _InlineNumberFieldState extends State<_InlineNumberField> {
+  late TextEditingController _controller;
+  late FocusNode _focusNode;
+  bool _isFocused = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: '${widget.value}');
+    _focusNode = FocusNode();
+    
+    _focusNode.addListener(() {
+      setState(() => _isFocused = _focusNode.hasFocus);
+      if (_focusNode.hasFocus) {
+        // Auto-select all text when focused
+        _controller.selection = TextSelection(
+          baseOffset: 0,
+          extentOffset: _controller.text.length,
+        );
+      } else {
+        // Save value when unfocused
+        final newValue = int.tryParse(_controller.text) ?? widget.value;
+        if (newValue != widget.value) {
+          widget.onChanged(newValue);
+        }
+      }
+    });
+  }
+
+  @override
+  void didUpdateWidget(_InlineNumberField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.value != widget.value && !_isFocused) {
+      _controller.text = '${widget.value}';
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: widget.width,
+      height: 40,
+      decoration: BoxDecoration(
+        // Pale yellow when focused to guide user action
+        color: _isFocused ? const Color(0xFFFFFBEB) : AppColors.neutral50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: _isFocused ? const Color(0xFFD97706) : AppColors.border,
+          width: _isFocused ? 2 : 1,
+        ),
+        // Subtle shadow when focused
+        boxShadow: _isFocused ? [
+          BoxShadow(
+            color: const Color(0xFFD97706).withOpacity(0.2),
+            blurRadius: 8,
+            spreadRadius: 1,
+          ),
+        ] : null,
+      ),
+      child: TextField(
+        controller: _controller,
+        focusNode: _focusNode,
+        keyboardType: TextInputType.number,
+        textAlign: TextAlign.center,
+        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+        decoration: InputDecoration(
+          isDense: true,
+          prefixText: widget.prefix,
+          prefixStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
+          border: InputBorder.none,
+        ),
+        onSubmitted: (value) {
+          final newValue = int.tryParse(value) ?? widget.value;
+          widget.onChanged(newValue);
+          _focusNode.unfocus();
+        },
+      ),
+    );
+  }
+}
+
 // Data Models
 class ProposalLineItem {
   String description;
@@ -5635,11 +6162,13 @@ class ProposalLineItem {
 // ============ SERVICES SELECTION MODAL ============
 class _ServicesSelectionModal extends StatefulWidget {
   final List<Map<String, dynamic>> services;
+  final Set<String> alreadyAddedServices;
   final Function(List<Map<String, dynamic>>) onServicesSelected;
 
   const _ServicesSelectionModal({
     required this.services,
     required this.onServicesSelected,
+    this.alreadyAddedServices = const {},
   });
 
   @override
@@ -5654,6 +6183,11 @@ class _ServicesSelectionModalState extends State<_ServicesSelectionModal> {
   List<String> get _categories {
     final cats = widget.services.map((s) => s['category'] as String).toSet().toList();
     return ['All', ...cats];
+  }
+
+  // Check if a service is already added
+  bool _isAlreadyAdded(Map<String, dynamic> service) {
+    return widget.alreadyAddedServices.contains(service['name'] as String);
   }
 
   List<Map<String, dynamic>> get _filteredServices {
@@ -5788,48 +6322,70 @@ class _ServicesSelectionModalState extends State<_ServicesSelectionModal> {
                       itemBuilder: (context, index) {
                         final service = _filteredServices[index];
                         final isSelected = _selectedServiceIds.contains(service['id']);
+                        final isAlreadyAdded = _isAlreadyAdded(service);
 
                         return Container(
                           margin: const EdgeInsets.only(bottom: 8),
                           decoration: BoxDecoration(
-                            color: isSelected ? AppColors.accent.withOpacity(0.05) : AppColors.cardBackground,
+                            color: isAlreadyAdded 
+                                ? AppColors.neutral100.withOpacity(0.5)
+                                : isSelected 
+                                    ? AppColors.accent.withOpacity(0.05) 
+                                    : AppColors.cardBackground,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                              color: isSelected ? AppColors.accent : AppColors.border,
+                              color: isAlreadyAdded 
+                                  ? AppColors.textTertiary 
+                                  : isSelected 
+                                      ? AppColors.accent 
+                                      : AppColors.border,
                               width: isSelected ? 2 : 1,
                             ),
                           ),
                           child: InkWell(
                             borderRadius: BorderRadius.circular(12),
-                            onTap: () {
-                              setState(() {
-                                if (isSelected) {
-                                  _selectedServiceIds.remove(service['id']);
-                                } else {
-                                  _selectedServiceIds.add(service['id']);
-                                }
-                              });
-                            },
+                            onTap: isAlreadyAdded 
+                                ? null  // Disable tap for already added services
+                                : () {
+                                    setState(() {
+                                      if (isSelected) {
+                                        _selectedServiceIds.remove(service['id']);
+                                      } else {
+                                        _selectedServiceIds.add(service['id']);
+                                      }
+                                    });
+                                  },
                             child: Padding(
                               padding: const EdgeInsets.all(16),
                               child: Row(
                                 children: [
-                                  // Checkbox
-                                  Container(
-                                    width: 24,
-                                    height: 24,
-                                    decoration: BoxDecoration(
-                                      color: isSelected ? AppColors.accent : Colors.transparent,
-                                      borderRadius: BorderRadius.circular(6),
-                                      border: Border.all(
-                                        color: isSelected ? AppColors.accent : AppColors.border,
-                                        width: 2,
+                                  // Checkbox or "Added" indicator
+                                  if (isAlreadyAdded)
+                                    Container(
+                                      width: 24,
+                                      height: 24,
+                                      decoration: BoxDecoration(
+                                        color: AppColors.success.withOpacity(0.2),
+                                        borderRadius: BorderRadius.circular(6),
                                       ),
+                                      child: const Icon(Icons.check, color: AppColors.success, size: 16),
+                                    )
+                                  else
+                                    Container(
+                                      width: 24,
+                                      height: 24,
+                                      decoration: BoxDecoration(
+                                        color: isSelected ? AppColors.accent : Colors.transparent,
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(
+                                          color: isSelected ? AppColors.accent : AppColors.border,
+                                          width: 2,
+                                        ),
+                                      ),
+                                      child: isSelected
+                                          ? const Icon(Icons.check, color: Colors.white, size: 16)
+                                          : null,
                                     ),
-                                    child: isSelected
-                                        ? const Icon(Icons.check, color: Colors.white, size: 16)
-                                        : null,
-                                  ),
                                   const SizedBox(width: 16),
 
                                   // Service Info
@@ -5837,9 +6393,31 @@ class _ServicesSelectionModalState extends State<_ServicesSelectionModal> {
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        Text(
-                                          service['name'],
-                                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                                        Row(
+                                          children: [
+                                            Expanded(
+                                              child: Text(
+                                                service['name'] as String,
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.w600, 
+                                                  fontSize: 15,
+                                                  color: isAlreadyAdded ? AppColors.textTertiary : null,
+                                                ),
+                                              ),
+                                            ),
+                                            if (isAlreadyAdded)
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                                decoration: BoxDecoration(
+                                                  color: AppColors.success.withOpacity(0.1),
+                                                  borderRadius: BorderRadius.circular(4),
+                                                ),
+                                                child: const Text(
+                                                  'ADDED',
+                                                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.success),
+                                                ),
+                                              ),
+                                          ],
                                         ),
                                         const SizedBox(height: 4),
                                         Text(

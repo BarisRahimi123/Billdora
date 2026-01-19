@@ -33,7 +33,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
     if (auth.companyId != null) {
       context.read<ProjectsProvider>().loadProjects(auth.companyId!);
       // Also load clients for the create modal
-      context.read<SalesProvider>().loadClients(auth.companyId!);
+      context.read<SalesProvider>().loadClients();
     }
   }
 

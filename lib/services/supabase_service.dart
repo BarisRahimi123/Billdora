@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SupabaseService {
@@ -276,28 +277,28 @@ class SupabaseService {
   }
 
   // ============ NOTIFICATIONS ============
-  Future<List<Map<String, dynamic>>> getNotifications(String userId) async {
-    final response = await _client
-        .from('notifications')
-        .select()
-        .eq('user_id', userId)
-        .order('created_at', ascending: false)
-        .limit(50);
-    return List<Map<String, dynamic>>.from(response);
-  }
+  // Note: getNotifications is defined below with more parameters
 
   Future<void> markNotificationRead(String id) async {
     await _client.from('notifications').update({'read': true}).eq('id', id);
   }
 
   // ============ PROFILES ============
-  Future<Map<String, dynamic>?> getProfileByClerkId(String clerkUserId) async {
+  /// Get profile by Supabase Auth user ID (stored in clerk_id column for legacy reasons)
+  Future<Map<String, dynamic>?> getProfileBySupabaseUserId(String supabaseUserId) async {
+    debugPrint('SupabaseService.getProfileBySupabaseUserId: Looking for clerk_id=$supabaseUserId');
     final response = await _client
         .from('profiles')
         .select('*, roles(*)')
-        .eq('clerk_user_id', clerkUserId)
+        .eq('clerk_id', supabaseUserId)
         .maybeSingle();
+    debugPrint('SupabaseService.getProfileBySupabaseUserId: Found=${response != null}');
     return response;
+  }
+  
+  /// Legacy method name for backward compatibility
+  Future<Map<String, dynamic>?> getProfileByClerkId(String clerkUserId) async {
+    return getProfileBySupabaseUserId(clerkUserId);
   }
 
   Future<Map<String, dynamic>?> getProfileByAuthId(String authUserId) async {
@@ -305,6 +306,15 @@ class SupabaseService {
         .from('profiles')
         .select('*, roles(*)')
         .eq('id', authUserId)
+        .maybeSingle();
+    return response;
+  }
+
+  Future<Map<String, dynamic>?> getProfileByEmail(String email) async {
+    final response = await _client
+        .from('profiles')
+        .select('*, roles(*)')
+        .eq('email', email)
         .maybeSingle();
     return response;
   }
@@ -343,20 +353,57 @@ class SupabaseService {
 
   // ============ LEADS ============
   Future<List<Map<String, dynamic>>> getLeads(String companyId) async {
-    final response = await _client
-        .from('leads')
-        .select('*, profiles!leads_assigned_to_fkey(first_name, last_name, avatar_url)')
-        .eq('company_id', companyId)
-        .order('created_at', ascending: false);
-    return List<Map<String, dynamic>>.from(response);
+    debugPrint('SupabaseService.getLeads: Fetching leads for companyId=$companyId');
+    try {
+      final response = await _client
+          .from('leads')
+          .select('*')
+          .eq('company_id', companyId)
+          .order('created_at', ascending: false);
+      final leads = List<Map<String, dynamic>>.from(response);
+      debugPrint('SupabaseService.getLeads: SUCCESS - Found ${leads.length} leads');
+      return leads;
+    } catch (e) {
+      debugPrint('SupabaseService.getLeads: ERROR - $e');
+      rethrow;
+    }
   }
 
   Future<Map<String, dynamic>> createLead(Map<String, dynamic> data) async {
+    debugPrint('SupabaseService.createLead: Input data=$data');
+    
+    // Clean up data to match Supabase schema
+    final cleanData = <String, dynamic>{
+      'company_id': data['company_id'],
+      'name': data['name'] ?? data['contact_name'],
+      'email': data['email'] ?? data['contact_email'],
+      'phone': data['phone'] ?? data['contact_phone'],
+      'company': data['company'] ?? data['company_name'],  // Column is 'company' not 'company_name'
+      'title': data['title'],
+      'address': data['address'],
+      'city': data['city'],
+      'state': data['state'],
+      'zip': data['zip'],
+      'source': data['source']?.toString().toLowerCase() ?? 'other',
+      'status': data['status'] ?? 'new',
+      'value': data['value'],
+      'notes': data['notes'],
+    };
+    // Remove null values
+    cleanData.removeWhere((key, value) => value == null || value == '');
+    
+    debugPrint('SupabaseService.createLead: Clean data=$cleanData');
+    
+    if (cleanData['company_id'] == null) {
+      throw Exception('company_id is required to create a lead');
+    }
+    
     final response = await _client
         .from('leads')
-        .insert(data)
+        .insert(cleanData)
         .select()
         .single();
+    debugPrint('SupabaseService.createLead: Response=$response');
     return response;
   }
 
@@ -370,12 +417,21 @@ class SupabaseService {
 
   // ============ QUOTES ============
   Future<List<Map<String, dynamic>>> getQuotes(String companyId) async {
-    final response = await _client
-        .from('quotes')
-        .select('*, leads(company_name, contact_name), clients(name)')
-        .eq('company_id', companyId)
-        .order('created_at', ascending: false);
-    return List<Map<String, dynamic>>.from(response);
+    debugPrint('SupabaseService.getQuotes: Fetching quotes for companyId=$companyId');
+    try {
+      final response = await _client
+          .from('quotes')
+          .select('*, leads(name, company, email), clients(name, company)')
+          .eq('company_id', companyId)
+          .order('created_at', ascending: false);
+      final quotes = List<Map<String, dynamic>>.from(response);
+      debugPrint('SupabaseService.getQuotes: SUCCESS - Found ${quotes.length} quotes');
+      return quotes;
+    } catch (e) {
+      debugPrint('SupabaseService.getQuotes: ERROR - $e');
+      // Return empty list on error instead of crashing all loads
+      return [];
+    }
   }
 
   Future<Map<String, dynamic>> getQuote(String id) async {
@@ -516,10 +572,10 @@ class SupabaseService {
     // Create client from lead
     final client = await _client.from('clients').insert({
       'company_id': lead['company_id'],
-      'name': lead['company_name'],
-      'email': lead['contact_email'],
-      'phone': lead['contact_phone'],
-      'contact_person': lead['contact_name'],
+      'name': lead['company'] ?? lead['company_name'],
+      'email': lead['email'] ?? lead['contact_email'],
+      'phone': lead['phone'] ?? lead['contact_phone'],
+      'contact_person': lead['name'] ?? lead['contact_name'],
     }).select().single();
 
     // Update lead status
@@ -553,6 +609,10 @@ class SupabaseService {
 
   Future<void> updateConsultant(String id, Map<String, dynamic> data) async {
     await _client.from('consultants').update(data).eq('id', id);
+  }
+
+  Future<void> deleteConsultant(String id) async {
+    await _client.from('consultants').delete().eq('id', id);
   }
 
   // ============ COLLABORATOR ACCOUNTS ============
@@ -1109,6 +1169,42 @@ class SupabaseService {
     if (response.status != 200) {
       throw Exception(response.data?['error'] ?? 'Failed to send invoice');
     }
+    return response.data;
+  }
+
+  /// Send collaborator invitation email
+  Future<Map<String, dynamic>> sendCollaboratorInvitation({
+    required String collaboratorEmail,
+    required String collaboratorName,
+    required String ownerName,
+    required String companyName,
+    required String projectName,
+    String? quoteId,
+    String? companyId,
+    String? deadline,
+    String? notes,
+    bool showPricing = false,
+    String? portalUrl,
+  }) async {
+    debugPrint('SupabaseService.sendCollaboratorInvitation: Sending to $collaboratorEmail');
+    final response = await _client.functions.invoke('send-collaborator-invite', body: {
+      'collaboratorEmail': collaboratorEmail,
+      'collaboratorName': collaboratorName,
+      'ownerName': ownerName,
+      'companyName': companyName,
+      'projectName': projectName,
+      'quoteId': quoteId,
+      'companyId': companyId,
+      'deadline': deadline,
+      'notes': notes,
+      'showPricing': showPricing,
+      'portalUrl': portalUrl ?? 'https://billdora.com',
+    });
+    if (response.status != 200) {
+      debugPrint('SupabaseService.sendCollaboratorInvitation: ERROR - ${response.data}');
+      throw Exception(response.data?['error'] ?? 'Failed to send invitation');
+    }
+    debugPrint('SupabaseService.sendCollaboratorInvitation: SUCCESS');
     return response.data;
   }
 }

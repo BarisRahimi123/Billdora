@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -18,7 +19,14 @@ List<Map<String, dynamic>> get consultantsList => _legacyConsultantsList;
 final List<Map<String, dynamic>> _legacyConsultantsList = [];
 
 class SalesScreen extends StatefulWidget {
-  const SalesScreen({super.key});
+  final int? initialTab;
+  final int? initialSubTab;
+  
+  const SalesScreen({
+    super.key, 
+    this.initialTab,
+    this.initialSubTab,
+  });
 
   @override
   State<SalesScreen> createState() => _SalesScreenState();
@@ -34,8 +42,17 @@ class _SalesScreenState extends State<SalesScreen> with SingleTickerProviderStat
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(
+      length: 4, 
+      vsync: this,
+      initialIndex: widget.initialTab ?? 0,
+    );
     _tabController.addListener(() => setState(() {}));
+    
+    // Load data immediately after the first frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadDataIfNeeded();
+    });
   }
 
   @override
@@ -46,11 +63,60 @@ class _SalesScreenState extends State<SalesScreen> with SingleTickerProviderStat
       _initializeProviders();
     }
   }
+  
+  /// Automatically load data if it's not already loaded
+  Future<void> _loadDataIfNeeded() async {
+    final salesProvider = context.read<SalesProvider>();
+    final authProvider = context.read<AuthProvider>();
+    
+    // If leads are empty and we're not currently loading, trigger a load
+    if (salesProvider.leads.isEmpty && !salesProvider.isLoading) {
+      final companyId = authProvider.companyId;
+      if (companyId != null) {
+        debugPrint('SalesScreen._loadDataIfNeeded: Triggering automatic data load...');
+        await salesProvider.initialize(companyId);
+      }
+    }
+  }
 
   Future<void> _initializeProviders() async {
+    // Try to get companyId from AuthProvider first, then PermissionsProvider
+    final authProvider = context.read<AuthProvider>();
     final permProvider = context.read<PermissionsProvider>();
-    if (permProvider.currentCompanyId != null) {
-      await context.read<SalesProvider>().initialize(permProvider.currentCompanyId!);
+    
+    debugPrint('SalesScreen._initializeProviders: Starting...');
+    debugPrint('SalesScreen._initializeProviders: authProvider.companyId=${authProvider.companyId}');
+    debugPrint('SalesScreen._initializeProviders: authProvider.isLoading=${authProvider.isLoading}');
+    debugPrint('SalesScreen._initializeProviders: permProvider.currentCompanyId=${permProvider.currentCompanyId}');
+    
+    // Wait for AuthProvider to finish loading if it's still loading
+    if (authProvider.isLoading) {
+      debugPrint('SalesScreen._initializeProviders: Waiting for AuthProvider to finish loading...');
+      await Future.delayed(const Duration(milliseconds: 500));
+      // Check again after waiting
+      if (authProvider.isLoading) {
+        await Future.delayed(const Duration(milliseconds: 500));
+      }
+    }
+    
+    final companyId = authProvider.companyId ?? permProvider.currentCompanyId;
+    debugPrint('SalesScreen._initializeProviders: using companyId=$companyId');
+    
+    if (companyId != null) {
+      await context.read<SalesProvider>().initialize(companyId);
+    } else {
+      debugPrint('SalesScreen._initializeProviders: WARNING - No company ID available! Will retry...');
+      // Retry with exponential backoff
+      for (int i = 0; i < 3; i++) {
+        await Future.delayed(Duration(milliseconds: 500 * (i + 1)));
+        final retryCompanyId = authProvider.companyId ?? permProvider.currentCompanyId;
+        if (retryCompanyId != null) {
+          debugPrint('SalesScreen._initializeProviders: Retry ${i + 1} successful with companyId=$retryCompanyId');
+          await context.read<SalesProvider>().initialize(retryCompanyId);
+          return;
+        }
+      }
+      debugPrint('SalesScreen._initializeProviders: ERROR - Still no company ID after retries!');
     }
   }
 
@@ -141,7 +207,7 @@ class _SalesScreenState extends State<SalesScreen> with SingleTickerProviderStat
                   _LeadsTab(key: _leadsTabKey),
                   _ClientsTab(key: _clientsTabKey),
                   _ConsultantsTab(key: _consultantsTabKey),
-                  const _QuotesTab(),
+                  _QuotesTab(initialSubTab: widget.initialSubTab),
                 ],
               ),
             ),
@@ -309,6 +375,16 @@ class _LeadsTabState extends State<_LeadsTab> {
 
   final List<String> _statuses = ['all', 'new', 'contacted', 'qualified', 'proposal', 'won', 'lost'];
 
+  // Helper to parse date from various formats
+  DateTime _parseDate(dynamic dateValue) {
+    if (dateValue == null) return DateTime.now();
+    if (dateValue is DateTime) return dateValue;
+    if (dateValue is String) {
+      return DateTime.tryParse(dateValue) ?? DateTime.now();
+    }
+    return DateTime.now();
+  }
+
   // Get leads from provider
   List<Map<String, dynamic>> get _leads => context.read<SalesProvider>().leads;
 
@@ -335,6 +411,9 @@ class _LeadsTabState extends State<_LeadsTab> {
 
   // Public method to show add lead modal (called from parent)
   void showAddLeadModal() {
+    // Get provider BEFORE showing modal to avoid context issues
+    final salesProvider = context.read<SalesProvider>();
+    
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -342,10 +421,12 @@ class _LeadsTabState extends State<_LeadsTab> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => _AddLeadModal(
+      builder: (_) => _AddLeadModal(
         onLeadAdded: (newLead) async {
-          // Use provider to create lead
-          await context.read<SalesProvider>().createLead(newLead);
+          // Use provider captured from parent context
+          debugPrint('Adding lead via provider...');
+          final success = await salesProvider.createLead(newLead);
+          debugPrint('Lead creation result: $success');
         },
       ),
     );
@@ -367,7 +448,6 @@ class _LeadsTabState extends State<_LeadsTab> {
             updatedLead['id'],
             updatedLead,
           );
-          });
         },
       ),
     );
@@ -405,8 +485,35 @@ class _LeadsTabState extends State<_LeadsTab> {
 
   @override
   Widget build(BuildContext context) {
+    final salesProvider = context.watch<SalesProvider>();
+    final authProvider = context.watch<AuthProvider>();
+    
     return Column(
       children: [
+        // Debug Info Banner (temporary - remove after debugging)
+        if (authProvider.companyId != null)
+          Container(
+            padding: const EdgeInsets.all(8),
+            margin: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.info.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AppColors.info.withOpacity(0.3)),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, size: 16, color: AppColors.info),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Company: ${authProvider.companyId?.substring(0, 8)}... | Leads: ${salesProvider.leads.length} | Loading: ${salesProvider.isLoading}',
+                    style: TextStyle(fontSize: 11, color: AppColors.info),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        
         // Status Filter Pills (minimal, secondary)
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
@@ -457,16 +564,38 @@ class _LeadsTabState extends State<_LeadsTab> {
 
         // Leads List (compact cards)
         Expanded(
-          child: _filteredLeads.isEmpty
-              ? const Center(child: Text('No leads found', style: TextStyle(color: AppColors.textSecondary)))
-              : ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  itemCount: _filteredLeads.length,
-                  itemBuilder: (context, index) {
-                    final lead = _filteredLeads[index];
-                    return _buildLeadCard(lead);
-                  },
-                ),
+          child: context.watch<SalesProvider>().isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : _filteredLeads.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.inbox_outlined, size: 48, color: AppColors.textTertiary),
+                          const SizedBox(height: 12),
+                          const Text('No leads found', style: TextStyle(color: AppColors.textSecondary)),
+                          const SizedBox(height: 24),
+                          ElevatedButton.icon(
+                            onPressed: () {
+                              final authProvider = context.read<AuthProvider>();
+                              if (authProvider.companyId != null) {
+                                context.read<SalesProvider>().loadLeads();
+                              }
+                            },
+                            icon: const Icon(Icons.refresh, size: 18),
+                            label: const Text('Reload'),
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      itemCount: _filteredLeads.length,
+                      itemBuilder: (context, index) {
+                        final lead = _filteredLeads[index];
+                        return _buildLeadCard(lead);
+                      },
+                    ),
         ),
       ],
     );
@@ -475,7 +604,8 @@ class _LeadsTabState extends State<_LeadsTab> {
   Widget _buildLeadCard(Map<String, dynamic> lead) {
     final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 0);
     final dateFormat = DateFormat('M/d/yy');
-    final proposalStatus = lead['proposalStatus'] as String;
+    // Handle both camelCase (app) and snake_case (Supabase) field names
+    final proposalStatus = (lead['proposalStatus'] ?? lead['proposal_status'] ?? 'none') as String;
     final canConvert = proposalStatus == 'approved';
     final hasProposal = proposalStatus != 'none';
     
@@ -498,14 +628,14 @@ class _LeadsTabState extends State<_LeadsTab> {
                 width: 38,
                 height: 38,
                 decoration: BoxDecoration(
-                  color: _getLeadColor(lead['name']).withOpacity(0.15),
+                  color: _getLeadColor(lead['name'] ?? '').withOpacity(0.15),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Center(
                   child: Text(
-                    lead['name'][0].toUpperCase(),
+                    ((lead['name'] ?? '') as String).isNotEmpty ? (lead['name'] as String)[0].toUpperCase() : '?',
                     style: TextStyle(
-                      color: _getLeadColor(lead['name']),
+                      color: _getLeadColor(lead['name'] ?? ''),
                       fontWeight: FontWeight.w600,
                       fontSize: 15,
                     ),
@@ -523,21 +653,21 @@ class _LeadsTabState extends State<_LeadsTab> {
                       children: [
                         Expanded(
                           child: Text(
-                            lead['name'],
+                            lead['name'] ?? 'Unknown',
                             style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         if (context.watch<PermissionsProvider>().permissions.canViewClientValues)
                           Text(
-                            currencyFormat.format(lead['value']),
+                            currencyFormat.format(lead['value'] ?? 0),
                             style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
                           ),
                       ],
                     ),
-                    if (lead['company'].isNotEmpty)
+                    if ((lead['company'] ?? lead['company_name'] ?? '').toString().isNotEmpty)
                       Text(
-                        lead['company'],
+                        (lead['company'] ?? lead['company_name'] ?? '').toString(),
                         style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                       ),
                   ],
@@ -569,9 +699,9 @@ class _LeadsTabState extends State<_LeadsTab> {
           // Compact Info Row
           Row(
             children: [
-              _buildMiniChip(lead['source']),
+              _buildMiniChip(lead['source'] ?? 'other'),
               const SizedBox(width: 6),
-              _buildStatusBadge(lead['status']),
+              _buildStatusBadge(lead['status'] ?? 'new'),
               const SizedBox(width: 6),
               if (hasProposal) ...[
                 _buildProposalBadge(proposalStatus),
@@ -580,7 +710,10 @@ class _LeadsTabState extends State<_LeadsTab> {
               const Spacer(),
               Icon(Icons.calendar_today_outlined, size: 11, color: AppColors.textTertiary),
               const SizedBox(width: 4),
-              Text(dateFormat.format(lead['created']), style: TextStyle(fontSize: 11, color: AppColors.textTertiary)),
+              Text(
+                dateFormat.format(_parseDate(lead['created'] ?? lead['created_at'])),
+                style: TextStyle(fontSize: 11, color: AppColors.textTertiary),
+              ),
             ],
           ),
           
@@ -769,19 +902,8 @@ class _LeadsTabState extends State<_LeadsTab> {
             }
           });
           
-          // Add project to global projects list
-          final clientGroupIndex = projectGroups.indexWhere((group) => group['clientId'] == clientId);
-          if (clientGroupIndex != -1) {
-            // Client group exists, add project to it
-            (projectGroups[clientGroupIndex]['projects'] as List<Map<String, dynamic>>).add(newProject);
-          } else {
-            // Create new client group
-            projectGroups.add({
-              'client': convertedClient['company'],
-              'clientId': clientId,
-              'projects': [newProject],
-            });
-          }
+          // Note: Project is created in the database via provider
+          // The projects list will be refreshed when user navigates to Projects page
           
           // Show success message with auto-dismiss
           ScaffoldMessenger.of(context).showSnackBar(
@@ -2267,7 +2389,9 @@ class _ClientsTabState extends State<_ClientsTab> {
 // ============ QUOTES TAB ============
 // ============ QUOTES TAB (with sub-tabs: All Quotes, Responses, Templates) ============
 class _QuotesTab extends StatefulWidget {
-  const _QuotesTab();
+  final int? initialSubTab;
+  
+  const _QuotesTab({this.initialSubTab});
 
   @override
   State<_QuotesTab> createState() => _QuotesTabState();
@@ -2423,7 +2547,11 @@ class _QuotesTabState extends State<_QuotesTab> with SingleTickerProviderStateMi
   @override
   void initState() {
     super.initState();
-    _subTabController = TabController(length: 4, vsync: this);
+    _subTabController = TabController(
+      length: 4, 
+      vsync: this,
+      initialIndex: widget.initialSubTab ?? 0,
+    );
     _subTabController.addListener(() => setState(() {}));
   }
 
@@ -2434,7 +2562,21 @@ class _QuotesTabState extends State<_QuotesTab> with SingleTickerProviderStateMi
   }
 
   int get _totalQuotes => _quotesByClient.fold(0, (sum, g) => sum + (g['quotes'] as List).length);
-  int get _pendingCount => _pendingProposals.length;
+  
+  // Get pending proposals from both mock data and real database
+  List<Map<String, dynamic>> get _actualPendingProposals {
+    // Get real pending quotes from provider
+    final salesProvider = context.read<SalesProvider>();
+    final realPendingQuotes = salesProvider.quotes.where((q) => 
+      q['status'] == 'pending_collaborators' || 
+      q['status'] == 'pending'
+    ).toList();
+    
+    // Combine with mock data for demo (remove mock data later)
+    return [..._pendingProposals, ...realPendingQuotes];
+  }
+  
+  int get _pendingCount => _actualPendingProposals.length;
 
   @override
   Widget build(BuildContext context) {
@@ -3049,7 +3191,7 @@ class _QuotesTabState extends State<_QuotesTab> with SingleTickerProviderStateMi
     final dateFormat = DateFormat('MMM d');
     final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 0);
     
-    if (_pendingProposals.isEmpty) {
+    if (_actualPendingProposals.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -3100,9 +3242,9 @@ class _QuotesTabState extends State<_QuotesTab> with SingleTickerProviderStateMi
         Expanded(
           child: ListView.builder(
             padding: const EdgeInsets.symmetric(horizontal: 12),
-            itemCount: _pendingProposals.length,
+            itemCount: _actualPendingProposals.length,
             itemBuilder: (context, index) {
-              final proposal = _pendingProposals[index];
+              final proposal = _actualPendingProposals[index];
               final collaborators = proposal['collaborators'] as List<Map<String, dynamic>>;
               final submitted = collaborators.where((c) => c['status'] == 'submitted').length;
               final total = collaborators.length;
@@ -4362,7 +4504,7 @@ class _MergedProposalPreviewState extends State<_MergedProposalPreview> {
 
 // ============ MODALS & DIALOGS ============
 class _AddLeadModal extends StatefulWidget {
-  final Function(Map<String, dynamic>) onLeadAdded;
+  final Future<void> Function(Map<String, dynamic>) onLeadAdded;
   
   const _AddLeadModal({required this.onLeadAdded});
 
@@ -4407,7 +4549,7 @@ class _AddLeadModalState extends State<_AddLeadModal> {
     super.dispose();
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     if (_nameController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter a lead name'), backgroundColor: AppColors.error),
@@ -4415,11 +4557,13 @@ class _AddLeadModalState extends State<_AddLeadModal> {
       return;
     }
 
+    // Save scaffold messenger before closing modal
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
     final valueText = _valueController.text.replaceAll(RegExp(r'[^\d.]'), '');
     final value = double.tryParse(valueText) ?? 0.0;
 
     final newLead = {
-      'id': DateTime.now().millisecondsSinceEpoch.toString(),
       'name': _nameController.text.trim(),
       'title': _titleController.text.trim(),
       'company': _companyController.text.trim(),
@@ -4431,18 +4575,20 @@ class _AddLeadModalState extends State<_AddLeadModal> {
       'zip': _zipController.text.trim(),
       'website': _websiteController.text.trim(),
       'type': _selectedType,
-      'source': _selectedSource,
+      'source': _selectedSource.toLowerCase(),
       'status': 'new',
       'value': value,
       'notes': _notesController.text.trim(),
-      'created': DateTime.now(),
-      'proposalStatus': 'none',
-      'proposalId': null,
     };
 
-    widget.onLeadAdded(newLead);
+    // Close modal
     Navigator.pop(context);
-    ScaffoldMessenger.of(context).showSnackBar(
+    
+    // Save lead (async) - provider was captured in parent context
+    await widget.onLeadAdded(newLead);
+    
+    // Show success
+    scaffoldMessenger.showSnackBar(
       const SnackBar(content: Text('Lead added successfully!'), backgroundColor: AppColors.success),
     );
   }

@@ -32,7 +32,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
     final auth = context.read<AuthProvider>();
     if (auth.companyId != null) {
       context.read<InvoicesProvider>().loadInvoices(auth.companyId!);
-      context.read<SalesProvider>().loadClients(auth.companyId!);
+      context.read<SalesProvider>().loadClients();
     }
   }
 

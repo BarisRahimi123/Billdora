@@ -30,13 +30,20 @@ class SalesProvider extends ChangeNotifier {
 
   /// Initialize with company ID and load all data
   Future<void> initialize(String companyId) async {
+    debugPrint('========== SALES PROVIDER INIT ==========');
+    debugPrint('SalesProvider.initialize: companyId=$companyId');
     _companyId = companyId;
     await loadAll();
+    debugPrint('SalesProvider.initialize: DONE, loaded ${_leads.length} leads');
   }
 
   /// Load all sales data
   Future<void> loadAll() async {
-    if (_companyId == null) return;
+    debugPrint('SalesProvider.loadAll: Starting with companyId=$_companyId');
+    if (_companyId == null) {
+      debugPrint('SalesProvider.loadAll: ERROR - No company ID!');
+      return;
+    }
     
     _isLoading = true;
     _errorMessage = null;
@@ -44,6 +51,7 @@ class SalesProvider extends ChangeNotifier {
 
     try {
       // Load all in parallel
+      debugPrint('SalesProvider.loadAll: Fetching all data...');
       final results = await Future.wait([
         _supabaseService.getLeads(_companyId!),
         _supabaseService.getClients(_companyId!),
@@ -56,10 +64,13 @@ class SalesProvider extends ChangeNotifier {
       _consultants = results[2];
       _quotes = results[3];
 
+      debugPrint('SalesProvider.loadAll: SUCCESS - Loaded ${_leads.length} leads, ${_clients.length} clients, ${_consultants.length} consultants, ${_quotes.length} quotes');
+
       _isLoading = false;
       notifyListeners();
     } catch (e) {
       _errorMessage = e.toString();
+      debugPrint('SalesProvider.loadAll: ERROR - $e');
       _isLoading = false;
       notifyListeners();
     }
@@ -67,25 +78,46 @@ class SalesProvider extends ChangeNotifier {
 
   // ============ LEADS ============
   Future<void> loadLeads() async {
-    if (_companyId == null) return;
+    debugPrint('========== LOAD LEADS ==========');
+    debugPrint('SalesProvider.loadLeads: companyId=$_companyId');
+    if (_companyId == null) {
+      debugPrint('SalesProvider.loadLeads: ERROR - No company ID!');
+      return;
+    }
     try {
       _leads = await _supabaseService.getLeads(_companyId!);
+      debugPrint('SalesProvider.loadLeads: SUCCESS - Loaded ${_leads.length} leads');
       notifyListeners();
     } catch (e) {
       _errorMessage = e.toString();
+      debugPrint('SalesProvider.loadLeads: ERROR - $e');
     }
   }
 
   Future<bool> createLead(Map<String, dynamic> data) async {
-    if (_companyId == null) return false;
+    debugPrint('========== CREATE LEAD ==========');
+    debugPrint('SalesProvider.createLead: companyId=$_companyId');
+    debugPrint('SalesProvider.createLead: input data=$data');
+    
+    if (_companyId == null) {
+      debugPrint('SalesProvider.createLead: ERROR - No company ID!');
+      _errorMessage = 'No company ID set. Please log in again.';
+      notifyListeners();
+      return false;
+    }
     try {
       data['company_id'] = _companyId;
+      debugPrint('SalesProvider.createLead: Calling supabase with company_id=$_companyId');
       final newLead = await _supabaseService.createLead(data);
+      debugPrint('SalesProvider.createLead: SUCCESS! Lead ID: ${newLead['id']}');
       _leads.insert(0, newLead);
       notifyListeners();
       return true;
-    } catch (e) {
+    } catch (e, stack) {
+      debugPrint('SalesProvider.createLead: EXCEPTION - $e');
+      debugPrint('Stack trace: $stack');
       _errorMessage = e.toString();
+      notifyListeners();
       return false;
     }
   }
@@ -187,6 +219,9 @@ class SalesProvider extends ChangeNotifier {
     }
   }
 
+  // Alias for createClient
+  Future<bool> addClient(Map<String, dynamic> data) => createClient(data);
+
   // ============ CONSULTANTS ============
   Future<void> loadConsultants() async {
     if (_companyId == null) return;
@@ -220,6 +255,21 @@ class SalesProvider extends ChangeNotifier {
         _consultants[index] = {..._consultants[index], ...data};
         notifyListeners();
       }
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      return false;
+    }
+  }
+
+  // Alias for createConsultant
+  Future<bool> addConsultant(Map<String, dynamic> data) => createConsultant(data);
+
+  Future<bool> deleteConsultant(String id) async {
+    try {
+      await _supabaseService.deleteConsultant(id);
+      _consultants.removeWhere((c) => c['id'] == id);
+      notifyListeners();
       return true;
     } catch (e) {
       _errorMessage = e.toString();

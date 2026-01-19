@@ -67,7 +67,14 @@ class AppRouter {
           ),
           GoRoute(
             path: '/sales',
-            builder: (context, state) => const SalesScreen(),
+            builder: (context, state) {
+              final tab = state.uri.queryParameters['tab'];
+              final subTab = state.uri.queryParameters['subTab'];
+              return SalesScreen(
+                initialTab: tab != null ? int.tryParse(tab) : null,
+                initialSubTab: subTab != null ? int.tryParse(subTab) : null,
+              );
+            },
             routes: [
               GoRoute(
                 path: 'proposal/create',

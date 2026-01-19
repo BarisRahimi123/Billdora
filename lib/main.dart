@@ -23,6 +23,9 @@ import 'router/app_router.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
+  // Enable Google Fonts runtime fetching (required for fonts to load)
+  GoogleFonts.config.allowRuntimeFetching = true;
+  
   await Supabase.initialize(
     url: Env.supabaseUrl,
     anonKey: Env.supabaseAnonKey,
@@ -311,6 +314,11 @@ class AppColors {
   static const Color errorLight = Color(0xFFFEF2F2);
   static const Color info = Color(0xFF3B82F6);
   static const Color infoLight = Color(0xFFEFF6FF);
+  
+  // Action Highlight (Pale yellow for user guidance on editable fields)
+  static const Color actionHighlight = Color(0xFFFFFBEB);  // Same as warningLight
+  static const Color actionHighlightBorder = Color(0xFFD97706);  // Amber-600
+  static const Color actionHighlightShadow = Color(0x33D97706);  // Amber with opacity
   
   // Color Aliases (for compatibility)
   static const Color blue = info;
