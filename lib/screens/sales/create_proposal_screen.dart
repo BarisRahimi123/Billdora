@@ -4142,21 +4142,23 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
                       final companyText = companyController.text;
                       final notesText = notesController.text;
                       
+                      // Capture context and providers BEFORE any async operations
+                      final currentContext = this.context;
+                      final authProvider = currentContext.read<AuthProvider>();
+                      final supabaseService = SupabaseService();
+                      
                       // Close the modal first
                       navigator.pop();
                       
                       // Show loading on the main screen
                       showDialog(
-                        context: this.context,
+                        context: currentContext,
                         barrierDismissible: false,
                         builder: (ctx) => const Center(child: CircularProgressIndicator()),
                       );
                       
                       try {
                         // Send the actual invitation email
-                        final authProvider = this.context.read<AuthProvider>();
-                        final supabaseService = SupabaseService();
-                        
                         await supabaseService.sendCollaboratorInvitation(
                           collaboratorEmail: emailText,
                           collaboratorName: nameText,
@@ -4172,22 +4174,28 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
                         );
                         
                         // Also save the consultant to the database so it appears in the consultants list
-                        final consultantData = await supabaseService.createConsultant({
-                          'company_id': authProvider.companyId,
-                          'name': nameText,
-                          'company_name': companyText.isNotEmpty ? companyText : 'Independent',
-                          'email': emailText,
-                          'specialty': finalRole,
-                          'status': 'active',
-                        });
-                        debugPrint('Created consultant in database: ${consultantData['id']}');
+                        Map<String, dynamic>? consultantData;
+                        try {
+                          consultantData = await supabaseService.createConsultant({
+                            'company_id': authProvider.companyId,
+                            'name': nameText,
+                            'company_name': companyText.isNotEmpty ? companyText : 'Independent',
+                            'email': emailText,
+                            'specialty': finalRole,
+                            'status': 'active',
+                          });
+                          debugPrint('Created consultant in database: ${consultantData['id']}');
+                        } catch (consultantError) {
+                          debugPrint('Warning: Failed to create consultant record: $consultantError');
+                          // Continue anyway - the invitation was sent successfully
+                        }
                         
-                        // Close loading dialog
-                        if (mounted) Navigator.of(this.context).pop();
+                        // Close loading dialog - use Navigator.of with rootNavigator to ensure we close the right dialog
+                        if (mounted) Navigator.of(currentContext, rootNavigator: true).pop();
                         
                         setState(() {
                           _collaborators.add({
-                            'id': consultantData['id'] ?? DateTime.now().millisecondsSinceEpoch.toString(),
+                            'id': consultantData?['id'] ?? DateTime.now().millisecondsSinceEpoch.toString(),
                             'name': nameText,
                             'email': emailText,
                             'company': companyText.isNotEmpty ? companyText : 'Independent',
@@ -4211,7 +4219,7 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
                         );
                       } catch (e) {
                         // Close loading dialog
-                        if (mounted) Navigator.of(this.context).pop();
+                        if (mounted) Navigator.of(currentContext, rootNavigator: true).pop();
                         scaffoldMessenger.showSnackBar(
                           SnackBar(
                             content: Text('Failed to send invitation: ${e.toString()}'),
