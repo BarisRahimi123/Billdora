@@ -1,42 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 
 import '../../main.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/permissions_provider.dart';
+import '../../providers/projects_provider.dart';
+import '../../providers/sales_provider.dart';
 import '../shell/app_header.dart';
-
-// Global projects list - accessible from Sales page for lead-to-project conversion
-final List<Map<String, dynamic>> projectGroups = [
-  {
-    'client': 'Barzan Shop',
-    'clientId': 'c1',
-    'projects': [
-      {'id': 'p1', 'name': 'Website Redesign', 'description': 'Complete website overhaul', 'status': 'active', 'budget': 5000.0},
-      {'id': 'p2', 'name': 'Mobile App', 'description': 'iOS and Android app development', 'status': 'active', 'budget': 8000.0},
-      {'id': 'p3', 'name': 'SEO Optimization', 'description': 'Search engine optimization', 'status': 'completed', 'budget': 2000.0},
-      {'id': 'p4', 'name': 'Logo Design', 'description': 'Brand identity refresh', 'status': 'active', 'budget': 1500.0},
-      {'id': 'p5', 'name': 'Social Media Setup', 'description': 'Social media presence', 'status': 'completed', 'budget': 800.0},
-      {'id': 'p6', 'name': 'Email Marketing', 'description': 'Email campaign setup', 'status': 'on-hold', 'budget': 1200.0},
-      {'id': 'p7', 'name': 'Analytics Dashboard', 'description': 'Custom analytics solution', 'status': 'active', 'budget': 3500.0},
-    ],
-  },
-  {
-    'client': 'Sequoia Consulting',
-    'clientId': 'c2',
-    'projects': [
-      {'id': 'p8', 'name': 'SAGECREST', 'description': 'TSM Map - TENTATIVE SUBDIVISION MAP', 'status': 'active', 'budget': 2000.0},
-    ],
-  },
-  {
-    'client': 'Unassigned',
-    'clientId': null,
-    'projects': [
-      {'id': 'p9', 'name': 'Internal Tool', 'description': 'Internal productivity tool', 'status': 'active', 'budget': 0.0},
-      {'id': 'p10', 'name': 'Template Library', 'description': 'Reusable design templates', 'status': 'active', 'budget': 0.0},
-      {'id': 'p11', 'name': 'Training Materials', 'description': 'Team training resources', 'status': 'completed', 'budget': 0.0},
-    ],
-  },
-];
 
 class ProjectsScreen extends StatefulWidget {
   const ProjectsScreen({super.key});
@@ -47,61 +19,62 @@ class ProjectsScreen extends StatefulWidget {
 
 class _ProjectsScreenState extends State<ProjectsScreen> {
   String _searchQuery = '';
-  String _viewMode = 'list'; // list or grid
+  String _viewMode = 'list';
   final Set<String> _expandedGroups = {};
 
-  List<Map<String, dynamic>> get _filteredGroups {
-    if (_searchQuery.isEmpty) return projectGroups;
-    
-    return projectGroups.map((group) {
-      final filteredProjects = (group['projects'] as List<Map<String, dynamic>>)
-          .where((p) =>
-              p['name'].toLowerCase().contains(_searchQuery.toLowerCase()) ||
-              p['description'].toLowerCase().contains(_searchQuery.toLowerCase()))
-          .toList();
-      
-      if (filteredProjects.isEmpty) return null;
-      
-      return {...group, 'projects': filteredProjects};
-    }).whereType<Map<String, dynamic>>().toList();
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
   }
 
-  // Get all projects as a flat list (not grouped)
-  List<Map<String, dynamic>> get _allProjects {
-    final allProjects = <Map<String, dynamic>>[];
-    for (final group in projectGroups) {
-      final projects = group['projects'] as List<Map<String, dynamic>>;
-      for (final project in projects) {
-        allProjects.add({
-          ...project,
-          'client': group['client'],
-          'clientId': group['clientId'],
-        });
-      }
+  Future<void> _loadData() async {
+    final auth = context.read<AuthProvider>();
+    if (auth.companyId != null) {
+      context.read<ProjectsProvider>().loadProjects(auth.companyId!);
+      // Also load clients for the create modal
+      context.read<SalesProvider>().loadClients(auth.companyId!);
+    }
+  }
+
+  // Group projects by client
+  List<Map<String, dynamic>> _getGroupedProjects(List<Map<String, dynamic>> projects) {
+    final Map<String, List<Map<String, dynamic>>> grouped = {};
+    
+    for (final project in projects) {
+      final clientName = project['clients']?['name'] ?? 'Unassigned';
+      grouped.putIfAbsent(clientName, () => []);
+      grouped[clientName]!.add(project);
     }
     
-    // Apply search filter
-    if (_searchQuery.isNotEmpty) {
-      return allProjects
-          .where((p) =>
-              p['name'].toLowerCase().contains(_searchQuery.toLowerCase()) ||
-              p['description'].toLowerCase().contains(_searchQuery.toLowerCase()) ||
-              p['client'].toLowerCase().contains(_searchQuery.toLowerCase()))
-          .toList();
-    }
-    
-    return allProjects;
+    return grouped.entries.map((e) => {
+      'client': e.key,
+      'clientId': e.value.first['client_id'],
+      'projects': e.value,
+    }).toList();
+  }
+
+  List<Map<String, dynamic>> _filterProjects(List<Map<String, dynamic>> projects) {
+    if (_searchQuery.isEmpty) return projects;
+    return projects.where((p) =>
+      (p['name'] ?? '').toLowerCase().contains(_searchQuery.toLowerCase()) ||
+      (p['description'] ?? '').toLowerCase().contains(_searchQuery.toLowerCase())
+    ).toList();
   }
 
   @override
   Widget build(BuildContext context) {
+    final projectsProvider = context.watch<ProjectsProvider>();
+    final permissions = context.watch<PermissionsProvider>();
+    final filteredProjects = _filterProjects(projectsProvider.projects);
+    final groupedProjects = _getGroupedProjects(filteredProjects);
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // App Header with Hamburger Menu
             const AppHeader(showSearch: false),
 
             // Title and Actions
@@ -178,14 +151,41 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
               ),
             ),
 
-            // Project Display
+            // Content
             Expanded(
-              child: _viewMode == 'list' 
-                  ? _buildGroupedView() 
-                  : _buildGridView(),
+              child: projectsProvider.isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : projectsProvider.errorMessage != null
+                      ? Center(child: Text('Error: ${projectsProvider.errorMessage}'))
+                      : filteredProjects.isEmpty
+                          ? _buildEmptyState()
+                          : _viewMode == 'list'
+                              ? _buildGroupedView(groupedProjects, permissions)
+                              : _buildGridView(filteredProjects, permissions),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.folder_outlined, size: 64, color: AppColors.textTertiary),
+          const SizedBox(height: 16),
+          Text(
+            'No projects found',
+            style: TextStyle(fontSize: 16, color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: 8),
+          TextButton(
+            onPressed: () => _showNewProjectModal(),
+            child: const Text('Create your first project'),
+          ),
+        ],
       ),
     );
   }
@@ -233,51 +233,33 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
     );
   }
 
-  // Grouped view (by client)
-  Widget _buildGroupedView() {
+  Widget _buildGroupedView(List<Map<String, dynamic>> groups, PermissionsProvider permissions) {
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      itemCount: _filteredGroups.length,
+      itemCount: groups.length,
       itemBuilder: (context, index) {
-        final group = _filteredGroups[index];
-        return _buildProjectGroup(group);
+        return _buildProjectGroup(groups[index], permissions);
       },
     );
   }
 
-  // Grid view (all projects)
-  Widget _buildGridView() {
-    final projects = _allProjects;
-    
-    if (projects.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.folder_outlined, size: 64, color: AppColors.textTertiary),
-            const SizedBox(height: 16),
-            Text(
-              'No projects found',
-              style: TextStyle(fontSize: 16, color: AppColors.textSecondary),
-            ),
-          ],
-        ),
-      );
-    }
-    
+  Widget _buildGridView(List<Map<String, dynamic>> projects, PermissionsProvider permissions) {
     return ListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: projects.length,
       itemBuilder: (context, index) {
         final project = projects[index];
-        return _buildFlatProjectCard(project);
+        return _buildFlatProjectCard(project, permissions);
       },
     );
   }
 
-  Widget _buildFlatProjectCard(Map<String, dynamic> project) {
+  Widget _buildFlatProjectCard(Map<String, dynamic> project, PermissionsProvider permissions) {
     final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 0);
-    
+    final status = project['status'] ?? 'active';
+    final budget = (project['budget'] as num?)?.toDouble() ?? 0.0;
+    final clientName = project['clients']?['name'] ?? 'Unassigned';
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -292,12 +274,12 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
           width: 48,
           height: 48,
           decoration: BoxDecoration(
-            color: _getStatusColor(project['status']).withOpacity(0.1),
+            color: _getStatusColor(status).withOpacity(0.1),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(
             Icons.folder_outlined,
-            color: _getStatusColor(project['status']),
+            color: _getStatusColor(status),
             size: 24,
           ),
         ),
@@ -305,11 +287,8 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              project['name'],
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-              ),
+              project['name'] ?? '',
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 4),
             Row(
@@ -317,11 +296,8 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                 Icon(Icons.business_outlined, size: 12, color: AppColors.textTertiary),
                 const SizedBox(width: 4),
                 Text(
-                  project['client'] ?? 'Unassigned',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: AppColors.textSecondary,
-                  ),
+                  clientName,
+                  style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                 ),
               ],
             ),
@@ -331,11 +307,11 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
           padding: const EdgeInsets.only(top: 8),
           child: Row(
             children: [
-              _buildStatusChip(project['status']),
+              _buildStatusChip(status),
               const SizedBox(width: 8),
-              if (project['budget'] > 0)
+              if (permissions.canViewClientValues && budget > 0)
                 Text(
-                  currencyFormat.format(project['budget']),
+                  currencyFormat.format(budget),
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
@@ -352,14 +328,10 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
 
   Color _getStatusColor(String status) {
     switch (status) {
-      case 'active':
-        return AppColors.success;
-      case 'completed':
-        return AppColors.info;
-      case 'on-hold':
-        return AppColors.warning;
-      default:
-        return AppColors.textSecondary;
+      case 'active': return AppColors.success;
+      case 'completed': return AppColors.info;
+      case 'on-hold': return AppColors.warning;
+      default: return AppColors.textSecondary;
     }
   }
 
@@ -381,7 +353,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
     );
   }
 
-  Widget _buildProjectGroup(Map<String, dynamic> group) {
+  Widget _buildProjectGroup(Map<String, dynamic> group, PermissionsProvider permissions) {
     final client = group['client'] as String;
     final projects = group['projects'] as List<Map<String, dynamic>>;
     final isExpanded = _expandedGroups.contains(client);
@@ -395,7 +367,6 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
       ),
       child: Column(
         children: [
-          // Group Header
           ListTile(
             onTap: () {
               setState(() {
@@ -412,10 +383,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
             ),
             title: Row(
               children: [
-                Text(
-                  client,
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
+                Text(client, style: const TextStyle(fontWeight: FontWeight.w600)),
                 const SizedBox(width: 12),
                 Text(
                   '(${projects.length} projects)',
@@ -428,20 +396,20 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
               ],
             ),
           ),
-
-          // Expanded Projects
           if (isExpanded) ...[
             const Divider(height: 1, color: AppColors.border),
-            ...projects.map((project) => _buildProjectItem(project)),
+            ...projects.map((project) => _buildProjectItem(project, permissions)),
           ],
         ],
       ),
     );
   }
 
-  Widget _buildProjectItem(Map<String, dynamic> project) {
+  Widget _buildProjectItem(Map<String, dynamic> project, PermissionsProvider permissions) {
     final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 0);
-    
+    final status = project['status'] ?? 'active';
+    final budget = (project['budget'] as num?)?.toDouble() ?? 0.0;
+
     return Container(
       color: AppColors.neutral50,
       child: ListTile(
@@ -456,7 +424,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
           ),
           child: Center(
             child: Text(
-              project['name'][0].toUpperCase(),
+              (project['name'] ?? 'P')[0].toUpperCase(),
               style: const TextStyle(
                 fontWeight: FontWeight.w600,
                 color: AppColors.textSecondary,
@@ -465,11 +433,11 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
           ),
         ),
         title: Text(
-          project['name'],
+          project['name'] ?? '',
           style: const TextStyle(fontWeight: FontWeight.w600),
         ),
         subtitle: Text(
-          project['description'],
+          project['description'] ?? '',
           style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
@@ -477,12 +445,14 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _buildStatusBadge(project['status']),
-            const SizedBox(width: 12),
-            Text(
-              currencyFormat.format(project['budget']),
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
+            _buildStatusBadge(status),
+            if (permissions.canViewClientValues) ...[
+              const SizedBox(width: 12),
+              Text(
+                currencyFormat.format(budget),
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ],
             const SizedBox(width: 8),
             const Icon(Icons.chevron_right, color: AppColors.textSecondary),
           ],
@@ -492,18 +462,10 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
   }
 
   Widget _buildStatusBadge(String status) {
-    Color color;
-    switch (status) {
-      case 'active': color = AppColors.success; break;
-      case 'completed': color = AppColors.info; break;
-      case 'on-hold': color = AppColors.warning; break;
-      default: color = AppColors.textSecondary;
-    }
-
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: _getStatusColor(status).withOpacity(0.1),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
@@ -511,7 +473,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
         style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w600,
-          color: color,
+          color: _getStatusColor(status),
         ),
       ),
     );
@@ -530,11 +492,53 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
   }
 }
 
-class _NewProjectModal extends StatelessWidget {
+class _NewProjectModal extends StatefulWidget {
   const _NewProjectModal();
 
   @override
+  State<_NewProjectModal> createState() => _NewProjectModalState();
+}
+
+class _NewProjectModalState extends State<_NewProjectModal> {
+  final _nameController = TextEditingController();
+  final _budgetController = TextEditingController();
+  final _descriptionController = TextEditingController();
+  String? _selectedClientId;
+  bool _isSubmitting = false;
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _budgetController.dispose();
+    _descriptionController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _createProject() async {
+    if (_nameController.text.trim().isEmpty) return;
+
+    setState(() => _isSubmitting = true);
+
+    final projectData = {
+      'name': _nameController.text.trim(),
+      'description': _descriptionController.text.trim(),
+      'budget': double.tryParse(_budgetController.text) ?? 0.0,
+      'client_id': _selectedClientId,
+      'status': 'active',
+    };
+
+    await context.read<ProjectsProvider>().addProject(projectData);
+    
+    if (mounted) {
+      Navigator.pop(context);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final clients = context.watch<SalesProvider>().clients;
+    final permissions = context.watch<PermissionsProvider>();
+
     return DraggableScrollableSheet(
       initialChildSize: 0.7,
       minChildSize: 0.5,
@@ -560,19 +564,27 @@ class _NewProjectModal extends StatelessWidget {
               const SizedBox(height: 20),
               const Text('New Project', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
               const SizedBox(height: 24),
-              _buildTextField('Project Name *', 'Enter project name'),
+              _buildTextField('Project Name *', 'Enter project name', _nameController),
               const SizedBox(height: 16),
-              _buildDropdown('Client', ['Barzan Shop', 'Sequoia Consulting', 'None']),
+              _buildClientDropdown(clients),
               const SizedBox(height: 16),
-              _buildTextField('Budget', '\$0.00'),
-              const SizedBox(height: 16),
-              _buildTextField('Description', 'Project description...', maxLines: 3),
+              if (permissions.canViewClientValues)
+                _buildTextField('Budget', '\$0.00', _budgetController),
+              if (permissions.canViewClientValues)
+                const SizedBox(height: 16),
+              _buildTextField('Description', 'Project description...', _descriptionController, maxLines: 3),
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Create Project'),
+                  onPressed: _isSubmitting ? null : _createProject,
+                  child: _isSubmitting
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Create Project'),
                 ),
               ),
             ],
@@ -582,13 +594,14 @@ class _NewProjectModal extends StatelessWidget {
     );
   }
 
-  Widget _buildTextField(String label, String hint, {int maxLines = 1}) {
+  Widget _buildTextField(String label, String hint, TextEditingController controller, {int maxLines = 1}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
         const SizedBox(height: 6),
         TextField(
+          controller: controller,
           maxLines: maxLines,
           decoration: InputDecoration(
             hintText: hint,
@@ -604,11 +617,16 @@ class _NewProjectModal extends StatelessWidget {
     );
   }
 
-  Widget _buildDropdown(String label, List<String> options) {
+  Widget _buildClientDropdown(List<Map<String, dynamic>> clients) {
+    final options = [
+      {'id': null, 'name': 'None (Unassigned)'},
+      ...clients,
+    ];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+        const Text('Client', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
         const SizedBox(height: 6),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 14),
@@ -618,11 +636,15 @@ class _NewProjectModal extends StatelessWidget {
             border: Border.all(color: AppColors.border),
           ),
           child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: options.first,
+            child: DropdownButton<String?>(
+              value: _selectedClientId,
               isExpanded: true,
-              items: options.map((o) => DropdownMenuItem(value: o, child: Text(o))).toList(),
-              onChanged: (_) {},
+              hint: const Text('Select client'),
+              items: options.map((c) => DropdownMenuItem(
+                value: c['id'] as String?,
+                child: Text(c['name'] ?? 'Unknown'),
+              )).toList(),
+              onChanged: (value) => setState(() => _selectedClientId = value),
             ),
           ),
         ),

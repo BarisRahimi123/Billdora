@@ -1,121 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import 'dart:async';
 
 import '../../main.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/expenses_provider.dart';
+import '../../providers/projects_provider.dart';
+import '../../providers/time_provider.dart';
 import '../shell/app_header.dart';
 
-// Mock Projects Data (would come from a service/provider in production)
-final List<Map<String, dynamic>> mockProjects = [
-  {
-    'id': 'p1',
-    'name': 'Mobile App UI Design',
-    'client': 'Tech Startup Inc.',
-    'tasks': [
-      {
-        'id': 't1',
-        'name': 'User Research & Analysis',
-        'subtasks': [
-          {'id': 'st1', 'name': 'Conduct user interviews'},
-          {'id': 'st2', 'name': 'Analyze competitors'},
-          {'id': 'st3', 'name': 'Create user personas'},
-        ],
-      },
-      {
-        'id': 't2',
-        'name': 'Wireframing',
-        'subtasks': [
-          {'id': 'st4', 'name': 'Sketch initial layouts'},
-          {'id': 'st5', 'name': 'Create low-fi wireframes'},
-          {'id': 'st6', 'name': 'Client review session'},
-        ],
-      },
-      {
-        'id': 't3',
-        'name': 'Visual Design',
-        'subtasks': [
-          {'id': 'st7', 'name': 'Design system creation'},
-          {'id': 'st8', 'name': 'Hi-fi mockups'},
-          {'id': 'st9', 'name': 'Asset preparation'},
-        ],
-      },
-    ],
-  },
-  {
-    'id': 'p2',
-    'name': 'E-commerce Website',
-    'client': 'Retail Corp',
-    'tasks': [
-      {
-        'id': 't4',
-        'name': 'Homepage Design',
-        'subtasks': [
-          {'id': 'st10', 'name': 'Hero section'},
-          {'id': 'st11', 'name': 'Product showcase'},
-          {'id': 'st12', 'name': 'Footer design'},
-        ],
-      },
-      {
-        'id': 't5',
-        'name': 'Product Pages',
-        'subtasks': [
-          {'id': 'st13', 'name': 'Product detail template'},
-          {'id': 'st14', 'name': 'Shopping cart UI'},
-          {'id': 'st15', 'name': 'Checkout flow'},
-        ],
-      },
-    ],
-  },
-  {
-    'id': 'p3',
-    'name': 'Virtual Tour Production',
-    'client': 'Real Estate Agency',
-    'tasks': [
-      {
-        'id': 't6',
-        'name': '360° Photography',
-        'subtasks': [
-          {'id': 'st16', 'name': 'Property walkthrough'},
-          {'id': 'st17', 'name': 'Photo editing'},
-        ],
-      },
-      {
-        'id': 't7',
-        'name': 'Tour Assembly',
-        'subtasks': [
-          {'id': 'st18', 'name': 'Stitch panoramas'},
-          {'id': 'st19', 'name': 'Add hotspots'},
-          {'id': 'st20', 'name': 'Final testing'},
-        ],
-      },
-    ],
-  },
-  {
-    'id': 'p4',
-    'name': 'Brand Identity Design',
-    'client': 'Fashion Boutique',
-    'tasks': [
-      {
-        'id': 't8',
-        'name': 'Logo Design',
-        'subtasks': [
-          {'id': 'st21', 'name': 'Concept sketches'},
-          {'id': 'st22', 'name': 'Digital refinement'},
-          {'id': 'st23', 'name': 'Color variations'},
-        ],
-      },
-      {
-        'id': 't9',
-        'name': 'Brand Guidelines',
-        'subtasks': [
-          {'id': 'st24', 'name': 'Typography system'},
-          {'id': 'st25', 'name': 'Color palette'},
-          {'id': 'st26', 'name': 'Usage examples'},
-        ],
-      },
-    ],
-  },
-];
+// Projects data now comes from ProjectsProvider
 
 class TimeExpenseScreen extends StatefulWidget {
   const TimeExpenseScreen({super.key});
@@ -131,6 +26,16 @@ class _TimeExpenseScreenState extends State<TimeExpenseScreen> with SingleTicker
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    final auth = context.read<AuthProvider>();
+    if (auth.companyId != null) {
+      context.read<ProjectsProvider>().loadProjects(auth.companyId!);
+      context.read<TimeProvider>().loadTimeEntries(auth.companyId!, userId: auth.userId);
+      context.read<ExpensesProvider>().loadExpenses(auth.companyId!);
+    }
   }
 
   @override
@@ -381,37 +286,25 @@ class _TimeTabState extends State<_TimeTab> {
   // Day selection
   DateTime _selectedDate = DateTime.now();
   
-  // Mock time entries
-  final List<Map<String, dynamic>> _timeEntries = [];
+  // Get projects from provider
+  List<Map<String, dynamic>> _getProjects(BuildContext context) {
+    return context.watch<ProjectsProvider>().projects;
+  }
   
-  // Helper getters to access data
-  Map<String, dynamic>? get selectedProject {
+  // Helper to get selected project
+  Map<String, dynamic>? _getSelectedProject(List<Map<String, dynamic>> projects) {
+    if (_selectedProjectId == null) return null;
     try {
-      return mockProjects.firstWhere((p) => p['id'] == _selectedProjectId);
+      return projects.firstWhere((p) => p['id'] == _selectedProjectId);
     } catch (e) {
       return null;
     }
   }
   
-  List<Map<String, dynamic>> get availableTasks {
-    if (_selectedProjectId == null) return [];
-    try {
-      final project = mockProjects.firstWhere((p) => p['id'] == _selectedProjectId);
-      return (project['tasks'] as List<dynamic>?)?.cast<Map<String, dynamic>>() ?? [];
-    } catch (e) {
-      return [];
-    }
-  }
-  
-  List<Map<String, dynamic>> get availableSubtasks {
-    if (_selectedTaskId == null) return [];
-    try {
-      final task = availableTasks.firstWhere((t) => t['id'] == _selectedTaskId);
-      return (task['subtasks'] as List<dynamic>?)?.cast<Map<String, dynamic>>() ?? [];
-    } catch (e) {
-      return [];
-    }
-  }
+  // Tasks come from the tasks table linked to project - for now using empty list
+  // TODO: Load tasks from TasksProvider when project is selected
+  List<Map<String, dynamic>> get availableTasks => [];
+  List<Map<String, dynamic>> get availableSubtasks => [];
 
   @override
   void dispose() {
@@ -441,52 +334,30 @@ class _TimeTabState extends State<_TimeTab> {
       return;
     }
     
+    final projects = context.read<ProjectsProvider>().projects;
+    final project = projects.firstWhere((p) => p['id'] == _selectedProjectId, orElse: () => {});
+    
+    if (_elapsedSeconds > 0 && project.isNotEmpty) {
+      // Save time entry via provider
+      context.read<TimeProvider>().addTimeEntry({
+        'project_id': _selectedProjectId,
+        'task_id': _selectedTaskId,
+        'subtask_id': _selectedSubtaskId,
+        'description': _descriptionController.text,
+        'hours': _elapsedSeconds / 3600,
+        'date': _selectedDate.toIso8601String().split('T')[0],
+        'status': 'draft',
+      });
+    }
+    
     setState(() {
       _isTimerRunning = false;
       _timer?.cancel();
-      if (_elapsedSeconds > 0) {
-        // Get project, task, and subtask names
-        final project = mockProjects.firstWhere((p) => p['id'] == _selectedProjectId);
-        String? taskName;
-        String? subtaskName;
-        
-        if (_selectedTaskId != null) {
-          try {
-            final task = (project['tasks'] as List).firstWhere((t) => t['id'] == _selectedTaskId);
-            taskName = task['name'];
-            
-            if (_selectedSubtaskId != null) {
-              try {
-                final subtask = (task['subtasks'] as List?)?.firstWhere((st) => st['id'] == _selectedSubtaskId);
-                subtaskName = subtask?['name'];
-              } catch (e) {
-                // Subtask not found
-              }
-            }
-          } catch (e) {
-            // Task not found
-          }
-        }
-        
-        // Save entry
-        _timeEntries.add({
-          'projectId': _selectedProjectId!,
-          'projectName': project['name'],
-          'taskId': _selectedTaskId,
-          'taskName': taskName,
-          'subtaskId': _selectedSubtaskId,
-          'subtaskName': subtaskName,
-          'description': _descriptionController.text,
-          'hours': _elapsedSeconds / 3600,
-          'date': _selectedDate,
-          'status': 'draft',
-        });
-        _elapsedSeconds = 0;
-        _selectedProjectId = null;
-        _selectedTaskId = null;
-        _selectedSubtaskId = null;
-        _descriptionController.clear();
-      }
+      _elapsedSeconds = 0;
+      _selectedProjectId = null;
+      _selectedTaskId = null;
+      _selectedSubtaskId = null;
+      _descriptionController.clear();
     });
   }
 
@@ -544,15 +415,16 @@ class _TimeTabState extends State<_TimeTab> {
                       hint: Text('Select Project *', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
                       isExpanded: true,
                       icon: Icon(Icons.unfold_more, size: 20, color: AppColors.textSecondary),
-                      items: mockProjects.map((project) {
+                      items: _getProjects(context).map((project) {
+                        final clientName = project['clients']?['name'] ?? 'No Client';
                         return DropdownMenuItem(
                           value: project['id'] as String,
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Text(project['name'] as String, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
-                              Text(project['client'] as String, style: TextStyle(fontSize: 11, color: AppColors.textTertiary)),
+                              Text(project['name'] as String? ?? '', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+                              Text(clientName, style: TextStyle(fontSize: 11, color: AppColors.textTertiary)),
                             ],
                           ),
                         );
@@ -822,66 +694,61 @@ class _TimeTabState extends State<_TimeTab> {
                 const Divider(height: 1, color: AppColors.border),
                 
                 // Time Entries or Empty State
-                if (_timeEntries.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.all(32),
-                    child: Column(
-                      children: [
-                        Text(
-                          'No time entries for ${dateFormat.format(_selectedDate)}',
-                          style: const TextStyle(
-                            color: AppColors.textSecondary,
+                Builder(builder: (context) {
+                  final timeEntries = context.watch<TimeProvider>().timeEntries;
+                  final dayEntries = timeEntries.where((e) {
+                    final date = DateTime.tryParse(e['date'] ?? '');
+                    return date != null &&
+                        date.year == _selectedDate.year &&
+                        date.month == _selectedDate.month &&
+                        date.day == _selectedDate.day;
+                  }).toList();
+                  
+                  if (dayEntries.isEmpty) {
+                    return Padding(
+                      padding: const EdgeInsets.all(32),
+                      child: Column(
+                        children: [
+                          Text(
+                            'No time entries for ${dateFormat.format(_selectedDate)}',
+                            style: const TextStyle(color: AppColors.textSecondary),
                           ),
-                        ),
-                        const SizedBox(height: 16),
-                        OutlinedButton(
-                          onPressed: () {},
-                          style: OutlinedButton.styleFrom(
-                            side: const BorderSide(color: AppColors.border),
+                          const SizedBox(height: 16),
+                          OutlinedButton(
+                            onPressed: () {},
+                            style: OutlinedButton.styleFrom(side: const BorderSide(color: AppColors.border)),
+                            child: const Text('+ Add Project Row'),
                           ),
-                          child: const Text('+ Add Project Row'),
-                        ),
-                      ],
-                    ),
-                  )
-                else
-                  ListView.separated(
+                        ],
+                      ),
+                    );
+                  }
+                  
+                  return ListView.separated(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
-                    itemCount: _timeEntries.length,
+                    itemCount: dayEntries.length,
                     separatorBuilder: (_, __) => const Divider(height: 1, color: AppColors.border),
                     itemBuilder: (context, index) {
-                      final entry = _timeEntries[index];
-                      // Build subtitle based on what's available
-                      String? subtitle;
-                      if (entry['subtaskName'] != null) {
-                        subtitle = '${entry['taskName']} › ${entry['subtaskName']}';
-                      } else if (entry['taskName'] != null) {
-                        subtitle = entry['taskName'];
-                      } else if (entry['description'].toString().isNotEmpty) {
-                        subtitle = entry['description'];
-                      }
+                      final entry = dayEntries[index];
+                      final projectName = entry['projects']?['name'] ?? 'Unknown Project';
+                      final description = entry['description'] ?? '';
+                      final hours = (entry['hours'] as num?)?.toDouble() ?? 0.0;
                       
                       return ListTile(
                         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        title: Text(
-                          entry['projectName'],
-                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-                        ),
-                        subtitle: subtitle != null
-                            ? Text(subtitle, style: TextStyle(fontSize: 12, color: AppColors.textSecondary))
+                        title: Text(projectName, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                        subtitle: description.isNotEmpty
+                            ? Text(description, style: TextStyle(fontSize: 12, color: AppColors.textSecondary))
                             : null,
                         trailing: Text(
-                          '${entry['hours'].toStringAsFixed(1)}h',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.accent,
-                          ),
+                          '${hours.toStringAsFixed(1)}h',
+                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.accent),
                         ),
                       );
                     },
-                  ),
+                  );
+                }),
                 
                 // Add Another Row Link
                 Padding(
@@ -898,20 +765,21 @@ class _TimeTabState extends State<_TimeTab> {
           const SizedBox(height: 20),
           
           // Submit Button
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: _timeEntries.isEmpty ? null : () {},
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _timeEntries.isEmpty 
-                    ? AppColors.neutral300 
-                    : AppColors.accent,
-                padding: const EdgeInsets.symmetric(vertical: 16),
+          Builder(builder: (context) {
+            final hasEntries = context.watch<TimeProvider>().timeEntries.isNotEmpty;
+            return SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: hasEntries ? () {} : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: hasEntries ? AppColors.accent : AppColors.neutral300,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+                icon: const Icon(Icons.send_outlined),
+                label: const Text('Submit for Approval'),
               ),
-              icon: const Icon(Icons.send_outlined),
-              label: const Text('Submit for Approval'),
-            ),
-          ),
+            );
+          }),
         ],
       ),
     );
@@ -925,18 +793,21 @@ class _ExpensesTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final expensesProvider = context.watch<ExpensesProvider>();
+    final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 0);
+    
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Summary Cards
+          // Summary Cards - using real stats from provider
           Row(
             children: [
               Expanded(
                 child: _SummaryCard(
-                  label: 'This Month',
-                  value: '\$1,245',
+                  label: 'Total',
+                  value: currencyFormat.format(expensesProvider.totalExpenses),
                   icon: Icons.calendar_month,
                   color: AppColors.accent,
                 ),
@@ -945,7 +816,7 @@ class _ExpensesTab extends StatelessWidget {
               Expanded(
                 child: _SummaryCard(
                   label: 'Pending',
-                  value: '\$320',
+                  value: currencyFormat.format(expensesProvider.pendingExpenses),
                   icon: Icons.hourglass_empty,
                   color: AppColors.warning,
                 ),
@@ -954,7 +825,7 @@ class _ExpensesTab extends StatelessWidget {
               Expanded(
                 child: _SummaryCard(
                   label: 'Billable',
-                  value: '\$890',
+                  value: currencyFormat.format(expensesProvider.billableExpenses),
                   icon: Icons.attach_money,
                   color: AppColors.success,
                 ),
@@ -966,9 +837,7 @@ class _ExpensesTab extends StatelessWidget {
           // Recent Expenses
           Text(
             'Recent Expenses',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 12),
           Container(
@@ -977,33 +846,29 @@ class _ExpensesTab extends StatelessWidget {
               borderRadius: BorderRadius.circular(16),
               boxShadow: AppShadows.card,
             ),
-            child: Column(
-              children: [
-                _ExpenseListItem(
-                  category: 'Software',
-                  description: 'Adobe Creative Cloud',
-                  amount: 54.99,
-                  date: DateTime.now().subtract(const Duration(days: 2)),
-                  status: 'pending',
-                ),
-                const Divider(height: 1, color: AppColors.border),
-                _ExpenseListItem(
-                  category: 'Travel',
-                  description: 'Client meeting - Uber',
-                  amount: 28.50,
-                  date: DateTime.now().subtract(const Duration(days: 5)),
-                  status: 'approved',
-                ),
-                const Divider(height: 1, color: AppColors.border),
-                _ExpenseListItem(
-                  category: 'Equipment',
-                  description: 'USB-C Hub',
-                  amount: 79.00,
-                  date: DateTime.now().subtract(const Duration(days: 7)),
-                  status: 'approved',
-                ),
-              ],
-            ),
+            child: expensesProvider.isLoading
+                ? const Padding(padding: EdgeInsets.all(32), child: Center(child: CircularProgressIndicator()))
+                : expensesProvider.expenses.isEmpty
+                    ? const Padding(
+                        padding: EdgeInsets.all(32),
+                        child: Center(child: Text('No expenses yet', style: TextStyle(color: AppColors.textSecondary))),
+                      )
+                    : ListView.separated(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: expensesProvider.expenses.length.clamp(0, 10), // Show max 10
+                        separatorBuilder: (_, __) => const Divider(height: 1, color: AppColors.border),
+                        itemBuilder: (context, index) {
+                          final expense = expensesProvider.expenses[index];
+                          return _ExpenseListItem(
+                            category: expense['category'] ?? 'Other',
+                            description: expense['description'] ?? '',
+                            amount: (expense['amount'] as num?)?.toDouble() ?? 0.0,
+                            date: DateTime.tryParse(expense['date'] ?? '') ?? DateTime.now(),
+                            status: expense['status'] ?? 'draft',
+                          );
+                        },
+                      ),
           ),
         ],
       ),

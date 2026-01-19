@@ -1,56 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 
 import '../../main.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/sales_provider.dart';
+import '../../providers/permissions_provider.dart';
+import '../../services/supabase_service.dart';
 import '../shell/app_header.dart';
 import '../projects/projects_screen.dart';
 
-// Global consultants list - accessible from Sales page and Proposal creation
-final List<Map<String, dynamic>> consultantsList = [
-  {
-    'id': '1',
-    'name': 'Sarah Miller',
-    'company': 'SM Consulting',
-    'email': 'sarah@smconsulting.com',
-    'phone': '+1 (555) 234-5678',
-    'specialty': 'Landscape Architecture',
-    'rate': 150.0,
-    'rateType': 'hourly',
-    'status': 'active',
-    'projects': 12,
-    'totalBilled': 45000.0,
-    'created': DateTime(2025, 6, 15),
-  },
-  {
-    'id': '2',
-    'name': 'Michael Chen',
-    'company': 'Chen Engineering',
-    'email': 'michael@cheneng.com',
-    'phone': '+1 (555) 345-6789',
-    'specialty': 'Structural Engineering',
-    'rate': 200.0,
-    'rateType': 'hourly',
-    'status': 'active',
-    'projects': 8,
-    'totalBilled': 32000.0,
-    'created': DateTime(2025, 8, 22),
-  },
-  {
-    'id': '3',
-    'name': 'Emily Rodriguez',
-    'company': 'ER Design Studio',
-    'email': 'emily@erdesign.com',
-    'phone': '+1 (555) 456-7890',
-    'specialty': 'Interior Design',
-    'rate': 5000.0,
-    'rateType': 'project',
-    'status': 'active',
-    'projects': 5,
-    'totalBilled': 25000.0,
-    'created': DateTime(2025, 10, 5),
-  },
-];
+// NOTE: consultantsList is now managed by SalesProvider
+// Access via: context.watch<SalesProvider>().consultants
+// Legacy reference for backward compatibility during migration:
+List<Map<String, dynamic>> get consultantsList => _legacyConsultantsList;
+final List<Map<String, dynamic>> _legacyConsultantsList = [];
 
 class SalesScreen extends StatefulWidget {
   const SalesScreen({super.key});
@@ -64,12 +29,29 @@ class _SalesScreenState extends State<SalesScreen> with SingleTickerProviderStat
   final GlobalKey<_LeadsTabState> _leadsTabKey = GlobalKey<_LeadsTabState>();
   final GlobalKey<_ClientsTabState> _clientsTabKey = GlobalKey<_ClientsTabState>();
   final GlobalKey<_ConsultantsTabState> _consultantsTabKey = GlobalKey<_ConsultantsTabState>();
+  bool _initialized = false;
   
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
     _tabController.addListener(() => setState(() {}));
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_initialized) {
+      _initialized = true;
+      _initializeProviders();
+    }
+  }
+
+  Future<void> _initializeProviders() async {
+    final permProvider = context.read<PermissionsProvider>();
+    if (permProvider.currentCompanyId != null) {
+      await context.read<SalesProvider>().initialize(permProvider.currentCompanyId!);
+    }
   }
 
   @override
@@ -170,6 +152,7 @@ class _SalesScreenState extends State<SalesScreen> with SingleTickerProviderStat
   }
 
   Widget _buildTabBar() {
+    final salesProvider = context.watch<SalesProvider>();
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.all(3),
@@ -179,10 +162,10 @@ class _SalesScreenState extends State<SalesScreen> with SingleTickerProviderStat
       ),
       child: Row(
         children: [
-          _buildTab(0, 'Leads', 5),
-          _buildTab(1, 'Clients', clientsList.length),
-          _buildTab(2, 'Team', consultantsList.length),
-          _buildTab(3, 'Quotes', 31),
+          _buildTab(0, 'Leads', salesProvider.leadsCount),
+          _buildTab(1, 'Clients', salesProvider.clientsCount),
+          _buildTab(2, 'Team', salesProvider.consultantsCount),
+          _buildTab(3, 'Quotes', salesProvider.quotesCount),
         ],
       ),
     );
@@ -324,136 +307,30 @@ class _LeadsTabState extends State<_LeadsTab> {
   String _statusFilter = 'all';
   String _searchQuery = '';
 
-  // Leads with proposal tracking
-  // proposalStatus: 'none' | 'draft' | 'sent' | 'approved' | 'declined'
-  // Full lead structure for proper conversion to client
-  final List<Map<String, dynamic>> _leads = [
-    {
-      'id': '1', 
-      'name': 'Testing', 
-      'email': 'test@wgcc.com',
-      'phone': '+1 (555) 100-0001',
-      'title': 'Manager',
-      'company': 'Wgcc', 
-      'address': '',
-      'city': '',
-      'state': '',
-      'zip': '',
-      'website': '',
-      'type': 'Other',
-      'source': 'Other', 
-      'status': 'new', 
-      'value': 5009.0, 
-      'created': DateTime(2026, 1, 13), 
-      'proposalStatus': 'none',
-      'proposalId': null, // Links to the sent proposal
-      'notes': '',
-    },
-    {
-      'id': '2', 
-      'name': 'John Doe', 
-      'email': 'john@email.com',
-      'phone': '+1 (555) 200-0002',
-      'title': 'Owner',
-      'company': 'John\'s LLC', 
-      'address': '',
-      'city': '',
-      'state': '',
-      'zip': '',
-      'website': '',
-      'type': 'Other',
-      'source': 'Other', 
-      'status': 'new', 
-      'value': 4000.0, 
-      'created': DateTime(2026, 1, 13), 
-      'proposalStatus': 'none',
-      'proposalId': null,
-      'notes': '',
-    },
-    {
-      'id': '3', 
-      'name': 'Sarah Miller', 
-      'email': 'sarah@techsolutions.com',
-      'phone': '+1 (555) 300-0003',
-      'title': 'CEO',
-      'company': 'Tech Solutions', 
-      'address': '100 Tech Park',
-      'city': 'San Jose',
-      'state': 'CA',
-      'zip': '95101',
-      'website': 'www.techsolutions.com',
-      'type': 'Technology',
-      'source': 'Referral', 
-      'status': 'proposal', 
-      'value': 8500.0, 
-      'created': DateTime(2026, 1, 10), 
-      'proposalStatus': 'sent',
-      'proposalId': 'prop_001',
-      'notes': 'Very interested in web development services',
-    },
-    {
-      'id': '4', 
-      'name': 'Mike Johnson', 
-      'email': 'mike@startupxyz.io',
-      'phone': '+1 (555) 400-0004',
-      'title': 'Founder',
-      'company': 'StartupXYZ', 
-      'address': '500 Innovation Blvd',
-      'city': 'Austin',
-      'state': 'TX',
-      'zip': '73301',
-      'website': 'www.startupxyz.io',
-      'type': 'Technology',
-      'source': 'Website', 
-      'status': 'proposal', 
-      'value': 12000.0, 
-      'created': DateTime(2026, 1, 5), 
-      'proposalStatus': 'approved',
-      'proposalId': 'prop_002',
-      'notes': 'Ready to convert - approved mobile app proposal',
-    },
-    {
-      'id': '5', 
-      'name': 'Emily Chen', 
-      'email': 'emily@designco.com',
-      'phone': '+1 (555) 500-0005',
-      'title': 'Creative Director',
-      'company': 'Design Co', 
-      'address': '',
-      'city': 'Los Angeles',
-      'state': 'CA',
-      'zip': '',
-      'website': 'www.designco.com',
-      'type': 'Consulting',
-      'source': 'Website', 
-      'status': 'contacted', 
-      'value': 6500.0, 
-      'created': DateTime(2026, 1, 8), 
-      'proposalStatus': 'none',
-      'proposalId': null,
-      'notes': 'Follow up scheduled for next week',
-    },
-  ];
-
   final List<String> _statuses = ['all', 'new', 'contacted', 'qualified', 'proposal', 'won', 'lost'];
 
+  // Get leads from provider
+  List<Map<String, dynamic>> get _leads => context.read<SalesProvider>().leads;
+
   List<Map<String, dynamic>> get _filteredLeads {
-    var filtered = _leads;
+    final salesProvider = context.watch<SalesProvider>();
+    var filtered = salesProvider.leads;
     if (_statusFilter != 'all') {
       filtered = filtered.where((l) => l['status'] == _statusFilter).toList();
     }
     if (_searchQuery.isNotEmpty) {
       filtered = filtered.where((l) =>
-        l['name'].toLowerCase().contains(_searchQuery.toLowerCase()) ||
-        l['company'].toLowerCase().contains(_searchQuery.toLowerCase())
+        (l['contact_name'] ?? l['name'] ?? '').toString().toLowerCase().contains(_searchQuery.toLowerCase()) ||
+        (l['company_name'] ?? l['company'] ?? '').toString().toLowerCase().contains(_searchQuery.toLowerCase())
       ).toList();
     }
     return filtered;
   }
 
   int _getStatusCount(String status) {
-    if (status == 'all') return _leads.length;
-    return _leads.where((l) => l['status'] == status).length;
+    final leads = context.read<SalesProvider>().leads;
+    if (status == 'all') return leads.length;
+    return leads.where((l) => l['status'] == status).length;
   }
 
   // Public method to show add lead modal (called from parent)
@@ -466,10 +343,9 @@ class _LeadsTabState extends State<_LeadsTab> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) => _AddLeadModal(
-        onLeadAdded: (newLead) {
-          setState(() {
-            _leads.insert(0, newLead);
-          });
+        onLeadAdded: (newLead) async {
+          // Use provider to create lead
+          await context.read<SalesProvider>().createLead(newLead);
         },
       ),
     );
@@ -485,12 +361,12 @@ class _LeadsTabState extends State<_LeadsTab> {
       ),
       builder: (context) => _EditLeadModal(
         lead: lead,
-        onLeadUpdated: (updatedLead) {
-          setState(() {
-            final index = _leads.indexWhere((l) => l['id'] == updatedLead['id']);
-            if (index != -1) {
-              _leads[index] = updatedLead;
-            }
+        onLeadUpdated: (updatedLead) async {
+          // Use provider to update lead
+          await context.read<SalesProvider>().updateLead(
+            updatedLead['id'],
+            updatedLead,
+          );
           });
         },
       ),
@@ -510,14 +386,14 @@ class _LeadsTabState extends State<_LeadsTab> {
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () {
-              setState(() {
-                _leads.removeWhere((l) => l['id'] == lead['id']);
-              });
+            onPressed: () async {
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Lead deleted'), backgroundColor: AppColors.success),
-              );
+              await context.read<SalesProvider>().deleteLead(lead['id']);
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Lead deleted'), backgroundColor: AppColors.success),
+                );
+              }
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
             child: const Text('Delete'),
@@ -652,10 +528,11 @@ class _LeadsTabState extends State<_LeadsTab> {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        Text(
-                          currencyFormat.format(lead['value']),
-                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-                        ),
+                        if (context.watch<PermissionsProvider>().permissions.canViewClientValues)
+                          Text(
+                            currencyFormat.format(lead['value']),
+                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                          ),
                       ],
                     ),
                     if (lead['company'].isNotEmpty)
@@ -1230,7 +1107,7 @@ class _ClientsTabState extends State<_ClientsTab> {
   }
 
   List<Map<String, dynamic>> get _filteredClients {
-    var filtered = clientsList;
+    var filtered = context.watch<SalesProvider>().clients;
     
     // Type filter
     if (_typeFilter != 'all') {
@@ -1278,7 +1155,7 @@ class _ClientsTabState extends State<_ClientsTab> {
   
   // Get top clients (top 3 by revenue)
   List<String> get _topClientIds {
-    final sorted = List<Map<String, dynamic>>.from(clientsList);
+    final sorted = List<Map<String, dynamic>>.from(context.read<SalesProvider>().clients);
     sorted.sort((a, b) => ((b['value'] as double?) ?? 0).compareTo((a['value'] as double?) ?? 0));
     return sorted.take(3).map((c) => c['id'] as String).toList();
   }
@@ -1293,15 +1170,12 @@ class _ClientsTabState extends State<_ClientsTab> {
       ),
       builder: (context) => _AddClientModalFull(
         client: clientToEdit,
-        onClientSaved: (client) {
-          setState(() {
-            if (clientToEdit != null) {
-              final index = clientsList.indexWhere((c) => c['id'] == client['id']);
-              if (index != -1) clientsList[index] = client;
-            } else {
-              clientsList.insert(0, client);
-            }
-          });
+        onClientSaved: (client) async {
+          if (clientToEdit != null) {
+            await context.read<SalesProvider>().updateClient(client['id'], client);
+          } else {
+            await context.read<SalesProvider>().addClient(client);
+          }
         },
       ),
     );
@@ -1317,12 +1191,14 @@ class _ClientsTabState extends State<_ClientsTab> {
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
           ElevatedButton(
-            onPressed: () {
-              setState(() => clientsList.removeWhere((c) => c['id'] == client['id']));
+            onPressed: () async {
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Client deleted'), backgroundColor: AppColors.success),
-              );
+              await context.read<SalesProvider>().deleteClient(client['id']);
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Client deleted'), backgroundColor: AppColors.success),
+                );
+              }
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
             child: const Text('Delete'),
@@ -1504,7 +1380,8 @@ class _ClientsTabState extends State<_ClientsTab> {
           children: [
             const Text('Sort Clients By', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
             const SizedBox(height: 16),
-            _buildSortOption('revenue', 'Revenue', 'Highest revenue first', Icons.attach_money),
+            if (context.read<PermissionsProvider>().permissions.canViewClientValues)
+              _buildSortOption('revenue', 'Revenue', 'Highest revenue first', Icons.attach_money),
             _buildSortOption('activity', 'Activity', 'Most quotes & projects', Icons.trending_up),
             _buildSortOption('name', 'Name', 'Alphabetical order', Icons.sort_by_alpha),
             _buildSortOption('recent', 'Recent Activity', 'Most recently active', Icons.access_time),
@@ -1739,8 +1616,10 @@ class _ClientsTabState extends State<_ClientsTab> {
                       // Stats Row
                       Row(
                         children: [
-                          _buildMiniStat(Icons.attach_money, currencyFormat.format(revenue), AppColors.success),
-                          const SizedBox(width: 10),
+                          if (context.watch<PermissionsProvider>().permissions.canViewClientValues) ...[
+                            _buildMiniStat(Icons.attach_money, currencyFormat.format(revenue), AppColors.success),
+                            const SizedBox(width: 10),
+                          ],
                           _buildMiniStat(Icons.description_outlined, '${client['quotes']} quotes', AppColors.info),
                           const SizedBox(width: 10),
                           Container(
@@ -3084,7 +2963,7 @@ class _QuotesTabState extends State<_QuotesTab> with SingleTickerProviderStateMi
                       child: OutlinedButton.icon(
                         onPressed: () {
                           Navigator.pop(context);
-                          // Resend
+                          _resendProposal(quote, clientName, clientEmail);
                         },
                         icon: const Icon(Icons.refresh, size: 18),
                         label: const Text('Resend'),
@@ -3586,6 +3465,60 @@ class _QuotesTabState extends State<_QuotesTab> with SingleTickerProviderStateMi
         ],
       ),
     );
+  }
+
+  Future<void> _resendProposal(Map<String, dynamic> quote, String? clientName, String? clientEmail) async {
+    if (clientEmail == null || clientEmail.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No client email available'), backgroundColor: AppColors.error),
+      );
+      return;
+    }
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Resend Proposal'),
+        content: Text('Resend this proposal to $clientEmail?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Resend'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      final authProvider = context.read<AuthProvider>();
+      final supabase = context.read<SupabaseService>();
+      
+      await supabase.sendProposal(
+        quoteId: quote['id'],
+        companyId: authProvider.currentCompanyId ?? '',
+        clientEmail: clientEmail,
+        clientName: clientName ?? 'Client',
+        projectName: quote['title'] ?? quote['project'] ?? 'Project',
+        companyName: authProvider.currentCompanyName ?? 'Company',
+        senderName: authProvider.userName,
+        letterContent: 'This is a reminder about the proposal we sent previously. Please review and respond at your earliest convenience.',
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Proposal resent to $clientEmail'), backgroundColor: AppColors.success),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to resend: ${e.toString()}'), backgroundColor: AppColors.error),
+        );
+      }
+    }
   }
 
   // ============ RESPONSES CONTENT ============
@@ -6077,7 +6010,7 @@ class _ConsultantsTabState extends State<_ConsultantsTab> {
   String _statusFilter = 'all';
   
   List<Map<String, dynamic>> get _filteredConsultants {
-    var filtered = consultantsList;
+    var filtered = context.watch<SalesProvider>().consultants;
     if (_statusFilter != 'all') {
       filtered = filtered.where((c) => c['status'] == _statusFilter).toList();
     }
@@ -6118,10 +6051,8 @@ class _ConsultantsTabState extends State<_ConsultantsTab> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) => _AddConsultantModal(
-        onConsultantAdded: (newConsultant) {
-          setState(() {
-            consultantsList.insert(0, newConsultant);
-          });
+        onConsultantAdded: (newConsultant) async {
+          await context.read<SalesProvider>().addConsultant(newConsultant);
         },
       ),
     );
@@ -6137,13 +6068,11 @@ class _ConsultantsTabState extends State<_ConsultantsTab> {
       ),
       builder: (context) => _EditConsultantModal(
         consultant: consultant,
-        onConsultantUpdated: (updatedConsultant) {
-          setState(() {
-            final index = consultantsList.indexWhere((c) => c['id'] == updatedConsultant['id']);
-            if (index != -1) {
-              consultantsList[index] = updatedConsultant;
-            }
-          });
+        onConsultantUpdated: (updatedConsultant) async {
+          await context.read<SalesProvider>().updateConsultant(
+            updatedConsultant['id'],
+            updatedConsultant,
+          );
         },
       ),
     );
@@ -6162,14 +6091,14 @@ class _ConsultantsTabState extends State<_ConsultantsTab> {
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () {
-              setState(() {
-                consultantsList.removeWhere((c) => c['id'] == consultant['id']);
-              });
+            onPressed: () async {
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Consultant deleted'), backgroundColor: AppColors.success),
-              );
+              await context.read<SalesProvider>().deleteConsultant(consultant['id']);
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Consultant deleted'), backgroundColor: AppColors.success),
+                );
+              }
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
             child: const Text('Delete'),

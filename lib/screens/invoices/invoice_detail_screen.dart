@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 
 import '../../main.dart';
+import '../../services/supabase_service.dart';
 
 class InvoiceDetailScreen extends StatefulWidget {
   final String invoiceId;
@@ -107,6 +109,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> with SingleTi
                           if (value == 'delete') _showDeleteConfirmation();
                           else if (value == 'duplicate') _duplicateInvoice();
                           else if (value == 'export') _exportInvoice();
+                          else if (value == 'remind') _sendPaymentReminder();
                         },
                         itemBuilder: (context) => [
                           const PopupMenuItem(
@@ -126,6 +129,16 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> with SingleTi
                                 Icon(Icons.download, size: 18),
                                 SizedBox(width: 12),
                                 Text('Export PDF'),
+                              ],
+                            ),
+                          ),
+                          const PopupMenuItem(
+                            value: 'remind',
+                            child: Row(
+                              children: [
+                                Icon(Icons.notifications_active_outlined, size: 18, color: AppColors.warning),
+                                SizedBox(width: 12),
+                                Text('Send Reminder', style: TextStyle(color: AppColors.warning)),
                               ],
                             ),
                           ),
@@ -966,6 +979,74 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> with SingleTi
       ),
     );
     // TODO: Implement PDF export
+  }
+
+  Future<void> _sendPaymentReminder() async {
+    final clientEmail = _invoice['clientEmail'] ?? '';
+    if (clientEmail.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No client email available'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    // Show confirmation dialog
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Send Payment Reminder'),
+        content: Text('Send a payment reminder to $clientEmail for Invoice ${_invoice['number']}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.warning),
+            child: const Text('Send Reminder'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      final supabase = context.read<SupabaseService>();
+      final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 2);
+      final dateFormat = DateFormat('MMM d, yyyy');
+
+      await supabase.sendPaymentReminder(
+        invoiceId: _invoice['id'],
+        clientEmail: clientEmail,
+        clientName: _invoice['client'] ?? 'Client',
+        invoiceNumber: _invoice['number'] ?? '',
+        totalAmount: currencyFormat.format(_invoice['amount'] ?? 0),
+        dueDate: _invoice['dueDate'] != null ? dateFormat.format(_invoice['dueDate']) : null,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Payment reminder sent to $clientEmail'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to send reminder: ${e.toString()}'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
   }
 }
 

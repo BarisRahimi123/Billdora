@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 
 import '../../main.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/team_provider.dart';
 import '../shell/app_header.dart';
 
 class TeamScreen extends StatefulWidget {
@@ -15,143 +18,156 @@ class _TeamScreenState extends State<TeamScreen> {
   String _searchQuery = '';
   String? _selectedStaffId;
 
-  // Mock data
-  final List<Map<String, dynamic>> _staff = [];
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadTeam();
+    });
+  }
 
-  List<Map<String, dynamic>> get _filteredStaff {
-    if (_searchQuery.isEmpty) return _staff;
-    return _staff.where((s) => 
-      s['name'].toLowerCase().contains(_searchQuery.toLowerCase()) ||
-      s['email'].toLowerCase().contains(_searchQuery.toLowerCase())
-    ).toList();
+  Future<void> _loadTeam() async {
+    final authProvider = context.read<AuthProvider>();
+    final companyId = authProvider.currentCompanyId;
+    if (companyId != null) {
+      await context.read<TeamProvider>().loadTeamMembers(companyId);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // App Header with Hamburger Menu
-            const AppHeader(showSearch: false),
+    return Consumer<TeamProvider>(
+      builder: (context, teamProvider, child) {
+        final filteredStaff = teamProvider.search(_searchQuery);
+        
+        return Scaffold(
+          backgroundColor: AppColors.background,
+          body: SafeArea(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const AppHeader(showSearch: false),
 
-            // Title
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Team', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
-                  const SizedBox(height: 4),
-                  Text('Manage staff members and their assignments', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-                ],
-              ),
-            ),
-
-            // Action Buttons
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  _buildActionButton(Icons.send_outlined, false, () {}),
-                  const SizedBox(width: 8),
-                  _buildActionButton(Icons.add, true, () => _showAddStaffModal()),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Search and List
-            Expanded(
-              child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16),
-                decoration: BoxDecoration(
-                  color: AppColors.cardBackground,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: AppShadows.card,
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Team', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+                      const SizedBox(height: 4),
+                      Text('Manage staff members and their assignments', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                    ],
+                  ),
                 ),
-                child: Column(
-                  children: [
-                    // Search Bar
-                    Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Container(
-                              height: 40,
-                              decoration: BoxDecoration(
-                                color: AppColors.neutral50,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: TextField(
-                                onChanged: (value) => setState(() => _searchQuery = value),
-                                decoration: InputDecoration(
-                                  hintText: 'Search...',
-                                  hintStyle: TextStyle(fontSize: 14, color: AppColors.textSecondary),
-                                  border: InputBorder.none,
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Checkbox(
-                            value: false,
-                            onChanged: (_) {},
-                            activeColor: AppColors.accent,
-                          ),
-                          Text('No staff found', style: TextStyle(color: AppColors.textSecondary)),
-                        ],
-                      ),
-                    ),
 
-                    // Staff List or Empty State
-                    Expanded(
-                      child: _filteredStaff.isEmpty
-                          ? Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.people_outline, size: 64, color: AppColors.textTertiary),
-                                  const SizedBox(height: 16),
-                                  Text(
-                                    'Select a staff member to view details',
-                                    style: TextStyle(color: AppColors.textSecondary),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    children: [
+                      _buildActionButton(Icons.send_outlined, false, () {}),
+                      const SizedBox(width: 8),
+                      _buildActionButton(Icons.add, true, () => _showAddStaffModal()),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                Expanded(
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: AppColors.cardBackground,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: AppShadows.card,
+                    ),
+                    child: Column(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Container(
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.neutral50,
+                                    borderRadius: BorderRadius.circular(8),
                                   ),
-                                ],
-                              ),
-                            )
-                          : ListView.builder(
-                              itemCount: _filteredStaff.length,
-                              itemBuilder: (context, index) {
-                                final staff = _filteredStaff[index];
-                                return ListTile(
-                                  leading: CircleAvatar(
-                                    backgroundColor: AppColors.accent.withOpacity(0.1),
-                                    child: Text(
-                                      staff['name'][0],
-                                      style: const TextStyle(color: AppColors.accent),
+                                  child: TextField(
+                                    onChanged: (value) => setState(() => _searchQuery = value),
+                                    decoration: InputDecoration(
+                                      hintText: 'Search...',
+                                      hintStyle: TextStyle(fontSize: 14, color: AppColors.textSecondary),
+                                      border: InputBorder.none,
+                                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                                     ),
                                   ),
-                                  title: Text(staff['name']),
-                                  subtitle: Text(staff['role'] ?? staff['email']),
-                                  selected: _selectedStaffId == staff['id'],
-                                  onTap: () => setState(() => _selectedStaffId = staff['id']),
-                                );
-                              },
-                            ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Text('${filteredStaff.length} members', style: TextStyle(color: AppColors.textSecondary)),
+                            ],
+                          ),
+                        ),
+
+                        Expanded(
+                          child: teamProvider.isLoading
+                              ? const Center(child: CircularProgressIndicator())
+                              : filteredStaff.isEmpty
+                                  ? Center(
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(Icons.people_outline, size: 64, color: AppColors.textTertiary),
+                                          const SizedBox(height: 16),
+                                          Text(
+                                            teamProvider.members.isEmpty
+                                                ? 'No team members yet'
+                                                : 'No results found',
+                                            style: TextStyle(color: AppColors.textSecondary),
+                                          ),
+                                        ],
+                                      ),
+                                    )
+                                  : ListView.builder(
+                                      itemCount: filteredStaff.length,
+                                      itemBuilder: (context, index) {
+                                        final staff = filteredStaff[index];
+                                        final fullName = '${staff['first_name'] ?? ''} ${staff['last_name'] ?? ''}'.trim();
+                                        final role = staff['roles']?['name'] ?? 'Staff';
+                                        final email = staff['email'] ?? '';
+                                        
+                                        return ListTile(
+                                          leading: CircleAvatar(
+                                            backgroundColor: AppColors.accent.withOpacity(0.1),
+                                            backgroundImage: staff['avatar_url'] != null
+                                                ? NetworkImage(staff['avatar_url'])
+                                                : null,
+                                            child: staff['avatar_url'] == null
+                                                ? Text(
+                                                    fullName.isNotEmpty ? fullName[0].toUpperCase() : '?',
+                                                    style: const TextStyle(color: AppColors.accent),
+                                                  )
+                                                : null,
+                                          ),
+                                          title: Text(fullName.isNotEmpty ? fullName : email),
+                                          subtitle: Text(role),
+                                          selected: _selectedStaffId == staff['id'],
+                                          onTap: () => setState(() => _selectedStaffId = staff['id']),
+                                        );
+                                      },
+                                    ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
-              ),
+                const SizedBox(height: 16),
+              ],
             ),
-            const SizedBox(height: 16),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -188,7 +204,6 @@ class _AddStaffModal extends StatefulWidget {
 class _AddStaffModalState extends State<_AddStaffModal> with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
-  // Personal Info
   String _fullName = '';
   String _email = '';
   String _phone = '';
@@ -198,7 +213,6 @@ class _AddStaffModalState extends State<_AddStaffModal> with SingleTickerProvide
   String _state = '';
   String _zipCode = '';
 
-  // Employment
   String _employeeId = '';
   DateTime? _hireDate;
   String _jobTitle = '';
@@ -208,7 +222,6 @@ class _AddStaffModalState extends State<_AddStaffModal> with SingleTickerProvide
   String _reportsTo = '';
   String _workLocation = '';
 
-  // Emergency Contact
   String _emergencyName = '';
   String _relationship = '';
   String _emergencyPhone = '';
@@ -241,7 +254,6 @@ class _AddStaffModalState extends State<_AddStaffModal> with SingleTickerProvide
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Header
             Padding(
               padding: const EdgeInsets.all(16),
               child: Row(
@@ -256,7 +268,6 @@ class _AddStaffModalState extends State<_AddStaffModal> with SingleTickerProvide
               ),
             ),
 
-            // Tabs
             TabBar(
               controller: _tabController,
               isScrollable: true,
@@ -272,7 +283,6 @@ class _AddStaffModalState extends State<_AddStaffModal> with SingleTickerProvide
               ],
             ),
 
-            // Tab Content
             Expanded(
               child: TabBarView(
                 controller: _tabController,
@@ -284,7 +294,6 @@ class _AddStaffModalState extends State<_AddStaffModal> with SingleTickerProvide
               ),
             ),
 
-            // Footer
             Container(
               padding: const EdgeInsets.all(16),
               child: Row(
@@ -298,8 +307,14 @@ class _AddStaffModalState extends State<_AddStaffModal> with SingleTickerProvide
                   const SizedBox(width: 12),
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('Add Staff'),
+                      onPressed: () {
+                        // TODO: Implement add staff via Supabase
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Staff member invitation sent'), backgroundColor: AppColors.success),
+                        );
+                      },
+                      child: const Text('Send Invite'),
                     ),
                   ),
                 ],

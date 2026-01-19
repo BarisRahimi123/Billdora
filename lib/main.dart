@@ -8,6 +8,16 @@ import 'config/env.dart';
 import 'services/auth_service.dart';
 import 'services/supabase_service.dart';
 import 'providers/auth_provider.dart';
+import 'providers/permissions_provider.dart';
+import 'providers/sales_provider.dart';
+import 'providers/projects_provider.dart';
+import 'providers/tasks_provider.dart';
+import 'providers/time_provider.dart';
+import 'providers/invoices_provider.dart';
+import 'providers/expenses_provider.dart';
+import 'providers/settings_provider.dart';
+import 'providers/notifications_provider.dart';
+import 'providers/team_provider.dart';
 import 'router/app_router.dart';
 
 void main() async {
@@ -42,6 +52,16 @@ class BilldoraApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => PermissionsProvider()),
+        ChangeNotifierProvider(create: (_) => SalesProvider()),
+        ChangeNotifierProvider(create: (_) => ProjectsProvider()),
+        ChangeNotifierProvider(create: (_) => TasksProvider()),
+        ChangeNotifierProvider(create: (_) => TimeProvider()),
+        ChangeNotifierProvider(create: (_) => InvoicesProvider()),
+        ChangeNotifierProvider(create: (_) => ExpensesProvider()),
+        ChangeNotifierProvider(create: (_) => SettingsProvider()),
+        ChangeNotifierProvider(create: (_) => NotificationsProvider()),
+        ChangeNotifierProvider(create: (_) => TeamProvider()),
         Provider(create: (_) => SupabaseService()),
         Provider(create: (_) => AuthService()),
       ],

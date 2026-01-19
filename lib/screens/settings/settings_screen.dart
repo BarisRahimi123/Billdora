@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../../main.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/settings_provider.dart';
 import '../shell/app_header.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -17,122 +18,23 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
-  // Mock profile data
-  final Map<String, dynamic> _profile = {
-    'fullName': 'Baris Rahimi',
-    'phone': '5128396700',
-    'email': 'baris@plansrow.com',
-    'dateOfBirth': DateTime(1985, 12, 26),
-    'streetAddress': '2469 N Pearwood Ave',
-    'city': 'Fresno',
-    'state': 'Ca',
-    'zipCode': '93727',
-    'emergencyContactName': '',
-    'emergencyPhone': '',
-    'emergencyRelationship': '',
-  };
-
-  // Categories data (for Services)
-  List<Map<String, dynamic>> _categories = [
-    {'id': '1', 'name': 'Development', 'color': 0xFF3B82F6, 'icon': 'code'},
-    {'id': '2', 'name': 'Design', 'color': 0xFF8B5CF6, 'icon': 'palette'},
-    {'id': '3', 'name': 'Consulting', 'color': 0xFF10B981, 'icon': 'lightbulb'},
-    {'id': '4', 'name': 'Management', 'color': 0xFFF59E0B, 'icon': 'work'},
-    {'id': '5', 'name': 'Other', 'color': 0xFF6B7280, 'icon': 'category'},
-  ];
-
-  // Consultant Specialties/Traits
-  List<Map<String, dynamic>> _consultantSpecialties = [
-    {'id': '1', 'name': 'Architect', 'color': 0xFF3B82F6, 'icon': 'architecture'},
-    {'id': '2', 'name': 'Structural Engineer', 'color': 0xFF10B981, 'icon': 'engineering'},
-    {'id': '3', 'name': 'Interior Designer', 'color': 0xFF8B5CF6, 'icon': 'design_services'},
-    {'id': '4', 'name': 'Landscape Architect', 'color': 0xFF10B981, 'icon': 'park'},
-    {'id': '5', 'name': 'Civil Engineer', 'color': 0xFF3B82F6, 'icon': 'construction'},
-    {'id': '6', 'name': 'Electrical Engineer', 'color': 0xFFF59E0B, 'icon': 'electrical_services'},
-    {'id': '7', 'name': 'Mechanical Engineer', 'color': 0xFFEF4444, 'icon': 'precision_manufacturing'},
-    {'id': '8', 'name': 'Other', 'color': 0xFF6B7280, 'icon': 'person'},
-  ];
-
-  // Services data
-  List<Map<String, dynamic>> _services = [
-    {
-      'id': '1',
-      'name': 'Web Development',
-      'description': 'Custom website development and maintenance',
-      'rate': 150.0,
-      'unit': 'hour',
-      'category': 'Development',
-    },
-    {
-      'id': '2',
-      'name': 'UI/UX Design',
-      'description': 'User interface and experience design services',
-      'rate': 120.0,
-      'unit': 'hour',
-      'category': 'Design',
-    },
-    {
-      'id': '3',
-      'name': 'Consulting',
-      'description': 'Technical consulting and strategy',
-      'rate': 200.0,
-      'unit': 'hour',
-      'category': 'Consulting',
-    },
-    {
-      'id': '4',
-      'name': 'Project Management',
-      'description': 'End-to-end project management',
-      'rate': 100.0,
-      'unit': 'hour',
-      'category': 'Management',
-    },
-  ];
-
-  // Terms & Conditions data
-  List<Map<String, dynamic>> _termsConditions = [
-    {
-      'id': '1',
-      'title': 'Payment Terms',
-      'content': 'Payment is due within 30 days of invoice date. A late fee of 1.5% per month will be applied to overdue balances.',
-      'isDefault': true,
-    },
-    {
-      'id': '2',
-      'title': 'Scope Changes',
-      'content': 'Any changes to the project scope after acceptance will require a written change order and may affect the timeline and cost.',
-      'isDefault': true,
-    },
-    {
-      'id': '3',
-      'title': 'Intellectual Property',
-      'content': 'Upon full payment, client receives full ownership of all deliverables. Provider retains the right to use work samples in portfolio.',
-      'isDefault': true,
-    },
-    {
-      'id': '4',
-      'title': 'Cancellation Policy',
-      'content': 'Either party may cancel with 14 days written notice. Client is responsible for payment of all work completed up to cancellation date.',
-      'isDefault': true,
-    },
-    {
-      'id': '5',
-      'title': 'Confidentiality',
-      'content': 'Both parties agree to keep confidential information private and not disclose to third parties without written consent.',
-      'isDefault': false,
-    },
-    {
-      'id': '6',
-      'title': 'Limitation of Liability',
-      'content': 'Provider liability is limited to the total amount paid under the agreement. Provider is not liable for indirect or consequential damages.',
-      'isDefault': false,
-    },
-  ];
+  // Consultant Specialties - fetched from provider
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 12, vsync: this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadSettings();
+    });
+  }
+
+  Future<void> _loadSettings() async {
+    final authProvider = context.read<AuthProvider>();
+    final companyId = authProvider.currentCompanyId;
+    if (companyId != null) {
+      await context.read<SettingsProvider>().loadAll(companyId);
+    }
   }
 
   @override
@@ -355,6 +257,9 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
 
   Widget _buildServicesTab() {
     final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 0);
+    final settingsProvider = context.watch<SettingsProvider>();
+    final services = settingsProvider.services;
+    final categories = settingsProvider.categories;
     
     return Column(
       children: [
@@ -373,7 +278,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    '${_services.length} services configured',
+                    '${services.length} services configured',
                     style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                   ),
                 ],
@@ -398,7 +303,9 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
         
         // Services List
         Expanded(
-          child: _services.isEmpty
+          child: settingsProvider.isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : services.isEmpty
               ? Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -413,9 +320,9 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                 )
               : ListView.builder(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: _services.length,
+                  itemCount: services.length,
                   itemBuilder: (context, index) {
-                    final service = _services[index];
+                    final service = services[index];
                     
                     return Container(
                       margin: const EdgeInsets.only(bottom: 12),
@@ -562,7 +469,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
     final descriptionController = TextEditingController();
     final rateController = TextEditingController();
     String selectedUnit = 'hour';
-    String selectedCategory = _categories.isNotEmpty ? _categories.first['name'] as String : 'Other';
+    final categories = context.read<SettingsProvider>().categories;
+    String selectedCategory = categories.isNotEmpty ? categories.first['name'] as String : 'Other';
     
     showModalBottomSheet(
       context: context,
@@ -661,7 +569,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                         child: DropdownButton<String>(
                           value: selectedCategory,
                           isExpanded: true,
-                          items: _categories
+                          items: context.read<SettingsProvider>().categories
                               .map((cat) => DropdownMenuItem(value: cat['name'] as String, child: Text(cat['name'] as String)))
                               .toList(),
                           onChanged: (value) {
@@ -776,17 +684,14 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: () {
+                        onPressed: () async {
                           if (nameController.text.isNotEmpty && rateController.text.isNotEmpty) {
-                            setState(() {
-                              _services.add({
-                                'id': DateTime.now().millisecondsSinceEpoch.toString(),
-                                'name': nameController.text,
-                                'description': descriptionController.text,
-                                'rate': double.tryParse(rateController.text) ?? 0.0,
-                                'unit': selectedUnit,
-                                'category': selectedCategory,
-                              });
+                            await context.read<SettingsProvider>().addService({
+                              'name': nameController.text,
+                              'description': descriptionController.text,
+                              'rate': double.tryParse(rateController.text) ?? 0.0,
+                              'unit': selectedUnit,
+                              'category_name': selectedCategory,
                             });
                             Navigator.pop(context);
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -922,7 +827,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                         child: DropdownButton<String>(
                           value: selectedCategory,
                           isExpanded: true,
-                          items: _categories
+                          items: context.read<SettingsProvider>().categories
                               .map((cat) => DropdownMenuItem(value: cat['name'] as String, child: Text(cat['name'] as String)))
                               .toList(),
                           onChanged: (value) {
@@ -1037,20 +942,14 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: () {
+                        onPressed: () async {
                           if (nameController.text.isNotEmpty && rateController.text.isNotEmpty) {
-                            setState(() {
-                              final index = _services.indexWhere((s) => s['id'] == service['id']);
-                              if (index != -1) {
-                                _services[index] = {
-                                  'id': service['id'],
-                                  'name': nameController.text,
-                                  'description': descriptionController.text,
-                                  'rate': double.tryParse(rateController.text) ?? 0.0,
-                                  'unit': selectedUnit,
-                                  'category': selectedCategory,
-                                };
-                              }
+                            await context.read<SettingsProvider>().updateService(service['id'], {
+                              'name': nameController.text,
+                              'description': descriptionController.text,
+                              'rate': double.tryParse(rateController.text) ?? 0.0,
+                              'unit': selectedUnit,
+                              'category_name': selectedCategory,
                             });
                             Navigator.pop(context);
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -1095,10 +994,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () {
-              setState(() {
-                _services.removeWhere((s) => s['id'] == id);
-              });
+            onPressed: () async {
+              await context.read<SettingsProvider>().deleteService(id);
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
@@ -1115,6 +1012,10 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
   }
 
   Widget _buildCategoriesTab() {
+    final settingsProvider = context.watch<SettingsProvider>();
+    final categories = settingsProvider.categories;
+    final services = settingsProvider.services;
+    
     return Column(
       children: [
         // Header with Add Button
@@ -1132,7 +1033,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    '${_categories.length} categories configured',
+                    '${categories.length} categories configured',
                     style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                   ),
                 ],
@@ -1157,11 +1058,13 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
         
         // Categories List
         Expanded(
-          child: ListView.builder(
+          child: settingsProvider.isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : ListView.builder(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: _categories.length,
+            itemCount: categories.length,
             itemBuilder: (context, index) {
-              final category = _categories[index];
+              final category = categories[index];
               
               return Container(
                 margin: const EdgeInsets.only(bottom: 12),
@@ -1213,7 +1116,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
-                        '${_services.where((s) => s['category'] == category['name']).length} services',
+                        '${services.where((s) => s['category'] == category['name']).length} services',
                         style: TextStyle(
                           fontSize: 12,
                           color: AppColors.textSecondary,
@@ -1398,15 +1301,12 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: () {
+                        onPressed: () async {
                           if (nameController.text.isNotEmpty) {
-                            setState(() {
-                              _categories.add({
-                                'id': DateTime.now().millisecondsSinceEpoch.toString(),
-                                'name': nameController.text,
-                                'color': selectedColor,
-                                'icon': 'category',
-                              });
+                            await context.read<SettingsProvider>().addCategory({
+                              'name': nameController.text,
+                              'color': selectedColor,
+                              'icon': 'category',
                             });
                             Navigator.pop(context);
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -1533,25 +1433,12 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: () {
+                        onPressed: () async {
                           if (nameController.text.isNotEmpty) {
-                            setState(() {
-                              final index = _categories.indexWhere((c) => c['id'] == category['id']);
-                              if (index != -1) {
-                                final oldName = _categories[index]['name'];
-                                _categories[index] = {
-                                  'id': category['id'],
-                                  'name': nameController.text,
-                                  'color': selectedColor,
-                                  'icon': category['icon'],
-                                };
-                                // Update services with old category name
-                                for (var service in _services) {
-                                  if (service['category'] == oldName) {
-                                    service['category'] = nameController.text;
-                                  }
-                                }
-                              }
+                            await context.read<SettingsProvider>().updateCategory(category['id'], {
+                              'name': nameController.text,
+                              'color': selectedColor,
+                              'icon': category['icon'],
                             });
                             Navigator.pop(context);
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -1582,37 +1469,20 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
   }
 
   void _deleteCategory(String id) {
-    final category = _categories.firstWhere((c) => c['id'] == id);
-    final hasServices = _services.any((s) => s['category'] == category['name']);
-    
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Delete Category'),
-        content: Text(
-          hasServices
-              ? 'This category has services assigned to it. Deleting it will set those services to "Other". Continue?'
-              : 'Are you sure you want to delete this category?',
-        ),
+        content: const Text('Are you sure you want to delete this category?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () {
-              setState(() {
-                // Update services with this category to "Other"
-                if (hasServices) {
-                  for (var service in _services) {
-                    if (service['category'] == category['name']) {
-                      service['category'] = 'Other';
-                    }
-                  }
-                }
-                _categories.removeWhere((c) => c['id'] == id);
-              });
+            onPressed: () async {
+              await context.read<SettingsProvider>().deleteCategory(id);
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
@@ -1647,7 +1517,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    '${_consultantSpecialties.length} specialties configured',
+                    '${context.watch<SettingsProvider>().specialties.length} specialties configured',
                     style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                   ),
                 ],
@@ -1674,9 +1544,9 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
         Expanded(
           child: ListView.builder(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: _consultantSpecialties.length,
+            itemCount: context.watch<SettingsProvider>().specialties.length,
             itemBuilder: (context, index) {
-              final specialty = _consultantSpecialties[index];
+              final specialty = context.watch<SettingsProvider>().specialties[index];
               
               return Container(
                 margin: const EdgeInsets.only(bottom: 12),
@@ -1861,13 +1731,9 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                       child: ElevatedButton(
                         onPressed: () {
                           if (nameController.text.isNotEmpty) {
-                            setState(() {
-                              _consultantSpecialties.add({
-                                'id': DateTime.now().millisecondsSinceEpoch.toString(),
-                                'name': nameController.text,
-                                'color': selectedColor,
-                                'icon': 'person',
-                              });
+                            context.read<SettingsProvider>().addSpecialty({
+                              'name': nameController.text,
+                              'description': '',
                             });
                             Navigator.pop(context);
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -1996,17 +1862,10 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                       child: ElevatedButton(
                         onPressed: () {
                           if (nameController.text.isNotEmpty) {
-                            setState(() {
-                              final index = _consultantSpecialties.indexWhere((s) => s['id'] == specialty['id']);
-                              if (index != -1) {
-                                _consultantSpecialties[index] = {
-                                  'id': specialty['id'],
-                                  'name': nameController.text,
-                                  'color': selectedColor,
-                                  'icon': specialty['icon'],
-                                };
-                              }
-                            });
+                            context.read<SettingsProvider>().updateSpecialty(
+                              specialty['id'],
+                              {'name': nameController.text},
+                            );
                             Navigator.pop(context);
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
@@ -2038,24 +1897,23 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
   }
 
   void _deleteConsultantSpecialty(String id) {
-    final specialty = _consultantSpecialties.firstWhere((s) => s['id'] == id);
+    final specialties = context.read<SettingsProvider>().specialties;
+    final specialty = specialties.firstWhere((s) => s['id'] == id, orElse: () => {'name': 'Unknown'});
     
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Delete Specialty'),
         content: Text('Are you sure you want to delete "${specialty['name']}"?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () {
-              setState(() {
-                _consultantSpecialties.removeWhere((s) => s['id'] == id);
-              });
-              Navigator.pop(context);
+              context.read<SettingsProvider>().deleteSpecialty(id);
+              Navigator.pop(dialogContext);
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text('Specialty deleted successfully'),
@@ -2072,6 +1930,9 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
 
   // ============ TERMS & CONDITIONS TAB ============
   Widget _buildTermsTab() {
+    final settingsProvider = context.watch<SettingsProvider>();
+    final terms = settingsProvider.terms;
+    
     return Column(
       children: [
         // Header
@@ -2129,7 +1990,9 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
 
         // Terms List
         Expanded(
-          child: _termsConditions.isEmpty
+          child: settingsProvider.isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : terms.isEmpty
               ? Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -2142,16 +2005,16 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                 )
               : ListView.builder(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: _termsConditions.length,
+                  itemCount: terms.length,
                   itemBuilder: (context, index) {
-                    final term = _termsConditions[index];
+                    final term = terms[index];
                     return Container(
                       margin: const EdgeInsets.only(bottom: 12),
                       decoration: BoxDecoration(
                         color: AppColors.cardBackground,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: term['isDefault'] ? AppColors.accent.withOpacity(0.3) : AppColors.border,
+                          color: (term['is_default'] ?? false) ? AppColors.accent.withOpacity(0.3) : AppColors.border,
                         ),
                         boxShadow: AppShadows.sm,
                       ),
@@ -2178,7 +2041,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Text(term['title'], style: const TextStyle(fontWeight: FontWeight.w600)),
-                                      if (term['isDefault'])
+                                      if (term['is_default'] == true)
                                         Row(
                                           children: [
                                             Icon(Icons.check_circle, size: 12, color: AppColors.success),
@@ -2191,12 +2054,12 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                                 ),
                                 PopupMenuButton<String>(
                                   icon: const Icon(Icons.more_vert, size: 20),
-                                  onSelected: (value) {
+                                  onSelected: (value) async {
                                     if (value == 'edit') {
                                       _showEditTermModal(term);
                                     } else if (value == 'toggle') {
-                                      setState(() {
-                                        term['isDefault'] = !term['isDefault'];
+                                      await context.read<SettingsProvider>().updateTerms(term['id'], {
+                                        'is_default': !(term['is_default'] ?? false),
                                       });
                                     } else if (value == 'delete') {
                                       _showDeleteTermDialog(term);
@@ -2206,7 +2069,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                                     const PopupMenuItem(value: 'edit', child: Text('Edit')),
                                     PopupMenuItem(
                                       value: 'toggle',
-                                      child: Text(term['isDefault'] ? 'Remove from defaults' : 'Add to defaults'),
+                                      child: Text((term['is_default'] ?? false) ? 'Remove from defaults' : 'Add to defaults'),
                                     ),
                                     const PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: AppColors.error))),
                                   ],
@@ -2315,15 +2178,12 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () {
+                  onPressed: () async {
                     if (titleController.text.isNotEmpty && contentController.text.isNotEmpty) {
-                      setState(() {
-                        _termsConditions.add({
-                          'id': DateTime.now().millisecondsSinceEpoch.toString(),
-                          'title': titleController.text,
-                          'content': contentController.text,
-                          'isDefault': isDefault,
-                        });
+                      await context.read<SettingsProvider>().addTerms({
+                        'title': titleController.text,
+                        'content': contentController.text,
+                        'is_default': isDefault,
                       });
                       Navigator.pop(context);
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -2344,7 +2204,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
   void _showEditTermModal(Map<String, dynamic> term) {
     final titleController = TextEditingController(text: term['title']);
     final contentController = TextEditingController(text: term['content']);
-    bool isDefault = term['isDefault'];
+    bool isDefault = term['is_default'] ?? false;
 
     showModalBottomSheet(
       context: context,
@@ -2419,11 +2279,11 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () {
-                    setState(() {
-                      term['title'] = titleController.text;
-                      term['content'] = contentController.text;
-                      term['isDefault'] = isDefault;
+                  onPressed: () async {
+                    await context.read<SettingsProvider>().updateTerms(term['id'], {
+                      'title': titleController.text,
+                      'content': contentController.text,
+                      'is_default': isDefault,
                     });
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -2452,10 +2312,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () {
-              setState(() {
-                _termsConditions.removeWhere((t) => t['id'] == term['id']);
-              });
+            onPressed: () async {
+              await context.read<SettingsProvider>().deleteTerms(term['id']);
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Term deleted'), backgroundColor: AppColors.success),

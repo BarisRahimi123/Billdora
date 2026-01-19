@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 
 import '../../main.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/invoices_provider.dart';
+import '../../providers/permissions_provider.dart';
+import '../../providers/sales_provider.dart';
 import '../shell/app_header.dart';
 
 class InvoicesScreen extends StatefulWidget {
@@ -16,31 +21,30 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
   int _activeTab = 0; // 0 = All, 1 = Draft, 2 = Sent, 3 = Aging
   String _statusFilter = 'all';
   String _searchQuery = '';
-  String _viewMode = 'list'; // list or client
-  
-  // Mock data
-  final List<Map<String, dynamic>> _invoices = [
-    {'id': '1', 'number': 'INV-001', 'client': 'Acme Corp', 'amount': 2500.0, 'status': 'paid', 'dueDate': DateTime.now().subtract(const Duration(days: 5)), 'viewCount': 3, 'lastViewedAt': DateTime.now().subtract(const Duration(days: 2))},
-    {'id': '2', 'number': 'INV-002', 'client': 'TechStart Inc', 'amount': 1800.0, 'status': 'sent', 'dueDate': DateTime.now().add(const Duration(days: 15)), 'viewCount': 5, 'lastViewedAt': DateTime.now().subtract(const Duration(hours: 6))},
-    {'id': '3', 'number': 'INV-003', 'client': 'Design Studio', 'amount': 4200.0, 'status': 'draft', 'dueDate': null, 'viewCount': 0, 'lastViewedAt': null},
-    {'id': '4', 'number': 'INV-004', 'client': 'Global Media', 'amount': 950.0, 'status': 'overdue', 'dueDate': DateTime.now().subtract(const Duration(days: 10)), 'viewCount': 2, 'lastViewedAt': DateTime.now().subtract(const Duration(days: 5))},
-    {'id': '5', 'number': 'INV-005', 'client': 'Acme Corp', 'amount': 3200.0, 'status': 'sent', 'dueDate': DateTime.now().add(const Duration(days: 7)), 'viewCount': 1, 'lastViewedAt': DateTime.now().subtract(const Duration(hours: 12))},
-    {'id': '6', 'number': 'INV-006', 'client': 'Startup Labs', 'amount': 1500.0, 'status': 'paid', 'dueDate': DateTime.now().subtract(const Duration(days: 20)), 'viewCount': 0, 'lastViewedAt': null},
-    {'id': '7', 'number': 'INV-007', 'client': 'Tech Innovations', 'amount': 2100.0, 'status': 'draft', 'dueDate': null, 'viewCount': 0, 'lastViewedAt': null},
-  ];
 
-  List<Map<String, dynamic>> get _filteredInvoices {
-    var filtered = _invoices;
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    final auth = context.read<AuthProvider>();
+    if (auth.companyId != null) {
+      context.read<InvoicesProvider>().loadInvoices(auth.companyId!);
+      context.read<SalesProvider>().loadClients(auth.companyId!);
+    }
+  }
+
+  List<Map<String, dynamic>> _getFilteredInvoices(List<Map<String, dynamic>> invoices) {
+    var filtered = invoices;
     
     // Filter by tab
     if (_activeTab == 1) {
-      // Draft tab
       filtered = filtered.where((i) => i['status'] == 'draft').toList();
     } else if (_activeTab == 2) {
-      // Sent tab
       filtered = filtered.where((i) => i['status'] == 'sent').toList();
     } else if (_activeTab == 3) {
-      // Aging tab (overdue + sent)
       filtered = filtered.where((i) => i['status'] == 'overdue' || i['status'] == 'sent').toList();
     }
     
@@ -52,35 +56,35 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
     // Filter by search
     if (_searchQuery.isNotEmpty) {
       filtered = filtered.where((i) => 
-        i['number'].toLowerCase().contains(_searchQuery.toLowerCase()) ||
-        i['client'].toLowerCase().contains(_searchQuery.toLowerCase())
+        (i['invoice_number'] ?? '').toLowerCase().contains(_searchQuery.toLowerCase()) ||
+        (i['clients']?['name'] ?? '').toLowerCase().contains(_searchQuery.toLowerCase())
       ).toList();
     }
     
     return filtered;
   }
 
-  Map<String, double> get _stats {
-    final wip = _invoices.where((i) => i['status'] == 'draft').fold(0.0, (sum, i) => sum + i['amount']);
-    final sent = _invoices.where((i) => i['status'] == 'sent').fold(0.0, (sum, i) => sum + i['amount']);
-    final aging = _invoices.where((i) => i['status'] == 'overdue').fold(0.0, (sum, i) => sum + i['amount']);
+  Map<String, double> _getStats(List<Map<String, dynamic>> invoices) {
+    final wip = invoices.where((i) => i['status'] == 'draft').fold(0.0, (sum, i) => sum + ((i['total'] as num?) ?? 0).toDouble());
+    final sent = invoices.where((i) => i['status'] == 'sent').fold(0.0, (sum, i) => sum + ((i['total'] as num?) ?? 0).toDouble());
+    final aging = invoices.where((i) => i['status'] == 'overdue').fold(0.0, (sum, i) => sum + ((i['total'] as num?) ?? 0).toDouble());
     return {'wip': wip, 'sent': sent, 'aging': aging};
   }
 
   @override
   Widget build(BuildContext context) {
     final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 0);
-    final stats = _stats;
+    final invoicesProvider = context.watch<InvoicesProvider>();
+    final permissions = context.watch<PermissionsProvider>();
+    final filteredInvoices = _getFilteredInvoices(invoicesProvider.invoices);
+    final stats = _getStats(invoicesProvider.invoices);
     
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
         child: CustomScrollView(
           slivers: [
-            // App Header with Hamburger Menu
-            const SliverToBoxAdapter(
-              child: AppHeader(showSearch: false),
-            ),
+            const SliverToBoxAdapter(child: AppHeader(showSearch: false)),
 
             // Title and Actions
             SliverToBoxAdapter(
@@ -107,26 +111,26 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                     ),
                     Row(
                       children: [
-                        // Log Payment Button
-                        GestureDetector(
-                          onTap: () => _showCreatePaymentModal(),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: AppColors.cardBackground,
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: AppColors.border),
-                            ),
-                            child: const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.attach_money, size: 16, color: AppColors.textPrimary),
-                                SizedBox(width: 4),
-                                Text('Log', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
-                              ],
+                        if (permissions.canViewClientValues)
+                          GestureDetector(
+                            onTap: () => _showCreatePaymentModal(),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: AppColors.cardBackground,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: AppColors.border),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.attach_money, size: 16, color: AppColors.textPrimary),
+                                  SizedBox(width: 4),
+                                  Text('Log', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+                                ],
+                              ),
                             ),
                           ),
-                        ),
                         const SizedBox(width: 8),
                         GestureDetector(
                           onTap: () => context.push('/invoices/create'),
@@ -141,14 +145,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                               children: [
                                 Icon(Icons.add, color: Colors.white, size: 18),
                                 SizedBox(width: 4),
-                                Text(
-                                  'New',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
+                                Text('New', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500)),
                               ],
                             ),
                           ),
@@ -160,33 +157,22 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
               ),
             ),
 
-            // Stats Row
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Row(
-                  children: [
-                    Expanded(child: _StatPill(
-                      label: 'WIP',
-                      value: currencyFormat.format(stats['wip']),
-                      color: AppColors.neutral500,
-                    )),
-                    const SizedBox(width: 8),
-                    Expanded(child: _StatPill(
-                      label: 'Sent',
-                      value: currencyFormat.format(stats['sent']),
-                      color: AppColors.warning,
-                    )),
-                    const SizedBox(width: 8),
-                    Expanded(child: _StatPill(
-                      label: 'Aging',
-                      value: currencyFormat.format(stats['aging']),
-                      color: AppColors.error,
-                    )),
-                  ],
+            // Stats Row (only for users with permission)
+            if (permissions.canViewClientValues)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Row(
+                    children: [
+                      Expanded(child: _StatPill(label: 'WIP', value: currencyFormat.format(stats['wip']), color: AppColors.neutral500)),
+                      const SizedBox(width: 8),
+                      Expanded(child: _StatPill(label: 'Sent', value: currencyFormat.format(stats['sent']), color: AppColors.warning)),
+                      const SizedBox(width: 8),
+                      Expanded(child: _StatPill(label: 'Aging', value: currencyFormat.format(stats['aging']), color: AppColors.error)),
+                    ],
+                  ),
                 ),
               ),
-            ),
 
             // Tabs
             SliverToBoxAdapter(
@@ -250,36 +236,36 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
             SliverPadding(
               padding: const EdgeInsets.all(16),
               sliver: SliverToBoxAdapter(
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: AppColors.cardBackground,
-                    borderRadius: BorderRadius.circular(AppRadius.lg),
-                    boxShadow: AppShadows.card,
-                  ),
-                  child: _filteredInvoices.isEmpty
-                      ? const Padding(
-                          padding: EdgeInsets.all(40),
-                          child: Center(
-                            child: Text(
-                              'No invoices found',
-                              style: TextStyle(color: AppColors.textSecondary),
+                child: invoicesProvider.isLoading
+                    ? const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator()))
+                    : invoicesProvider.errorMessage != null
+                        ? Center(child: Padding(padding: const EdgeInsets.all(40), child: Text('Error: ${invoicesProvider.errorMessage}')))
+                        : Container(
+                            decoration: BoxDecoration(
+                              color: AppColors.cardBackground,
+                              borderRadius: BorderRadius.circular(AppRadius.lg),
+                              boxShadow: AppShadows.card,
                             ),
+                            child: filteredInvoices.isEmpty
+                                ? const Padding(
+                                    padding: EdgeInsets.all(40),
+                                    child: Center(child: Text('No invoices found', style: TextStyle(color: AppColors.textSecondary))),
+                                  )
+                                : ListView.separated(
+                                    shrinkWrap: true,
+                                    physics: const NeverScrollableScrollPhysics(),
+                                    itemCount: filteredInvoices.length,
+                                    separatorBuilder: (_, __) => Divider(height: 1, color: AppColors.border),
+                                    itemBuilder: (context, index) {
+                                      final invoice = filteredInvoices[index];
+                                      return _InvoiceListTile(
+                                        invoice: invoice,
+                                        showAmount: permissions.canViewClientValues,
+                                        onTap: () => context.push('/invoices/${invoice['id']}'),
+                                      );
+                                    },
+                                  ),
                           ),
-                        )
-                      : ListView.separated(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: _filteredInvoices.length,
-                          separatorBuilder: (_, __) => Divider(height: 1, color: AppColors.border),
-                          itemBuilder: (context, index) {
-                            final invoice = _filteredInvoices[index];
-                            return _InvoiceListTile(
-                              invoice: invoice,
-                              onTap: () => context.push('/invoices/${invoice['id']}'),
-                            );
-                          },
-                        ),
-                ),
               ),
             ),
           ],
@@ -304,20 +290,21 @@ class _CreatePaymentModal extends StatefulWidget {
 }
 
 class _CreatePaymentModalState extends State<_CreatePaymentModal> {
-  String? _selectedClient;
+  String? _selectedClientId;
   double _amount = 0.0;
   String _paymentType = 'Check';
   DateTime _paymentDate = DateTime.now();
   String _referenceNumber = '';
   String _notes = '';
   bool _projectSpecific = false;
+  bool _isSubmitting = false;
 
-  final List<String> _clients = ['Barzan Shop', 'Sequoia Consulting', 'Acme Corp', 'TechStart Inc'];
   final List<String> _paymentTypes = ['Check', 'Cash', 'Credit Card', 'Bank Transfer', 'PayPal', 'Stripe', 'Other'];
 
   @override
   Widget build(BuildContext context) {
     final dateFormat = DateFormat('MMM d, yyyy');
+    final clients = context.watch<SalesProvider>().clients;
     
     return Dialog(
       backgroundColor: AppColors.cardBackground,
@@ -328,7 +315,6 @@ class _CreatePaymentModalState extends State<_CreatePaymentModal> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Header
             Padding(
               padding: const EdgeInsets.all(16),
               child: Row(
@@ -344,14 +330,12 @@ class _CreatePaymentModalState extends State<_CreatePaymentModal> {
             ),
             const Divider(height: 1),
 
-            // Content
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Client
                     _buildLabel('Client'),
                     const SizedBox(height: 8),
                     Container(
@@ -363,17 +347,19 @@ class _CreatePaymentModalState extends State<_CreatePaymentModal> {
                       ),
                       child: DropdownButtonHideUnderline(
                         child: DropdownButton<String>(
-                          value: _selectedClient,
+                          value: _selectedClientId,
                           isExpanded: true,
                           hint: const Text('Select a client'),
-                          items: _clients.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
-                          onChanged: (value) => setState(() => _selectedClient = value),
+                          items: clients.map((c) => DropdownMenuItem(
+                            value: c['id'] as String,
+                            child: Text(c['name'] ?? 'Unknown'),
+                          )).toList(),
+                          onChanged: (value) => setState(() => _selectedClientId = value),
                         ),
                       ),
                     ),
                     const SizedBox(height: 16),
 
-                    // Total Amount
                     _buildLabel('Total Amount'),
                     const SizedBox(height: 8),
                     TextField(
@@ -388,7 +374,6 @@ class _CreatePaymentModalState extends State<_CreatePaymentModal> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Payment Type
                     _buildLabel('Payment Type'),
                     const SizedBox(height: 8),
                     Container(
@@ -409,7 +394,6 @@ class _CreatePaymentModalState extends State<_CreatePaymentModal> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Payment Date
                     _buildLabel('Payment Date'),
                     const SizedBox(height: 8),
                     GestureDetector(
@@ -434,7 +418,6 @@ class _CreatePaymentModalState extends State<_CreatePaymentModal> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Reference Number
                     _buildLabel('Reference Number'),
                     const SizedBox(height: 8),
                     TextField(
@@ -447,7 +430,6 @@ class _CreatePaymentModalState extends State<_CreatePaymentModal> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Payment Notes/Memo
                     _buildLabel('Payment Notes/Memo'),
                     const SizedBox(height: 8),
                     TextField(
@@ -462,7 +444,6 @@ class _CreatePaymentModalState extends State<_CreatePaymentModal> {
                     ),
                     const SizedBox(height: 8),
 
-                    // Project-Specific Payment
                     Row(
                       children: [
                         Checkbox(
@@ -486,7 +467,6 @@ class _CreatePaymentModalState extends State<_CreatePaymentModal> {
               ),
             ),
 
-            // Footer
             Container(
               padding: const EdgeInsets.all(16),
               child: Row(
@@ -500,8 +480,13 @@ class _CreatePaymentModalState extends State<_CreatePaymentModal> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('Save'),
+                      onPressed: _isSubmitting ? null : () {
+                        // TODO: Save payment via provider
+                        Navigator.pop(context);
+                      },
+                      child: _isSubmitting
+                          ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                          : const Text('Save'),
                     ),
                   ),
                 ],
@@ -515,30 +500,6 @@ class _CreatePaymentModalState extends State<_CreatePaymentModal> {
 
   Widget _buildLabel(String text) {
     return Text(text, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textSecondary));
-  }
-}
-
-class _IconButton extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback onTap;
-
-  const _IconButton({required this.icon, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 36,
-        height: 36,
-        decoration: BoxDecoration(
-          color: AppColors.cardBackground,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppColors.border),
-        ),
-        child: Icon(icon, size: 18, color: AppColors.textSecondary),
-      ),
-    );
   }
 }
 
@@ -560,22 +521,9 @@ class _StatPill extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-              color: color,
-            ),
-          ),
+          Text(value, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: color)),
           const SizedBox(height: 2),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              color: AppColors.textSecondary,
-            ),
-          ),
+          Text(label, style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
         ],
       ),
     );
@@ -655,9 +603,10 @@ class _FilterButton extends StatelessWidget {
 
 class _InvoiceListTile extends StatelessWidget {
   final Map<String, dynamic> invoice;
+  final bool showAmount;
   final VoidCallback onTap;
 
-  const _InvoiceListTile({required this.invoice, required this.onTap});
+  const _InvoiceListTile({required this.invoice, required this.showAmount, required this.onTap});
 
   Color get _statusColor {
     switch (invoice['status']) {
@@ -677,27 +626,13 @@ class _InvoiceListTile extends StatelessWidget {
     }
   }
 
-  String _formatViewTime(DateTime timestamp) {
-    final now = DateTime.now();
-    final difference = now.difference(timestamp);
-    
-    if (difference.inMinutes < 60) {
-      return '${difference.inMinutes}m ago';
-    } else if (difference.inHours < 24) {
-      return '${difference.inHours}h ago';
-    } else if (difference.inDays < 7) {
-      return '${difference.inDays}d ago';
-    } else {
-      return DateFormat('MMM d').format(timestamp);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 0);
     final dateFormat = DateFormat('MMM d');
-    final viewCount = invoice['viewCount'] as int? ?? 0;
-    final lastViewedAt = invoice['lastViewedAt'] as DateTime?;
+    final clientName = invoice['clients']?['name'] ?? 'Unknown Client';
+    final dueDate = invoice['due_date'] != null ? DateTime.tryParse(invoice['due_date']) : null;
+    final total = (invoice['total'] as num?)?.toDouble() ?? 0.0;
     
     return ListTile(
       onTap: onTap,
@@ -711,95 +646,39 @@ class _InvoiceListTile extends StatelessWidget {
         ),
         child: Center(
           child: Text(
-            invoice['client'][0],
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: AppColors.accent,
-            ),
+            clientName.isNotEmpty ? clientName[0] : '?',
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.accent),
           ),
         ),
       ),
       title: Row(
         children: [
           Text(
-            invoice['number'],
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: AppColors.textPrimary,
-            ),
+            invoice['invoice_number'] ?? 'INV-???',
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textPrimary),
           ),
-          if (invoice['dueDate'] != null) ...[
+          if (dueDate != null) ...[
             const SizedBox(width: 8),
             Text(
-              'Due ${dateFormat.format(invoice['dueDate'])}',
-              style: TextStyle(
-                fontSize: 11,
-                color: AppColors.textTertiary,
-              ),
+              'Due ${dateFormat.format(dueDate)}',
+              style: TextStyle(fontSize: 11, color: AppColors.textTertiary),
             ),
           ],
         ],
       ),
-      subtitle: Row(
-        children: [
-          Expanded(
-            child: Text(
-              invoice['client'],
-              style: TextStyle(
-                fontSize: 13,
-                color: AppColors.textSecondary,
-              ),
-            ),
-          ),
-          // View count indicator (only for sent/paid invoices)
-          if (viewCount > 0 && lastViewedAt != null) ...[
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: AppColors.info.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.visibility_outlined, size: 12, color: AppColors.info),
-                  const SizedBox(width: 4),
-                  Text(
-                    '$viewCount',
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.info,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    '• ${_formatViewTime(lastViewedAt)}',
-                    style: TextStyle(
-                      fontSize: 9,
-                      color: AppColors.textTertiary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ],
+      subtitle: Text(
+        clientName,
+        style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
       ),
       trailing: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          Text(
-            currencyFormat.format(invoice['amount']),
-            style: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
+          if (showAmount)
+            Text(
+              currencyFormat.format(total),
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
             ),
-          ),
           const SizedBox(height: 4),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -808,12 +687,8 @@ class _InvoiceListTile extends StatelessWidget {
               borderRadius: BorderRadius.circular(6),
             ),
             child: Text(
-              invoice['status'].toString().toUpperCase(),
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
-                color: _statusColor,
-              ),
+              (invoice['status'] ?? 'draft').toString().toUpperCase(),
+              style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: _statusColor),
             ),
           ),
         ],

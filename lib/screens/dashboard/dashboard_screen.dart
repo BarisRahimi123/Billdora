@@ -29,8 +29,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _loadStats() async {
     final supabase = context.read<SupabaseService>();
+    final authProvider = context.read<AuthProvider>();
+    final companyId = authProvider.currentCompanyId;
+    if (companyId == null) {
+      setState(() => _isLoading = false);
+      return;
+    }
     try {
-      final stats = await supabase.getDashboardStats('company-id');
+      final stats = await supabase.getDashboardStats(companyId);
       setState(() {
         _stats = stats;
         _isLoading = false;
