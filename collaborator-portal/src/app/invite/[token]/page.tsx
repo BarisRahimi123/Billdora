@@ -23,18 +23,15 @@ export default function InvitePage() {
     try {
       const supabase = createClient()
       
-      // Fetch invitation with related quote and company data
+      // Fetch invitation data (owner_name, company_name, project_name are now stored directly)
       const { data, error: fetchError } = await supabase
         .from('collaborator_invitations')
-        .select(`
-          *,
-          quotes(id, title, scope, subtotal, total, line_items, recipient_name),
-          companies(id, name, logo_url)
-        `)
+        .select('*')
         .eq('token', token)
         .single()
 
       if (fetchError || !data) {
+        console.error('Fetch error:', fetchError)
         setError('This invitation link is invalid or has expired.')
         return
       }
@@ -98,9 +95,10 @@ export default function InvitePage() {
     )
   }
 
-  const quote = invitation?.quotes as any
-  const company = invitation?.companies as any
   const deadline = invitation?.deadline ? new Date(invitation.deadline) : null
+  const companyName = invitation?.company_name || 'A company'
+  const ownerName = invitation?.owner_name || 'Someone'
+  const projectName = invitation?.project_name || invitation?.notes || 'Project Proposal'
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#f5f5f3] to-[#e8e8e5]">
@@ -136,7 +134,7 @@ export default function InvitePage() {
             </div>
             <h1 className="text-3xl font-bold mb-2">You&apos;re Invited!</h1>
             <p className="text-white/90 text-lg">
-              {company?.name || 'A company'} wants you to collaborate on a proposal
+              {companyName} wants you to collaborate on a proposal
             </p>
           </div>
 
@@ -147,15 +145,12 @@ export default function InvitePage() {
               <div className="flex items-start justify-between mb-4">
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900 mb-1">
-                    {quote?.title || invitation?.notes || 'Project Proposal'}
+                    {projectName}
                   </h2>
                   <p className="text-gray-600">
-                    From <span className="font-medium text-gray-900">{company?.name}</span>
+                    From <span className="font-medium text-gray-900">{companyName}</span>
                   </p>
                 </div>
-                {company?.logo_url && (
-                  <img src={company.logo_url} alt={company.name} className="w-12 h-12 rounded-lg object-cover" />
-                )}
               </div>
 
               <div className="grid grid-cols-2 gap-4 mt-6">
@@ -165,7 +160,7 @@ export default function InvitePage() {
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 uppercase">Invited By</p>
-                    <p className="font-medium text-gray-900">{invitation?.collaborator_name}</p>
+                    <p className="font-medium text-gray-900">{ownerName}</p>
                   </div>
                 </div>
 
@@ -183,17 +178,15 @@ export default function InvitePage() {
                   </div>
                 )}
 
-                {quote?.recipient_name && (
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-sm">
-                      <Building2 className="w-5 h-5 text-[#476E66]" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500 uppercase">Client</p>
-                      <p className="font-medium text-gray-900">{quote.recipient_name}</p>
-                    </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-sm">
+                    <Building2 className="w-5 h-5 text-[#476E66]" />
                   </div>
-                )}
+                  <div>
+                    <p className="text-xs text-gray-500 uppercase">Company</p>
+                    <p className="font-medium text-gray-900">{companyName}</p>
+                  </div>
+                </div>
 
                 {invitation?.role && (
                   <div className="flex items-center gap-3">
@@ -210,15 +203,8 @@ export default function InvitePage() {
 
               {invitation?.notes && (
                 <div className="mt-6 pt-6 border-t border-gray-200">
-                  <p className="text-xs text-gray-500 uppercase mb-2">Notes from sender</p>
+                  <p className="text-xs text-gray-500 uppercase mb-2">Notes from {ownerName}</p>
                   <p className="text-gray-700">{invitation.notes}</p>
-                </div>
-              )}
-
-              {quote?.scope && (
-                <div className="mt-6 pt-6 border-t border-gray-200">
-                  <p className="text-xs text-gray-500 uppercase mb-2">Project Scope</p>
-                  <p className="text-gray-700 whitespace-pre-wrap">{quote.scope}</p>
                 </div>
               )}
             </div>
@@ -231,7 +217,7 @@ export default function InvitePage() {
                   { num: 1, text: 'Create your free Billdora account (30 seconds)' },
                   { num: 2, text: 'View the full project details and scope' },
                   { num: 3, text: 'Add your services and pricing' },
-                  { num: 4, text: `Submit for ${company?.name || 'the sender'} to review` },
+                  { num: 4, text: `Submit for ${companyName} to review` },
                 ].map((step) => (
                   <div key={step.num} className="flex items-center gap-3">
                     <div className="w-8 h-8 bg-[#476E66] rounded-full flex items-center justify-center text-white text-sm font-bold">
