@@ -1,0 +1,539 @@
+import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
+import { User } from '@supabase/supabase-js';
+import { supabase, Profile } from '../lib/supabase';
+import { Capacitor } from '@capacitor/core';
+
+interface SignUpResult {
+  error: Error | null;
+  emailConfirmationRequired?: boolean;
+}
+
+interface AuthContextType {
+  user: User | null;
+  profile: Profile | null;
+  loading: boolean;
+  signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
+  signUp: (email: string, password: string, fullName: string, phone: string, companyName?: string, staffData?: { dateOfBirth?: string; address?: string; city?: string; state?: string; zipCode?: string; emergencyContactName?: string; emergencyContactPhone?: string; dateOfHire?: string } | null) => Promise<SignUpResult>;
+  signInWithGoogle: () => Promise<{ error: Error | null }>;
+  signInWithApple: () => Promise<{ error: Error | null }>;
+  signInWithFacebook: () => Promise<{ error: Error | null }>;
+  signOut: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
+  resendVerificationEmail: (email: string) => Promise<{ error: Error | null }>;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+// Track if auth has ever been initialized (persists across re-renders)
+let globalAuthInitialized = false;
+
+// Register device token for push notifications
+async function registerDeviceToken(token: string, userId: string, companyId: string, authToken: string) {
+  try {
+    const response = await fetch('https://bqxnagmmegdbqrzhheip.supabase.co/rest/v1/device_tokens', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJxeG5hZ21tZWdkYnFyemhoZWlwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI2OTM5NTgsImV4cCI6MjA2ODI2OTk1OH0.LBb7KaCSs7LpsD9NZCOcartkcDIIALBIrpnYcv5Y0yY',
+        'Authorization': `Bearer ${authToken}`,
+        'Prefer': 'resolution=merge-duplicates'
+      },
+      body: JSON.stringify({
+        device_token: token,
+        user_id: userId,
+        company_id: companyId,
+        platform: 'ios'
+      })
+    });
+    if (response.ok) {
+      console.log('Device token registered for push notifications');
+    }
+  } catch (e) {
+    console.error('Failed to register device token:', e);
+  }
+}
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  // Only show loading on very first mount, never again
+  const [loading, setLoading] = useState(!globalAuthInitialized);
+  const hasInitialized = useRef(globalAuthInitialized);
+
+  useEffect(() => {
+    let isMounted = true;
+    let initialLoadComplete = hasInitialized.current;
+    
+    // If already initialized, skip loading state entirely
+    if (hasInitialized.current) {
+      setLoading(false);
+    }
+    
+    // Safety timeout - never let loading state hang forever (reduced to 5s for faster UX)
+    const timeout = setTimeout(() => {
+      if (isMounted && !hasInitialized.current) {
+        console.warn('Auth check timed out after 5 seconds');
+        setLoading(false);
+        initialLoadComplete = true;
+        hasInitialized.current = true;
+        globalAuthInitialized = true;
+      }
+    }, 5000);
+    
+    async function loadUser() {
+      try {
+        // CRITICAL: Clear any cached session FIRST before validation
+        // This prevents the auth state change listener from restoring stale data
+        const cachedToken = localStorage.getItem('sb-bqxnagmmegdbqrzhheip-auth-token');
+        
+        // Use getUser() to VALIDATE session against server (not just cached)
+        // This prevents stale/ghost sessions from being used
+        const { data: { user: validatedUser }, error: userError } = await supabase.auth.getUser();
+        
+        if (!isMounted) return;
+        
+        // If session validation failed, clear any stale cache
+        if (userError || !validatedUser) {
+          localStorage.removeItem('sb-bqxnagmmegdbqrzhheip-auth-token');
+          sessionStorage.removeItem('sb-bqxnagmmegdbqrzhheip-auth-token');
+          setUser(null);
+          setProfile(null);
+          setLoading(false);
+          initialLoadComplete = true;
+          return;
+        }
+        
+        const currentUser = validatedUser;
+        
+        if (currentUser) {
+          // SESSION VALIDATION: Verify the cached session matches a real profile
+          // This prevents "ghost user" issues from stale cached sessions
+          try {
+            const { data: profileData, error: profileError } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', currentUser.id)
+              .maybeSingle();
+            
+            if (!isMounted) return;
+            
+            // If no profile exists for this user OR profile doesn't match, clear the invalid session
+            if (profileError || !profileData) {
+              console.warn('Session mismatch detected - clearing invalid session');
+              // Clear all Supabase auth storage to prevent ghost user
+              localStorage.removeItem('sb-bqxnagmmegdbqrzhheip-auth-token');
+              sessionStorage.removeItem('sb-bqxnagmmegdbqrzhheip-auth-token');
+              await supabase.auth.signOut();
+              setUser(null);
+              setProfile(null);
+            } else {
+              // Valid session - set user and profile
+              setUser(currentUser);
+              setProfile(profileData);
+            }
+          } catch (e) {
+            console.error('Profile validation error:', e);
+            // On error, still try to use the session but without profile
+            setUser(currentUser);
+          }
+        } else {
+          setUser(null);
+          setProfile(null);
+        }
+      } catch (error) {
+        console.error('Auth load error:', error);
+        // On any error, clear potentially corrupted session
+        localStorage.removeItem('sb-bqxnagmmegdbqrzhheip-auth-token');
+        sessionStorage.removeItem('sb-bqxnagmmegdbqrzhheip-auth-token');
+        setUser(null);
+        setProfile(null);
+      } finally {
+        clearTimeout(timeout);
+        if (isMounted) {
+          setLoading(false);
+          initialLoadComplete = true;
+          hasInitialized.current = true;
+          globalAuthInitialized = true;
+        }
+      }
+    }
+    
+    loadUser();
+    
+    // Set up auth state change listener
+    // CRITICAL: Only process events AFTER initial load is complete
+    // This prevents cached sessions from bypassing server validation
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (!isMounted) return;
+        
+        // Ignore INITIAL_SESSION event - we handle this in loadUser()
+        // This prevents the cached/stale session from being restored
+        if (event === 'INITIAL_SESSION') {
+          return;
+        }
+        
+        // Only process real auth events (SIGNED_IN, SIGNED_OUT, TOKEN_REFRESHED)
+        // after the initial validation is complete
+        if (!initialLoadComplete) {
+          return;
+        }
+        
+        setUser(session?.user || null);
+        if (session?.user) {
+          const { data } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .maybeSingle();
+          if (isMounted) setProfile(data);
+        } else {
+          setProfile(null);
+        }
+      }
+    );
+
+    // Proactive session refresh every 10 minutes to prevent stale tokens
+    const refreshInterval = setInterval(async () => {
+      if (isMounted) {
+        try {
+          await supabase.auth.refreshSession();
+        } catch (e) {
+          console.warn('Session refresh failed:', e);
+        }
+      }
+    }, 10 * 60 * 1000);
+
+    // Refresh session when app becomes visible after being hidden
+    // More resilient - don't clear user state on network errors
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState === 'visible' && isMounted) {
+        try {
+          // First check if we have a cached session
+          const { data: { session: currentSession } } = await supabase.auth.getSession();
+          
+          if (currentSession) {
+            // Try to refresh, but don't logout on failure (network may be slow)
+            const { data, error } = await supabase.auth.refreshSession();
+            
+            // Only clear session if we get a specific auth error (not network error)
+            if (error && (error.message.includes('Invalid') || error.message.includes('expired'))) {
+              console.warn('Session invalid, clearing auth state');
+              setUser(null);
+              setProfile(null);
+            } else if (data?.session?.user) {
+              // Update user if refresh succeeded
+              setUser(data.session.user);
+            }
+            // On network errors, keep existing state - don't logout user
+          }
+        } catch (e) {
+          // Network error - keep existing auth state, don't logout
+          console.warn('Session refresh on visibility failed (keeping state):', e);
+        }
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // Handle Capacitor App state changes (iOS foreground/background)
+    let appStateListener: any = null;
+    if (Capacitor.isNativePlatform()) {
+      import('@capacitor/app').then(({ App }) => {
+        appStateListener = App.addListener('appStateChange', async ({ isActive }) => {
+          if (isActive && isMounted) {
+            console.log('App resumed from background');
+            try {
+              // Soft refresh - don't clear state on errors
+              const { data } = await supabase.auth.refreshSession();
+              if (data?.session?.user) {
+                setUser(data.session.user);
+              }
+            } catch (e) {
+              console.warn('App resume session refresh failed (keeping state):', e);
+            }
+          }
+        });
+      }).catch(console.error);
+    }
+
+    return () => {
+      isMounted = false;
+      clearTimeout(timeout);
+      clearInterval(refreshInterval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      if (appStateListener) {
+        appStateListener.remove();
+      }
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  async function signIn(email: string, password: string) {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    
+    // Check if email is not confirmed
+    if (error?.message?.toLowerCase().includes('email not confirmed')) {
+      return { error: new Error('Please verify your email address before logging in. Check your inbox for the verification link.') };
+    }
+    
+    if (!error && data.user) {
+      // Double-check email confirmation
+      if (!data.user.email_confirmed_at) {
+        await supabase.auth.signOut();
+        return { error: new Error('Please verify your email address before logging in. Check your inbox for the verification link.') };
+      }
+      
+      setUser(data.user);
+      const { data: profileData } = await supabase.from('profiles').select('*').eq('id', data.user.id).maybeSingle();
+      setProfile(profileData);
+      
+      // Store credentials for iOS push notification registration
+      if (profileData?.company_id && data.session?.access_token) {
+        localStorage.setItem('userId', data.user.id);
+        localStorage.setItem('companyId', profileData.company_id);
+        localStorage.setItem('authToken', data.session.access_token);
+        
+        // Register device token if available (for iOS app)
+        const deviceToken = localStorage.getItem('apnsDeviceToken');
+        if (deviceToken) {
+          registerDeviceToken(deviceToken, data.user.id, profileData.company_id, data.session.access_token);
+        }
+      }
+    }
+    return { error };
+  }
+
+  async function signUp(email: string, password: string, fullName: string, phone: string, companyName?: string, staffData?: { dateOfBirth?: string; address?: string; city?: string; state?: string; zipCode?: string; emergencyContactName?: string; emergencyContactPhone?: string; dateOfHire?: string } | null): Promise<SignUpResult> {
+    const { data, error } = await supabase.auth.signUp({ 
+      email, 
+      password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/login`,
+      }
+    });
+    
+    if (error) {
+      return { error };
+    }
+    
+    if (data.user) {
+      // Check if email confirmation is required (user exists but not confirmed)
+      const emailConfirmationRequired = !data.user.email_confirmed_at;
+      
+      // Check if there's a pending invitation for this email
+      let invitation: any = null;
+      try {
+        const { data: inviteData } = await supabase
+          .from('company_invitations')
+          .select('*, role:roles(id, name)')
+          .eq('email', email.toLowerCase())
+          .eq('status', 'pending')
+          .gt('expires_at', new Date().toISOString())
+          .maybeSingle();
+        invitation = inviteData;
+      } catch (e) {
+        console.error('Failed to check invitation:', e);
+      }
+
+      let companyId: string | null = null;
+      let userRole = 'admin';
+      let roleId: string | null = null;
+
+      if (invitation) {
+        // User was invited - use invitation's company and role
+        companyId = invitation.company_id;
+        roleId = invitation.role_id;
+        userRole = invitation.role?.name || 'staff';
+        
+        // Mark invitation as accepted
+        try {
+          await supabase
+            .from('company_invitations')
+            .update({ status: 'accepted' })
+            .eq('id', invitation.id);
+        } catch (e) {
+          console.error('Failed to update invitation status:', e);
+        }
+      } else {
+        // New user signing up - create company via RPC (bypasses RLS during signup)
+        try {
+          const actualCompanyName = companyName?.trim() || `${fullName}'s Company`;
+          const { data: newCompanyId, error: companyError } = await supabase.rpc('create_company_for_user', {
+            p_user_id: data.user.id,
+            p_company_name: actualCompanyName,
+            p_full_name: fullName,
+            p_phone: phone
+          });
+          if (!companyError && newCompanyId) {
+            companyId = newCompanyId;
+          }
+        } catch (e) {
+          console.error('Company creation failed:', e);
+        }
+      }
+      
+      // Try to create profile (may already exist via trigger)
+      try {
+        const { data: existingProfile } = await supabase.from('profiles')
+          .select('*').eq('id', data.user.id).maybeSingle();
+        
+        if (existingProfile) {
+          // Profile exists, update it with company_id, role, phone, and company_name
+          const updateData: any = { 
+            company_id: companyId, 
+            full_name: fullName, 
+            role: userRole,
+            phone: phone,
+            company_name: companyName || null,
+          };
+          if (roleId) updateData.role_id = roleId;
+          // Add staff onboarding data if provided (for invited users)
+          if (staffData) {
+            if (staffData.dateOfBirth) updateData.date_of_birth = staffData.dateOfBirth;
+            if (staffData.address) updateData.address = staffData.address;
+            if (staffData.city) updateData.city = staffData.city;
+            if (staffData.state) updateData.state = staffData.state;
+            if (staffData.zipCode) updateData.zip_code = staffData.zipCode;
+            if (staffData.emergencyContactName) updateData.emergency_contact_name = staffData.emergencyContactName;
+            if (staffData.emergencyContactPhone) updateData.emergency_contact_phone = staffData.emergencyContactPhone;
+            if (staffData.dateOfHire) updateData.hire_date = staffData.dateOfHire;
+          }
+          
+          const { data: updatedProfile } = await supabase.from('profiles')
+            .update(updateData)
+            .eq('id', data.user.id)
+            .select().single();
+          setProfile(updatedProfile);
+        } else {
+          // Create new profile
+          const profileData: any = {
+            id: data.user.id,
+            email,
+            full_name: fullName,
+            company_id: companyId,
+            role: userRole,
+            is_active: true,
+            is_billable: true,
+            phone: phone,
+            company_name: companyName || null,
+          };
+          if (roleId) profileData.role_id = roleId;
+          // Add staff onboarding data if provided (for invited users)
+          if (staffData) {
+            if (staffData.dateOfBirth) profileData.date_of_birth = staffData.dateOfBirth;
+            if (staffData.address) profileData.address = staffData.address;
+            if (staffData.city) profileData.city = staffData.city;
+            if (staffData.state) profileData.state = staffData.state;
+            if (staffData.zipCode) profileData.zip_code = staffData.zipCode;
+            if (staffData.emergencyContactName) profileData.emergency_contact_name = staffData.emergencyContactName;
+            if (staffData.emergencyContactPhone) profileData.emergency_contact_phone = staffData.emergencyContactPhone;
+            if (staffData.dateOfHire) profileData.hire_date = staffData.dateOfHire;
+          }
+          
+          const { data: newProfile } = await supabase.from('profiles').insert(profileData).select().single();
+          setProfile(newProfile);
+        }
+      } catch (e) {
+        console.error('Profile setup failed:', e);
+      }
+      
+      // Sync to HubSpot for lead capture (fire and forget)
+      try {
+        fetch('https://bqxnagmmegdbqrzhheip.supabase.co/functions/v1/hubspot-sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email,
+            full_name: fullName,
+            phone_number: phone,
+            company_name: companyName,
+          }),
+        }).catch(console.error);
+      } catch (e) {
+        console.error('HubSpot sync failed:', e);
+      }
+      
+      // Don't set user if email confirmation is required
+      if (!emailConfirmationRequired) {
+        setUser(data.user);
+      }
+      
+      return { error: null, emailConfirmationRequired };
+    }
+    
+    return { error: null };
+  }
+
+  async function resendVerificationEmail(email: string) {
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email,
+      options: {
+        emailRedirectTo: `${window.location.origin}/login`,
+      }
+    });
+    return { error };
+  }
+
+  async function signOut() {
+    // Clear local state first for immediate UI update
+    setUser(null);
+    setProfile(null);
+    // Clear Supabase auth storage explicitly to prevent ghost sessions
+    localStorage.removeItem('sb-bqxnagmmegdbqrzhheip-auth-token');
+    sessionStorage.removeItem('sb-bqxnagmmegdbqrzhheip-auth-token');
+    // Clear iOS push notification credentials
+    localStorage.removeItem('userId');
+    localStorage.removeItem('companyId');
+    localStorage.removeItem('authToken');
+    // Then sign out from Supabase
+    await supabase.auth.signOut();
+  }
+
+  async function signInWithGoogle() {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: `${window.location.origin}/dashboard` }
+    });
+    return { error };
+  }
+
+  async function signInWithApple() {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'apple',
+      options: { redirectTo: `${window.location.origin}/dashboard` }
+    });
+    return { error };
+  }
+
+  async function signInWithFacebook() {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'facebook',
+      options: { redirectTo: `${window.location.origin}/dashboard` }
+    });
+    return { error };
+  }
+
+  async function refreshProfile() {
+    if (user) {
+      const { data } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .maybeSingle();
+      setProfile(data);
+    }
+  }
+
+  return (
+    <AuthContext.Provider value={{ user, profile, loading, signIn, signUp, signInWithGoogle, signInWithApple, signInWithFacebook, signOut, refreshProfile, resendVerificationEmail }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (!context) throw new Error('useAuth must be used within AuthProvider');
+  return context;
+}
