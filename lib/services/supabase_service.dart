@@ -1,5 +1,8 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../config/env.dart';
 
 class SupabaseService {
   final SupabaseClient _client = Supabase.instance.client;
@@ -31,7 +34,7 @@ class SupabaseService {
         .from('clients')
         .select()
         .eq('company_id', companyId)
-        .order('name', ascending: true);
+        .order('primary_name', ascending: true);
     return List<Map<String, dynamic>>.from(response);
   }
 
@@ -421,7 +424,7 @@ class SupabaseService {
     try {
       final response = await _client
           .from('quotes')
-          .select('*, leads(name, company, email), clients(name, company)')
+          .select('*, leads(name, company_name, email), clients(primary_name, company_name)')
           .eq('company_id', companyId)
           .order('created_at', ascending: false);
       final quotes = List<Map<String, dynamic>>.from(response);
@@ -552,12 +555,50 @@ class SupabaseService {
 
   // ============ TEAM ============
   Future<List<Map<String, dynamic>>> getTeamMembers(String companyId) async {
-    final response = await _client
+    // Get internal team members from profiles
+    final profilesResponse = await _client
         .from('profiles')
         .select('*, roles(name, description)')
         .eq('company_id', companyId)
-        .order('first_name');
-    return List<Map<String, dynamic>>.from(response);
+        .order('full_name');
+    
+    // Transform profiles to have first_name/last_name for UI compatibility
+    final profiles = List<Map<String, dynamic>>.from(profilesResponse).map((p) {
+      final fullName = (p['full_name'] as String?) ?? '';
+      final nameParts = fullName.split(' ');
+      return <String, dynamic>{
+        ...p,
+        'first_name': nameParts.isNotEmpty ? nameParts.first : '',
+        'last_name': nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '',
+      };
+    }).toList();
+    
+    // Get external collaborators from collaborator_invitations
+    final collaboratorsResponse = await _client
+        .from('collaborator_invitations')
+        .select()
+        .eq('company_id', companyId)
+        .order('created_at', ascending: false);
+    
+    // Transform collaborators to match team member format
+    final collaborators = List<Map<String, dynamic>>.from(collaboratorsResponse).map((inv) {
+      final nameParts = (inv['collaborator_name'] as String? ?? '').split(' ');
+      return <String, dynamic>{
+        'id': inv['id'],
+        'first_name': nameParts.isNotEmpty ? nameParts.first : '',
+        'last_name': nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '',
+        'email': inv['collaborator_email'] ?? '',
+        'company': inv['collaborator_company'] ?? '',
+        'role': inv['role'] ?? 'Collaborator',
+        'status': inv['status'] ?? 'invited',
+        'is_collaborator': true,
+        'created_at': inv['created_at'],
+        'roles': {'name': inv['role'] ?? 'Collaborator', 'description': 'External collaborator'},
+      };
+    }).toList();
+    
+    // Combine both lists - internal first, then collaborators
+    return [...profiles, ...collaborators];
   }
 
   // ============ CONVERT LEAD TO CLIENT ============
@@ -589,13 +630,40 @@ class SupabaseService {
 
   // ============ CONSULTANTS (Owner's Contact List) ============
   Future<List<Map<String, dynamic>>> getConsultants(String companyId) async {
-    final response = await _client
+    // Get consultants from consultants table
+    final consultantsResponse = await _client
         .from('consultants')
         .select('*, collaborator_accounts(name, email, avatar_url)')
         .eq('company_id', companyId)
         .eq('status', 'active')
         .order('name');
-    return List<Map<String, dynamic>>.from(response);
+    final consultants = List<Map<String, dynamic>>.from(consultantsResponse);
+    
+    // Also get collaborator invitations and merge them
+    final invitationsResponse = await _client
+        .from('collaborator_invitations')
+        .select()
+        .eq('company_id', companyId)
+        .order('created_at', ascending: false);
+    
+    // Transform invitations to match consultant format
+    final invitedCollaborators = List<Map<String, dynamic>>.from(invitationsResponse).map((inv) {
+      return <String, dynamic>{
+        'id': inv['id'],
+        'name': inv['collaborator_name'] ?? 'Unknown',
+        'email': inv['collaborator_email'] ?? '',
+        'company': inv['collaborator_company'] ?? '',
+        'specialty': inv['role'] ?? 'Collaborator',
+        'status': inv['status'] ?? 'invited',
+        'is_collaborator': true,
+        'projects': 0,
+        'totalBilled': 0.0,
+        'created_at': inv['created_at'],
+      };
+    }).toList();
+    
+    // Combine both lists
+    return [...consultants, ...invitedCollaborators];
   }
 
   Future<Map<String, dynamic>> createConsultant(Map<String, dynamic> data) async {
@@ -1049,7 +1117,7 @@ class SupabaseService {
   Future<Map<String, dynamic>?> getCollaboratorInvitation(String token) async {
     final response = await _client
         .from('proposal_collaborators')
-        .select('*, quotes(title, recipient_name, start_date, total_days), consultants(name, email)')
+        .select('*, quotes(title, recipient_name, valid_until), consultants(name, email)')
         .eq('invite_token', token)
         .maybeSingle();
     return response;
@@ -1185,9 +1253,13 @@ class SupabaseService {
     String? notes,
     bool showPricing = false,
     String? portalUrl,
+    List<Map<String, dynamic>>? lineItems,
   }) async {
-    debugPrint('SupabaseService.sendCollaboratorInvitation: Sending to $collaboratorEmail');
-    final response = await _client.functions.invoke('send-collaborator-invite', body: {
+    debugPrint('SupabaseService.sendCollaboratorInvitation: Sending to $collaboratorEmail with ${lineItems?.length ?? 0} line items');
+    
+    // Use direct HTTP call with anon key to avoid JWT verification issues
+    final url = Uri.parse('${Env.supabaseUrl}/functions/v1/send-collaborator-invite');
+    final body = {
       'collaboratorEmail': collaboratorEmail,
       'collaboratorName': collaboratorName,
       'ownerName': ownerName,
@@ -1198,13 +1270,105 @@ class SupabaseService {
       'deadline': deadline,
       'notes': notes,
       'showPricing': showPricing,
-      'portalUrl': portalUrl ?? 'https://billdora.com',
-    });
-    if (response.status != 200) {
-      debugPrint('SupabaseService.sendCollaboratorInvitation: ERROR - ${response.data}');
-      throw Exception(response.data?['error'] ?? 'Failed to send invitation');
+      'portalUrl': null, // Let edge function use its default URL
+      'lineItems': lineItems,
+    };
+    
+    final httpResponse = await http.post(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': Env.supabaseAnonKey,
+        'Authorization': 'Bearer ${_client.auth.currentSession?.accessToken ?? Env.supabaseAnonKey}',
+      },
+      body: jsonEncode(body),
+    );
+    
+    if (httpResponse.statusCode != 200) {
+      debugPrint('SupabaseService.sendCollaboratorInvitation: ERROR - ${httpResponse.body}');
+      throw Exception('Failed to send invitation: ${httpResponse.body}');
     }
+    
     debugPrint('SupabaseService.sendCollaboratorInvitation: SUCCESS');
-    return response.data;
+    return jsonDecode(httpResponse.body);
+  }
+
+  /// Get invitations sent by a company (for Pending tab - owner view)
+  Future<List<Map<String, dynamic>>> getSentInvitations(String companyId) async {
+    debugPrint('SupabaseService.getSentInvitations: Fetching for companyId=$companyId');
+    final response = await _client
+        .from('collaborator_invitations')
+        .select()
+        .eq('company_id', companyId)
+        .order('created_at', ascending: false);
+    debugPrint('SupabaseService.getSentInvitations: Got ${response.length} invitations');
+    return List<Map<String, dynamic>>.from(response);
+  }
+
+  /// Get invitations received by a user (for collaborator's draft view)
+  Future<List<Map<String, dynamic>>> getReceivedInvitations(String profileId) async {
+    final response = await _client
+        .from('collaborator_invitations')
+        .select()
+        .eq('collaborator_profile_id', profileId)
+        .order('created_at', ascending: false);
+    return List<Map<String, dynamic>>.from(response);
+  }
+
+  /// Get invitations received by a user by their email address
+  Future<List<Map<String, dynamic>>> getReceivedInvitationsByEmail(String email) async {
+    debugPrint('SupabaseService.getReceivedInvitationsByEmail: email=$email');
+    final response = await _client
+        .from('collaborator_invitations')
+        .select('*, companies(id, name, logo_url)')
+        .eq('collaborator_email', email)
+        .order('created_at', ascending: false);
+    debugPrint('SupabaseService.getReceivedInvitationsByEmail: Got ${response.length} invitations');
+    return List<Map<String, dynamic>>.from(response);
+  }
+
+  /// Send reminder to collaborator
+  Future<void> sendCollaboratorReminder(String invitationId) async {
+    debugPrint('SupabaseService.sendCollaboratorReminder: invitationId=$invitationId');
+    
+    // Get the invitation details
+    final invitation = await _client
+        .from('collaborator_invitations')
+        .select()
+        .eq('id', invitationId)
+        .single();
+    
+    if (invitation == null) {
+      throw Exception('Invitation not found');
+    }
+    
+    // Call the edge function to resend the invitation email
+    final httpResponse = await http.post(
+      Uri.parse('${Env.supabaseUrl}/functions/v1/send-collaborator-invite'),
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': Env.supabaseAnonKey,
+        'Authorization': 'Bearer ${_client.auth.currentSession?.accessToken ?? Env.supabaseAnonKey}',
+      },
+      body: jsonEncode({
+        'collaboratorEmail': invitation['collaborator_email'],
+        'collaboratorName': invitation['collaborator_name'] ?? '',
+        'projectName': invitation['project_name'] ?? 'Project',
+        'ownerName': invitation['owner_name'] ?? '',
+        'companyName': invitation['company_name'] ?? '',
+        'notes': 'Reminder: ${invitation['notes'] ?? 'Please submit your pricing.'}',
+        'role': invitation['role'] ?? 'Collaborator',
+        'companyId': invitation['company_id'],
+        'inviterId': invitation['inviter_id'],
+        'isReminder': true,
+      }),
+    );
+    
+    if (httpResponse.statusCode != 200) {
+      debugPrint('SupabaseService.sendCollaboratorReminder: ERROR - ${httpResponse.body}');
+      throw Exception('Failed to send reminder: ${httpResponse.body}');
+    }
+    
+    debugPrint('SupabaseService.sendCollaboratorReminder: SUCCESS');
   }
 }

@@ -7,12 +7,15 @@ class SalesProvider extends ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
   String? _companyId;
+  String? _userEmail;
 
   // Data lists
   List<Map<String, dynamic>> _leads = [];
   List<Map<String, dynamic>> _clients = [];
   List<Map<String, dynamic>> _consultants = [];
   List<Map<String, dynamic>> _quotes = [];
+  List<Map<String, dynamic>> _sentInvitations = [];
+  List<Map<String, dynamic>> _receivedInvitations = [];
 
   // Getters
   bool get isLoading => _isLoading;
@@ -21,20 +24,24 @@ class SalesProvider extends ChangeNotifier {
   List<Map<String, dynamic>> get clients => _clients;
   List<Map<String, dynamic>> get consultants => _consultants;
   List<Map<String, dynamic>> get quotes => _quotes;
+  List<Map<String, dynamic>> get sentInvitations => _sentInvitations;
+  List<Map<String, dynamic>> get receivedInvitations => _receivedInvitations;
 
   // Counts
   int get leadsCount => _leads.length;
   int get clientsCount => _clients.length;
   int get consultantsCount => _consultants.length;
   int get quotesCount => _quotes.length;
+  int get receivedInvitationsCount => _receivedInvitations.length;
 
-  /// Initialize with company ID and load all data
-  Future<void> initialize(String companyId) async {
+  /// Initialize with company ID and user email, then load all data
+  Future<void> initialize(String companyId, {String? userEmail}) async {
     debugPrint('========== SALES PROVIDER INIT ==========');
-    debugPrint('SalesProvider.initialize: companyId=$companyId');
+    debugPrint('SalesProvider.initialize: companyId=$companyId, userEmail=$userEmail');
     _companyId = companyId;
+    _userEmail = userEmail;
     await loadAll();
-    debugPrint('SalesProvider.initialize: DONE, loaded ${_leads.length} leads');
+    debugPrint('SalesProvider.initialize: DONE, loaded ${_leads.length} leads, ${_receivedInvitations.length} received invitations');
   }
 
   /// Load all sales data
@@ -52,19 +59,32 @@ class SalesProvider extends ChangeNotifier {
     try {
       // Load all in parallel
       debugPrint('SalesProvider.loadAll: Fetching all data...');
-      final results = await Future.wait([
+      final futures = <Future<List<Map<String, dynamic>>>>[
         _supabaseService.getLeads(_companyId!),
         _supabaseService.getClients(_companyId!),
         _supabaseService.getConsultants(_companyId!),
         _supabaseService.getQuotes(_companyId!),
-      ]);
+        _supabaseService.getSentInvitations(_companyId!),
+      ];
+      
+      // Add received invitations if we have user email
+      if (_userEmail != null && _userEmail!.isNotEmpty) {
+        futures.add(_supabaseService.getReceivedInvitationsByEmail(_userEmail!));
+      }
+      
+      final results = await Future.wait(futures);
 
       _leads = results[0];
       _clients = results[1];
       _consultants = results[2];
       _quotes = results[3];
+      _sentInvitations = results[4];
+      
+      if (results.length > 5) {
+        _receivedInvitations = results[5];
+      }
 
-      debugPrint('SalesProvider.loadAll: SUCCESS - Loaded ${_leads.length} leads, ${_clients.length} clients, ${_consultants.length} consultants, ${_quotes.length} quotes');
+      debugPrint('SalesProvider.loadAll: SUCCESS - Loaded ${_leads.length} leads, ${_clients.length} clients, ${_consultants.length} consultants, ${_quotes.length} quotes, ${_sentInvitations.length} sent, ${_receivedInvitations.length} received');
 
       _isLoading = false;
       notifyListeners();

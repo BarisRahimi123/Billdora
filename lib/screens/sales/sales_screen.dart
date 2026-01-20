@@ -43,7 +43,7 @@ class _SalesScreenState extends State<SalesScreen> with SingleTickerProviderStat
   void initState() {
     super.initState();
     _tabController = TabController(
-      length: 4, 
+      length: 5, 
       vsync: this,
       initialIndex: widget.initialTab ?? 0,
     );
@@ -74,7 +74,7 @@ class _SalesScreenState extends State<SalesScreen> with SingleTickerProviderStat
       final companyId = authProvider.companyId;
       if (companyId != null) {
         debugPrint('SalesScreen._loadDataIfNeeded: Triggering automatic data load...');
-        await salesProvider.initialize(companyId);
+        await salesProvider.initialize(companyId, userEmail: authProvider.userEmail);
       }
     }
   }
@@ -103,7 +103,7 @@ class _SalesScreenState extends State<SalesScreen> with SingleTickerProviderStat
     debugPrint('SalesScreen._initializeProviders: using companyId=$companyId');
     
     if (companyId != null) {
-      await context.read<SalesProvider>().initialize(companyId);
+      await context.read<SalesProvider>().initialize(companyId, userEmail: authProvider.userEmail);
     } else {
       debugPrint('SalesScreen._initializeProviders: WARNING - No company ID available! Will retry...');
       // Retry with exponential backoff
@@ -112,7 +112,7 @@ class _SalesScreenState extends State<SalesScreen> with SingleTickerProviderStat
         final retryCompanyId = authProvider.companyId ?? permProvider.currentCompanyId;
         if (retryCompanyId != null) {
           debugPrint('SalesScreen._initializeProviders: Retry ${i + 1} successful with companyId=$retryCompanyId');
-          await context.read<SalesProvider>().initialize(retryCompanyId);
+          await context.read<SalesProvider>().initialize(retryCompanyId, userEmail: authProvider.userEmail);
           return;
         }
       }
@@ -132,6 +132,7 @@ class _SalesScreenState extends State<SalesScreen> with SingleTickerProviderStat
       case 1: return 'Add Client';
       case 2: return 'Add Consultant';
       case 3: return 'Add Quote';
+      case 4: return ''; // No add for Inbox
       default: return 'Add';
     }
   }
@@ -208,6 +209,7 @@ class _SalesScreenState extends State<SalesScreen> with SingleTickerProviderStat
                   _ClientsTab(key: _clientsTabKey),
                   _ConsultantsTab(key: _consultantsTabKey),
                   _QuotesTab(initialSubTab: widget.initialSubTab),
+                  const _ReceivedInvitationsTab(),
                 ],
               ),
             ),
@@ -232,6 +234,7 @@ class _SalesScreenState extends State<SalesScreen> with SingleTickerProviderStat
           _buildTab(1, 'Clients', salesProvider.clientsCount),
           _buildTab(2, 'Team', salesProvider.consultantsCount),
           _buildTab(3, 'Quotes', salesProvider.quotesCount),
+          _buildTab(4, 'Inbox', salesProvider.receivedInvitationsCount),
         ],
       ),
     );
@@ -307,6 +310,9 @@ class _SalesScreenState extends State<SalesScreen> with SingleTickerProviderStat
         break;
       case 3:
         _showCreateProposalDialog();
+        break;
+      case 4:
+        // No add action for received invitations
         break;
     }
   }
@@ -2438,97 +2444,7 @@ class _QuotesTabState extends State<_QuotesTab> with SingleTickerProviderStateMi
     },
   ];
 
-  // Proposals awaiting collaborator submissions
-  final List<Map<String, dynamic>> _pendingProposals = [
-    {
-      'id': 'p1',
-      'title': 'Enterprise Software Development',
-      'number': '260116-001',
-      'date': DateTime(2026, 1, 16),
-      'client': 'Tech Innovations Inc',
-      'clientEmail': 'contact@techinnovations.com',
-      'amount': 45000.0,
-      'lineItems': [
-        {'name': 'Backend API Development', 'amount': 20000.0, 'days': 30},
-        {'name': 'Database Architecture', 'amount': 15000.0, 'days': 15},
-        {'name': 'Cloud Infrastructure Setup', 'amount': 10000.0, 'days': 10},
-      ],
-      'collaborators': [
-        {
-          'id': 'c1',
-          'name': 'Sarah Chen',
-          'company': 'Chen UX Design',
-          'email': 'sarah@chenux.com',
-          'role': 'UI/UX Designer',
-          'status': 'submitted',
-          'showInfo': true, // Client will see collaborator info
-          'submittedAt': DateTime(2026, 1, 15),
-          'lineItems': [
-            {'name': 'User Research & Personas', 'amount': 3500.0, 'days': 5},
-            {'name': 'Wireframing & Prototyping', 'amount': 5000.0, 'days': 7},
-            {'name': 'UI Design System', 'amount': 8500.0, 'days': 10},
-          ],
-          'totalAmount': 17000.0,
-        },
-        {
-          'id': 'c2',
-          'name': 'Marcus Rodriguez',
-          'company': 'MR Security Solutions',
-          'email': 'marcus@mrsecurity.io',
-          'role': 'Security Consultant',
-          'status': 'pending',
-          'showInfo': false, // Anonymous - client won't see info
-          'deadline': DateTime(2026, 1, 18),
-        },
-      ],
-    },
-    {
-      'id': 'p2',
-      'title': 'E-commerce Platform Redesign',
-      'number': '260115-042',
-      'date': DateTime(2026, 1, 15),
-      'client': 'Fashion Forward LLC',
-      'clientEmail': 'projects@fashionforward.com',
-      'amount': 28000.0,
-      'lineItems': [
-        {'name': 'Platform Migration', 'amount': 15000.0, 'days': 20},
-        {'name': 'Payment Integration', 'amount': 8000.0, 'days': 10},
-        {'name': 'Analytics Setup', 'amount': 5000.0, 'days': 5},
-      ],
-      'collaborators': [
-        {
-          'id': 'c3',
-          'name': 'Alex Kim',
-          'company': 'Kim Digital Marketing',
-          'email': 'alex@kimdigital.com',
-          'role': 'Marketing Strategist',
-          'status': 'submitted',
-          'showInfo': true,
-          'submittedAt': DateTime(2026, 1, 14),
-          'lineItems': [
-            {'name': 'SEO Strategy', 'amount': 4000.0, 'days': 8},
-            {'name': 'Social Media Campaign', 'amount': 6000.0, 'days': 12},
-          ],
-          'totalAmount': 10000.0,
-        },
-        {
-          'id': 'c4',
-          'name': 'Emma Wilson',
-          'company': 'Wilson Content Co',
-          'email': 'emma@wilsoncontent.com',
-          'role': 'Content Writer',
-          'status': 'submitted',
-          'showInfo': false, // Anonymous
-          'submittedAt': DateTime(2026, 1, 15),
-          'lineItems': [
-            {'name': 'Product Descriptions', 'amount': 2500.0, 'days': 5},
-            {'name': 'Blog Content', 'amount': 3500.0, 'days': 7},
-          ],
-          'totalAmount': 6000.0,
-        },
-      ],
-    },
-  ];
+
 
   final List<Map<String, dynamic>> _responses = [
     {'quote': 'Proposal for Wall street global', 'number': '260114-717', 'response': 'Accepted', 'signer': 'Barzan Jan Rahimi', 'date': DateTime(2026, 1, 14)},
@@ -2563,17 +2479,54 @@ class _QuotesTabState extends State<_QuotesTab> with SingleTickerProviderStateMi
 
   int get _totalQuotes => _quotesByClient.fold(0, (sum, g) => sum + (g['quotes'] as List).length);
   
-  // Get pending proposals from both mock data and real database
+  // Get pending proposals from sent invitations
   List<Map<String, dynamic>> get _actualPendingProposals {
-    // Get real pending quotes from provider
-    final salesProvider = context.read<SalesProvider>();
-    final realPendingQuotes = salesProvider.quotes.where((q) => 
-      q['status'] == 'pending_collaborators' || 
-      q['status'] == 'pending'
-    ).toList();
+    final salesProvider = context.watch<SalesProvider>();
     
-    // Combine with mock data for demo (remove mock data later)
-    return [..._pendingProposals, ...realPendingQuotes];
+    // Transform sent invitations into pending proposal format
+    final invitationProposals = salesProvider.sentInvitations
+        .where((inv) => inv['status'] != 'submitted')
+        .map((inv) {
+          final createdAt = inv['created_at'] != null 
+              ? DateTime.tryParse(inv['created_at'].toString()) ?? DateTime.now()
+              : DateTime.now();
+          
+          // Parse line_items from database (stored as JSONB)
+          final rawLineItems = inv['line_items'];
+          final lineItems = rawLineItems is List 
+              ? rawLineItems.map((item) => item is Map ? Map<String, dynamic>.from(item) : <String, dynamic>{}).toList()
+              : <Map<String, dynamic>>[];
+          
+          // Calculate total amount from line items
+          double totalAmount = 0;
+          for (final item in lineItems) {
+            totalAmount += (item['amount'] as num?)?.toDouble() ?? 0;
+          }
+          
+          return <String, dynamic>{
+            'id': inv['id'],
+            'title': inv['project_name'] ?? 'Collaboration Request',
+            'number': inv['id']?.toString().substring(0, 8) ?? '',
+            'date': createdAt,
+            'client': inv['company_name'] ?? inv['owner_name'] ?? '',
+            'clientEmail': inv['collaborator_email'] ?? '',
+            'amount': totalAmount > 0 ? totalAmount : (inv['response_amount'] ?? 0) as num,
+            'lineItems': lineItems,
+            'collaborators': <Map<String, dynamic>>[
+              <String, dynamic>{
+                'id': inv['id'],
+                'name': inv['collaborator_name'] ?? '',
+                'company': inv['collaborator_company'] ?? '',
+                'email': inv['collaborator_email'] ?? '',
+                'role': inv['role'] ?? 'Collaborator',
+                'status': inv['status'] ?? 'pending',
+                'showInfo': inv['show_pricing'] ?? true,
+              }
+            ],
+          };
+        }).toList();
+    
+    return invitationProposals;
   }
   
   int get _pendingCount => _actualPendingProposals.length;
@@ -2782,7 +2735,21 @@ class _QuotesTabState extends State<_QuotesTab> with SingleTickerProviderStateMi
   Widget _buildQuoteItem(Map<String, dynamic> quote, {String? clientName, String? clientEmail}) {
     final dateFormat = DateFormat('M/d/yyyy');
     final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 0);
-    final amount = quote['amount'] as double? ?? 0.0;
+    final amount = (quote['amount'] as num?)?.toDouble() ?? 0.0;
+    final title = (quote['title'] as String?) ?? 'Untitled Quote';
+    final number = (quote['number'] as String?) ?? '';
+    final status = (quote['status'] as String?) ?? 'draft';
+    final views = (quote['views'] as int?) ?? 0;
+    
+    // Handle both DateTime and String dates
+    DateTime? quoteDate;
+    final dateValue = quote['date'] ?? quote['created_at'];
+    if (dateValue is DateTime) {
+      quoteDate = dateValue;
+    } else if (dateValue is String) {
+      quoteDate = DateTime.tryParse(dateValue);
+    }
+    quoteDate ??= DateTime.now();
     
     return InkWell(
       onTap: () => _showQuotePreview(quote, clientName: clientName, clientEmail: clientEmail),
@@ -2806,10 +2773,12 @@ class _QuotesTabState extends State<_QuotesTab> with SingleTickerProviderStateMi
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(quote['title'], style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+                    Text(title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
                     const SizedBox(height: 2),
                     Text(
-                      '${quote['number']} • ${dateFormat.format(quote['date'])}',
+                      number.isNotEmpty 
+                        ? '$number • ${dateFormat.format(quoteDate)}'
+                        : dateFormat.format(quoteDate),
                       style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
                     ),
                   ],
@@ -2825,15 +2794,15 @@ class _QuotesTabState extends State<_QuotesTab> with SingleTickerProviderStateMi
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  _buildStatusBadge(quote['status']),
-                  if (quote['views'] > 0) ...[
+                  _buildStatusBadge(status),
+                  if (views > 0) ...[
                     const SizedBox(height: 4),
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(Icons.visibility_outlined, size: 12, color: AppColors.textTertiary),
                         const SizedBox(width: 2),
-                        Text('${quote['views']}', style: TextStyle(fontSize: 10, color: AppColors.textTertiary)),
+                        Text('$views', style: TextStyle(fontSize: 10, color: AppColors.textTertiary)),
                       ],
                     ),
                   ],
@@ -2851,9 +2820,21 @@ class _QuotesTabState extends State<_QuotesTab> with SingleTickerProviderStateMi
   void _showQuotePreview(Map<String, dynamic> quote, {String? clientName, String? clientEmail}) {
     final dateFormat = DateFormat('MMM d, yyyy');
     final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 2);
-    final lineItems = quote['lineItems'] as List<Map<String, dynamic>>? ?? [];
-    final amount = quote['amount'] as double? ?? 0.0;
-    final status = quote['status'] as String;
+    final lineItems = (quote['lineItems'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+    final amount = (quote['amount'] as num?)?.toDouble() ?? 0.0;
+    final status = (quote['status'] as String?) ?? 'draft';
+    final title = (quote['title'] as String?) ?? 'Untitled Quote';
+    final number = (quote['number'] as String?) ?? '';
+    
+    // Handle both DateTime and String dates
+    DateTime? quoteDate;
+    final dateValue = quote['date'] ?? quote['created_at'];
+    if (dateValue is DateTime) {
+      quoteDate = dateValue;
+    } else if (dateValue is String) {
+      quoteDate = DateTime.tryParse(dateValue);
+    }
+    quoteDate ??= DateTime.now();
     
     showModalBottomSheet(
       context: context,
@@ -2893,13 +2874,14 @@ class _QuotesTabState extends State<_QuotesTab> with SingleTickerProviderStateMi
                           children: [
                             _buildStatusBadge(status),
                             const SizedBox(width: 8),
-                            Text('# ${quote['number']}', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                            if (number.isNotEmpty)
+                              Text('# $number', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                           ],
                         ),
                         const SizedBox(height: 8),
-                        Text(quote['title'], style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                        Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
                         const SizedBox(height: 4),
-                        Text('Created ${dateFormat.format(quote['date'])}', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                        Text('Created ${dateFormat.format(quoteDate!)}', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                       ],
                     ),
                   ),
@@ -3165,6 +3147,7 @@ class _QuotesTabState extends State<_QuotesTab> with SingleTickerProviderStateMi
   }
 
   Widget _buildStatusBadge(String status) {
+    if (status.isEmpty) status = 'draft';
     Color color;
     switch (status) {
       case 'sent': color = AppColors.info; break;
@@ -3245,7 +3228,8 @@ class _QuotesTabState extends State<_QuotesTab> with SingleTickerProviderStateMi
             itemCount: _actualPendingProposals.length,
             itemBuilder: (context, index) {
               final proposal = _actualPendingProposals[index];
-              final collaborators = proposal['collaborators'] as List<Map<String, dynamic>>;
+              final collaboratorsList = proposal['collaborators'] as List<dynamic>? ?? [];
+              final collaborators = collaboratorsList.map((c) => c as Map<String, dynamic>).toList();
               final submitted = collaborators.where((c) => c['status'] == 'submitted').length;
               final total = collaborators.length;
               final allSubmitted = submitted == total;
@@ -3285,7 +3269,7 @@ class _QuotesTabState extends State<_QuotesTab> with SingleTickerProviderStateMi
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  proposal['title'] as String,
+                                  (proposal['title'] as String?) ?? 'Untitled',
                                   style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -3294,7 +3278,7 @@ class _QuotesTabState extends State<_QuotesTab> with SingleTickerProviderStateMi
                                 Row(
                                   children: [
                                     Text(
-                                      proposal['client'] as String,
+                                      (proposal['client'] as String?) ?? '',
                                       style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                                     ),
                                     const SizedBox(width: 8),
@@ -3387,12 +3371,7 @@ class _QuotesTabState extends State<_QuotesTab> with SingleTickerProviderStateMi
                           ] else ...[
                             Expanded(
                               child: OutlinedButton.icon(
-                                onPressed: () {
-                                  // Send reminder
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('Reminder sent to pending collaborators'), backgroundColor: AppColors.info),
-                                  );
-                                },
+                                onPressed: () => _sendCollaboratorReminder(proposal),
                                 icon: const Icon(Icons.notifications_active_outlined, size: 18),
                                 label: const Text('Send Reminder'),
                                 style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 12)),
@@ -3459,7 +3438,7 @@ class _QuotesTabState extends State<_QuotesTab> with SingleTickerProviderStateMi
                 radius: 16,
                 backgroundColor: AppColors.neutral200,
                 child: Text(
-                  (collab['name'] as String).substring(0, 1),
+                  ((collab['name'] as String?) ?? '?').isNotEmpty ? (collab['name'] as String).substring(0, 1) : '?',
                   style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
                 ),
               ),
@@ -3486,7 +3465,7 @@ class _QuotesTabState extends State<_QuotesTab> with SingleTickerProviderStateMi
                 Row(
                   children: [
                     Text(
-                      collab['name'] as String,
+                      (collab['name'] as String?) ?? 'Unknown',
                       style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
                     ),
                     const SizedBox(width: 6),
@@ -3505,7 +3484,7 @@ class _QuotesTabState extends State<_QuotesTab> with SingleTickerProviderStateMi
                   ],
                 ),
                 Text(
-                  collab['role'] as String,
+                  (collab['role'] as String?) ?? 'Collaborator',
                   style: TextStyle(fontSize: 10, color: AppColors.textSecondary),
                 ),
               ],
@@ -3556,13 +3535,55 @@ class _QuotesTabState extends State<_QuotesTab> with SingleTickerProviderStateMi
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Proposal sent to client!'), backgroundColor: AppColors.success),
           );
-          // Remove from pending
-          setState(() {
-            _pendingProposals.removeWhere((p) => p['id'] == proposal['id']);
-          });
+          // Refresh pending invitations
+          context.read<SalesProvider>().loadAll();
         },
       ),
     );
+  }
+
+  Future<void> _sendCollaboratorReminder(Map<String, dynamic> proposal) async {
+    final invitationId = proposal['id'];
+    if (invitationId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Cannot send reminder: invitation not found'), backgroundColor: AppColors.error),
+      );
+      return;
+    }
+
+    // Show loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final supabaseService = SupabaseService();
+      await supabaseService.sendCollaboratorReminder(invitationId.toString());
+      
+      Navigator.pop(context); // Close loading
+      
+      if (mounted) {
+        final collaboratorEmail = proposal['clientEmail'] ?? '';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Reminder sent to $collaboratorEmail'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
+    } catch (e) {
+      Navigator.pop(context); // Close loading
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to send reminder: ${e.toString()}'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
   }
 
   void _showPartialPreview(Map<String, dynamic> proposal) {
@@ -3598,9 +3619,8 @@ class _QuotesTabState extends State<_QuotesTab> with SingleTickerProviderStateMi
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Proposal sent without collaborators'), backgroundColor: AppColors.info),
               );
-              setState(() {
-                _pendingProposals.removeWhere((p) => p['id'] == proposal['id']);
-              });
+              // Refresh pending invitations
+              context.read<SalesProvider>().loadAll();
             },
             child: const Text('Send'),
           ),
@@ -3934,15 +3954,46 @@ class _MergedProposalPreviewState extends State<_MergedProposalPreview> {
 
   @override
   Widget build(BuildContext context) {
+    try {
+      return _buildContent(context);
+    } catch (e, stack) {
+      debugPrint('MergedProposalPreview ERROR: $e');
+      debugPrint('Stack: $stack');
+      return Container(
+        height: MediaQuery.of(context).size.height * 0.5,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                const SizedBox(height: 16),
+                Text('Error loading preview:\n$e', textAlign: TextAlign.center),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+  }
+
+  Widget _buildContent(BuildContext context) {
     final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 2);
     final dateFormat = DateFormat('MMMM d, yyyy');
     final proposal = widget.proposal;
-    final lineItems = proposal['lineItems'] as List<Map<String, dynamic>>;
-    final collaborators = proposal['collaborators'] as List<Map<String, dynamic>>;
+    final lineItemsList = proposal['lineItems'] as List<dynamic>? ?? [];
+    final lineItems = lineItemsList.map((e) => e is Map ? Map<String, dynamic>.from(e) : <String, dynamic>{}).toList();
+    final collaboratorsList = proposal['collaborators'] as List<dynamic>? ?? [];
+    final collaborators = collaboratorsList.map((e) => e is Map ? Map<String, dynamic>.from(e) : <String, dynamic>{}).toList();
     final submittedCollaborators = collaborators.where((c) => c['status'] == 'submitted').toList();
     
     // Calculate totals
-    double ownerTotal = (proposal['amount'] as num).toDouble();
+    double ownerTotal = (proposal['amount'] as num?)?.toDouble() ?? 0.0;
     double collaboratorTotal = 0;
     for (final collab in submittedCollaborators) {
       collaboratorTotal += (collab['totalAmount'] as num? ?? 0).toDouble();
@@ -4111,7 +4162,9 @@ class _MergedProposalPreviewState extends State<_MergedProposalPreview> {
                           radius: 22,
                           backgroundColor: AppColors.accent.withOpacity(0.1),
                           child: Text(
-                            (proposal['client'] as String).substring(0, 1),
+                            (proposal['client'] as String?)?.isNotEmpty == true 
+                                ? (proposal['client'] as String).substring(0, 1).toUpperCase()
+                                : '?',
                             style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.accent),
                           ),
                         ),
@@ -4121,11 +4174,13 @@ class _MergedProposalPreviewState extends State<_MergedProposalPreview> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                proposal['client'] as String,
+                                (proposal['client'] as String?)?.isNotEmpty == true 
+                                    ? proposal['client'] as String 
+                                    : 'Unknown Client',
                                 style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
                               ),
                               Text(
-                                proposal['clientEmail'] as String,
+                                (proposal['clientEmail'] as String?) ?? '',
                                 style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                               ),
                             ],
@@ -4136,7 +4191,9 @@ class _MergedProposalPreviewState extends State<_MergedProposalPreview> {
                           children: [
                             Text('Proposal Date', style: TextStyle(fontSize: 10, color: AppColors.textTertiary)),
                             Text(
-                              dateFormat.format(proposal['date'] as DateTime),
+                              proposal['date'] != null 
+                                  ? dateFormat.format(proposal['date'] as DateTime)
+                                  : '-',
                               style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
                             ),
                           ],
@@ -4149,7 +4206,7 @@ class _MergedProposalPreviewState extends State<_MergedProposalPreview> {
                   
                   // Proposal Title
                   Text(
-                    proposal['title'] as String,
+                    (proposal['title'] as String?) ?? 'Untitled Proposal',
                     style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
                   ),
                   
@@ -4392,7 +4449,7 @@ class _MergedProposalPreviewState extends State<_MergedProposalPreview> {
               children: [
                 Expanded(
                   flex: 3,
-                  child: Text(item['name'] as String, style: const TextStyle(fontSize: 13)),
+                  child: Text((item['name'] as String?) ?? (item['description'] as String?) ?? '', style: const TextStyle(fontSize: 13)),
                 ),
                 if (item['days'] != null)
                   SizedBox(
@@ -4449,7 +4506,7 @@ class _MergedProposalPreviewState extends State<_MergedProposalPreview> {
                   radius: 12,
                   backgroundColor: AppColors.info.withOpacity(0.2),
                   child: Text(
-                    (collab['name'] as String).substring(0, 1),
+                    ((collab['name'] as String?) ?? '?').isNotEmpty ? (collab['name'] as String).substring(0, 1) : '?',
                     style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.info),
                   ),
                 ),
@@ -4479,7 +4536,7 @@ class _MergedProposalPreviewState extends State<_MergedProposalPreview> {
                     ),
                     if (_showCollaboratorInfo && showInfo)
                       Text(
-                        collab['email'] as String,
+                        (collab['email'] as String?) ?? '',
                         style: TextStyle(fontSize: 10, color: AppColors.textSecondary),
                       ),
                   ],
@@ -6161,10 +6218,11 @@ class _ConsultantsTabState extends State<_ConsultantsTab> {
       filtered = filtered.where((c) => c['status'] == _statusFilter).toList();
     }
     if (_searchQuery.isNotEmpty) {
+      final query = _searchQuery.toLowerCase();
       filtered = filtered.where((c) =>
-        c['name'].toLowerCase().contains(_searchQuery.toLowerCase()) ||
-        c['company'].toLowerCase().contains(_searchQuery.toLowerCase()) ||
-        c['specialty'].toLowerCase().contains(_searchQuery.toLowerCase())
+        ((c['name'] as String?) ?? '').toLowerCase().contains(query) ||
+        ((c['company'] as String?) ?? '').toLowerCase().contains(query) ||
+        ((c['specialty'] as String?) ?? '').toLowerCase().contains(query)
       ).toList();
     }
     return filtered;
@@ -6173,7 +6231,7 @@ class _ConsultantsTabState extends State<_ConsultantsTab> {
   Map<String, List<Map<String, dynamic>>> get _consultantsBySpecialty {
     final groups = <String, List<Map<String, dynamic>>>{};
     for (final consultant in _filteredConsultants) {
-      final specialty = consultant['specialty'] as String;
+      final specialty = (consultant['specialty'] as String?) ?? 'Other';
       if (!groups.containsKey(specialty)) {
         groups[specialty] = [];
       }
@@ -6318,7 +6376,7 @@ class _ConsultantsTabState extends State<_ConsultantsTab> {
               Expanded(
                 child: _buildStatCard(
                   'Total Consultants',
-                  '${consultantsList.length}',
+                  '${_filteredConsultants.length}',
                   Icons.people_outline,
                   AppColors.accent,
                 ),
@@ -6327,7 +6385,7 @@ class _ConsultantsTabState extends State<_ConsultantsTab> {
               Expanded(
                 child: _buildStatCard(
                   'Active Projects',
-                  '${consultantsList.fold(0, (sum, c) => sum + (c['projects'] as int))}',
+                  '${_filteredConsultants.fold(0, (sum, c) => sum + ((c['projects'] as int?) ?? 0))}',
                   Icons.work_outline,
                   AppColors.info,
                 ),
@@ -6336,7 +6394,7 @@ class _ConsultantsTabState extends State<_ConsultantsTab> {
               Expanded(
                 child: _buildStatCard(
                   'Total Billed',
-                  currencyFormat.format(consultantsList.fold(0.0, (sum, c) => sum + (c['totalBilled'] as double))),
+                  currencyFormat.format(_filteredConsultants.fold(0.0, (sum, c) => sum + ((c['totalBilled'] as num?)?.toDouble() ?? 0.0))),
                   Icons.attach_money,
                   AppColors.success,
                 ),
@@ -6478,7 +6536,9 @@ class _ConsultantsTabState extends State<_ConsultantsTab> {
 
   Widget _buildConsultantCard(Map<String, dynamic> consultant) {
     final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 0);
-    final isActive = consultant['status'] == 'active';
+    final name = (consultant['name'] as String?) ?? 'Unknown';
+    final isActive = consultant['status'] == 'active' || consultant['status'] == 'invited';
+    final isCollaborator = consultant['is_collaborator'] == true;
     
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -6510,7 +6570,7 @@ class _ConsultantsTabState extends State<_ConsultantsTab> {
                   ),
                   child: Center(
                     child: Text(
-                      consultant['name'][0].toUpperCase(),
+                      name.isNotEmpty ? name[0].toUpperCase() : '?',
                       style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w700,
@@ -6530,7 +6590,7 @@ class _ConsultantsTabState extends State<_ConsultantsTab> {
                         children: [
                           Expanded(
                             child: Text(
-                              consultant['name'],
+                              name,
                               style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -6554,22 +6614,23 @@ class _ConsultantsTabState extends State<_ConsultantsTab> {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        consultant['company'],
+                        (consultant['company'] as String?) ?? (consultant['email'] as String?) ?? '',
                         style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                       ),
                       const SizedBox(height: 6),
                       Row(
                         children: [
                           Flexible(
-                            child: _buildMiniInfo(Icons.build_outlined, consultant['specialty']),
+                            child: _buildMiniInfo(Icons.build_outlined, (consultant['specialty'] as String?) ?? 'Consultant'),
                           ),
                           const SizedBox(width: 12),
-                          Flexible(
-                            child: _buildMiniInfo(
-                              Icons.attach_money,
-                              '${currencyFormat.format(consultant['rate'])}/${consultant['rateType'] == 'hourly' ? 'hr' : 'project'}',
+                          if (consultant['rate'] != null)
+                            Flexible(
+                              child: _buildMiniInfo(
+                                Icons.attach_money,
+                                '${currencyFormat.format((consultant['rate'] as num?)?.toDouble() ?? 0)}/${consultant['rateType'] == 'hourly' ? 'hr' : 'project'}',
+                              ),
                             ),
-                          ),
                         ],
                       ),
                     ],
@@ -7156,10 +7217,31 @@ class _ConsultantDetailModal extends StatelessWidget {
   
   const _ConsultantDetailModal({required this.consultant, required this.onEdit});
 
+  // Helper to safely get name
+  String get _name => (consultant['name'] as String?) ?? 'Unknown';
+  String get _company => (consultant['company'] as String?) ?? '';
+  String get _specialty => (consultant['specialty'] as String?) ?? 'Consultant';
+  String get _email => (consultant['email'] as String?) ?? '';
+  String get _phone => (consultant['phone'] as String?) ?? '';
+  String get _status => (consultant['status'] as String?) ?? 'active';
+  double get _rate => (consultant['rate'] as num?)?.toDouble() ?? 0.0;
+  String get _rateType => (consultant['rateType'] as String?) ?? 'hourly';
+  int get _projects => (consultant['projects'] as int?) ?? 0;
+  double get _totalBilled => (consultant['totalBilled'] as num?)?.toDouble() ?? 0.0;
+  
+  DateTime? get _createdDate {
+    final created = consultant['created'] ?? consultant['created_at'];
+    if (created == null) return null;
+    if (created is DateTime) return created;
+    if (created is String) return DateTime.tryParse(created);
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 0);
     final dateFormat = DateFormat('MMM d, yyyy');
+    final isActive = _status == 'active' || _status == 'invited';
     
     return Container(
       height: MediaQuery.of(context).size.height * 0.75,
@@ -7200,7 +7282,7 @@ class _ConsultantDetailModal extends StatelessWidget {
                   ),
                   child: Center(
                     child: Text(
-                      consultant['name'][0].toUpperCase(),
+                      _name.isNotEmpty ? _name[0].toUpperCase() : '?',
                       style: const TextStyle(
                         fontSize: 26,
                         fontWeight: FontWeight.w700,
@@ -7218,37 +7300,39 @@ class _ConsultantDetailModal extends StatelessWidget {
                         children: [
                           Expanded(
                             child: Text(
-                              consultant['name'],
+                              _name,
                               style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
                             ),
                           ),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
-                              color: consultant['status'] == 'active' 
+                              color: isActive 
                                 ? AppColors.success.withOpacity(0.1) 
                                 : AppColors.neutral200,
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
-                              consultant['status'] == 'active' ? 'Active' : 'Inactive',
+                              isActive ? 'Active' : 'Inactive',
                               style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
-                                color: consultant['status'] == 'active' ? AppColors.success : AppColors.textTertiary,
+                                color: isActive ? AppColors.success : AppColors.textTertiary,
                               ),
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        consultant['company'],
-                        style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
-                      ),
+                      if (_company.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          _company,
+                          style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
+                        ),
+                      ],
                       const SizedBox(height: 4),
                       Text(
-                        consultant['specialty'],
+                        _specialty,
                         style: TextStyle(fontSize: 12, color: AppColors.accent),
                       ),
                     ],
@@ -7267,9 +7351,12 @@ class _ConsultantDetailModal extends StatelessWidget {
               children: [
                 // Contact Info
                 _buildSection('Contact', [
-                  _buildInfoRow(Icons.email_outlined, consultant['email']),
-                  if (consultant['phone']?.isNotEmpty ?? false)
-                    _buildInfoRow(Icons.phone_outlined, consultant['phone']),
+                  if (_email.isNotEmpty)
+                    _buildInfoRow(Icons.email_outlined, _email),
+                  if (_phone.isNotEmpty)
+                    _buildInfoRow(Icons.phone_outlined, _phone),
+                  if (_email.isEmpty && _phone.isEmpty)
+                    _buildInfoRow(Icons.info_outline, 'No contact info available'),
                 ]),
                 
                 const SizedBox(height: 20),
@@ -7280,7 +7367,9 @@ class _ConsultantDetailModal extends StatelessWidget {
                     Expanded(
                       child: _buildStatCard(
                         'Rate',
-                        '${currencyFormat.format(consultant['rate'])}/${consultant['rateType'] == 'hourly' ? 'hr' : 'proj'}',
+                        _rate > 0 
+                          ? '${currencyFormat.format(_rate)}/${_rateType == 'hourly' ? 'hr' : 'proj'}'
+                          : 'N/A',
                         Icons.attach_money,
                         AppColors.accent,
                       ),
@@ -7289,7 +7378,7 @@ class _ConsultantDetailModal extends StatelessWidget {
                     Expanded(
                       child: _buildStatCard(
                         'Projects',
-                        '${consultant['projects']}',
+                        '$_projects',
                         Icons.work_outline,
                         AppColors.info,
                       ),
@@ -7298,7 +7387,7 @@ class _ConsultantDetailModal extends StatelessWidget {
                     Expanded(
                       child: _buildStatCard(
                         'Total Billed',
-                        currencyFormat.format(consultant['totalBilled']),
+                        currencyFormat.format(_totalBilled),
                         Icons.receipt_long_outlined,
                         AppColors.success,
                       ),
@@ -7309,9 +7398,10 @@ class _ConsultantDetailModal extends StatelessWidget {
                 const SizedBox(height: 20),
                 
                 // Additional Info
-                _buildSection('Additional Info', [
-                  _buildInfoRow(Icons.calendar_today_outlined, 'Added ${dateFormat.format(consultant['created'])}'),
-                ]),
+                if (_createdDate != null)
+                  _buildSection('Additional Info', [
+                    _buildInfoRow(Icons.calendar_today_outlined, 'Added ${dateFormat.format(_createdDate!)}'),
+                  ]),
                 
                 const SizedBox(height: 24),
                 
@@ -7396,5 +7486,353 @@ class _ConsultantDetailModal extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+
+// ============================================================================
+// RECEIVED INVITATIONS TAB - Shows invitations received from other companies
+// ============================================================================
+class _ReceivedInvitationsTab extends StatelessWidget {
+  const _ReceivedInvitationsTab();
+
+  @override
+  Widget build(BuildContext context) {
+    final salesProvider = context.watch<SalesProvider>();
+    final invitations = salesProvider.receivedInvitations;
+
+    if (salesProvider.isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+
+    if (invitations.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: AppColors.accent.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.inbox_outlined,
+                size: 40,
+                color: AppColors.accent,
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'No invitations yet',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'When someone invites you to collaborate\non a proposal, it will appear here.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: () => salesProvider.loadAll(),
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: invitations.length,
+        itemBuilder: (context, index) {
+          final invitation = invitations[index];
+          return _InvitationCard(invitation: invitation);
+        },
+      ),
+    );
+  }
+}
+
+class _InvitationCard extends StatelessWidget {
+  final Map<String, dynamic> invitation;
+
+  const _InvitationCard({required this.invitation});
+
+  @override
+  Widget build(BuildContext context) {
+    final status = invitation['status'] as String? ?? 'invited';
+    final projectName = invitation['project_name'] as String? ?? 'Collaboration Request';
+    final companyName = invitation['company_name'] ?? 
+        (invitation['companies'] as Map<String, dynamic>?)?['name'] ?? 
+        invitation['owner_name'] ?? 
+        'Unknown Company';
+    final createdAt = invitation['created_at'] != null 
+        ? DateTime.tryParse(invitation['created_at'].toString())
+        : null;
+    final deadline = invitation['deadline'] != null 
+        ? DateTime.tryParse(invitation['deadline'].toString())
+        : null;
+    final notes = invitation['notes'] as String?;
+
+    Color statusColor;
+    String statusLabel;
+    IconData statusIcon;
+
+    switch (status) {
+      case 'invited':
+        statusColor = Colors.orange;
+        statusLabel = 'Action Required';
+        statusIcon = Icons.notifications_active;
+        break;
+      case 'viewed':
+        statusColor = Colors.blue;
+        statusLabel = 'Viewed';
+        statusIcon = Icons.visibility;
+        break;
+      case 'in_progress':
+        statusColor = Colors.purple;
+        statusLabel = 'In Progress';
+        statusIcon = Icons.edit;
+        break;
+      case 'submitted':
+        statusColor = Colors.teal;
+        statusLabel = 'Submitted';
+        statusIcon = Icons.send;
+        break;
+      case 'accepted':
+        statusColor = Colors.green;
+        statusLabel = 'Accepted';
+        statusIcon = Icons.check_circle;
+        break;
+      case 'revision_requested':
+        statusColor = Colors.amber;
+        statusLabel = 'Revision Requested';
+        statusIcon = Icons.replay;
+        break;
+      case 'locked':
+        statusColor = Colors.grey;
+        statusLabel = 'Locked';
+        statusIcon = Icons.lock;
+        break;
+      default:
+        statusColor = Colors.grey;
+        statusLabel = status;
+        statusIcon = Icons.help_outline;
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () {
+            // TODO: Navigate to invitation detail / response page
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Opening $projectName...'),
+                duration: const Duration(seconds: 2),
+              ),
+            );
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header: Status badge and date
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: statusColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: statusColor.withOpacity(0.3)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(statusIcon, size: 14, color: statusColor),
+                          const SizedBox(width: 4),
+                          Text(
+                            statusLabel,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: statusColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Spacer(),
+                    if (createdAt != null)
+                      Text(
+                        _formatDate(createdAt),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                // Project name
+                Text(
+                  projectName,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+
+                // Company name
+                Row(
+                  children: [
+                    Icon(Icons.business, size: 14, color: AppColors.textSecondary),
+                    const SizedBox(width: 6),
+                    Text(
+                      'From: $companyName',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+
+                // Deadline if exists
+                if (deadline != null) ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.schedule,
+                        size: 14,
+                        color: deadline.isBefore(DateTime.now().add(const Duration(days: 3)))
+                            ? Colors.red
+                            : AppColors.textSecondary,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Due: ${_formatDate(deadline)}',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: deadline.isBefore(DateTime.now().add(const Duration(days: 3)))
+                              ? Colors.red
+                              : AppColors.textSecondary,
+                          fontWeight: deadline.isBefore(DateTime.now().add(const Duration(days: 3)))
+                              ? FontWeight.w600
+                              : FontWeight.normal,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+
+                // Notes if exists
+                if (notes != null && notes.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppColors.neutral100,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(Icons.notes, size: 14, color: AppColors.textSecondary),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            notes,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: AppColors.textSecondary,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+
+                // Action button for pending invitations
+                if (status == 'invited' || status == 'viewed' || status == 'in_progress') ...[
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        // TODO: Navigate to respond page
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Opening response form...'),
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.edit, size: 18),
+                      label: Text(status == 'in_progress' ? 'Continue Response' : 'Submit Your Pricing'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.accent,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    final diff = now.difference(date);
+
+    if (diff.inDays == 0) {
+      return 'Today';
+    } else if (diff.inDays == 1) {
+      return 'Yesterday';
+    } else if (diff.inDays < 7) {
+      return '${diff.inDays} days ago';
+    } else {
+      return DateFormat('MMM d, y').format(date);
+    }
   }
 }
