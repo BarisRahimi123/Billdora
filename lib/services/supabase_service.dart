@@ -1198,7 +1198,7 @@ class SupabaseService {
       'deadline': deadline,
       'notes': notes,
       'showPricing': showPricing,
-      'portalUrl': portalUrl ?? 'https://billdora.com',
+      'portalUrl': portalUrl ?? 'https://collaborate.billdora.com',
     });
     if (response.status != 200) {
       debugPrint('SupabaseService.sendCollaboratorInvitation: ERROR - ${response.data}');
