@@ -5,7 +5,9 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  final String? inviteToken;
+  
+  const LoginScreen({super.key, this.inviteToken});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -34,6 +36,10 @@ class _LoginScreenState extends State<LoginScreen> {
     );
 
     if (success && mounted) {
+      // Process invite token if present
+      if (widget.inviteToken != null) {
+        await authProvider.processInviteForExistingUser(widget.inviteToken!);
+      }
       context.go('/sales');
     }
   }

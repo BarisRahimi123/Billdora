@@ -6,6 +6,7 @@ import '../providers/auth_provider.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/auth/signup_screen.dart';
 import '../screens/auth/forgot_password_screen.dart';
+import '../screens/auth/collaborator_invite_screen.dart';
 import '../screens/dashboard/dashboard_screen.dart';
 import '../screens/invoices/invoices_screen.dart';
 import '../screens/invoices/invoice_detail_screen.dart';
@@ -32,7 +33,8 @@ class AppRouter {
       final isLoggedIn = authProvider.isAuthenticated;
       final isLoggingIn = state.matchedLocation == '/login' || 
                           state.matchedLocation == '/signup' ||
-                          state.matchedLocation == '/forgot-password';
+                          state.matchedLocation == '/forgot-password' ||
+                          state.matchedLocation.startsWith('/invite/');
 
       if (!isLoggedIn && !isLoggingIn) {
         return '/login';
@@ -46,7 +48,10 @@ class AppRouter {
       // Auth Routes
       GoRoute(
         path: '/login',
-        builder: (context, state) => const LoginScreen(),
+        builder: (context, state) {
+          final inviteToken = state.uri.queryParameters['inviteToken'];
+          return LoginScreen(inviteToken: inviteToken);
+        },
       ),
       GoRoute(
         path: '/signup',
@@ -55,6 +60,12 @@ class AppRouter {
       GoRoute(
         path: '/forgot-password',
         builder: (context, state) => const ForgotPasswordScreen(),
+      ),
+      GoRoute(
+        path: '/invite/:token',
+        builder: (context, state) => CollaboratorInviteScreen(
+          token: state.pathParameters['token']!,
+        ),
       ),
       
       // Main App Shell with Bottom Navigation

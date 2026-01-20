@@ -153,6 +153,187 @@ class AuthProvider extends ChangeNotifier {
     return result;
   }
 
+  /// Sign up with collaborator invite token - implements the viral loop
+  Future<AuthResult> signUpWithInvite(String email, String password, String firstName, String lastName, String inviteToken) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    final result = await _authService.signUpWithEmail(email, password, firstName, lastName);
+    
+    if (result.success && result.user != null) {
+      _isAuthenticated = true;
+      _user = result.user;
+      
+      // Create profile and company for new user
+      await _createUserProfile(result.user!['id'], email, firstName, lastName);
+      
+      // Process the invite - create viral loop connections
+      await _processCollaboratorInvite(inviteToken, result.user!['id']);
+    } else {
+      _errorMessage = result.errorMessage;
+    }
+
+    _isLoading = false;
+    notifyListeners();
+    return result;
+  }
+
+  /// Process collaborator invite: link profile, create client, create draft proposal
+  Future<void> _processCollaboratorInvite(String inviteToken, String newUserId) async {
+    try {
+      debugPrint('AuthProvider: Processing collaborator invite token=$inviteToken');
+      
+      // 1. Get the invitation details
+      final invitation = await _supabaseService.client
+          .from('collaborator_invitations')
+          .select('*, quotes(id, title, recipient_name, line_items, start_date, total_days)')
+          .eq('token', inviteToken)
+          .maybeSingle();
+      
+      if (invitation == null) {
+        debugPrint('AuthProvider: Invitation not found');
+        return;
+      }
+
+      // 2. Update invitation with the new profile
+      await _supabaseService.client
+          .from('collaborator_invitations')
+          .update({
+            'collaborator_profile_id': newUserId,
+            'status': 'accepted',
+          })
+          .eq('token', inviteToken);
+
+      // 3. Create the inviter's company as a client for the new user
+      final inviterCompanyId = invitation['company_id'];
+      final inviterCompanyName = invitation['company_name'] ?? 'Client';
+      final ownerName = invitation['owner_name'] ?? '';
+      
+      // Fetch inviter company details if available
+      Map<String, dynamic>? inviterCompany;
+      if (inviterCompanyId != null) {
+        inviterCompany = await _supabaseService.client
+            .from('companies')
+            .select()
+            .eq('id', inviterCompanyId)
+            .maybeSingle();
+      }
+      
+      // Create client record for the new user
+      final clientData = {
+        'company_id': _companyId,
+        'company_name': inviterCompany?['name'] ?? inviterCompanyName,
+        'primary_name': ownerName,
+        'primary_email': inviterCompany?['email'] ?? '',
+        'type': 'referral',
+        'notes': 'Added via collaborator invitation',
+        'is_active': true,
+      };
+      
+      final newClient = await _supabaseService.createClient(clientData);
+      debugPrint('AuthProvider: Created client from inviter - ${newClient['id']}');
+      
+      // 4. Create a draft proposal with the collaborator's line items
+      final originalQuote = invitation['quotes'];
+      final collaboratorLineItems = invitation['line_items'] as List<dynamic>?;
+      
+      if (originalQuote != null) {
+        final proposalData = {
+          'company_id': _companyId,
+          'client_id': newClient['id'],
+          'title': originalQuote['title'] ?? 'Project Proposal',
+          'recipient_name': ownerName,
+          'status': 'draft',
+          'line_items': collaboratorLineItems ?? [],
+          'notes': 'Created from collaboration invite',
+          'start_date': originalQuote['start_date'],
+          'total_days': originalQuote['total_days'],
+        };
+        
+        final newProposal = await _supabaseService.createQuote(proposalData);
+        debugPrint('AuthProvider: Created draft proposal - ${newProposal['id']}');
+      }
+      
+      debugPrint('AuthProvider: Viral loop complete!');
+    } catch (e) {
+      debugPrint('AuthProvider: Error processing collaborator invite - $e');
+      // Don't fail the signup if invite processing fails
+    }
+  }
+
+  /// Process invite for existing user who logs in (simpler flow - just accept invite)
+  Future<void> processInviteForExistingUser(String inviteToken) async {
+    if (_profile == null || _companyId == null) return;
+    
+    try {
+      debugPrint('AuthProvider: Processing invite for existing user');
+      
+      // Get invitation
+      final invitation = await _supabaseService.client
+          .from('collaborator_invitations')
+          .select('*, quotes(id, title, recipient_name, line_items, start_date, total_days)')
+          .eq('token', inviteToken)
+          .maybeSingle();
+      
+      if (invitation == null || invitation['collaborator_profile_id'] != null) {
+        return; // Already processed or not found
+      }
+
+      // Update invitation
+      await _supabaseService.client
+          .from('collaborator_invitations')
+          .update({
+            'collaborator_profile_id': userId,
+            'status': 'accepted',
+          })
+          .eq('token', inviteToken);
+
+      // Check if inviter's company is already a client
+      final inviterCompanyId = invitation['company_id'];
+      final existingClients = await _supabaseService.client
+          .from('clients')
+          .select('id')
+          .eq('company_id', _companyId!)
+          .eq('company_name', invitation['company_name'] ?? '');
+      
+      String clientId;
+      if (existingClients.isEmpty) {
+        // Create client
+        final clientData = {
+          'company_id': _companyId,
+          'company_name': invitation['company_name'] ?? 'Client',
+          'primary_name': invitation['owner_name'] ?? '',
+          'type': 'referral',
+          'is_active': true,
+        };
+        final newClient = await _supabaseService.createClient(clientData);
+        clientId = newClient['id'];
+      } else {
+        clientId = existingClients.first['id'];
+      }
+
+      // Create draft proposal if quote exists
+      final originalQuote = invitation['quotes'];
+      if (originalQuote != null) {
+        final proposalData = {
+          'company_id': _companyId,
+          'client_id': clientId,
+          'title': originalQuote['title'] ?? 'Project Proposal',
+          'recipient_name': invitation['owner_name'] ?? '',
+          'status': 'draft',
+          'line_items': invitation['line_items'] ?? [],
+          'notes': 'Created from collaboration invite',
+        };
+        await _supabaseService.createQuote(proposalData);
+      }
+      
+      debugPrint('AuthProvider: Invite processed for existing user');
+    } catch (e) {
+      debugPrint('AuthProvider: Error processing invite for existing user - $e');
+    }
+  }
+
   /// Create profile, company, and assign owner role for new user
   Future<void> _createUserProfile(String authUserId, String email, String firstName, String lastName) async {
     try {

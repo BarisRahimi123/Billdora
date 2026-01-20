@@ -154,7 +154,7 @@ class BilldoraApp extends StatelessWidget {
         ),
         iconTheme: IconThemeData(color: AppColors.textPrimary),
       ),
-      cardTheme: CardThemeData(
+      cardTheme: CardTheme(
         color: AppColors.cardBackground,
         elevation: 0,
         shape: RoundedRectangleBorder(
