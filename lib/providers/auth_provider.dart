@@ -186,6 +186,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   /// Load existing profile after sign in (Supabase Auth)
+  /// Auto-creates company and profile if none exists (e.g., for collaborator portal users)
   Future<void> _loadUserProfile(String authUserId) async {
     debugPrint('AuthProvider._loadUserProfile: Looking for profile with authUserId=$authUserId');
     try {
@@ -208,11 +209,53 @@ class AuthProvider extends ChangeNotifier {
       if (_profile != null) {
         _companyId = _profile!['company_id'];
         debugPrint('AuthProvider._loadUserProfile: Found profile! company_id=$_companyId');
+        
+        // Check if profile has a company_id - if not, create a company for them
+        if (_companyId == null && _user != null) {
+          debugPrint('AuthProvider._loadUserProfile: Profile exists but no company - creating one');
+          await _createCompanyForExistingProfile(authUserId, _user!['email'] ?? 'user@example.com');
+        }
       } else {
-        debugPrint('AuthProvider._loadUserProfile: No profile found - will need to create one');
+        // No profile found - create company and profile for this user
+        // This handles users who signed up via collaborator portal or external auth
+        debugPrint('AuthProvider._loadUserProfile: No profile found - creating company and profile');
+        if (_user != null) {
+          final email = _user!['email'] ?? 'user@example.com';
+          final metadata = _user!['user_metadata'] as Map<String, dynamic>? ?? {};
+          final fullName = metadata['full_name'] ?? metadata['name'] ?? email.split('@').first;
+          final nameParts = fullName.toString().split(' ');
+          final firstName = nameParts.first;
+          final lastName = nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
+          
+          await _createUserProfile(authUserId, email, firstName, lastName);
+        }
       }
     } catch (e) {
       debugPrint('AuthProvider._loadUserProfile: Error - $e');
+    }
+  }
+  
+  /// Create a company for a user who has a profile but no company
+  Future<void> _createCompanyForExistingProfile(String authUserId, String email) async {
+    try {
+      final userName = email.split('@').first;
+      
+      // Create company
+      final company = await _supabaseService.createCompany({
+        'name': '$userName\'s Company',
+        'owner_id': authUserId,
+      });
+      _companyId = company['id'];
+      debugPrint('AuthProvider._createCompanyForExistingProfile: Created company $_companyId');
+      
+      // Update profile with company_id
+      await _supabaseService.updateProfile(_profile!['id'], {
+        'company_id': _companyId,
+      });
+      _profile!['company_id'] = _companyId;
+      debugPrint('AuthProvider._createCompanyForExistingProfile: Updated profile with company_id');
+    } catch (e) {
+      debugPrint('AuthProvider._createCompanyForExistingProfile: Error - $e');
     }
   }
 
