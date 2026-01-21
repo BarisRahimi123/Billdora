@@ -216,9 +216,8 @@ class AuthProvider extends ChangeNotifier {
           await _createCompanyForExistingProfile(authUserId, _user!['email'] ?? 'user@example.com');
         }
       } else {
-        // No profile found - create company and profile for this user
-        // This handles users who signed up via collaborator portal or external auth
-        debugPrint('AuthProvider._loadUserProfile: No profile found - creating company and profile');
+        // No profile found - check if user has a staff invitation first
+        debugPrint('AuthProvider._loadUserProfile: No profile found - checking for staff invitation');
         if (_user != null) {
           final email = _user!['email'] ?? 'user@example.com';
           final metadata = _user!['user_metadata'] as Map<String, dynamic>? ?? {};
@@ -227,7 +226,18 @@ class AuthProvider extends ChangeNotifier {
           final firstName = nameParts.first;
           final lastName = nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
           
-          await _createUserProfile(authUserId, email, firstName, lastName);
+          // Check for pending staff invitation
+          final staffInvitation = await _supabaseService.getStaffInvitationByEmail(email);
+          
+          if (staffInvitation != null) {
+            // User was invited to join an existing company - use that company
+            debugPrint('AuthProvider._loadUserProfile: Found staff invitation - joining company ${staffInvitation['company_id']}');
+            await _joinCompanyFromInvitation(authUserId, email, firstName, lastName, staffInvitation);
+          } else {
+            // No invitation - create their own company (independent user)
+            debugPrint('AuthProvider._loadUserProfile: No staff invitation - creating own company');
+            await _createUserProfile(authUserId, email, firstName, lastName);
+          }
         }
       }
     } catch (e) {
@@ -235,6 +245,54 @@ class AuthProvider extends ChangeNotifier {
     }
   }
   
+  /// Join an existing company via staff invitation
+  Future<void> _joinCompanyFromInvitation(
+    String authUserId, 
+    String email, 
+    String firstName, 
+    String lastName, 
+    Map<String, dynamic> invitation,
+  ) async {
+    try {
+      _companyId = invitation['company_id'];
+      
+      // Get the appropriate role for this user (from invitation or default to staff)
+      final roles = await _supabaseService.getRolesByCompany(_companyId!);
+      final invitedRole = invitation['role'] ?? 'Staff';
+      final role = roles.firstWhere(
+        (r) => r['name'].toString().toLowerCase() == invitedRole.toString().toLowerCase(),
+        orElse: () => roles.firstWhere(
+          (r) => r['name'].toString().toLowerCase() == 'staff',
+          orElse: () => roles.first,
+        ),
+      );
+
+      // Create profile with the company's ID (joining existing company)
+      _profile = await _supabaseService.createProfile({
+        'id': authUserId,
+        'clerk_id': authUserId,
+        'company_id': _companyId,
+        'role_id': role['id'],
+        'email': email,
+        'first_name': firstName,
+        'last_name': lastName,
+        'full_name': '$firstName $lastName',
+        'job_title': invitation['job_title'],
+        'department': invitation['department'],
+        'phone': invitation['phone'],
+      });
+      
+      // Mark the invitation as accepted
+      await _supabaseService.acceptStaffInvitation(invitation['id']);
+      
+      debugPrint('AuthProvider._joinCompanyFromInvitation: Joined company $_companyId with role ${role['name']}');
+    } catch (e) {
+      debugPrint('Error joining company from invitation: $e');
+      // Fallback: create their own company
+      await _createUserProfile(authUserId, email, firstName, lastName);
+    }
+  }
+
   /// Create a company for a user who has a profile but no company
   Future<void> _createCompanyForExistingProfile(String authUserId, String email) async {
     try {

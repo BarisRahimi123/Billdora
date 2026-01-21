@@ -307,13 +307,41 @@ class _AddStaffModalState extends State<_AddStaffModal> with SingleTickerProvide
                   const SizedBox(width: 12),
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: () {
-                        // TODO: Implement add staff via Supabase
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Staff member invitation sent'), backgroundColor: AppColors.success),
-                        );
-                      },
+                      onPressed: _email.isEmpty || _fullName.isEmpty
+                          ? null
+                          : () async {
+                              final authProvider = context.read<AuthProvider>();
+                              final teamProvider = context.read<TeamProvider>();
+                              
+                              final success = await teamProvider.inviteStaffMember(
+                                email: _email,
+                                fullName: _fullName,
+                                role: _role,
+                                inviterName: authProvider.profile?['full_name'] ?? 'Team Admin',
+                                companyName: authProvider.currentCompanyName ?? 'Company',
+                                phone: _phone.isNotEmpty ? _phone : null,
+                                jobTitle: _jobTitle.isNotEmpty ? _jobTitle : null,
+                                department: _department.isNotEmpty ? _department : null,
+                              );
+                              
+                              Navigator.pop(context);
+                              
+                              if (success) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Invitation sent to $_email'),
+                                    backgroundColor: AppColors.success,
+                                  ),
+                                );
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Failed to send invitation: ${teamProvider.errorMessage}'),
+                                    backgroundColor: AppColors.error,
+                                  ),
+                                );
+                              }
+                            },
                       child: const Text('Send Invite'),
                     ),
                   ),

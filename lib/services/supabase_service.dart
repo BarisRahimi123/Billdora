@@ -560,6 +560,83 @@ class SupabaseService {
     return List<Map<String, dynamic>>.from(response);
   }
 
+  // ============ STAFF INVITATIONS ============
+  /// Create a staff invitation for a new team member
+  Future<Map<String, dynamic>> createStaffInvitation(Map<String, dynamic> data) async {
+    final response = await _client
+        .from('staff_invitations')
+        .insert(data)
+        .select()
+        .single();
+    return response;
+  }
+
+  /// Get pending staff invitation by email
+  Future<Map<String, dynamic>?> getStaffInvitationByEmail(String email) async {
+    try {
+      final response = await _client
+          .from('staff_invitations')
+          .select('*, companies(id, name)')
+          .eq('email', email)
+          .eq('status', 'pending')
+          .order('created_at', ascending: false)
+          .limit(1)
+          .maybeSingle();
+      return response;
+    } catch (e) {
+      debugPrint('Error getting staff invitation: $e');
+      return null;
+    }
+  }
+
+  /// Accept a staff invitation - update status
+  Future<void> acceptStaffInvitation(String invitationId) async {
+    await _client
+        .from('staff_invitations')
+        .update({
+          'status': 'accepted',
+          'accepted_at': DateTime.now().toIso8601String(),
+        })
+        .eq('id', invitationId);
+  }
+
+  /// Send staff invitation email via Edge Function
+  Future<void> sendStaffInviteEmail({
+    required String email,
+    required String inviterName,
+    required String companyName,
+    required String role,
+    required String invitationId,
+  }) async {
+    try {
+      await _client.functions.invoke(
+        'send-staff-invite',
+        body: {
+          'email': email,
+          'inviterName': inviterName,
+          'companyName': companyName,
+          'role': role,
+          'invitationId': invitationId,
+          'portalUrl': 'https://www.billdora.com',
+        },
+      );
+      debugPrint('Staff invitation email sent to $email');
+    } catch (e) {
+      debugPrint('Error sending staff invite email: $e');
+      rethrow;
+    }
+  }
+
+  /// Get all staff invitations for a company
+  Future<List<Map<String, dynamic>>> getStaffInvitations(String companyId) async {
+    final response = await _client
+        .from('staff_invitations')
+        .select()
+        .eq('company_id', companyId)
+        .order('created_at', ascending: false);
+    return List<Map<String, dynamic>>.from(response);
+  }
+
   // ============ CONVERT LEAD TO CLIENT ============
   Future<Map<String, dynamic>> convertLeadToClient(String leadId) async {
     // Fetch lead data
