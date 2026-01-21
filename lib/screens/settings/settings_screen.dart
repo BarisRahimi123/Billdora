@@ -518,8 +518,14 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
     final descriptionController = TextEditingController();
     final rateController = TextEditingController();
     String selectedUnit = 'hour';
+    
+    // Get categories or use default fallback
     final categories = context.read<SettingsProvider>().categories;
-    String selectedCategory = categories.isNotEmpty ? categories.first['name'] as String : 'Other';
+    final List<String> categoryOptions = categories.isNotEmpty
+        ? categories.map((cat) => cat['name'] as String).toList()
+        : ['Construction', 'Design', 'Consulting', 'Development', 'Other'];
+    
+    String selectedCategory = categoryOptions.first;
     
     showModalBottomSheet(
       context: context,
@@ -618,8 +624,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                         child: DropdownButton<String>(
                           value: selectedCategory,
                           isExpanded: true,
-                          items: context.read<SettingsProvider>().categories
-                              .map((cat) => DropdownMenuItem(value: cat['name'] as String, child: Text(cat['name'] as String)))
+                          items: categoryOptions
+                              .map((cat) => DropdownMenuItem(value: cat, child: Text(cat)))
                               .toList(),
                           onChanged: (value) {
                             setModalState(() => selectedCategory = value!);
@@ -777,7 +783,14 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
     final descriptionController = TextEditingController(text: service['description']);
     final rateController = TextEditingController(text: service['rate'].toString());
     String selectedUnit = service['unit'];
-    String selectedCategory = service['category'];
+    
+    // Get categories or use default fallback
+    final categories = context.read<SettingsProvider>().categories;
+    final List<String> categoryOptions = categories.isNotEmpty
+        ? categories.map((cat) => cat['name'] as String).toList()
+        : ['Construction', 'Design', 'Consulting', 'Development', 'Other'];
+    
+    String selectedCategory = service['category'] ?? categoryOptions.first;
     
     showModalBottomSheet(
       context: context,
@@ -876,8 +889,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                         child: DropdownButton<String>(
                           value: selectedCategory,
                           isExpanded: true,
-                          items: context.read<SettingsProvider>().categories
-                              .map((cat) => DropdownMenuItem(value: cat['name'] as String, child: Text(cat['name'] as String)))
+                          items: categoryOptions
+                              .map((cat) => DropdownMenuItem(value: cat, child: Text(cat)))
                               .toList(),
                           onChanged: (value) {
                             setModalState(() => selectedCategory = value!);
