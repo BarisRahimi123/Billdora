@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../main.dart';
@@ -98,20 +99,83 @@ class AppHeader extends StatelessWidget {
               ),
               const SizedBox(width: 8),
 
-              // Profile Avatar
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: AppColors.accent.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(10),
+              // Profile Avatar with Dropdown
+              PopupMenuButton<String>(
+                offset: const Offset(0, 45),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                child: Center(
-                  child: Text(
-                    authProvider.userName.isNotEmpty ? authProvider.userName[0].toUpperCase() : 'B',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.accent,
+                color: AppColors.cardBackground,
+                elevation: 8,
+                onSelected: (value) {
+                  if (value == 'settings') {
+                    context.go('/settings');
+                  } else if (value == 'signout') {
+                    context.read<AuthProvider>().signOut();
+                    context.go('/login');
+                  }
+                },
+                itemBuilder: (context) => [
+                  PopupMenuItem<String>(
+                    enabled: false,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          authProvider.userName.isNotEmpty ? authProvider.userName : 'User',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          authProvider.userEmail ?? '',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuDivider(),
+                  PopupMenuItem<String>(
+                    value: 'settings',
+                    child: Row(
+                      children: [
+                        Icon(Icons.settings_outlined, size: 18, color: AppColors.textSecondary),
+                        const SizedBox(width: 12),
+                        const Text('Settings'),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem<String>(
+                    value: 'signout',
+                    child: Row(
+                      children: [
+                        Icon(Icons.logout, size: 18, color: AppColors.error),
+                        const SizedBox(width: 12),
+                        Text('Sign Out', style: TextStyle(color: AppColors.error)),
+                      ],
+                    ),
+                  ),
+                ],
+                child: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: AppColors.accent.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Center(
+                    child: Text(
+                      authProvider.userName.isNotEmpty ? authProvider.userName[0].toUpperCase() : 'B',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.accent,
+                      ),
                     ),
                   ),
                 ),

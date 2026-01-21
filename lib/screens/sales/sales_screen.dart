@@ -6151,9 +6151,62 @@ class _ConsultantsTab extends StatefulWidget {
   State<_ConsultantsTab> createState() => _ConsultantsTabState();
 }
 
-class _ConsultantsTabState extends State<_ConsultantsTab> {
+class _ConsultantsTabState extends State<_ConsultantsTab> with SingleTickerProviderStateMixin {
+  late TabController _subTabController;
   String _searchQuery = '';
   String _statusFilter = 'all';
+  
+  // Inbox state
+  List<Map<String, dynamic>> _receivedInvitations = [];
+  bool _isLoadingInbox = false;
+  
+  @override
+  void initState() {
+    super.initState();
+    _subTabController = TabController(length: 2, vsync: this);
+    _subTabController.addListener(_onTabChanged);
+  }
+  
+  @override
+  void dispose() {
+    _subTabController.removeListener(_onTabChanged);
+    _subTabController.dispose();
+    super.dispose();
+  }
+  
+  void _onTabChanged() {
+    if (_subTabController.index == 1 && _receivedInvitations.isEmpty && !_isLoadingInbox) {
+      _loadInbox();
+    }
+  }
+  
+  Future<void> _loadInbox() async {
+    final authProvider = context.read<AuthProvider>();
+    final email = authProvider.profile?['email'] ?? authProvider.currentUser?['email'];
+    
+    if (email == null) {
+      debugPrint('_ConsultantsTabState._loadInbox: No email found');
+      return;
+    }
+    
+    setState(() => _isLoadingInbox = true);
+    
+    try {
+      final supabaseService = SupabaseService();
+      final invitations = await supabaseService.getReceivedInvitationsByEmail(email);
+      if (mounted) {
+        setState(() {
+          _receivedInvitations = invitations;
+          _isLoadingInbox = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('_ConsultantsTabState._loadInbox: Error - $e');
+      if (mounted) {
+        setState(() => _isLoadingInbox = false);
+      }
+    }
+  }
   
   List<Map<String, dynamic>> get _filteredConsultants {
     var filtered = context.watch<SalesProvider>().consultants;
@@ -6271,13 +6324,89 @@ class _ConsultantsTabState extends State<_ConsultantsTab> {
 
   @override
   Widget build(BuildContext context) {
+    return Column(
+      children: [
+        // Sub-tab bar: My Consultants | My Inbox
+        Container(
+          margin: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+          decoration: BoxDecoration(
+            color: AppColors.neutral100,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: TabBar(
+            controller: _subTabController,
+            indicator: BoxDecoration(
+              color: AppColors.cardBackground,
+              borderRadius: BorderRadius.circular(8),
+              boxShadow: AppShadows.sm,
+            ),
+            indicatorSize: TabBarIndicatorSize.tab,
+            labelColor: AppColors.accent,
+            unselectedLabelColor: AppColors.textSecondary,
+            labelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+            unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
+            padding: const EdgeInsets.all(4),
+            tabs: [
+              Tab(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.people_outline, size: 16),
+                    const SizedBox(width: 6),
+                    const Text('My Consultants'),
+                  ],
+                ),
+              ),
+              Tab(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.inbox_outlined, size: 16),
+                    const SizedBox(width: 6),
+                    const Text('My Inbox'),
+                    if (_receivedInvitations.isNotEmpty) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppColors.error,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          '${_receivedInvitations.length}',
+                          style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        
+        // Tab content
+        Expanded(
+          child: TabBarView(
+            controller: _subTabController,
+            children: [
+              _buildMyConsultantsView(),
+              _buildMyInboxView(),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+  
+  Widget _buildMyConsultantsView() {
     final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 0);
     
     return Column(
       children: [
         // Filter
         Padding(
-          padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+          padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
           child: Row(
             children: [
               const Spacer(),
@@ -6377,6 +6506,366 @@ class _ConsultantsTabState extends State<_ConsultantsTab> {
                 ),
         ),
       ],
+    );
+  }
+  
+  Widget _buildMyInboxView() {
+    if (_isLoadingInbox) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    
+    if (_receivedInvitations.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.inbox_outlined, size: 64, color: AppColors.textTertiary),
+            const SizedBox(height: 16),
+            Text(
+              'No invitations yet',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'When someone invites you to collaborate\non a proposal, it will appear here.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton.icon(
+              onPressed: _loadInbox,
+              icon: const Icon(Icons.refresh, size: 18),
+              label: const Text('Refresh'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.accent,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    
+    return RefreshIndicator(
+      onRefresh: _loadInbox,
+      child: ListView.builder(
+        padding: const EdgeInsets.all(12),
+        itemCount: _receivedInvitations.length,
+        itemBuilder: (context, index) => _buildInvitationCard(_receivedInvitations[index]),
+      ),
+    );
+  }
+  
+  Widget _buildInvitationCard(Map<String, dynamic> invitation) {
+    final dateFormat = DateFormat('MMM d, yyyy');
+    final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 0);
+    
+    final projectName = invitation['project_name'] ?? 'Untitled Project';
+    final companyName = invitation['company_name'] ?? 'Unknown Company';
+    final ownerName = invitation['owner_name'] ?? 'Someone';
+    final status = invitation['status'] as String? ?? 'invited';
+    final deadline = invitation['deadline'] != null ? DateTime.tryParse(invitation['deadline']) : null;
+    final notes = invitation['notes'] as String?;
+    final lineItems = invitation['line_items'] as List<dynamic>? ?? [];
+    final showPricing = invitation['show_pricing'] as bool? ?? false;
+    
+    // Get quote details if available
+    final quote = invitation['quotes'] as Map<String, dynamic>?;
+    final scope = quote?['scope'] as String? ?? invitation['scope_of_work'] as String?;
+    final total = quote?['total'] as num?;
+    
+    // Status styling
+    Color statusColor;
+    IconData statusIcon;
+    String statusLabel;
+    
+    switch (status) {
+      case 'viewed':
+        statusColor = AppColors.info;
+        statusIcon = Icons.visibility_outlined;
+        statusLabel = 'Viewed';
+        break;
+      case 'submitted':
+        statusColor = AppColors.success;
+        statusIcon = Icons.check_circle_outline;
+        statusLabel = 'Submitted';
+        break;
+      case 'accepted':
+        statusColor = AppColors.success;
+        statusIcon = Icons.thumb_up_outlined;
+        statusLabel = 'Accepted';
+        break;
+      case 'revision_requested':
+        statusColor = AppColors.warning;
+        statusIcon = Icons.edit_outlined;
+        statusLabel = 'Revision Requested';
+        break;
+      default:
+        statusColor = AppColors.accent;
+        statusIcon = Icons.mail_outline;
+        statusLabel = 'New Invitation';
+    }
+    
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: status == 'invited' ? AppColors.accent.withOpacity(0.3) : AppColors.border),
+        boxShadow: AppShadows.sm,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: statusColor.withOpacity(0.08),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: statusColor.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Center(
+                    child: Text(
+                      companyName.isNotEmpty ? companyName[0].toUpperCase() : 'C',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: statusColor),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        projectName,
+                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'From $ownerName • $companyName',
+                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: statusColor.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(statusIcon, size: 14, color: statusColor),
+                      const SizedBox(width: 4),
+                      Text(
+                        statusLabel,
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: statusColor),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          
+          // Content
+          Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Deadline
+                if (deadline != null) ...[
+                  Row(
+                    children: [
+                      Icon(Icons.schedule, size: 16, color: AppColors.textSecondary),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Deadline: ${dateFormat.format(deadline)}',
+                        style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                      ),
+                      if (deadline.isBefore(DateTime.now().add(const Duration(days: 3)))) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.error.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            'Soon',
+                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.error),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                ],
+                
+                // Scope
+                if (scope != null && scope.isNotEmpty) ...[
+                  Text(
+                    'Project Scope',
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    scope,
+                    style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 10),
+                ],
+                
+                // Notes from sender
+                if (notes != null && notes.isNotEmpty) ...[
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppColors.neutral50,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(Icons.notes, size: 16, color: AppColors.textSecondary),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            notes,
+                            style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontStyle: FontStyle.italic),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                ],
+                
+                // Line items preview (if pricing shown)
+                if (showPricing && lineItems.isNotEmpty) ...[
+                  Text(
+                    'Requested Services (${lineItems.length})',
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+                  ),
+                  const SizedBox(height: 6),
+                  ...lineItems.take(3).map((item) {
+                    final itemMap = item as Map<String, dynamic>;
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Row(
+                        children: [
+                          Icon(Icons.circle, size: 6, color: AppColors.accent),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              itemMap['description'] ?? 'Item',
+                              style: TextStyle(fontSize: 12, color: AppColors.textPrimary),
+                            ),
+                          ),
+                          Text(
+                            currencyFormat.format(itemMap['amount'] ?? 0),
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.accent),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                  if (lineItems.length > 3)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        '+${lineItems.length - 3} more items',
+                        style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                      ),
+                    ),
+                  const SizedBox(height: 10),
+                ],
+                
+                // Action buttons
+                Row(
+                  children: [
+                    if (status == 'invited' || status == 'viewed') ...[
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () => _openInvitationDetail(invitation),
+                          icon: const Icon(Icons.edit_outlined, size: 16),
+                          label: const Text('Add My Pricing'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.accent,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                        ),
+                      ),
+                    ] else if (status == 'submitted') ...[
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () => _openInvitationDetail(invitation),
+                          icon: const Icon(Icons.visibility_outlined, size: 16),
+                          label: const Text('View Submission'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.success,
+                            side: BorderSide(color: AppColors.success),
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                        ),
+                      ),
+                    ] else ...[
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () => _openInvitationDetail(invitation),
+                          icon: const Icon(Icons.open_in_new, size: 16),
+                          label: const Text('View Details'),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  void _openInvitationDetail(Map<String, dynamic> invitation) {
+    // TODO: Navigate to invitation detail/response screen
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _InvitationDetailModal(
+        invitation: invitation,
+        onSubmit: () {
+          Navigator.pop(context);
+          _loadInbox(); // Refresh after submission
+        },
+      ),
     );
   }
 
@@ -7393,6 +7882,482 @@ class _ConsultantDetailModal extends StatelessWidget {
           Text(value, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: color)),
           const SizedBox(height: 2),
           Text(label, style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
+        ],
+      ),
+    );
+  }
+}
+
+// ============ INVITATION DETAIL MODAL ============
+class _InvitationDetailModal extends StatefulWidget {
+  final Map<String, dynamic> invitation;
+  final VoidCallback onSubmit;
+
+  const _InvitationDetailModal({
+    required this.invitation,
+    required this.onSubmit,
+  });
+
+  @override
+  State<_InvitationDetailModal> createState() => _InvitationDetailModalState();
+}
+
+class _InvitationDetailModalState extends State<_InvitationDetailModal> {
+  final List<Map<String, dynamic>> _myLineItems = [];
+  final _notesController = TextEditingController();
+  bool _isSubmitting = false;
+  
+  @override
+  void initState() {
+    super.initState();
+    // Pre-populate with existing response if any
+    final existingItems = widget.invitation['response_items'] as List<dynamic>?;
+    if (existingItems != null) {
+      _myLineItems.addAll(existingItems.map((e) => Map<String, dynamic>.from(e)));
+    }
+    _notesController.text = widget.invitation['response_notes'] as String? ?? '';
+  }
+  
+  @override
+  void dispose() {
+    _notesController.dispose();
+    super.dispose();
+  }
+  
+  double get _totalAmount {
+    return _myLineItems.fold(0.0, (sum, item) => sum + (item['amount'] as num? ?? 0));
+  }
+  
+  void _addLineItem() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        final descController = TextEditingController();
+        final qtyController = TextEditingController(text: '1');
+        final priceController = TextEditingController();
+        
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text('Add Service'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: descController,
+                  decoration: const InputDecoration(
+                    labelText: 'Description',
+                    hintText: 'e.g., Web Development',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: qtyController,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(labelText: 'Quantity'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TextField(
+                        controller: priceController,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Unit Price',
+                          prefixText: '\$',
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final qty = int.tryParse(qtyController.text) ?? 1;
+                final price = double.tryParse(priceController.text) ?? 0;
+                setState(() {
+                  _myLineItems.add({
+                    'description': descController.text,
+                    'quantity': qty,
+                    'unitPrice': price,
+                    'amount': qty * price,
+                  });
+                });
+                Navigator.pop(context);
+              },
+              child: const Text('Add'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+  
+  void _removeLineItem(int index) {
+    setState(() {
+      _myLineItems.removeAt(index);
+    });
+  }
+  
+  Future<void> _submitResponse() async {
+    if (_myLineItems.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please add at least one service'), backgroundColor: AppColors.error),
+      );
+      return;
+    }
+    
+    setState(() => _isSubmitting = true);
+    
+    try {
+      final supabaseService = SupabaseService();
+      
+      // Update the invitation with response data
+      await supabaseService.client
+          .from('collaborator_invitations')
+          .update({
+            'status': 'submitted',
+            'line_items': _myLineItems,
+            'response_amount': _totalAmount,
+            'response_notes': _notesController.text,
+            'submitted_at': DateTime.now().toIso8601String(),
+          })
+          .eq('id', widget.invitation['id']);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Response submitted successfully!'), backgroundColor: AppColors.success),
+        );
+        widget.onSubmit();
+      }
+    } catch (e) {
+      debugPrint('Error submitting response: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error),
+        );
+        setState(() => _isSubmitting = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 0);
+    final dateFormat = DateFormat('MMM d, yyyy');
+    
+    final projectName = widget.invitation['project_name'] ?? 'Project';
+    final companyName = widget.invitation['company_name'] ?? 'Company';
+    final ownerName = widget.invitation['owner_name'] ?? 'Sender';
+    final deadline = widget.invitation['deadline'] != null ? DateTime.tryParse(widget.invitation['deadline']) : null;
+    final notes = widget.invitation['notes'] as String?;
+    final status = widget.invitation['status'] as String? ?? 'invited';
+    final isEditable = status == 'invited' || status == 'viewed' || status == 'revision_requested';
+    
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.9,
+      decoration: const BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        children: [
+          // Handle
+          Container(
+            margin: const EdgeInsets.only(top: 12),
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: AppColors.border,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          
+          // Header
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.cardBackground,
+              border: Border(bottom: BorderSide(color: AppColors.border)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            projectName,
+                            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'From $ownerName • $companyName',
+                            style: TextStyle(color: AppColors.textSecondary),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+                if (deadline != null) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: AppColors.warning.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.schedule, size: 16, color: AppColors.warning),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Deadline: ${dateFormat.format(deadline)}',
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.warning),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          
+          // Content
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Notes from sender
+                  if (notes != null && notes.isNotEmpty) ...[
+                    Text(
+                      'Notes from $ownerName',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: AppColors.neutral50,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        notes,
+                        style: TextStyle(color: AppColors.textPrimary, fontStyle: FontStyle.italic),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                  ],
+                  
+                  // My Services section
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'My Services',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                      ),
+                      if (isEditable)
+                        ElevatedButton.icon(
+                          onPressed: _addLineItem,
+                          icon: const Icon(Icons.add, size: 16),
+                          label: const Text('Add Service'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.accent,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  
+                  if (_myLineItems.isEmpty)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: AppColors.neutral50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.border, style: BorderStyle.solid),
+                      ),
+                      child: Column(
+                        children: [
+                          Icon(Icons.add_shopping_cart_outlined, size: 40, color: AppColors.textTertiary),
+                          const SizedBox(height: 12),
+                          Text(
+                            'No services added yet',
+                            style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Tap "Add Service" to add your pricing',
+                            style: TextStyle(fontSize: 12, color: AppColors.textTertiary),
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    ...List.generate(_myLineItems.length, (index) {
+                      final item = _myLineItems[index];
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppColors.cardBackground,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    item['description'] ?? '',
+                                    style: const TextStyle(fontWeight: FontWeight.w600),
+                                  ),
+                                  Text(
+                                    '${item['quantity']} × ${currencyFormat.format(item['unitPrice'])}',
+                                    style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Text(
+                              currencyFormat.format(item['amount']),
+                              style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.accent),
+                            ),
+                            if (isEditable) ...[
+                              const SizedBox(width: 8),
+                              IconButton(
+                                icon: Icon(Icons.delete_outline, color: AppColors.error, size: 20),
+                                onPressed: () => _removeLineItem(index),
+                                constraints: const BoxConstraints(),
+                                padding: const EdgeInsets.all(4),
+                              ),
+                            ],
+                          ],
+                        ),
+                      );
+                    }),
+                  
+                  // Total
+                  if (_myLineItems.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: AppColors.accent.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Total', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                          Text(
+                            currencyFormat.format(_totalAmount),
+                            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18, color: AppColors.accent),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                  
+                  // Notes field
+                  if (isEditable) ...[
+                    const SizedBox(height: 20),
+                    Text(
+                      'Additional Notes (optional)',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _notesController,
+                      maxLines: 3,
+                      decoration: InputDecoration(
+                        hintText: 'Add any notes about your services...',
+                        filled: true,
+                        fillColor: AppColors.cardBackground,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide(color: AppColors.border),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide(color: AppColors.border),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          
+          // Footer with submit button
+          if (isEditable)
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.cardBackground,
+                border: Border(top: BorderSide(color: AppColors.border)),
+              ),
+              child: SafeArea(
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _isSubmitting ? null : _submitResponse,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.success,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    child: _isSubmitting
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          )
+                        : Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.send, size: 18),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Submit My Pricing (${currencyFormat.format(_totalAmount)})',
+                                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                              ),
+                            ],
+                          ),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
