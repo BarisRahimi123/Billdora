@@ -737,34 +737,100 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
                 ),
                 const Divider(height: 1, color: AppColors.border),
 
-                // Send To Section - Mutually Exclusive Client OR Lead
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text('Send To', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
-                          if (_recipientType != 'none')
-                            TextButton.icon(
-                              onPressed: _clearRecipient,
-                              icon: const Icon(Icons.close, size: 16),
-                              label: const Text('Clear'),
-                              style: TextButton.styleFrom(
-                                foregroundColor: AppColors.textSecondary,
-                                padding: const EdgeInsets.symmetric(horizontal: 8),
+                // COLLABORATION MODE: Show "Responding To" info card instead of "Send To"
+                if (widget.isCollaborationResponse) ...[
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.reply, size: 18, color: AppColors.accent),
+                            const SizedBox(width: 8),
+                            const Text('Responding To', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Your pricing will be submitted back to the requester',
+                          style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                        ),
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: AppColors.accent.withOpacity(0.05),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: AppColors.accent.withOpacity(0.2)),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  color: AppColors.accent.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    _recipientName.isNotEmpty ? _recipientName[0].toUpperCase() : 'R',
+                                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.accent),
+                                  ),
+                                ),
                               ),
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Select either a client or a lead to send this proposal',
-                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
-                      ),
-                      const SizedBox(height: 16),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(_recipientName.isNotEmpty ? _recipientName : 'Requester', style: const TextStyle(fontWeight: FontWeight.w600)),
+                                    if (_recipientCompany.isNotEmpty)
+                                      Text(_recipientCompany, style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                                    Text(
+                                      widget.invitation?['project_name'] ?? 'Project',
+                                      style: TextStyle(fontSize: 12, color: AppColors.accent, fontWeight: FontWeight.w500),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Icon(Icons.arrow_forward, color: AppColors.accent.withOpacity(0.5), size: 20),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ] else ...[
+                  // NORMAL MODE: Send To Section - Mutually Exclusive Client OR Lead
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Send To', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+                            if (_recipientType != 'none')
+                              TextButton.icon(
+                                onPressed: _clearRecipient,
+                                icon: const Icon(Icons.close, size: 16),
+                                label: const Text('Clear'),
+                                style: TextButton.styleFrom(
+                                  foregroundColor: AppColors.textSecondary,
+                                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                                ),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Select either a client or a lead to send this proposal',
+                          style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                        ),
+                        const SizedBox(height: 16),
 
                       // CLIENT Section
                       Column(
@@ -985,6 +1051,8 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
                     ],
                   ),
                 ),
+                ], // End of ] else ...[
+
                 const Divider(height: 1, color: AppColors.border),
 
                 // Line Items Table
