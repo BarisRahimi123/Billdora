@@ -52,11 +52,12 @@ class SettingsProvider extends ChangeNotifier {
   // Services CRUD
   Future<void> addService(Map<String, dynamic> service) async {
     try {
-      final newService = await _supabaseService.createService({
+      await _supabaseService.createService({
         ...service,
         'company_id': _companyId,
       });
-      _services.add(newService);
+      // Reload services to get proper structure
+      _services = await _supabaseService.getServices(_companyId!);
       notifyListeners();
     } catch (e) {
       _errorMessage = e.toString();
@@ -67,11 +68,9 @@ class SettingsProvider extends ChangeNotifier {
   Future<void> updateService(String id, Map<String, dynamic> data) async {
     try {
       await _supabaseService.updateService(id, data);
-      final index = _services.indexWhere((s) => s['id'] == id);
-      if (index != -1) {
-        _services[index] = {..._services[index], ...data};
-        notifyListeners();
-      }
+      // Reload services to get proper structure
+      _services = await _supabaseService.getServices(_companyId!);
+      notifyListeners();
     } catch (e) {
       _errorMessage = e.toString();
       notifyListeners();

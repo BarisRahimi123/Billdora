@@ -746,7 +746,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                               'description': descriptionController.text,
                               'rate': double.tryParse(rateController.text) ?? 0.0,
                               'unit': selectedUnit,
-                              'category_name': selectedCategory,
+                              'category': selectedCategory,
                             });
                             Navigator.pop(context);
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -1011,7 +1011,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                               'description': descriptionController.text,
                               'rate': double.tryParse(rateController.text) ?? 0.0,
                               'unit': selectedUnit,
-                              'category_name': selectedCategory,
+                              'category': selectedCategory,
                             });
                             Navigator.pop(context);
                             ScaffoldMessenger.of(context).showSnackBar(
