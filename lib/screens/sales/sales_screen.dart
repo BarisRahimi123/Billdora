@@ -6177,9 +6177,62 @@ class _ConsultantsTabState extends State<_ConsultantsTab> with SingleTickerProvi
   }
   
   void _onTabChanged() {
+    setState(() {}); // Refresh UI when tab changes
     if (_subTabController.index == 1 && _receivedInvitations.isEmpty && !_isLoadingInbox) {
       _loadInbox();
     }
+  }
+  
+  Widget _buildSubTabButton(int index, String label, IconData icon, {int badge = 0}) {
+    final isSelected = _subTabController.index == index;
+    
+    return GestureDetector(
+      onTap: () => _subTabController.animateTo(index),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(
+              color: isSelected ? AppColors.accent : Colors.transparent,
+              width: 2,
+            ),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 14,
+              color: isSelected ? AppColors.accent : AppColors.textTertiary,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                color: isSelected ? AppColors.accent : AppColors.textSecondary,
+              ),
+            ),
+            if (badge > 0) ...[
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppColors.error,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  '$badge',
+                  style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
   }
   
   Future<void> _loadInbox() async {
@@ -6346,63 +6399,23 @@ class _ConsultantsTabState extends State<_ConsultantsTab> with SingleTickerProvi
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // Sub-tab bar: My Consultants | My Inbox
+        // Refined Sub-tab bar - underline style, more subtle
         Container(
-          margin: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-          decoration: BoxDecoration(
-            color: AppColors.neutral100,
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: TabBar(
-            controller: _subTabController,
-            indicator: BoxDecoration(
-              color: AppColors.cardBackground,
-              borderRadius: BorderRadius.circular(8),
-              boxShadow: AppShadows.sm,
-            ),
-            indicatorSize: TabBarIndicatorSize.tab,
-            labelColor: AppColors.accent,
-            unselectedLabelColor: AppColors.textSecondary,
-            labelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-            unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
-            padding: const EdgeInsets.all(4),
-            tabs: [
-              Tab(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.people_outline, size: 16),
-                    const SizedBox(width: 6),
-                    const Text('My Consultants'),
-                  ],
-                ),
-              ),
-              Tab(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.inbox_outlined, size: 16),
-                    const SizedBox(width: 6),
-                    const Text('My Inbox'),
-                    if (_receivedInvitations.isNotEmpty) ...[
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: AppColors.error,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Text(
-                          '${_receivedInvitations.length}',
-                          style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w600),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
+          margin: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+          child: Row(
+            children: [
+              _buildSubTabButton(0, 'My Consultants', Icons.people_outline),
+              const SizedBox(width: 24),
+              _buildSubTabButton(1, 'My Inbox', Icons.inbox_outlined, badge: _receivedInvitations.length),
             ],
           ),
+        ),
+        
+        // Subtle divider
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16),
+          height: 1,
+          color: AppColors.border.withOpacity(0.5),
         ),
         
         // Tab content
