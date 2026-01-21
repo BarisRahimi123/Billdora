@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../main.dart';
+import 'create_proposal_screen.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/sales_provider.dart';
 import '../../providers/permissions_provider.dart';
@@ -6181,19 +6183,37 @@ class _ConsultantsTabState extends State<_ConsultantsTab> with SingleTickerProvi
   }
   
   Future<void> _loadInbox() async {
+    debugPrint('_ConsultantsTabState._loadInbox: Starting...');
     final authProvider = context.read<AuthProvider>();
-    final email = authProvider.profile?['email'] ?? authProvider.currentUser?['email'];
+    
+    // Try multiple ways to get the email
+    String? email = authProvider.profile?['email'];
+    debugPrint('_ConsultantsTabState._loadInbox: profile email=$email');
     
     if (email == null) {
-      debugPrint('_ConsultantsTabState._loadInbox: No email found');
+      email = authProvider.currentUser?['email'];
+      debugPrint('_ConsultantsTabState._loadInbox: currentUser email=$email');
+    }
+    
+    // Also try getting from Supabase auth directly
+    if (email == null) {
+      final supabaseUser = Supabase.instance.client.auth.currentUser;
+      email = supabaseUser?.email;
+      debugPrint('_ConsultantsTabState._loadInbox: supabase auth email=$email');
+    }
+    
+    if (email == null) {
+      debugPrint('_ConsultantsTabState._loadInbox: No email found - cannot load inbox');
       return;
     }
     
+    debugPrint('_ConsultantsTabState._loadInbox: Loading invitations for email=$email');
     setState(() => _isLoadingInbox = true);
     
     try {
       final supabaseService = SupabaseService();
       final invitations = await supabaseService.getReceivedInvitationsByEmail(email);
+      debugPrint('_ConsultantsTabState._loadInbox: Got ${invitations.length} invitations');
       if (mounted) {
         setState(() {
           _receivedInvitations = invitations;
@@ -6854,19 +6874,20 @@ class _ConsultantsTabState extends State<_ConsultantsTab> with SingleTickerProvi
   }
   
   void _openInvitationDetail(Map<String, dynamic> invitation) {
-    // TODO: Navigate to invitation detail/response screen
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => _InvitationDetailModal(
-        invitation: invitation,
-        onSubmit: () {
-          Navigator.pop(context);
-          _loadInbox(); // Refresh after submission
-        },
+    // Navigate to CreateProposalScreen in collaboration response mode
+    // This gives them the FULL proposal creation experience
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => CreateProposalScreen(
+          isCollaborationResponse: true,
+          invitation: invitation,
+          parentInvitationId: invitation['id'],
+        ),
       ),
-    );
+    ).then((_) {
+      // Refresh inbox when returning
+      _loadInbox();
+    });
   }
 
   Widget _buildStatCard(String label, String value, IconData icon, Color color) {

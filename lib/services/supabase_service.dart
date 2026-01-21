@@ -1213,13 +1213,11 @@ class SupabaseService {
   Future<List<Map<String, dynamic>>> getReceivedInvitationsByEmail(String email) async {
     debugPrint('SupabaseService.getReceivedInvitationsByEmail: email=$email');
     try {
+      // Simplified query - fetch all columns directly without joins
+      // The invitation already stores project_name, company_name, owner_name directly
       final response = await _client
           .from('collaborator_invitations')
-          .select('''
-            *,
-            companies(id, name, logo_url),
-            quotes(id, title, scope, total, valid_until, line_items)
-          ''')
+          .select('*')
           .eq('collaborator_email', email)
           .order('created_at', ascending: false);
       debugPrint('SupabaseService.getReceivedInvitationsByEmail: Got ${response.length} invitations');

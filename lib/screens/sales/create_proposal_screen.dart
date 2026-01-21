@@ -15,6 +15,11 @@ class CreateProposalScreen extends StatefulWidget {
   final String? leadName;
   final String? leadEmail;
   final String? leadCompany;
+  
+  // Collaboration Response Mode - when responding to an invitation
+  final bool isCollaborationResponse;
+  final Map<String, dynamic>? invitation; // The invitation data from parent
+  final String? parentInvitationId;
 
   const CreateProposalScreen({
     super.key, 
@@ -24,6 +29,9 @@ class CreateProposalScreen extends StatefulWidget {
     this.leadName,
     this.leadEmail,
     this.leadCompany,
+    this.isCollaborationResponse = false,
+    this.invitation,
+    this.parentInvitationId,
   });
 
   @override
@@ -151,18 +159,48 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
     {'id': '6', 'name': 'TSM Map', 'description': 'Tentative map services', 'rate': 50.0, 'unit': 'hour', 'category': 'Development'},
   ];
 
+  // Collaboration response mode fields
+  String _collaborationRecipientName = '';
+  String _collaborationRecipientCompany = '';
+  
   // Get selected recipient info
   Map<String, dynamic>? get _selectedRecipient {
     if (_recipientType == 'client' && _selectedClientId != null) {
       return _clients.firstWhere((c) => c['id'] == _selectedClientId, orElse: () => {});
     } else if (_recipientType == 'lead' && _selectedLeadId != null) {
       return _leads.firstWhere((l) => l['id'] == _selectedLeadId, orElse: () => {});
+    } else if (_recipientType == 'collaboration' && widget.invitation != null) {
+      return {
+        'name': widget.invitation!['owner_name'] ?? 'Requester',
+        'email': '', // Not used for collaboration
+        'company': widget.invitation!['company_name'] ?? '',
+      };
     }
     return null;
   }
 
-  String get _recipientName => _selectedRecipient?['name'] ?? 'Client';
+  String get _recipientName {
+    if (_recipientType == 'collaboration') {
+      return _collaborationRecipientName.isNotEmpty 
+          ? _collaborationRecipientName 
+          : (widget.invitation?['owner_name'] ?? 'Requester');
+    }
+    return _selectedRecipient?['name'] ?? 'Client';
+  }
+  
   String get _recipientEmail => _selectedRecipient?['email'] ?? '';
+  
+  String get _recipientCompany {
+    if (_recipientType == 'collaboration') {
+      return _collaborationRecipientCompany.isNotEmpty 
+          ? _collaborationRecipientCompany 
+          : (widget.invitation?['company_name'] ?? '');
+    }
+    return _selectedRecipient?['company'] ?? '';
+  }
+  
+  /// Check if we're in collaboration response mode
+  bool get _isCollaborationMode => widget.isCollaborationResponse && _recipientType == 'collaboration';
 
   void _selectClient(String? clientId) {
     setState(() {
@@ -468,9 +506,9 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
+          onPressed: () => Navigator.of(context).pop(),
         ),
-        title: const Text('New Proposal'),
+        title: Text(_isCollaborationMode ? 'Respond to Invitation' : 'New Proposal'),
         actions: [
           if (_currentStep == 4)
             IconButton(
@@ -2554,6 +2592,11 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
       text: 'Thank you for the opportunity to work together. I have attached the proposal for your consideration which includes a detailed Scope of Work, deliverable schedule, and investment summary.\n\nPlease review and let me know if you have any questions.',
     );
     
+    // Handle Collaboration Response Mode - pre-fill from invitation
+    if (widget.isCollaborationResponse && widget.invitation != null) {
+      _initializeFromInvitation();
+    }
+    
     // Pre-select lead if leadId was passed
     if (widget.leadId != null) {
       // Check if lead exists in list, if not add it
@@ -2581,6 +2624,30 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
         _selectClient(widget.clientId);
       });
     }
+  }
+  
+  /// Initialize proposal form from collaboration invitation data
+  void _initializeFromInvitation() {
+    final inv = widget.invitation!;
+    
+    // Pre-fill project name
+    _projectNameController.text = inv['project_name'] ?? 'Project Response';
+    
+    // Pre-fill scope from invitation notes or scope_of_work
+    final scope = inv['scope_of_work'] ?? inv['notes'] ?? '';
+    if (scope.isNotEmpty) {
+      _scopeController.text = 'Original Scope:\n$scope\n\nMy Additional Scope:\n';
+    }
+    
+    // Set recipient info to "Collaboration Response" mode - we're responding to parent, not a client
+    _recipientType = 'collaboration';
+    _collaborationRecipientName = inv['owner_name'] ?? 'Requester';
+    _collaborationRecipientCompany = inv['company_name'] ?? '';
+    
+    // Update email message for collaboration response
+    _emailMessageController.text = 'Here is my pricing response for ${inv['project_name'] ?? 'the project'}. Please review and let me know if you have any questions.';
+    
+    debugPrint('CreateProposalScreen: Initialized from invitation - project: ${inv['project_name']}');
   }
 
   @override
@@ -5174,8 +5241,14 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
     );
   }
 
-  // Show Send Proposal Modal
+  // Show Send Proposal Modal (or Submit Response for collaboration mode)
   void _showSendProposalModal() {
+    // In collaboration mode, show simplified submit modal
+    if (_isCollaborationMode) {
+      _showCollaborationSubmitModal();
+      return;
+    }
+    
     final emailController = TextEditingController(text: _recipientEmail);
     final subjectController = TextEditingController(
       text: 'Proposal: ${_projectNameController.text.isNotEmpty ? _projectNameController.text : "for $_recipientName"}',
@@ -5704,6 +5777,12 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
         'amount': item.amount,
       }).toList();
       
+      // Handle COLLABORATION RESPONSE MODE
+      if (mode == 'collaboration' || (_isCollaborationMode && widget.parentInvitationId != null)) {
+        await _submitCollaborationResponse(supabaseService, lineItemsData);
+        return;
+      }
+      
       // Save the quote/proposal to database first
       final quoteData = {
         'company_id': authProvider.companyId,
@@ -5775,6 +5854,224 @@ class _CreateProposalScreenState extends State<CreateProposalScreen> {
         );
       }
       debugPrint('Error sending proposal: $e');
+    }
+  }
+  
+  /// Show submit modal for collaboration response mode
+  void _showCollaborationSubmitModal() {
+    final currencyFormat = NumberFormat.currency(symbol: '\$');
+    final hasSubCollaborators = _collaborators.isNotEmpty;
+    final pendingSubCollaborators = _collaborators.where((c) => 
+      c['status'] == 'invited' || c['status'] == 'accepted' || c['status'] == 'revision_requested'
+    ).toList();
+    
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.cardBackground,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 20,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: AppColors.success.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.check_circle_outline, color: AppColors.success),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Submit Response', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                      Text(
+                        'Submit to $_recipientName • $_recipientCompany',
+                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            
+            // Summary
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.neutral50,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Project', style: TextStyle(color: AppColors.textSecondary)),
+                      Text(
+                        _projectNameController.text.isNotEmpty 
+                            ? _projectNameController.text 
+                            : 'Response',
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Services', style: TextStyle(color: AppColors.textSecondary)),
+                      Text('${_lineItems.length} items', style: const TextStyle(fontWeight: FontWeight.w600)),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  const Divider(),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Total Amount', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+                      Text(
+                        currencyFormat.format(_total),
+                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 18, color: AppColors.success),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            
+            // Sub-collaborators warning
+            if (hasSubCollaborators && pendingSubCollaborators.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.warning.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppColors.warning.withOpacity(0.3)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.warning_amber_rounded, color: AppColors.warning, size: 20),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        '${pendingSubCollaborators.length} sub-collaborator(s) haven\'t submitted yet. Their responses will be included when they submit.',
+                        style: TextStyle(fontSize: 12, color: AppColors.warning),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            
+            const SizedBox(height: 24),
+            
+            // Submit button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _executeSendMode('collaboration', '', false);
+                },
+                icon: const Icon(Icons.send_rounded),
+                label: Text('Submit to $_recipientName'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.success,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            
+            // Cancel button
+            SizedBox(
+              width: double.infinity,
+              child: TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  /// Submit collaboration response back to the parent requester
+  Future<void> _submitCollaborationResponse(SupabaseService supabaseService, List<Map<String, dynamic>> lineItemsData) async {
+    try {
+      // Update the invitation with the response
+      await supabaseService.client
+          .from('collaborator_invitations')
+          .update({
+            'status': 'submitted',
+            'line_items': lineItemsData,
+            'response_amount': _total,
+            'response_notes': _scopeController.text,
+            'submitted_at': DateTime.now().toIso8601String(),
+            // Store any sub-collaborators we invited
+            'sub_collaborators': _collaborators.isNotEmpty ? _collaborators : null,
+          })
+          .eq('id', widget.parentInvitationId!);
+      
+      Navigator.pop(context); // Close loading dialog
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Response submitted to $_recipientName!'),
+            backgroundColor: AppColors.success,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+        // Go back to sales screen
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      Navigator.pop(context); // Close loading
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to submit: ${e.toString()}'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+      debugPrint('Error submitting collaboration response: $e');
     }
   }
 
