@@ -421,7 +421,7 @@ class SupabaseService {
     try {
       final response = await _client
           .from('quotes')
-          .select('*, leads(name, company, email), clients(name, company)')
+          .select('*')
           .eq('company_id', companyId)
           .order('created_at', ascending: false);
       final quotes = List<Map<String, dynamic>>.from(response);
@@ -1206,5 +1206,77 @@ class SupabaseService {
     }
     debugPrint('SupabaseService.sendCollaboratorInvitation: SUCCESS');
     return response.data;
+  }
+
+  /// Get invitations received by a user by their email address
+  /// Includes full project details: scope, file attachments, client info, and quote line items
+  Future<List<Map<String, dynamic>>> getReceivedInvitationsByEmail(String email) async {
+    debugPrint('SupabaseService.getReceivedInvitationsByEmail: email=$email');
+    try {
+      final response = await _client
+          .from('collaborator_invitations')
+          .select('''
+            *,
+            companies(id, name, logo_url),
+            quotes(id, title, scope, total, valid_until, line_items)
+          ''')
+          .eq('collaborator_email', email)
+          .order('created_at', ascending: false);
+      debugPrint('SupabaseService.getReceivedInvitationsByEmail: Got ${response.length} invitations');
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      debugPrint('SupabaseService.getReceivedInvitationsByEmail: ERROR - $e');
+      return [];
+    }
+  }
+
+  /// Link pending invitations to a user's profile when they sign in
+  Future<void> linkInvitationsToProfile(String email, String profileId) async {
+    debugPrint('SupabaseService.linkInvitationsToProfile: email=$email, profileId=$profileId');
+    try {
+      await _client
+          .from('collaborator_invitations')
+          .update({'collaborator_profile_id': profileId})
+          .eq('collaborator_email', email)
+          .isFilter('collaborator_profile_id', null);
+      debugPrint('SupabaseService.linkInvitationsToProfile: Done');
+    } catch (e) {
+      debugPrint('SupabaseService.linkInvitationsToProfile: Error - $e');
+    }
+  }
+
+  /// Send reminder to collaborator
+  Future<void> sendCollaboratorReminder(String invitationId) async {
+    debugPrint('SupabaseService.sendCollaboratorReminder: invitationId=$invitationId');
+    
+    // Get the invitation details
+    final invitation = await _client
+        .from('collaborator_invitations')
+        .select()
+        .eq('id', invitationId)
+        .single();
+    
+    if (invitation == null) {
+      throw Exception('Invitation not found');
+    }
+    
+    // Call the edge function to resend the invitation email
+    final response = await _client.functions.invoke('send-collaborator-invite', body: {
+      'collaboratorEmail': invitation['collaborator_email'],
+      'collaboratorName': invitation['collaborator_name'] ?? '',
+      'projectName': invitation['project_name'] ?? 'Project',
+      'ownerName': invitation['owner_name'] ?? '',
+      'companyName': invitation['company_name'] ?? '',
+      'notes': 'Reminder: ${invitation['notes'] ?? 'Please submit your pricing.'}',
+      'companyId': invitation['company_id'],
+      'portalUrl': 'https://collaborate.billdora.com',
+    });
+    
+    if (response.status != 200) {
+      debugPrint('SupabaseService.sendCollaboratorReminder: ERROR - ${response.data}');
+      throw Exception('Failed to send reminder: ${response.data}');
+    }
+    
+    debugPrint('SupabaseService.sendCollaboratorReminder: SUCCESS');
   }
 }
