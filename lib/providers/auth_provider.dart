@@ -173,6 +173,7 @@ class AuthProvider extends ChangeNotifier {
       // 3. Create profile with owner role
       _profile = await _supabaseService.createProfile({
         'id': authUserId,
+        'clerk_user_id': authUserId,
         'company_id': _companyId,
         'role_id': ownerRole['id'],
         'email': email,
@@ -180,6 +181,8 @@ class AuthProvider extends ChangeNotifier {
         'last_name': lastName,
         'full_name': '$firstName $lastName',
       });
+      
+      debugPrint('AuthProvider._createUserProfile: Created company=$_companyId and profile for $email');
     } catch (e) {
       debugPrint('Error creating user profile: $e');
     }
@@ -190,13 +193,13 @@ class AuthProvider extends ChangeNotifier {
   Future<void> _loadUserProfile(String authUserId) async {
     debugPrint('AuthProvider._loadUserProfile: Looking for profile with authUserId=$authUserId');
     try {
-      // For Supabase Auth, the user ID is stored in clerk_id column (legacy naming)
-      // Try by clerk_id first (most common case)
+      // For Supabase Auth, the user ID is stored in clerk_user_id column (legacy naming)
+      // Try by clerk_user_id first (most common case)
       _profile = await _supabaseService.getProfileBySupabaseUserId(authUserId);
       
       // If not found, try by profile id
       if (_profile == null) {
-        debugPrint('AuthProvider._loadUserProfile: Not found by clerk_id, trying profile id');
+        debugPrint('AuthProvider._loadUserProfile: Not found by clerk_user_id, trying profile id');
         _profile = await _supabaseService.getProfileByAuthId(authUserId);
       }
       
@@ -270,7 +273,7 @@ class AuthProvider extends ChangeNotifier {
       // Create profile with the company's ID (joining existing company)
       _profile = await _supabaseService.createProfile({
         'id': authUserId,
-        'clerk_id': authUserId,
+        'clerk_user_id': authUserId,
         'company_id': _companyId,
         'role_id': role['id'],
         'email': email,

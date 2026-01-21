@@ -284,16 +284,21 @@ class SupabaseService {
   }
 
   // ============ PROFILES ============
-  /// Get profile by Supabase Auth user ID (stored in clerk_id column for legacy reasons)
+  /// Get profile by Supabase Auth user ID (stored in clerk_user_id column for legacy reasons)
   Future<Map<String, dynamic>?> getProfileBySupabaseUserId(String supabaseUserId) async {
-    debugPrint('SupabaseService.getProfileBySupabaseUserId: Looking for clerk_id=$supabaseUserId');
-    final response = await _client
-        .from('profiles')
-        .select('*, roles(*)')
-        .eq('clerk_id', supabaseUserId)
-        .maybeSingle();
-    debugPrint('SupabaseService.getProfileBySupabaseUserId: Found=${response != null}');
-    return response;
+    debugPrint('SupabaseService.getProfileBySupabaseUserId: Looking for clerk_user_id=$supabaseUserId');
+    try {
+      final response = await _client
+          .from('profiles')
+          .select('*, roles(*)')
+          .eq('clerk_user_id', supabaseUserId)
+          .maybeSingle();
+      debugPrint('SupabaseService.getProfileBySupabaseUserId: Found=${response != null}');
+      return response;
+    } catch (e) {
+      debugPrint('SupabaseService.getProfileBySupabaseUserId: Error - $e');
+      return null; // Return null so fallbacks can be tried
+    }
   }
   
   /// Legacy method name for backward compatibility

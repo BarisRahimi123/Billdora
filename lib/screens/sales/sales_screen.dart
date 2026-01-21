@@ -222,11 +222,18 @@ class _SalesScreenState extends State<SalesScreen> with SingleTickerProviderStat
   Widget _buildTabBar() {
     final salesProvider = context.watch<SalesProvider>();
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(3),
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
         color: AppColors.neutral100,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -247,15 +254,15 @@ class _SalesScreenState extends State<SalesScreen> with SingleTickerProviderStat
         onTap: () => _tabController.animateTo(index),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 2),
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
           decoration: BoxDecoration(
             color: isSelected ? AppColors.cardBackground : Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(10),
             boxShadow: isSelected ? [
               BoxShadow(
-                color: Colors.black.withOpacity(0.06),
-                blurRadius: 4,
-                offset: const Offset(0, 1),
+                color: Colors.black.withOpacity(0.08),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
               ),
             ] : null,
           ),
@@ -265,7 +272,7 @@ class _SalesScreenState extends State<SalesScreen> with SingleTickerProviderStat
               Text(
                 label,
                 style: TextStyle(
-                  fontSize: 13,
+                  fontSize: 14,
                   fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                   color: isSelected ? AppColors.textPrimary : AppColors.textTertiary,
                   letterSpacing: -0.2,
@@ -273,18 +280,18 @@ class _SalesScreenState extends State<SalesScreen> with SingleTickerProviderStat
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
-              const SizedBox(height: 2),
+              const SizedBox(height: 4),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                 decoration: BoxDecoration(
-                  color: isSelected ? AppColors.accent : Colors.transparent,
-                  borderRadius: BorderRadius.circular(4),
+                  color: isSelected ? AppColors.accent : AppColors.neutral200,
+                  borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
                   '$count',
                   style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
                     color: isSelected ? Colors.white : AppColors.textTertiary,
                   ),
                 ),
@@ -2584,24 +2591,28 @@ class _QuotesTabState extends State<_QuotesTab> with SingleTickerProviderStateMi
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // Sub-tabs (All Quotes, Pending, Responses, Templates)
+        // Sub-tabs with underline style
         Container(
           margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-          padding: const EdgeInsets.all(4),
-          decoration: BoxDecoration(
-            color: AppColors.neutral100,
-            borderRadius: BorderRadius.circular(10),
-          ),
           child: Row(
             children: [
               _buildSubTab(0, 'All', _totalQuotes),
+              const SizedBox(width: 20),
               _buildSubTab(1, 'Pending', _pendingCount, highlight: _pendingCount > 0),
+              const SizedBox(width: 20),
               _buildSubTab(2, 'Responses', _responses.length),
+              const SizedBox(width: 20),
               _buildSubTab(3, 'Templates', _templates.length),
             ],
           ),
         ),
-        const SizedBox(height: 8),
+        
+        // Subtle divider
+        Container(
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          height: 1,
+          color: AppColors.border.withOpacity(0.5),
+        ),
         
         // Sub-tab Content
         Expanded(
@@ -2622,49 +2633,50 @@ class _QuotesTabState extends State<_QuotesTab> with SingleTickerProviderStateMi
   Widget _buildSubTab(int index, String label, int count, {bool highlight = false}) {
     final isSelected = _subTabController.index == index;
     
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => _subTabController.animateTo(index),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          decoration: BoxDecoration(
-            color: isSelected ? AppColors.cardBackground : Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
-            boxShadow: isSelected ? AppShadows.sm : null,
+    return GestureDetector(
+      onTap: () => _subTabController.animateTo(index),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(
+              color: isSelected ? AppColors.accent : Colors.transparent,
+              width: 2,
+            ),
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                label,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                color: isSelected ? AppColors.accent : AppColors.textSecondary,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: highlight 
+                    ? AppColors.warning
+                    : (isSelected ? AppColors.accent.withOpacity(0.15) : AppColors.neutral200),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                '$count',
                 style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                  color: isSelected ? AppColors.textPrimary : AppColors.textSecondary,
-                ),
-              ),
-              const SizedBox(width: 4),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                decoration: BoxDecoration(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
                   color: highlight 
-                      ? AppColors.warning.withOpacity(isSelected ? 0.2 : 0.1)
-                      : (isSelected ? AppColors.accent.withOpacity(0.1) : AppColors.neutral200),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  '$count',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    color: highlight 
-                        ? AppColors.warning 
-                        : (isSelected ? AppColors.accent : AppColors.textTertiary),
-                  ),
+                      ? Colors.white
+                      : (isSelected ? AppColors.accent : AppColors.textTertiary),
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -6203,7 +6215,7 @@ class _ConsultantsTabState extends State<_ConsultantsTab> with SingleTickerProvi
           children: [
             Icon(
               icon,
-              size: 14,
+              size: 15,
               color: isSelected ? AppColors.accent : AppColors.textTertiary,
             ),
             const SizedBox(width: 6),
@@ -6221,7 +6233,7 @@ class _ConsultantsTabState extends State<_ConsultantsTab> with SingleTickerProvi
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
                   color: AppColors.error,
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   '$badge',
@@ -6399,13 +6411,13 @@ class _ConsultantsTabState extends State<_ConsultantsTab> with SingleTickerProvi
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // Refined Sub-tab bar - underline style, more subtle
+        // Sub-tabs with underline style
         Container(
-          margin: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+          margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
           child: Row(
             children: [
               _buildSubTabButton(0, 'My Consultants', Icons.people_outline),
-              const SizedBox(width: 24),
+              const SizedBox(width: 20),
               _buildSubTabButton(1, 'My Inbox', Icons.inbox_outlined, badge: _receivedInvitations.length),
             ],
           ),
@@ -6413,7 +6425,7 @@ class _ConsultantsTabState extends State<_ConsultantsTab> with SingleTickerProvi
         
         // Subtle divider
         Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16),
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
           height: 1,
           color: AppColors.border.withOpacity(0.5),
         ),
