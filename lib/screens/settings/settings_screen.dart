@@ -269,8 +269,22 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
     );
   }
 
-  Widget _buildDateDisplayField(String label, DateTime date) {
+  Widget _buildDateDisplayField(String label, dynamic date) {
     final dateFormat = DateFormat('MMM d, yyyy');
+    String displayText = 'Not set';
+    
+    if (date != null) {
+      if (date is DateTime) {
+        displayText = dateFormat.format(date);
+      } else if (date is String && date.isNotEmpty) {
+        try {
+          displayText = dateFormat.format(DateTime.parse(date));
+        } catch (_) {
+          displayText = date;
+        }
+      }
+    }
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -284,7 +298,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
             borderRadius: BorderRadius.circular(10),
             border: Border.all(color: AppColors.border),
           ),
-          child: Center(child: Text(dateFormat.format(date))),
+          child: Center(child: Text(displayText, style: TextStyle(color: date == null ? AppColors.textTertiary : AppColors.textPrimary))),
         ),
       ],
     );
